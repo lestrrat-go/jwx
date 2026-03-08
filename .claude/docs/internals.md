@@ -1,0 +1,90 @@
+<!-- Agent-consumed file. Keep terse, unambiguous, machine-parseable. -->
+
+# Internals
+
+## Code Generation Pipeline
+
+All `*_gen.go` files are generated. NEVER edit directly.
+
+### Generator → Output Mapping
+
+| Generator | Input | Output |
+|-----------|-------|--------|
+| `tools/cmd/genoptions/` | `{pkg}/options.yaml` | `{pkg}/options_gen.go` |
+| `tools/cmd/genjwt/` | `tools/cmd/genjwt/objects.yml` | `jwt/*_gen.go` |
+| `tools/cmd/genjws/` | `tools/cmd/genjws/objects.yml` | `jws/*_gen.go` |
+| `tools/cmd/genjwe/` | `tools/cmd/genjwe/objects.yml` | `jwe/*_gen.go` |
+| `tools/cmd/genjwk/` | `tools/cmd/genjwk/objects.yml` | `jwk/*_gen.go` |
+| `tools/cmd/genjwa/` | `tools/cmd/genjwa/objects.yml` | `jwa/*_gen.go` |
+| `tools/cmd/genreadfile/` | (none) | `{pkg}/io.go` ReadFile helpers |
+
+### Commands
+
+```bash
+make generate          # All
+make generate-jwt      # JWT only
+make generate-jws      # JWS only
+make generate-jwe      # JWE only
+make generate-jwk      # JWK only
+make generate-jwa      # JWA only
+```
+
+## Functional Options Pattern
+
+Defined in `{pkg}/options.yaml`, generated to `{pkg}/options_gen.go`.
+
+YAML structure:
+```yaml
+options:
+  - ident: Token           # → WithToken()
+    interface: ParseOption  # Option interface it implements
+    argument_type: Token    # Go type of argument
+    comment: |              # Godoc comment
+```
+
+Manual option functions in `{pkg}/options.go` supplement generated ones.
+
+## Key Registration/Extension Points
+
+| What | Registration Function | Package |
+|------|----------------------|---------|
+| Custom algorithms | `jwa.Register{Type}()` | jwa |
+| Custom key parsers | `jwk.RegisterKeyParser()` | jwk |
+| Custom key importers | `jwk.RegisterKeyImporter()` | jwk |
+| Custom key exporters | `jwk.RegisterKeyExporter()` | jwk |
+| Custom JWK fields | `jwk.RegisterCustomField()` | jwk |
+| Custom JWS fields | `jws.RegisterCustomField()` | jws |
+| Custom JWE fields | `jwe.RegisterCustomField()` | jwe |
+| Custom JWT claims | `jwt.RegisterCustomField()` | jwt |
+| Custom OIDC claims | `openid.RegisterCustomField()` | jwt/openid |
+| Custom signers | `jws.RegisterSigner()` | jws |
+| Custom verifiers | `jws.RegisterVerifier()` | jws |
+
+## JSON Backend
+
+Pluggable via build tag `jwx_goccy`:
+- Default: `encoding/json`
+- Optional: `goccy/go-json` (faster)
+
+Internal `internal/json` package abstracts the choice. Custom field registry (`json.Registry`) enables type-safe deserialization of extension fields.
+
+## Base64 Backend
+
+Pluggable via build tag `jwx_asmbase64`:
+- Default: `encoding/base64`
+- Optional: `segmentio/asm` (assembly-optimized)
+
+Internal `internal/base64` package abstracts the choice.
+
+## Multi-Module Layout
+
+| Module | Path | Purpose |
+|--------|------|---------|
+| Main | `./go.mod` | Core library |
+| Examples | `./examples/go.mod` | Usage examples (has `replace` directive) |
+| CLI | `./cmd/jwx/go.mod` | Command-line tool |
+| Perf Bench | `./bench/performance/go.mod` | Performance benchmarks |
+| Comparison | `./bench/comparison/go.mod` | Library comparison |
+| Generators | `./tools/cmd/*/go.mod` | Code generators |
+
+No `go.work` file. Nested modules use `replace` directives for local development.

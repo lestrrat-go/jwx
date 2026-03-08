@@ -230,3 +230,30 @@ Examples are included in `docs/` via autodoc markers:
 <!-- END INCLUDE -->
 ```
 
+## Pre-Read Rules
+
+Read linked doc BEFORE working in that area. No exceptions.
+
+| Trigger | Doc |
+|---------|-----|
+| Looking up package APIs, types, functions | `.claude/docs/packages.md` |
+| Running or writing tests, fuzz tests | `.claude/docs/testing.md` |
+| Understanding package relationships, imports | `.claude/docs/dependencies.md` |
+| Working with errors, error handling patterns | `.claude/docs/error-formatting.md` |
+| Code generation, options pattern, extension points, JSON/base64 backends | `.claude/docs/internals.md` |
+
+## Cache Maintenance
+
+These docs cache repository state. Still read source before modifying code.
+
+1. When your changes affect a doc below, update it in the same commit.
+2. If you notice any doc is wrong or stale — even on an unrelated task — fix it immediately.
+
+| Doc | Update trigger |
+|-----|----------------|
+| `.claude/docs/packages.md` | New/renamed/removed exported functions, types, or packages |
+| `.claude/docs/testing.md` | Changes to test infrastructure, build tags, test helpers, fuzz targets |
+| `.claude/docs/dependencies.md` | New internal imports between packages, new external dependencies |
+| `.claude/docs/error-formatting.md` | New sentinel errors, changes to error wrapping patterns |
+| `.claude/docs/internals.md` | Changes to generators, options YAML schema, registration points, multi-module layout |
+
