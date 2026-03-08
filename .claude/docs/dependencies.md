@@ -55,7 +55,7 @@ Leaf Packages (no internal deps)
 | `goccy/go-json` | internal/json | Optional fast JSON (build tag) |
 | `segmentio/asm` | internal/base64 | Optional fast base64 (build tag) |
 | `decred/secp256k1` | jwk (direct); jwa, jws (via build tag) | ES256K support (build tag) |
-| `valyala/fastjson` | jwk | Fast JSON parsing for key probing |
+| `valyala/fastjson` | jws/jwsbb | Fast JSON header parsing |
 | `golang.org/x/crypto` | jwe | Extended crypto (PBKDF2, etc.) |
 | `lestrrat-go/dsig` | jws/jwsbb | Digital signature primitives (HMAC, RSA, ECDSA, EdDSA) |
 | `lestrrat-go/dsig-secp256k1` | jws/jwsbb | ES256K/secp256k1 signature support (build tag) |
