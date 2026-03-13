@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1
-	github.com/goccy/go-json v0.10.3
+	github.com/goccy/go-json v0.10.6
 	github.com/lestrrat-go/blackmagic v1.0.4
 	github.com/lestrrat-go/httprc v1.0.6
 	github.com/lestrrat-go/iter v1.0.2
