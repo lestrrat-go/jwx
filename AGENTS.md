@@ -14,7 +14,7 @@ The rest of this document focuses on developing the jwx library itself.
 
 ## Go Version
 
-This project requires **Go 1.24.0** or later. Check `go.mod` for the exact version.
+This project requires **Go 1.25.0** or later. Check `go.mod` for the exact version.
 
 ## Module Path vs Physical Layout
 
@@ -256,4 +256,3 @@ These docs cache repository state. Still read source before modifying code.
 | `.claude/docs/dependencies.md` | New internal imports between packages, new external dependencies |
 | `.claude/docs/error-formatting.md` | New sentinel errors, changes to error wrapping patterns |
 | `.claude/docs/internals.md` | Changes to generators, options YAML schema, registration points, multi-module layout |
-

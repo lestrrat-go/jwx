@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         go_tags: [ 'stdlib', 'goccy', 'es256k', 'alltags' ]
-        go: [ '1.25', '1.24' ]
+        go: [ '1.25' ]
     name: "Smoke [ Go ${{ matrix.go }} / Tags ${{ matrix.go_tags }} ]"
     steps:
       - name: Checkout repository
@@ -50,4 +50,3 @@ jobs:
         run: make smoke-${{ matrix.go_tags }}
       - uses: bazelbuild/setup-bazelisk@b39c379c82683a5f25d34f0d062761f62693e0b2 # v3.0.0
       - run: bazel build //...
-
