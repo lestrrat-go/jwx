@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         go_tags: [ 'stdlib', 'goccy', 'es256k', 'secp256k1-pem', 'asmbase64', 'alltags']
-        go: [ '1.24' ]
+        go: [ '1.25' ]
     name: "Test [ Go ${{ matrix.go }} / Tags ${{ matrix.go_tags }} ]"
     steps:
       - name: Checkout repository
