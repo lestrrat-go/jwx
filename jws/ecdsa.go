@@ -136,7 +136,9 @@ func (es *ecdsaSigner) Sign(payload []byte, key interface{}) ([]byte, error) {
 	sBytesPadded := make([]byte, keyBytes)
 	copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
 
-	out := append(rBytesPadded, sBytesPadded...)
+	out := make([]byte, 0, keyBytes+len(sBytesPadded))
+	out = append(out, rBytesPadded...)
+	out = append(out, sBytesPadded...)
 
 	return out, nil
 }
