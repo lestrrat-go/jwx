@@ -1,8 +1,6 @@
 module github.com/lestrrat-go/jwx/v3/bench/performance
 
-go 1.24.0
-
-toolchain go1.24.4
+go 1.25.0
 
 require github.com/lestrrat-go/jwx/v3 v3.0.0
 
@@ -20,8 +18,8 @@ require (
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/valyala/fastjson v1.6.10 // indirect
-	golang.org/x/crypto v0.48.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/crypto v0.49.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
