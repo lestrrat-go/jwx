@@ -390,8 +390,8 @@ func parseJSON(data []byte) (result *Message, err error) {
 // separately: protected headers, payload and signature.
 // On error, returns a jws.ParseError.
 //
-// This function will be deprecated in v4. It is a low-level API, and
-// thus will be available in the `jwsbb` package.
+// Deprecated: This is a low-level API that will be removed in v4.
+// Use the jwsbb package directly instead.
 func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
 	hdr, payload, signature, err := jwsbb.SplitCompact(src)
 	if err != nil {
@@ -404,8 +404,8 @@ func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
 // separately: protected headers, payload and signature.
 // On error, returns a jws.ParseError.
 //
-// This function will be deprecated in v4. It is a low-level API, and
-// thus will be available in the `jwsbb` package.
+// Deprecated: This is a low-level API that will be removed in v4.
+// Use the jwsbb package directly instead.
 func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
 	hdr, payload, signature, err := jwsbb.SplitCompactString(src)
 	if err != nil {
@@ -418,8 +418,8 @@ func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
 // separately: protected headers, payload and signature.
 // On error, returns a jws.ParseError.
 //
-// This function will be deprecated in v4. It is a low-level API, and
-// thus will be available in the `jwsbb` package.
+// Deprecated: This is a low-level API that will be removed in v4.
+// Use the jwsbb package directly instead.
 func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
 	hdr, payload, signature, err := jwsbb.SplitCompactReader(rdr)
 	if err != nil {
