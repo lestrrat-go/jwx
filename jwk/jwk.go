@@ -41,7 +41,7 @@ func init() {
 		Type: reflect.TypeFor[json.RawMessage](),
 		Tag:  `json:"d,omitempty"`,
 	}); err != nil {
-		panic(fmt.Errorf("failed to register mandatory probe for 'kty' field: %w", err))
+		panic(fmt.Errorf("failed to register mandatory probe for 'd' field: %w", err))
 	}
 }
 
