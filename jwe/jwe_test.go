@@ -859,6 +859,41 @@ func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 	}
 }
 
+func TestMinPBES2Count(t *testing.T) {
+	// Encrypt a message using PBES2 (default p2c=10000)
+	password := []byte(`supersecret`)
+	key, err := jwk.Import(password)
+	require.NoError(t, err, `jwk.Import should succeed`)
+
+	payload := []byte(`hello world`)
+	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	t.Run("default min rejects nothing at default p2c", func(t *testing.T) {
+		// Default min is 1000, default p2c is 10000 — should succeed
+		_, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.NoError(t, err, `jwe.Decrypt should succeed with default settings`)
+	})
+
+	t.Run("high min rejects default p2c", func(t *testing.T) {
+		// NOTE: HAS GLOBAL EFFECT
+		jwe.Settings(jwe.WithMinPBES2Count(20000))
+		defer jwe.Settings(jwe.WithMinPBES2Count(1000))
+
+		_, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.Error(t, err, `jwe.Decrypt should fail when p2c < min`)
+	})
+
+	t.Run("min of zero disables check", func(t *testing.T) {
+		// NOTE: HAS GLOBAL EFFECT
+		jwe.Settings(jwe.WithMinPBES2Count(0))
+		defer jwe.Settings(jwe.WithMinPBES2Count(1000))
+
+		_, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.NoError(t, err, `jwe.Decrypt should succeed when min is 0`)
+	})
+}
+
 func TestCBCBufferSize(t *testing.T) {
 	// NOTE: This has GLOBAL EFFECT
 	jwe.Settings(jwe.WithCBCBufferSize(1))

@@ -30,6 +30,7 @@ import (
 
 var muSettings sync.RWMutex
 var maxPBES2Count = 10000
+var minPBES2Count = 1000
 var maxDecompressBufferSize int64 = 10 * 1024 * 1024 // 10MB
 
 func Settings(options ...GlobalOption) {
@@ -40,6 +41,10 @@ func Settings(options ...GlobalOption) {
 		case identMaxPBES2Count{}:
 			if err := option.Value(&maxPBES2Count); err != nil {
 				panic(fmt.Sprintf("jwe.Settings: value for option WithMaxPBES2Count must be an int: %s", err))
+			}
+		case identMinPBES2Count{}:
+			if err := option.Value(&minPBES2Count); err != nil {
+				panic(fmt.Sprintf("jwe.Settings: value for option WithMinPBES2Count must be an int: %s", err))
 			}
 		case identMaxDecompressBufferSize{}:
 			if err := option.Value(&maxDecompressBufferSize); err != nil {
@@ -525,8 +530,12 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 
 		muSettings.RLock()
 		maxCount := maxPBES2Count
+		minCount := minPBES2Count
 		muSettings.RUnlock()
 		if countFlt > float64(maxCount) {
+			return nil, fmt.Errorf("invalid 'p2c' value")
+		}
+		if countFlt < float64(minCount) {
 			return nil, fmt.Errorf("invalid 'p2c' value")
 		}
 		salt, err := base64.DecodeString(saltB64)

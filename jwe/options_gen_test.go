@@ -23,6 +23,7 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithMaxPBES2Count", identMaxPBES2Count{}.String())
 	require.Equal(t, "WithMergeProtectedHeaders", identMergeProtectedHeaders{}.String())
 	require.Equal(t, "WithMessage", identMessage{}.String())
+	require.Equal(t, "WithMinPBES2Count", identMinPBES2Count{}.String())
 	require.Equal(t, "WithPerRecipientHeaders", identPerRecipientHeaders{}.String())
 	require.Equal(t, "WithPretty", identPretty{}.String())
 	require.Equal(t, "WithProtectedHeaders", identProtectedHeaders{}.String())
