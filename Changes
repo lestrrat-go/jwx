@@ -5,6 +5,11 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.0.14 UNRELEASED
+  * [jws] `jws.Verify()` now validates the "crit" (Critical) header parameter per
+    RFC 7515 Section 4.1.11. Signatures with an empty "crit" array, standard JOSE
+    header names in "crit", or "crit"-listed extensions not present in the protected
+    header are now rejected.
+
   * [jwk] Fixed a deadlock in `jwk.Cache` that occurred when repeated `Refresh()` calls
     failed (e.g. HTTP 500 responses). Each failure killed an httprc worker goroutine,
     and after all workers were exhausted, subsequent `Refresh()` calls would block forever. (#1551)
