@@ -615,6 +615,10 @@ func Settings(options ...GlobalOption) {
 //
 // Since this function avoids doing many checks that jws.Verify would perform,
 // you must ensure to perform the necessary checks including ensuring that algorithm is safe to use for your payload yourself.
+//
+// Note: this function does NOT validate the "crit" (Critical) header
+// parameter (RFC 7515 Section 4.1.11). If you need "crit" validation,
+// use jws.Verify() instead.
 func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error) {
 	algstr := alg.String()
 

@@ -151,6 +151,13 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 			rawHeaders = protected
 		}
 
+		// Validate the "crit" header per RFC 7515 Section 4.1.11 before
+		// attempting signature verification with any keys.
+		if err := validateCritical(sig.protected); err != nil {
+			errs = append(errs, makeVerifyError(`signature #%d has invalid "crit" header: %w`, idx+1, err))
+			continue
+		}
+
 		verifyBuf = verifyBuf[:0]
 		verifyBuf = jwsbb.SignBuffer(verifyBuf, rawHeaders, msg.payload, vc.encoder, msg.b64)
 		for i, kp := range vc.keyProviders {
@@ -205,6 +212,37 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 
 	if vc.dst != nil {
 		*(vc.dst) = *msg
+	}
+
+	return nil
+}
+
+// validateCritical checks the "crit" header per RFC 7515 Section 4.1.11.
+// It verifies that all header names listed in "crit" are present in the
+// protected header and are not standard JWS header parameters.
+func validateCritical(protected Headers) error {
+	if !protected.Has(CriticalKey) {
+		return nil
+	}
+
+	crit, _ := protected.Critical()
+	if len(crit) == 0 {
+		return makeVerifyError(`"crit" header must not be empty`)
+	}
+
+	for _, name := range crit {
+		// RFC 7515 Section 4.1.11: "crit" MUST NOT include names defined
+		// by the JOSE Header specification itself.
+		for _, std := range stdHeaderNames {
+			if name == std {
+				return makeVerifyError(`"crit" header must not contain standard header parameter %q`, name)
+			}
+		}
+
+		// The extension must be present in the protected header
+		if !protected.Has(name) {
+			return makeVerifyError(`"crit" header references extension %q, but it is not present in the protected header`, name)
+		}
 	}
 
 	return nil
