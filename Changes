@@ -10,6 +10,11 @@ v3.0.14 UNRELEASED
     header names in "crit", or "crit"-listed extensions not present in the protected
     header are now rejected.
 
+  * [jwe] Fixed X25519 ECDH-ES key agreement to include `apu` and `apv` parameters
+    in the Concat KDF derivation, matching the ECDSA path. Previously these values
+    were silently discarded during encryption, weakening the key derivation per
+    RFC 7518 Section 4.6.2.
+
   * [jwk] Fixed a deadlock in `jwk.Cache` that occurred when repeated `Refresh()` calls
     failed (e.g. HTTP 500 responses). Each failure killed an httprc worker goroutine,
     and after all workers were exhausted, subsequent `Refresh()` calls would block forever. (#1551)

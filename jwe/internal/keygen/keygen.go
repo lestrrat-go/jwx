@@ -64,7 +64,7 @@ func Ecdhes(alg string, enc string, keysize int, pubkey *ecdsa.PublicKey, apu, a
 }
 
 // X25519 generates a new key using ECDH-ES with X25519
-func X25519(alg string, enc string, keysize int, pubkey *ecdh.PublicKey) (ByteSource, error) {
+func X25519(alg string, enc string, keysize int, pubkey *ecdh.PublicKey, apu, apv []byte) (ByteSource, error) {
 	priv, err := ecdh.X25519().GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to generate key for X25519: %w`, err)
@@ -84,7 +84,7 @@ func X25519(alg string, enc string, keysize int, pubkey *ecdh.PublicKey) (ByteSo
 	if err != nil {
 		return nil, fmt.Errorf(`failed to compute Z: %w`, err)
 	}
-	kdf := concatkdf.New(crypto.SHA256, []byte(algorithm), zBytes, []byte{}, []byte{}, pubinfo, []byte{})
+	kdf := concatkdf.New(crypto.SHA256, []byte(algorithm), zBytes, apu, apv, pubinfo, []byte{})
 	kek := make([]byte, keysize)
 	if _, err := kdf.Read(kek); err != nil {
 		return nil, fmt.Errorf(`failed to read kdf: %w`, err)
