@@ -45,12 +45,25 @@ func AssignNextBytesToken(dst *[]byte, dec *Decoder) error {
 	return nil
 }
 
+// ReadNextStringToken reads the next JSON token from the decoder and
+// returns it as a string. JSON null is explicitly rejected: while Go's
+// json.Decoder silently converts null to "", the JSON spec treats null
+// as a distinct type from string. In practice this is low-risk — legitimate
+// issuers rarely emit null for string claims — but rejecting null is the
+// correct behavior per the RFC type definitions (e.g. StringOrURI).
 func ReadNextStringToken(dec *Decoder) (string, error) {
-	var val string
+	var val any
 	if err := dec.Decode(&val); err != nil {
 		return "", fmt.Errorf(`error reading next value: %w`, err)
 	}
-	return val, nil
+	if val == nil {
+		return "", fmt.Errorf(`error reading next value: expected string, got null`)
+	}
+	s, ok := val.(string)
+	if !ok {
+		return "", fmt.Errorf(`error reading next value: expected string, got %T`, val)
+	}
+	return s, nil
 }
 
 func AssignNextStringToken(dst **string, dec *Decoder) error {

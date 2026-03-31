@@ -5,6 +5,12 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.0.14 UNRELEASED
+  * [jwt] `jwt.Parse()` now rejects JSON `null` for string registered claims
+    (`iss`, `sub`, `jti`). Previously, null was silently accepted as an empty
+    string due to Go's default JSON decoding behavior. This is a correctness fix
+    per the RFC type definitions (StringOrURI) rather than a security fix —
+    legitimate token issuers do not emit null for these claims. (#1484)
+
   * [jws] `jws.Verify()` now validates the "crit" (Critical) header parameter per
     RFC 7515 Section 4.1.11. Signatures with an empty "crit" array, standard JOSE
     header names in "crit", or "crit"-listed extensions not present in the protected
