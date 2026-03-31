@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/lestrrat-go/blackmagic"
@@ -233,10 +234,8 @@ func validateCritical(protected Headers) error {
 	for _, name := range crit {
 		// RFC 7515 Section 4.1.11: "crit" MUST NOT include names defined
 		// by the JOSE Header specification itself.
-		for _, std := range stdHeaderNames {
-			if name == std {
-				return makeVerifyError(`"crit" header must not contain standard header parameter %q`, name)
-			}
+		if slices.Contains(stdHeaderNames, name) {
+			return makeVerifyError(`"crit" header must not contain standard header parameter %q`, name)
 		}
 
 		// The extension must be present in the protected header
