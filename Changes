@@ -15,6 +15,12 @@ v3.0.14 UNRELEASED
     were silently discarded during encryption, weakening the key derivation per
     RFC 7518 Section 4.6.2.
 
+  * [jwe] POTENTIALLY BREAKING: `jwe.Decrypt()` now rejects PBES2 messages with
+    a `p2c` (iteration count) below 1,000 by default. This prevents accepting
+    tokens with trivially low iteration counts that eliminate PBKDF2 brute-force
+    protection. To restore the previous behavior or adjust the threshold, call
+    `jwe.Settings(jwe.WithMinPBES2Count(0))`.
+
   * [jwk] Fixed a deadlock in `jwk.Cache` that occurred when repeated `Refresh()` calls
     failed (e.g. HTTP 500 responses). Each failure killed an httprc worker goroutine,
     and after all workers were exhausted, subsequent `Refresh()` calls would block forever. (#1551)

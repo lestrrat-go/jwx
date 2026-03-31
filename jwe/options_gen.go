@@ -152,6 +152,7 @@ type identMaxDecompressBufferSize struct{}
 type identMaxPBES2Count struct{}
 type identMergeProtectedHeaders struct{}
 type identMessage struct{}
+type identMinPBES2Count struct{}
 type identPerRecipientHeaders struct{}
 type identPretty struct{}
 type identProtectedHeaders struct{}
@@ -212,6 +213,10 @@ func (identMergeProtectedHeaders) String() string {
 
 func (identMessage) String() string {
 	return "WithMessage"
+}
+
+func (identMinPBES2Count) String() string {
+	return "WithMinPBES2Count"
 }
 
 func (identPerRecipientHeaders) String() string {
@@ -367,6 +372,15 @@ func WithMergeProtectedHeaders(v bool) EncryptOption {
 // in one go.
 func WithMessage(v *Message) DecryptOption {
 	return &decryptOption{option.New(identMessage{}, v)}
+}
+
+// WithMinPBES2Count specifies the minimum number of PBES2 iterations
+// to accept when decrypting a message. If not specified, the default
+// value of 1,000 is used. Set to 0 to disable the minimum check.
+//
+// This option has a global effect.
+func WithMinPBES2Count(v int) GlobalOption {
+	return &globalOption{option.New(identMinPBES2Count{}, v)}
 }
 
 // WithPretty specifies whether the JSON output should be formatted and
