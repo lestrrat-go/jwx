@@ -194,6 +194,41 @@ func HeaderGetStringBytes(h Header, key string) ([]byte, error) {
 	return v.StringBytes()
 }
 
+// HeaderHas returns true if the given key exists in the JWS header.
+//
+// This function is experimental and may change or be removed in the future.
+func HeaderHas(h Header, key string) bool {
+	_, err := headerGet(h, key)
+	return err == nil
+}
+
+// HeaderGetStringArray returns a string array for the given key from the JWS header.
+// An error is returned if the JSON was not valid, if the key does not exist,
+// or if the value is not a JSON array of strings.
+//
+// This function is experimental and may change or be removed in the future.
+func HeaderGetStringArray(h Header, key string) ([]string, error) {
+	v, err := headerGet(h, key)
+	if err != nil {
+		return nil, err
+	}
+
+	arr, err := v.Array()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]string, len(arr))
+	for i, item := range arr {
+		sb, err := item.StringBytes()
+		if err != nil {
+			return nil, err
+		}
+		result[i] = string(sb)
+	}
+	return result, nil
+}
+
 // HeaderGetUint returns the uint value for the given key from the JWS header.
 // An error is returned if the JSON was not valid, if the key does not exist,
 // or if the value is not a uint.

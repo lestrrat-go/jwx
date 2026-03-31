@@ -246,3 +246,32 @@ func validateCritical(protected Headers) error {
 
 	return nil
 }
+
+// validateCriticalFast is the fastjson-based equivalent of validateCritical,
+// used by VerifyCompactFast to validate the "crit" header without full
+// message parsing.
+func validateCriticalFast(hdr jwsbb.Header) error {
+	crit, err := jwsbb.HeaderGetStringArray(hdr, CriticalKey)
+	if err != nil {
+		if errors.Is(err, jwsbb.ErrHeaderNotFound()) {
+			return nil
+		}
+		return makeVerifyError(`failed to read "crit" header: %w`, err)
+	}
+
+	if len(crit) == 0 {
+		return makeVerifyError(`"crit" header must not be empty`)
+	}
+
+	for _, name := range crit {
+		if slices.Contains(stdHeaderNames, name) {
+			return makeVerifyError(`"crit" header must not contain standard header parameter %q`, name)
+		}
+
+		if !jwsbb.HeaderHas(hdr, name) {
+			return makeVerifyError(`"crit" header references extension %q, but it is not present in the protected header`, name)
+		}
+	}
+
+	return nil
+}
