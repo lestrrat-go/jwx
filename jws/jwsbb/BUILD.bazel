@@ -7,6 +7,7 @@ go_library(
         "ecdsa.go",
         "eddsa.go",
         "format.go",
+        "header.go",
         "hmac.go",
         "jwsbb.go",
         "rsa.go",
@@ -24,6 +25,7 @@ go_library(
         "//internal/tokens",
         "//jws/internal/keytype",
         "@com_github_lestrrat_go_dsig//:dsig",
+        "@com_github_valyala_fastjson//:fastjson",
     ],
 )
 
