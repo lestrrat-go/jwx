@@ -1639,3 +1639,35 @@ func TestGH1482(t *testing.T) {
 	require.NoError(t, err, `jwt.Parse should succeed`)
 	require.NotEmpty(t, markerValue, "context value 'marker' should be present")
 }
+
+// TestGH1484 tests that jwt.Parse rejects JSON null for string registered
+// claims (iss, sub, jti). Go's json.Decoder silently converts null to ""
+// for string targets, so the library must explicitly check for this.
+// Low real-world risk — legitimate issuers don't emit null — but correct
+// per the RFC StringOrURI type definitions.
+func TestGH1484(t *testing.T) {
+	// Tokens signed with HS256 key "abracadabra".
+	// null_sub generated from issue report; null_iss and null_jti
+	// constructed by signing matching payloads with the same key.
+	testcases := []struct {
+		Name    string
+		Payload string
+	}{
+		{Name: "null_sub", Payload: `{"sub":null}`},
+		{Name: "null_iss", Payload: `{"iss":null}`},
+		{Name: "null_jti", Payload: `{"jti":null}`},
+	}
+
+	key, err := jwk.Import([]byte("abracadabra"))
+	require.NoError(t, err, `jwk.Import should succeed`)
+
+	for _, tc := range testcases {
+		t.Run(tc.Name, func(t *testing.T) {
+			signed, err := jws.Sign([]byte(tc.Payload), jws.WithKey(jwa.HS256(), key))
+			require.NoError(t, err, `jws.Sign should succeed`)
+
+			_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), key))
+			require.Error(t, err, `jwt.Parse should reject null claim`)
+		})
+	}
+}
