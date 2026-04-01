@@ -15,6 +15,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwk/internal/registry"
 )
 
 const (
@@ -519,7 +520,7 @@ LOOP:
 						}
 					}
 				}
-				decoded, err := registry.Decode(dec, tok)
+				decoded, err := fieldRegistry.Decode(dec, tok)
 				if err == nil {
 					h.setNoLock(tok, decoded)
 					continue
@@ -1344,7 +1345,7 @@ LOOP:
 						}
 					}
 				}
-				decoded, err := registry.Decode(dec, tok)
+				decoded, err := fieldRegistry.Decode(dec, tok)
 				if err == nil {
 					h.setNoLock(tok, decoded)
 					continue
@@ -1540,4 +1541,11 @@ func init() {
 // RSAStandardFieldsFilter returns a KeyFilter that filters out standard RSA fields.
 func RSAStandardFieldsFilter() KeyFilter {
 	return rsaStandardFields
+}
+
+func init() {
+	registry.Register(jwa.RSA().String(), registry.Constructor{
+		Public:  func() any { return newRSAPublicKey() },
+		Private: func() any { return newRSAPrivateKey() },
+	})
 }

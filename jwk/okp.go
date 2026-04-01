@@ -48,6 +48,15 @@ func (k *okpPublicKey) Import(rawKeyIf any) error {
 		crv = jwa.X25519()
 		k.crv = &crv
 	default:
+		for _, fn := range okpRawKeyImporters {
+			c, x, _, ok := fn(rawKeyIf)
+			if ok {
+				k.x = x
+				crv = c
+				k.crv = &crv
+				return nil
+			}
+		}
 		return fmt.Errorf(`unknown key type %T`, rawKeyIf)
 	}
 
@@ -72,10 +81,45 @@ func (k *okpPrivateKey) Import(rawKeyIf any) error {
 		crv = jwa.X25519()
 		k.crv = &crv
 	default:
+		for _, fn := range okpRawKeyImporters {
+			c, x, d, ok := fn(rawKeyIf)
+			if ok {
+				k.x = x
+				k.d = d
+				crv = c
+				k.crv = &crv
+				return nil
+			}
+		}
 		return fmt.Errorf(`unknown key type %T`, rawKeyIf)
 	}
 
 	return nil
+}
+
+// OKPCurveBuilder provides curve-specific key construction for OKP keys.
+// Build-tagged files (e.g. ed448.go) register additional curves via init().
+type OKPCurveBuilder struct {
+	BuildPublicKey  func(xbuf []byte) (any, error)
+	BuildPrivateKey func(xbuf, dbuf []byte) (any, error)
+}
+
+var okpCurveBuilders = map[jwa.EllipticCurveAlgorithm]OKPCurveBuilder{}
+
+// RegisterOKPCurveBuilder registers curve-specific key builders for OKP keys.
+func RegisterOKPCurveBuilder(alg jwa.EllipticCurveAlgorithm, b OKPCurveBuilder) {
+	okpCurveBuilders[alg] = b
+}
+
+// OKPRawKeyImporter tries to import a raw key as an OKP key.
+// Returns the curve, x, d (nil for public), and true if handled.
+type OKPRawKeyImporter func(key any) (crv jwa.EllipticCurveAlgorithm, x, d []byte, ok bool)
+
+var okpRawKeyImporters []OKPRawKeyImporter
+
+// RegisterOKPRawKeyImporter registers a function that can import raw keys as OKP keys.
+func RegisterOKPRawKeyImporter(fn OKPRawKeyImporter) {
+	okpRawKeyImporters = append(okpRawKeyImporters, fn)
 }
 
 func buildOKPPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte) (any, error) {
@@ -89,6 +133,9 @@ func buildOKPPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte) (any, error)
 		}
 		return ret, nil
 	default:
+		if b, ok := okpCurveBuilders[alg]; ok {
+			return b.BuildPublicKey(xbuf)
+		}
 		return nil, fmt.Errorf(`invalid curve algorithm %s`, alg)
 	}
 }
@@ -136,6 +183,9 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 		}
 		return ret, nil
 	default:
+		if b, ok := okpCurveBuilders[alg]; ok {
+			return b.BuildPrivateKey(xbuf, dbuf)
+		}
 		return nil, fmt.Errorf(`invalid curve algorithm %s`, alg)
 	}
 }

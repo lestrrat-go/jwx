@@ -103,6 +103,26 @@ func getDsigAlgorithm(jwsAlg string) (string, bool) {
 	return dsigAlg, ok
 }
 
+// Extension algorithm registries for algorithms not handled by dsig
+// (e.g. Ed448 from a separate module). Populated via RegisterEdDSAAlgorithm.
+var extSignFns = map[string]func(any, []byte) ([]byte, error){}
+var extVerifyFns = map[string]func(any, []byte, []byte) error{}
+var extValidateCurveFns = map[string]func(any) error{}
+
+// RegisterEdDSAAlgorithm registers sign, verify, and curve validation functions
+// for a fully-specified EdDSA algorithm (e.g. "Ed448"). This is intended to be
+// called from external modules that provide the crypto implementation.
+func RegisterEdDSAAlgorithm(
+	alg string,
+	signFn func(key any, payload []byte) ([]byte, error),
+	verifyFn func(key any, payload, signature []byte) error,
+	validateCurveFn func(pub any) error,
+) {
+	extSignFns[alg] = signFn
+	extVerifyFns[alg] = verifyFn
+	extValidateCurveFns[alg] = validateCurveFn
+}
+
 // validateEdDSACurve enforces that fully-specified EdDSA algorithms (RFC 9864)
 // are only used with the correct key curve. The polymorphic "EdDSA" algorithm
 // accepts any EdDSA key without curve checks. The pub argument must be the
@@ -116,8 +136,9 @@ func validateEdDSACurve(jwsAlg string, pub crypto.PublicKey) error {
 	case edDSA:
 		// Polymorphic EdDSA: no curve restriction
 	default:
-		// Unknown fully-specified EdDSA algorithm (e.g. Ed448): reject
-		// until the corresponding key type is supported
+		if fn, ok := extValidateCurveFns[jwsAlg]; ok {
+			return fn(pub)
+		}
 		return fmt.Errorf(`unsupported fully-specified EdDSA algorithm %q`, jwsAlg)
 	}
 	return nil

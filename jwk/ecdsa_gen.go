@@ -15,6 +15,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwk/internal/registry"
 )
 
 const (
@@ -549,7 +550,7 @@ LOOP:
 						}
 					}
 				}
-				decoded, err := registry.Decode(dec, tok)
+				decoded, err := fieldRegistry.Decode(dec, tok)
 				if err == nil {
 					h.setNoLock(tok, decoded)
 					continue
@@ -1258,7 +1259,7 @@ LOOP:
 						}
 					}
 				}
-				decoded, err := registry.Decode(dec, tok)
+				decoded, err := fieldRegistry.Decode(dec, tok)
 				if err == nil {
 					h.setNoLock(tok, decoded)
 					continue
@@ -1429,4 +1430,11 @@ func init() {
 // ECDSAStandardFieldsFilter returns a KeyFilter that filters out standard ECDSA fields.
 func ECDSAStandardFieldsFilter() KeyFilter {
 	return ecdsaStandardFields
+}
+
+func init() {
+	registry.Register(jwa.EC().String(), registry.Constructor{
+		Public:  func() any { return newECDSAPublicKey() },
+		Private: func() any { return newECDSAPrivateKey() },
+	})
 }

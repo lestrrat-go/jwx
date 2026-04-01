@@ -18,6 +18,10 @@ import (
 func Verify(key any, alg string, payload, signature []byte) error {
 	dsigAlg, ok := getDsigAlgorithm(alg)
 	if !ok {
+		// Check extension algorithms (e.g. Ed448 from separate module)
+		if fn, ok := extVerifyFns[alg]; ok {
+			return fn(key, payload, signature)
+		}
 		return fmt.Errorf(`jwsbb.Verify: unsupported signature algorithm %q`, alg)
 	}
 
@@ -87,6 +91,8 @@ func dispatchECDSAVerify(key any, dsigAlg string, payload, signature []byte) err
 }
 
 func dispatchEdDSAVerify(key any, jwsAlg, dsigAlg string, payload, signature []byte) error {
+	// Note: Extension algorithms (e.g. Ed448) are handled in Verify() before this function is called.
+
 	// Try crypto.Signer first (dsig can handle it directly)
 	if signer, ok := key.(crypto.Signer); ok {
 		// Verify it's an EdDSA key

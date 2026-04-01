@@ -32,6 +32,11 @@ func TestLegacySignatureSign(t *testing.T) {
 				// Skip alg=none
 				continue
 			}
+			if sig == jwa.EdDSAEd448() {
+				// Ed448 requires the jwx_ed448 build tag and uses
+				// circl, not the legacy signer path.
+				continue
+			}
 			signer, err := NewSigner(sig)
 			require.NoError(t, err, "NewSigner should succeed")
 			require.NotNil(t, signer, "NewSigner should return a valid signer")

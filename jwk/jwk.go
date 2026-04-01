@@ -19,7 +19,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 )
 
-var registry = json.NewRegistry()
+var fieldRegistry = json.NewRegistry()
 
 func bigIntToBytes(n *big.Int) ([]byte, error) {
 	if n == nil {
@@ -574,7 +574,7 @@ type CustomDecodeFunc = json.CustomDecodeFunc
 // that wraps your desired type (in this case `time.Time`) and implement
 // MarshalJSON and UnmashalJSON.
 func RegisterCustomField(name string, object any) {
-	registry.Register(name, object)
+	fieldRegistry.Register(name, object)
 }
 
 // Equal compares two keys and returns true if they are equal. The comparison

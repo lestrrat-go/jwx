@@ -23,6 +23,10 @@ import (
 func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
 	dsigAlg, ok := getDsigAlgorithm(alg)
 	if !ok {
+		// Check extension algorithms (e.g. Ed448 from separate module)
+		if fn, ok := extSignFns[alg]; ok {
+			return fn(key, payload)
+		}
 		return nil, fmt.Errorf(`jwsbb.Sign: unsupported signature algorithm %q`, alg)
 	}
 
@@ -92,6 +96,8 @@ func dispatchECDSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([
 }
 
 func dispatchEdDSASign(key any, jwsAlg, dsigAlg string, payload []byte, rr io.Reader) ([]byte, error) {
+	// Note: Extension algorithms (e.g. Ed448) are handled in Sign() before this function is called.
+
 	// Try crypto.Signer first (dsig can handle it directly)
 	if signer, ok := key.(crypto.Signer); ok {
 		// Verify it's an EdDSA key
