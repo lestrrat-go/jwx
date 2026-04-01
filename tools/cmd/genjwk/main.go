@@ -159,6 +159,34 @@ func generateKeyType(kt *KeyType, stdFields codegen.FieldList) error {
 		return fmt.Errorf(`failed to generate StandardFieldsFilter for %s: %w`, kt.Prefix, err)
 	}
 
+	// Generate init() to register key constructors in the internal registry.
+	// This allows jwk/jwkunsafe to create empty keys of any type.
+	o.LL("func init() {")
+	var publicIfName, privateIfName string
+	for _, obj := range kt.Objects {
+		ifName := kt.Prefix + obj.Name(true)
+		if v := obj.String(`interface`); v != "" {
+			ifName = v
+		}
+		switch obj.Name(false) {
+		case "publicKey":
+			publicIfName = ifName
+		case "privateKey":
+			privateIfName = ifName
+		case "symmetricKey":
+			privateIfName = ifName
+		}
+	}
+	o.L("registry.Register(%s.String(), registry.Constructor{", kt.KeyType)
+	if publicIfName != "" {
+		o.L("Public: func() any { return new%s() },", publicIfName)
+	}
+	if privateIfName != "" {
+		o.L("Private: func() any { return new%s() },", privateIfName)
+	}
+	o.L("})")
+	o.L("}")
+
 	if err := o.WriteFile(kt.Filename, codegen.WithFormatCode(true)); err != nil {
 		if cfe, ok := err.(codegen.CodeFormatError); ok {
 			fmt.Fprint(os.Stderr, cfe.Source())
@@ -596,7 +624,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("}")
 	o.L("}")
 
-	o.L("decoded, err := registry.Decode(dec, tok)")
+	o.L("decoded, err := fieldRegistry.Decode(dec, tok)")
 	o.L("if err == nil {")
 	o.L("h.setNoLock(tok, decoded)")
 	o.L("continue")

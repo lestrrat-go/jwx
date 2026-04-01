@@ -17,22 +17,24 @@ var builtinSignatureAlgorithm = map[string]struct{}{}
 
 func init() {
 	// builtin values for SignatureAlgorithm
-	algorithms := make([]SignatureAlgorithm, 15)
+	algorithms := make([]SignatureAlgorithm, 17)
 	algorithms[0] = NewSignatureAlgorithm("ES256")
 	algorithms[1] = NewSignatureAlgorithm("ES256K")
 	algorithms[2] = NewSignatureAlgorithm("ES384")
 	algorithms[3] = NewSignatureAlgorithm("ES512")
-	algorithms[4] = NewSignatureAlgorithm("EdDSA")
-	algorithms[5] = NewSignatureAlgorithm("HS256", WithIsSymmetric(true))
-	algorithms[6] = NewSignatureAlgorithm("HS384", WithIsSymmetric(true))
-	algorithms[7] = NewSignatureAlgorithm("HS512", WithIsSymmetric(true))
-	algorithms[8] = NewSignatureAlgorithm("none")
-	algorithms[9] = NewSignatureAlgorithm("PS256")
-	algorithms[10] = NewSignatureAlgorithm("PS384")
-	algorithms[11] = NewSignatureAlgorithm("PS512")
-	algorithms[12] = NewSignatureAlgorithm("RS256")
-	algorithms[13] = NewSignatureAlgorithm("RS384")
-	algorithms[14] = NewSignatureAlgorithm("RS512")
+	algorithms[4] = NewSignatureAlgorithm("EdDSA", WithDeprecated(true))
+	algorithms[5] = NewSignatureAlgorithm("Ed25519")
+	algorithms[6] = NewSignatureAlgorithm("Ed448")
+	algorithms[7] = NewSignatureAlgorithm("HS256", WithIsSymmetric(true))
+	algorithms[8] = NewSignatureAlgorithm("HS384", WithIsSymmetric(true))
+	algorithms[9] = NewSignatureAlgorithm("HS512", WithIsSymmetric(true))
+	algorithms[10] = NewSignatureAlgorithm("none")
+	algorithms[11] = NewSignatureAlgorithm("PS256")
+	algorithms[12] = NewSignatureAlgorithm("PS384")
+	algorithms[13] = NewSignatureAlgorithm("PS512")
+	algorithms[14] = NewSignatureAlgorithm("RS256")
+	algorithms[15] = NewSignatureAlgorithm("RS384")
+	algorithms[16] = NewSignatureAlgorithm("RS512")
 
 	RegisterSignatureAlgorithm(algorithms...)
 }
@@ -57,9 +59,19 @@ func ES512() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("ES512")
 }
 
-// EdDSA returns an object representing EdDSA signature algorithms.
+// EdDSA returns an object representing EdDSA signature algorithms (deprecated by RFC 9864, use EdDSAEd25519 or EdDSAEd448).
 func EdDSA() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("EdDSA")
+}
+
+// EdDSAEd25519 returns an object representing EdDSA signature algorithm using Ed25519 (RFC 9864). The function name is tentative and may change in future releases.
+func EdDSAEd25519() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("Ed25519")
+}
+
+// EdDSAEd448 returns an object representing EdDSA signature algorithm using Ed448 (RFC 9864). The function name is tentative and may change in future releases.
+func EdDSAEd448() SignatureAlgorithm {
+	return lookupBuiltinSignatureAlgorithm("Ed448")
 }
 
 // HS256 returns an object representing HMAC signature algorithm using SHA-256.

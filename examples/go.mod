@@ -6,6 +6,7 @@ require (
 	github.com/cloudflare/circl v1.6.3
 	github.com/emmansun/gmsm v0.41.1
 	github.com/lestrrat-go/httprc/v3 v3.0.5
+	github.com/lestrrat-go/jwx-circl-ed448 v0.0.0
 	github.com/lestrrat-go/jwx/v3 v3.0.0
 )
 

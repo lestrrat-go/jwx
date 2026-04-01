@@ -538,19 +538,23 @@ func init() {
 	rawKeyToKeyType[reflect.TypeFor[ecdsa.PublicKey]()] = jwa.EC()
 	rawKeyToKeyType[reflect.TypeFor[*ecdsa.PublicKey]()] = jwa.EC()
 
-	addAlgorithmForKeyType(jwa.OKP(), jwa.EdDSA())
+	RegisterAlgorithmForKeyType(jwa.OKP(), jwa.EdDSA())
+	RegisterAlgorithmForKeyType(jwa.OKP(), jwa.EdDSAEd25519())
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()} {
-		addAlgorithmForKeyType(jwa.OctetSeq(), alg)
+		RegisterAlgorithmForKeyType(jwa.OctetSeq(), alg)
 	}
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()} {
-		addAlgorithmForKeyType(jwa.RSA(), alg)
+		RegisterAlgorithmForKeyType(jwa.RSA(), alg)
 	}
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()} {
-		addAlgorithmForKeyType(jwa.EC(), alg)
+		RegisterAlgorithmForKeyType(jwa.EC(), alg)
 	}
 }
 
-func addAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) {
+// RegisterAlgorithmForKeyType registers an additional algorithm as valid for
+// the given key type. This is used internally by init() and can also be called
+// from external modules that provide support for additional algorithms (e.g. Ed448).
+func RegisterAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) {
 	keyTypeToAlgorithms[kty] = append(keyTypeToAlgorithms[kty], alg)
 }
 

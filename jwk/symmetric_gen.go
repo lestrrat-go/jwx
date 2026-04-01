@@ -15,6 +15,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwk/internal/registry"
 )
 
 const (
@@ -476,7 +477,7 @@ LOOP:
 						}
 					}
 				}
-				decoded, err := registry.Decode(dec, tok)
+				decoded, err := fieldRegistry.Decode(dec, tok)
 				if err == nil {
 					h.setNoLock(tok, decoded)
 					continue
@@ -617,4 +618,10 @@ func init() {
 // SymmetricStandardFieldsFilter returns a KeyFilter that filters out standard Symmetric fields.
 func SymmetricStandardFieldsFilter() KeyFilter {
 	return symmetricStandardFields
+}
+
+func init() {
+	registry.Register(jwa.OctetSeq().String(), registry.Constructor{
+		Private: func() any { return newSymmetricKey() },
+	})
 }

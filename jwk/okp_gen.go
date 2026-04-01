@@ -15,6 +15,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwk/internal/registry"
 )
 
 const (
@@ -516,7 +517,7 @@ LOOP:
 						}
 					}
 				}
-				decoded, err := registry.Decode(dec, tok)
+				decoded, err := fieldRegistry.Decode(dec, tok)
 				if err == nil {
 					h.setNoLock(tok, decoded)
 					continue
@@ -1183,7 +1184,7 @@ LOOP:
 						}
 					}
 				}
-				decoded, err := registry.Decode(dec, tok)
+				decoded, err := fieldRegistry.Decode(dec, tok)
 				if err == nil {
 					h.setNoLock(tok, decoded)
 					continue
@@ -1344,4 +1345,11 @@ func init() {
 // OKPStandardFieldsFilter returns a KeyFilter that filters out standard OKP fields.
 func OKPStandardFieldsFilter() KeyFilter {
 	return okpStandardFields
+}
+
+func init() {
+	registry.Register(jwa.OKP().String(), registry.Constructor{
+		Public:  func() any { return newOKPPublicKey() },
+		Private: func() any { return newOKPPrivateKey() },
+	})
 }

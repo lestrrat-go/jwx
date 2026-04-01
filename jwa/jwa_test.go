@@ -22,6 +22,43 @@ func TestSanity(t *testing.T) {
 	require.True(t, ok, `converting k2 to jws.KeyEncryptionAlgorithm should succeed`)
 }
 
+func TestRFC9864(t *testing.T) {
+	t.Parallel()
+
+	t.Run("EdDSA is deprecated", func(t *testing.T) {
+		t.Parallel()
+		require.True(t, jwa.EdDSA().IsDeprecated(), `EdDSA should be deprecated`)
+	})
+	t.Run("EdDSAEd25519 is not deprecated", func(t *testing.T) {
+		t.Parallel()
+		require.False(t, jwa.EdDSAEd25519().IsDeprecated(), `EdDSAEd25519 should not be deprecated`)
+	})
+	t.Run("EdDSAEd448 is not deprecated", func(t *testing.T) {
+		t.Parallel()
+		require.False(t, jwa.EdDSAEd448().IsDeprecated(), `EdDSAEd448 should not be deprecated`)
+	})
+	t.Run("EdDSAEd25519 string value", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "Ed25519", jwa.EdDSAEd25519().String(), `EdDSAEd25519 should have string value Ed25519`)
+	})
+	t.Run("EdDSAEd448 string value", func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "Ed448", jwa.EdDSAEd448().String(), `EdDSAEd448 should have string value Ed448`)
+	})
+	t.Run("LookupSignatureAlgorithm for Ed25519", func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupSignatureAlgorithm("Ed25519")
+		require.True(t, ok, `LookupSignatureAlgorithm("Ed25519") should succeed`)
+		require.Equal(t, jwa.EdDSAEd25519(), v)
+	})
+	t.Run("LookupEllipticCurveAlgorithm for Ed25519 still works", func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupEllipticCurveAlgorithm("Ed25519")
+		require.True(t, ok, `LookupEllipticCurveAlgorithm("Ed25519") should still succeed`)
+		require.Equal(t, jwa.Ed25519(), v)
+	})
+}
+
 func TestKeyAlgorithmFrom(t *testing.T) {
 	testcases := []struct {
 		Input any

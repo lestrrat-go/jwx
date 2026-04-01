@@ -392,12 +392,52 @@ func TestRoundtrip(t *testing.T) {
 			// "Verify(*ed25519.Public())": &pubkey,
 			"Verify(jwk.Key)": jwkKey,
 		}
-		for _, alg := range []jwa.SignatureAlgorithm{jwa.EdDSA()} {
+		for _, alg := range []jwa.SignatureAlgorithm{jwa.EdDSA(), jwa.EdDSAEd25519()} {
 			t.Run(alg.String(), func(t *testing.T) {
 				t.Parallel()
 				testRoundtrip(t, payload, alg, key, keys)
 			})
 		}
+	})
+}
+
+func TestRFC9864CrossAlgorithmVerify(t *testing.T) {
+	t.Parallel()
+
+	key, err := jwxtest.GenerateEd25519Key()
+	require.NoError(t, err, "ed25519 key generated")
+
+	payload := []byte("RFC 9864 cross-algorithm test")
+
+	t.Run("sign with EdDSAEd25519, verify with EdDSA", func(t *testing.T) {
+		t.Parallel()
+		signed, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), key))
+		require.NoError(t, err, "signing with EdDSAEd25519 should succeed")
+
+		// The alg header should be "Ed25519"
+		msg, err := jws.Parse(signed)
+		require.NoError(t, err, "parsing should succeed")
+		sigs := msg.Signatures()
+		require.Len(t, sigs, 1)
+		alg, ok := sigs[0].ProtectedHeaders().Algorithm()
+		require.True(t, ok, "algorithm should be present")
+		require.Equal(t, jwa.EdDSAEd25519(), alg)
+
+		// Verify with EdDSA should also work (same crypto)
+		verified, err := jws.Verify(signed, jws.WithKey(jwa.EdDSA(), key.Public()))
+		require.NoError(t, err, "verifying EdDSAEd25519-signed message with EdDSA should succeed")
+		require.Equal(t, payload, verified)
+	})
+
+	t.Run("sign with EdDSA, verify with EdDSAEd25519", func(t *testing.T) {
+		t.Parallel()
+		signed, err := jws.Sign(payload, jws.WithKey(jwa.EdDSA(), key))
+		require.NoError(t, err, "signing with EdDSA should succeed")
+
+		// Verify with EdDSAEd25519 should also work (same crypto)
+		verified, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), key.Public()))
+		require.NoError(t, err, "verifying EdDSA-signed message with EdDSAEd25519 should succeed")
+		require.Equal(t, payload, verified)
 	})
 }
 
@@ -1305,12 +1345,12 @@ func TestAlgorithmsForKey(t *testing.T) {
 		{
 			Name:     "ed25519.PublicKey",
 			Key:      ed25519.PublicKey(nil),
-			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA()},
+			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA(), jwa.EdDSAEd25519()},
 		},
 		{
 			Name:     "x25519.PublicKey",
 			Key:      &ecdh.PublicKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA()},
+			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA(), jwa.EdDSAEd25519()},
 		},
 	}
 

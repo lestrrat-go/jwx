@@ -17,6 +17,10 @@
 package jwsbb
 
 import (
+	"crypto"
+	"crypto/ed25519"
+	"fmt"
+
 	"github.com/lestrrat-go/dsig"
 )
 
@@ -44,6 +48,9 @@ const (
 
 	// EdDSA algorithm
 	edDSA = "EdDSA"
+
+	// Fully-specified EdDSA algorithms (RFC 9864)
+	edDSAEd25519 = "Ed25519"
 )
 
 // Signer is a generic interface that defines the method for signing payloads.
@@ -85,10 +92,54 @@ var jwsToDsigAlgorithm = map[string]string{
 
 	// EdDSA algorithm
 	edDSA: dsig.EdDSA,
+
+	// Fully-specified EdDSA algorithms (RFC 9864)
+	edDSAEd25519: dsig.EdDSA,
 }
 
 // getDsigAlgorithm returns the dsig algorithm name for a JWS algorithm
 func getDsigAlgorithm(jwsAlg string) (string, bool) {
 	dsigAlg, ok := jwsToDsigAlgorithm[jwsAlg]
 	return dsigAlg, ok
+}
+
+// Extension algorithm registries for algorithms not handled by dsig
+// (e.g. Ed448 from a separate module). Populated via RegisterEdDSAAlgorithm.
+var extSignFns = map[string]func(any, []byte) ([]byte, error){}
+var extVerifyFns = map[string]func(any, []byte, []byte) error{}
+var extValidateCurveFns = map[string]func(any) error{}
+
+// RegisterEdDSAAlgorithm registers sign, verify, and curve validation functions
+// for a fully-specified EdDSA algorithm (e.g. "Ed448"). This is intended to be
+// called from external modules that provide the crypto implementation.
+func RegisterEdDSAAlgorithm(
+	alg string,
+	signFn func(key any, payload []byte) ([]byte, error),
+	verifyFn func(key any, payload, signature []byte) error,
+	validateCurveFn func(pub any) error,
+) {
+	extSignFns[alg] = signFn
+	extVerifyFns[alg] = verifyFn
+	extValidateCurveFns[alg] = validateCurveFn
+}
+
+// validateEdDSACurve enforces that fully-specified EdDSA algorithms (RFC 9864)
+// are only used with the correct key curve. The polymorphic "EdDSA" algorithm
+// accepts any EdDSA key without curve checks. The pub argument must be the
+// already-extracted public key (after jwk.Key unwrapping / keyconv).
+func validateEdDSACurve(jwsAlg string, pub crypto.PublicKey) error {
+	switch jwsAlg {
+	case edDSAEd25519:
+		if _, ok := pub.(ed25519.PublicKey); !ok {
+			return fmt.Errorf(`algorithm %q requires an Ed25519 key, got %T`, jwsAlg, pub)
+		}
+	case edDSA:
+		// Polymorphic EdDSA: no curve restriction
+	default:
+		if fn, ok := extValidateCurveFns[jwsAlg]; ok {
+			return fn(pub)
+		}
+		return fmt.Errorf(`unsupported fully-specified EdDSA algorithm %q`, jwsAlg)
+	}
+	return nil
 }
