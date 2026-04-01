@@ -17,6 +17,10 @@
 package jwsbb
 
 import (
+	"crypto"
+	"crypto/ed25519"
+	"fmt"
+
 	"github.com/lestrrat-go/dsig"
 )
 
@@ -97,4 +101,24 @@ var jwsToDsigAlgorithm = map[string]string{
 func getDsigAlgorithm(jwsAlg string) (string, bool) {
 	dsigAlg, ok := jwsToDsigAlgorithm[jwsAlg]
 	return dsigAlg, ok
+}
+
+// validateEdDSACurve enforces that fully-specified EdDSA algorithms (RFC 9864)
+// are only used with the correct key curve. The polymorphic "EdDSA" algorithm
+// accepts any EdDSA key without curve checks. The pub argument must be the
+// already-extracted public key (after jwk.Key unwrapping / keyconv).
+func validateEdDSACurve(jwsAlg string, pub crypto.PublicKey) error {
+	switch jwsAlg {
+	case edDSAEd25519:
+		if _, ok := pub.(ed25519.PublicKey); !ok {
+			return fmt.Errorf(`algorithm %q requires an Ed25519 key, got %T`, jwsAlg, pub)
+		}
+	case edDSA:
+		// Polymorphic EdDSA: no curve restriction
+	default:
+		// Unknown fully-specified EdDSA algorithm (e.g. Ed448): reject
+		// until the corresponding key type is supported
+		return fmt.Errorf(`unsupported fully-specified EdDSA algorithm %q`, jwsAlg)
+	}
+	return nil
 }
