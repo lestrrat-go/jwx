@@ -22,6 +22,7 @@ import (
 // A converter that converts from a `jwk.Key` to a raw key is called a KeyExporter.
 
 var keyImporters = make(map[reflect.Type]KeyImporter)
+
 // KeyKind identifies a key for exporter dispatch. Built-in key types
 // use the key type string (e.g. "RSA", "EC", "OKP", "oct"). Keys that
 // implement KeyKinder can return a more specific identity
