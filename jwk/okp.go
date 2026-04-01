@@ -14,8 +14,18 @@ import (
 )
 
 func init() {
-	RegisterKeyExporter(jwa.OKP(), KeyExportFunc(okpJWKToRaw))
+	RegisterKeyExporter(KeyKind(jwa.OKP().String()), KeyExportFunc(okpJWKToRaw))
 }
+
+func okpKeyKind(crv func() (jwa.EllipticCurveAlgorithm, bool)) KeyKind {
+	if c, ok := crv(); ok {
+		return KeyKind(jwa.OKP().String() + ":" + c.String())
+	}
+	return KeyKind(jwa.OKP().String())
+}
+
+func (k *okpPublicKey) KeyKind() KeyKind  { return okpKeyKind(k.Crv) }
+func (k *okpPrivateKey) KeyKind() KeyKind { return okpKeyKind(k.Crv) }
 
 // Mental note:
 //
@@ -97,21 +107,6 @@ func (k *okpPrivateKey) Import(rawKeyIf any) error {
 	return nil
 }
 
-// OKPCurveBuilder provides curve-specific key construction for OKP keys.
-// External modules (e.g. github.com/lestrrat-go/jwx-circl-ed448) register
-// additional curves via RegisterOKPCurveBuilder.
-type OKPCurveBuilder struct {
-	BuildPublicKey  func(xbuf []byte) (any, error)
-	BuildPrivateKey func(xbuf, dbuf []byte) (any, error)
-}
-
-var okpCurveBuilders = map[jwa.EllipticCurveAlgorithm]OKPCurveBuilder{}
-
-// RegisterOKPCurveBuilder registers curve-specific key builders for OKP keys.
-func RegisterOKPCurveBuilder(alg jwa.EllipticCurveAlgorithm, b OKPCurveBuilder) {
-	okpCurveBuilders[alg] = b
-}
-
 // OKPRawKeyImporter tries to import a raw key as an OKP key.
 // Returns the curve, x, d (nil for public), and true if handled.
 type OKPRawKeyImporter func(key any) (crv jwa.EllipticCurveAlgorithm, x, d []byte, ok bool)
@@ -134,9 +129,6 @@ func buildOKPPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte) (any, error)
 		}
 		return ret, nil
 	default:
-		if b, ok := okpCurveBuilders[alg]; ok {
-			return b.BuildPublicKey(xbuf)
-		}
 		return nil, fmt.Errorf(`invalid curve algorithm %s`, alg)
 	}
 }
@@ -184,9 +176,6 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 		}
 		return ret, nil
 	default:
-		if b, ok := okpCurveBuilders[alg]; ok {
-			return b.BuildPrivateKey(xbuf, dbuf)
-		}
 		return nil, fmt.Errorf(`invalid curve algorithm %s`, alg)
 	}
 }
