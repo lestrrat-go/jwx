@@ -1361,6 +1361,7 @@ func TestAlgorithmsForKey(t *testing.T) {
 			}
 		}
 
+
 		sort.Slice(tc.Expected, func(i, j int) bool {
 			return tc.Expected[i].String() < tc.Expected[j].String()
 		})
