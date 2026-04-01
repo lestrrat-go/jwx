@@ -11,6 +11,13 @@ v3.0.14 UNRELEASED
     per the RFC type definitions (StringOrURI) rather than a security fix —
     legitimate token issuers do not emit null for these claims. (#1484)
 
+  * [jwa] Add fully-specified EdDSA signature algorithms `Ed25519` and `Ed448` per
+    RFC 9864. The polymorphic `EdDSA` algorithm is now marked as deprecated.
+    New Go accessors: `jwa.EdDSAEd25519()` and `jwa.EdDSAEd448()` (function names
+    are tentative and may change in future releases).
+    Note: Ed448 is registered as an algorithm identifier but is not usable for
+    signing or verification because Go's standard library does not support Ed448.
+
   * [jws] `jws.Verify()` now validates the "crit" (Critical) header parameter per
     RFC 7515 Section 4.1.11. Signatures with an empty "crit" array, standard JOSE
     header names in "crit", or "crit"-listed extensions not present in the protected
