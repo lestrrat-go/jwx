@@ -104,23 +104,20 @@ func getDsigAlgorithm(jwsAlg string) (string, bool) {
 }
 
 // Extension algorithm registries for algorithms not handled by dsig
-// (e.g. Ed448 from a separate module). Populated via RegisterEdDSAAlgorithm.
+// (e.g. Ed448 from a separate module). Populated via RegisterAlgorithm.
 var extSignFns = map[string]func(any, []byte) ([]byte, error){}
 var extVerifyFns = map[string]func(any, []byte, []byte) error{}
-var extValidateCurveFns = map[string]func(any) error{}
 
-// RegisterEdDSAAlgorithm registers sign, verify, and curve validation functions
-// for a fully-specified EdDSA algorithm (e.g. "Ed448"). This is intended to be
-// called from external modules that provide the crypto implementation.
-func RegisterEdDSAAlgorithm(
+// RegisterAlgorithm registers sign and verify functions for an algorithm
+// not handled by the built-in dsig mapping. This is intended to be called
+// from external modules that provide the crypto implementation.
+func RegisterAlgorithm(
 	alg string,
 	signFn func(key any, payload []byte) ([]byte, error),
 	verifyFn func(key any, payload, signature []byte) error,
-	validateCurveFn func(pub any) error,
 ) {
 	extSignFns[alg] = signFn
 	extVerifyFns[alg] = verifyFn
-	extValidateCurveFns[alg] = validateCurveFn
 }
 
 // validateEdDSACurve enforces that fully-specified EdDSA algorithms (RFC 9864)
@@ -136,9 +133,6 @@ func validateEdDSACurve(jwsAlg string, pub crypto.PublicKey) error {
 	case edDSA:
 		// Polymorphic EdDSA: no curve restriction
 	default:
-		if fn, ok := extValidateCurveFns[jwsAlg]; ok {
-			return fn(pub)
-		}
 		return fmt.Errorf(`unsupported fully-specified EdDSA algorithm %q`, jwsAlg)
 	}
 	return nil
