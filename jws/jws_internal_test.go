@@ -33,8 +33,9 @@ func TestLegacySignatureSign(t *testing.T) {
 				continue
 			}
 			if sig == jwa.EdDSAEd448() {
-				// Ed448 requires the jwx_ed448 build tag and uses
-				// circl, not the legacy signer path.
+				// Ed448 uses circl via a separate module
+				// (github.com/lestrrat-go/jwx-circl-ed448),
+				// not the legacy signer path.
 				continue
 			}
 			signer, err := NewSigner(sig)
