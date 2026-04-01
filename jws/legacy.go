@@ -61,15 +61,17 @@ func enableLegacySigners() {
 		}
 	}
 
-	if err := RegisterSigner(jwa.EdDSA(), SignerFactoryFn(func() (Signer, error) {
-		return legacy.NewEdDSASigner(), nil
-	})); err != nil {
-		panic(fmt.Sprintf("RegisterSigner failed: %v", err))
-	}
-	if err := RegisterVerifier(jwa.EdDSA(), VerifierFactoryFn(func() (Verifier, error) {
-		return legacy.NewEdDSAVerifier(), nil
-	})); err != nil {
-		panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.EdDSA(), jwa.EdDSAEd25519(), jwa.EdDSAEd448()} {
+		if err := RegisterSigner(alg, SignerFactoryFn(func() (Signer, error) {
+			return legacy.NewEdDSASigner(), nil
+		})); err != nil {
+			panic(fmt.Sprintf("RegisterSigner failed: %v", err))
+		}
+		if err := RegisterVerifier(alg, VerifierFactoryFn(func() (Verifier, error) {
+			return legacy.NewEdDSAVerifier(), nil
+		})); err != nil {
+			panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
+		}
 	}
 }
 

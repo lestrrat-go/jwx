@@ -539,6 +539,7 @@ func init() {
 	rawKeyToKeyType[reflect.TypeFor[*ecdsa.PublicKey]()] = jwa.EC()
 
 	addAlgorithmForKeyType(jwa.OKP(), jwa.EdDSA())
+	addAlgorithmForKeyType(jwa.OKP(), jwa.EdDSAEd25519())
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()} {
 		addAlgorithmForKeyType(jwa.OctetSeq(), alg)
 	}

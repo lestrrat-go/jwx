@@ -44,6 +44,9 @@ const (
 
 	// EdDSA algorithm
 	edDSA = "EdDSA"
+
+	// Fully-specified EdDSA algorithms (RFC 9864)
+	edDSAEd25519 = "Ed25519"
 )
 
 // Signer is a generic interface that defines the method for signing payloads.
@@ -85,6 +88,9 @@ var jwsToDsigAlgorithm = map[string]string{
 
 	// EdDSA algorithm
 	edDSA: dsig.EdDSA,
+
+	// Fully-specified EdDSA algorithms (RFC 9864)
+	edDSAEd25519: dsig.EdDSA,
 }
 
 // getDsigAlgorithm returns the dsig algorithm name for a JWS algorithm

@@ -141,7 +141,16 @@ algorithms:
         returnval_comment: ECDSA signature algorithm using secp256k1 curve and SHA-256
       - name: EdDSA
         value: EdDSA
-        returnval_comment: EdDSA signature algorithms
+        deprecated: true
+        returnval_comment: EdDSA signature algorithms (deprecated by RFC 9864, use EdDSAEd25519 or EdDSAEd448)
+      - name: EdDSAEd25519
+        value: Ed25519
+        returnval_comment: EdDSA signature algorithm using Ed25519 (RFC 9864)
+        comment: The function name is tentative and may change in future releases.
+      - name: EdDSAEd448
+        value: Ed448
+        returnval_comment: EdDSA signature algorithm using Ed448 (RFC 9864)
+        comment: The function name is tentative and may change in future releases.
       - name: PS256
         value: PS256
         returnval_comment: RSASSA-PSS signature algorithm using SHA-256 and MGF1-SHA256
