@@ -98,7 +98,8 @@ func (k *okpPrivateKey) Import(rawKeyIf any) error {
 }
 
 // OKPCurveBuilder provides curve-specific key construction for OKP keys.
-// Build-tagged files (e.g. ed448.go) register additional curves via init().
+// External modules (e.g. github.com/lestrrat-go/jwx-circl-ed448) register
+// additional curves via RegisterOKPCurveBuilder.
 type OKPCurveBuilder struct {
 	BuildPublicKey  func(xbuf []byte) (any, error)
 	BuildPrivateKey func(xbuf, dbuf []byte) (any, error)
