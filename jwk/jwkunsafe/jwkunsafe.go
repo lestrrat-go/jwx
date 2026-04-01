@@ -1,9 +1,18 @@
 // Package jwkunsafe provides low-level JWK key construction functions.
 //
-// These functions create empty, unpopulated key objects. In most cases you
-// should use [jwk.Import] or [jwk.ParseKey] instead. This package exists
-// for extension module authors who need to register custom [jwk.KeyImporter]
-// implementations for new key types (e.g. Ed448).
+// This package exposes APIs that are not intended for general use, but are
+// necessary for advanced use cases such as external modules that add new key
+// types (e.g. Ed448  via github.com/lestrrat-go/jwx-circl-ed448).
+//
+// Function in this package return objects in incomplete state that end-users
+// should not be expected to use directly. For example, the keys returned by
+// [NewKey] and [NewPublicKey] have no fields set, and must be fully populated
+// by the caller before they can be used. Normally, end-users only receive
+// fully-populated keys via [jwk.Parse] and related functions, and never
+// need to worry about the objects keys being unusable, which is something
+// this module works very hard to ensure.
+//
+// Unless you know exactly what you are doing, you should not use this package directly.
 package jwkunsafe
 
 import (
