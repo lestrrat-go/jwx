@@ -111,22 +111,6 @@ func TestSignatureAlgorithm(t *testing.T) {
 	})
 	t.Run(`Lookup the object`, func(t *testing.T) {
 		t.Parallel()
-		v, ok := jwa.LookupSignatureAlgorithm("Ed448")
-		require.True(t, ok, `Lookup should succeed`)
-		require.Equal(t, jwa.EdDSAEd448(), v, `Lookup value should be equal to constant`)
-	})
-	t.Run(`Unmarshal the string Ed448`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("Ed448")), &dst), `UnmarshalJSON is successful`)
-		require.Equal(t, jwa.EdDSAEd448(), dst, `unmarshaled value should be equal to constant`)
-	})
-	t.Run(`stringification for Ed448`, func(t *testing.T) {
-		t.Parallel()
-		require.Equal(t, "Ed448", jwa.EdDSAEd448().String(), `stringified value matches`)
-	})
-	t.Run(`Lookup the object`, func(t *testing.T) {
-		t.Parallel()
 		v, ok := jwa.LookupSignatureAlgorithm("HS256")
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.HS256(), v, `Lookup value should be equal to constant`)
@@ -310,9 +294,6 @@ func TestSignatureAlgorithm(t *testing.T) {
 		t.Run(`EdDSAEd25519`, func(t *testing.T) {
 			require.False(t, jwa.EdDSAEd25519().IsSymmetric(), `jwa.EdDSAEd25519 returns expected value`)
 		})
-		t.Run(`EdDSAEd448`, func(t *testing.T) {
-			require.False(t, jwa.EdDSAEd448().IsSymmetric(), `jwa.EdDSAEd448 returns expected value`)
-		})
 		t.Run(`HS256`, func(t *testing.T) {
 			require.True(t, jwa.HS256().IsSymmetric(), `jwa.HS256 returns expected value`)
 		})
@@ -353,7 +334,6 @@ func TestSignatureAlgorithm(t *testing.T) {
 			jwa.ES512():        {},
 			jwa.EdDSA():        {},
 			jwa.EdDSAEd25519(): {},
-			jwa.EdDSAEd448():   {},
 			jwa.HS256():        {},
 			jwa.HS384():        {},
 			jwa.HS512():        {},

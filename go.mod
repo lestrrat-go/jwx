@@ -17,9 +17,7 @@ require (
 )
 
 require (
-	github.com/cloudflare/circl v1.6.3 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/lestrrat-go/dsig-circl-ed448 v0.0.0-20260402082439-9eb97b3a7f2e // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect

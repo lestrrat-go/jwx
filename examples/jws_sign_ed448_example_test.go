@@ -7,9 +7,9 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jws"
 
-	// Importing dsig-circl-ed448 for its side effects registers the Ed448
-	// algorithm with dsig, making it available to jws.Sign and jws.Verify.
-	_ "github.com/lestrrat-go/dsig-circl-ed448"
+	// Importing jwx-circl-ed448 for its side effects registers Ed448
+	// with jwa, jws, and jwk, making it fully available for JWS operations.
+	_ "github.com/lestrrat-go/jwx-circl-ed448"
 )
 
 func Example_jws_sign_ed448() {

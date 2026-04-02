@@ -5,8 +5,8 @@ go 1.25.0
 require (
 	github.com/cloudflare/circl v1.6.3
 	github.com/emmansun/gmsm v0.41.1
-	github.com/lestrrat-go/dsig-circl-ed448 v0.0.0-20260402082439-9eb97b3a7f2e
 	github.com/lestrrat-go/httprc/v3 v3.0.5
+	github.com/lestrrat-go/jwx-circl-ed448 v0.0.0
 	github.com/lestrrat-go/jwx/v3 v3.0.0
 )
 
@@ -16,6 +16,7 @@ require (
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
 	github.com/lestrrat-go/dsig v1.0.1-0.20260402074825-c0d43bb43299 // indirect
+	github.com/lestrrat-go/dsig-circl-ed448 v0.0.0-20260402082439-9eb97b3a7f2e // indirect
 	github.com/lestrrat-go/dsig-secp256k1 v1.0.0 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
 	github.com/lestrrat-go/option/v2 v2.0.0 // indirect
