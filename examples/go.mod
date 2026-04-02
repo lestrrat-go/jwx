@@ -6,8 +6,8 @@ require (
 	github.com/cloudflare/circl v1.6.3
 	github.com/emmansun/gmsm v0.41.1
 	github.com/lestrrat-go/httprc/v3 v3.0.5
-	github.com/lestrrat-go/jwx-circl-ed448 v0.0.0-20260402121447-cedb65399532
-	github.com/lestrrat-go/jwx/v3 v3.0.14-0.20260402121309-3637fea80189
+	github.com/lestrrat-go/jwx-circl-ed448 v0.0.0-20260402235158-570c11e70454
+	github.com/lestrrat-go/jwx/v3 v3.0.14-0.20260402234301-4ae43ddee427
 )
 
 require (
