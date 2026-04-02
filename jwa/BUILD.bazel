@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "compression_gen.go",
         "content_encryption_gen.go",
+        "ed448.go",
         "elliptic_gen.go",
         "jwa.go",
         "key_encryption_gen.go",
