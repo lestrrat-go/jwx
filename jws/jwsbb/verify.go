@@ -19,8 +19,8 @@ func Verify(key any, alg string, payload, signature []byte) error {
 	dsigAlg, ok := getDsigAlgorithm(alg)
 	if !ok {
 		// Check extension algorithms (e.g. Ed448 from separate module)
-		if fn, ok := extVerifyFns[alg]; ok {
-			return fn(key, payload, signature)
+		if v, ok := extVerifiers[alg]; ok {
+			return v.Verify(key, payload, signature)
 		}
 		return fmt.Errorf(`jwsbb.Verify: unsupported signature algorithm %q`, alg)
 	}

@@ -24,8 +24,8 @@ func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
 	dsigAlg, ok := getDsigAlgorithm(alg)
 	if !ok {
 		// Check extension algorithms (e.g. Ed448 from separate module)
-		if fn, ok := extSignFns[alg]; ok {
-			return fn(key, payload)
+		if s, ok := extSigners[alg]; ok {
+			return s.Sign(key, payload)
 		}
 		return nil, fmt.Errorf(`jwsbb.Sign: unsupported signature algorithm %q`, alg)
 	}

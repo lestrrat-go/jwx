@@ -105,19 +105,15 @@ func getDsigAlgorithm(jwsAlg string) (string, bool) {
 
 // Extension algorithm registries for algorithms not handled by dsig
 // (e.g. Ed448 from a separate module). Populated via RegisterAlgorithm.
-var extSignFns = map[string]func(any, []byte) ([]byte, error){}
-var extVerifyFns = map[string]func(any, []byte, []byte) error{}
+var extSigners = map[string]Signer[any]{}
+var extVerifiers = map[string]Verifier[any]{}
 
-// RegisterAlgorithm registers sign and verify functions for an algorithm
+// RegisterAlgorithm registers a signer and verifier for an algorithm
 // not handled by the built-in dsig mapping. This is intended to be called
 // from external modules that provide the crypto implementation.
-func RegisterAlgorithm(
-	alg string,
-	signFn func(key any, payload []byte) ([]byte, error),
-	verifyFn func(key any, payload, signature []byte) error,
-) {
-	extSignFns[alg] = signFn
-	extVerifyFns[alg] = verifyFn
+func RegisterAlgorithm(alg string, signer Signer[any], verifier Verifier[any]) {
+	extSigners[alg] = signer
+	extVerifiers[alg] = verifier
 }
 
 // validateEdDSACurve enforces that fully-specified EdDSA algorithms (RFC 9864)
