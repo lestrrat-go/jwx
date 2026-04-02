@@ -69,7 +69,7 @@ func (CirclEdDSASigner) Algorithm() jwa.SignatureAlgorithm {
 // function, which takes care of the constructiion. In this example, we would like to
 // tell jwsbb.Sign to construct the buffer and generate the signature using ed25519.Sign,
 // but since the function signatures do not match, we are providing an adapter
-// that implements the jwsbb.Signer interface.
+// that implements the dsig.Signer interface.
 //
 // If you need to construct the buffer yourself, you can do so by using the
 // jwsbb.SignBuffer() function in combination with the jwsbb.SignRaw() function.

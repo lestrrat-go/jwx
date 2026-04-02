@@ -104,8 +104,8 @@ The `examples/go.mod` contains:
 replace github.com/lestrrat-go/jwx/v3 v3.0.0 => ../
 ```
 
-No `go.work` file is present. When working across modules, either:
-1. Create a temporary `go.work` file
+No `go.work` file is committed. When working across modules, either:
+1. Create a temporary `go.work` file (it is .gitignored)
 2. Rely on the `replace` directives already in place
 
 ## Development Commands

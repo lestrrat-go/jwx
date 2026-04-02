@@ -18,11 +18,8 @@ import (
 func Verify(key any, alg string, payload, signature []byte) error {
 	dsigAlg, ok := getDsigAlgorithm(alg)
 	if !ok {
-		// Check extension algorithms (e.g. Ed448 from separate module)
-		if fn, ok := extVerifyFns[alg]; ok {
-			return fn(key, payload, signature)
-		}
-		return fmt.Errorf(`jwsbb.Verify: unsupported signature algorithm %q`, alg)
+		// For custom algorithms registered with dsig, JWS name = dsig name
+		dsigAlg = alg
 	}
 
 	// Get dsig algorithm info to determine key conversion strategy
@@ -40,6 +37,8 @@ func Verify(key any, alg string, payload, signature []byte) error {
 		return dispatchECDSAVerify(key, dsigAlg, payload, signature)
 	case dsig.EdDSAFamily:
 		return dispatchEdDSAVerify(key, alg, dsigAlg, payload, signature)
+	case dsig.Custom:
+		return dsig.Verify(key, dsigAlg, payload, signature)
 	default:
 		return fmt.Errorf(`jwsbb.Verify: unsupported dsig algorithm family %q`, dsigInfo.Family)
 	}

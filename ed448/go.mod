@@ -1,26 +1,24 @@
-module github.com/lestrrat-go/jwx/v3/cmd/jwx
+module github.com/lestrrat-go/jwx/v3/ed448
 
 go 1.25.0
 
 require (
-	github.com/lestrrat-go/jwx/v3 v3.0.8
-	github.com/urfave/cli/v2 v2.26.0
-	golang.org/x/crypto v0.49.0
+	github.com/cloudflare/circl v1.6.3
+	github.com/lestrrat-go/dsig-circl-ed448 v1.0.0
+	github.com/lestrrat-go/jwx/v3 v3.0.14-0.20260402121309-3637fea80189
 )
 
 require (
-	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
 	github.com/lestrrat-go/blackmagic v1.0.4 // indirect
+	github.com/lestrrat-go/dsig v1.1.0 // indirect
+	github.com/lestrrat-go/dsig-secp256k1 v1.0.0 // indirect
 	github.com/lestrrat-go/httpcc v1.0.1 // indirect
 	github.com/lestrrat-go/httprc/v3 v3.0.5 // indirect
 	github.com/lestrrat-go/option/v2 v2.0.0 // indirect
-	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/valyala/fastjson v1.6.10 // indirect
-	github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e // indirect
+	golang.org/x/crypto v0.49.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 )
-
-replace github.com/lestrrat-go/jwx/v3 v3.0.0 => ../..

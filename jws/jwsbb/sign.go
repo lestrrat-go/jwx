@@ -23,11 +23,8 @@ import (
 func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
 	dsigAlg, ok := getDsigAlgorithm(alg)
 	if !ok {
-		// Check extension algorithms (e.g. Ed448 from separate module)
-		if fn, ok := extSignFns[alg]; ok {
-			return fn(key, payload)
-		}
-		return nil, fmt.Errorf(`jwsbb.Sign: unsupported signature algorithm %q`, alg)
+		// For custom algorithms registered with dsig, JWS name = dsig name
+		dsigAlg = alg
 	}
 
 	// Get dsig algorithm info to determine key conversion strategy
@@ -45,6 +42,8 @@ func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
 		return dispatchECDSASign(key, dsigAlg, payload, rr)
 	case dsig.EdDSAFamily:
 		return dispatchEdDSASign(key, alg, dsigAlg, payload, rr)
+	case dsig.Custom:
+		return dsig.Sign(key, dsigAlg, payload, rr)
 	default:
 		return nil, fmt.Errorf(`jwsbb.Sign: unsupported dsig algorithm family %q`, dsigInfo.Family)
 	}
