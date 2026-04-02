@@ -39,7 +39,7 @@ func init() {
 	// is exactly the same type as *ecdsa.PublicKey
 	jwk.RegisterKeyImporter(&sm2.PrivateKey{}, jwk.KeyImportFunc(convertShangMiSm2))
 
-	jwk.RegisterKeyExporter(jwa.EC(), jwk.KeyExportFunc(convertJWKToShangMiSm2))
+	jwk.RegisterKeyExporter(jwk.KeyKind(jwa.EC().String()), jwk.KeyExportFunc(convertJWKToShangMiSm2))
 }
 
 func convertShangMiSm2(key any) (jwk.Key, error) {

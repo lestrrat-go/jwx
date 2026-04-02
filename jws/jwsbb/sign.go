@@ -42,6 +42,8 @@ func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
 		return dispatchECDSASign(key, dsigAlg, payload, rr)
 	case dsig.EdDSAFamily:
 		return dispatchEdDSASign(key, alg, dsigAlg, payload, rr)
+	case dsig.Custom:
+		return dsig.Sign(key, dsigAlg, payload, rr)
 	default:
 		return nil, fmt.Errorf(`jwsbb.Sign: unsupported dsig algorithm family %q`, dsigInfo.Family)
 	}

@@ -37,6 +37,8 @@ func Verify(key any, alg string, payload, signature []byte) error {
 		return dispatchECDSAVerify(key, dsigAlg, payload, signature)
 	case dsig.EdDSAFamily:
 		return dispatchEdDSAVerify(key, alg, dsigAlg, payload, signature)
+	case dsig.Custom:
+		return dsig.Verify(key, dsigAlg, payload, signature)
 	default:
 		return fmt.Errorf(`jwsbb.Verify: unsupported dsig algorithm family %q`, dsigInfo.Family)
 	}
