@@ -772,26 +772,9 @@ The `jws.RegisterSigner`/`jws.RegisterVerifier` functions shown above operate at
 
 `jwsbb.RegisterAlgorithm` accepts implementations of the `jwsbb.Signer[any]` and `jwsbb.Verifier[any]` interfaces. It must be called from `init()` (it is not concurrency-safe). Pass `nil` for either signer or verifier if only one direction is needed.
 
-```go
-// In an extension module's init():
-package ed448ext
-
-import "github.com/lestrrat-go/jwx/v3/jws/jwsbb"
-
-type ed448Signer struct{}
-func (ed448Signer) Sign(key any, payload []byte) ([]byte, error) { /* ... */ }
-
-type ed448Verifier struct{}
-func (ed448Verifier) Verify(key any, payload, signature []byte) error { /* ... */ }
-
-func init() {
-    if err := jwsbb.RegisterAlgorithm("Ed448", ed448Signer{}, ed448Verifier{}); err != nil {
-        panic(err)
-    }
-}
-```
-
 The function returns an error if the algorithm name is empty, collides with a built-in algorithm, or has already been registered. Use `jwsbb.UnregisterAlgorithm()` to remove a previously registered algorithm.
+
+For a complete working example, see [github.com/lestrrat-go/jwx-circl-ed448](https://github.com/lestrrat-go/jwx-circl-ed448).
 
 # Enabling ES256K
 
