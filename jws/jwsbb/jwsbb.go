@@ -116,10 +116,23 @@ var extVerifiers = map[string]Verifier[any]{}
 // At least one of signer or verifier must be non-nil. Pass nil for the
 // other when only one direction is needed (e.g. verify-only).
 //
+// Built-in algorithm names (e.g. "RS256", "ES256", "EdDSA") cannot be
+// registered through this function. Built-in algorithms are always
+// dispatched through the internal dsig layer, so an extension registered
+// under the same name would never be invoked — rejecting at registration
+// time prevents silent dead code. To replace the implementation of a
+// built-in algorithm, use [jws.RegisterSigner] and [jws.RegisterVerifier]
+// at the higher jws layer instead.
+//
+// Note for extension module authors: if a future version of jwx adds
+// built-in support for an algorithm that your module currently provides,
+// RegisterAlgorithm will start returning an error on upgrade. This is
+// intentional — it signals that the extension is no longer needed.
+//
 // Returns an error if:
 //   - alg is empty
 //   - alg collides with a built-in algorithm
-//   - alg is already registered (call UnregisterAlgorithm first to replace)
+//   - alg is already registered (call [UnregisterAlgorithm] first to replace)
 //   - both signer and verifier are nil
 //
 // This function is NOT concurrency-safe. It must be called during init()

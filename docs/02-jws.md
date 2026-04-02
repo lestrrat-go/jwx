@@ -772,7 +772,11 @@ The `jws.RegisterSigner`/`jws.RegisterVerifier` functions shown above operate at
 
 `jwsbb.RegisterAlgorithm` accepts implementations of the `jwsbb.Signer[any]` and `jwsbb.Verifier[any]` interfaces. It must be called from `init()` (it is not concurrency-safe). Pass `nil` for either signer or verifier if only one direction is needed.
 
-The function returns an error if the algorithm name is empty, collides with a built-in algorithm, or has already been registered. Use `jwsbb.UnregisterAlgorithm()` to remove a previously registered algorithm.
+The function returns an error if the algorithm name is empty, already registered, or collides with a built-in algorithm. Built-in names (e.g. `RS256`, `ES256`, `EdDSA`) are rejected because extensions registered under the same name would never be invoked — the built-in dsig layer always takes priority. To replace the implementation of a built-in algorithm, use `jws.RegisterSigner()`/`jws.RegisterVerifier()` at the higher `jws` layer instead.
+
+Note for extension module authors: if a future version of jwx adds built-in support for an algorithm that your module currently provides, `RegisterAlgorithm` will start returning an error on upgrade. This is intentional — it signals that the extension is no longer needed.
+
+Use `jwsbb.UnregisterAlgorithm()` to remove a previously registered algorithm.
 
 For a complete working example, see [github.com/lestrrat-go/jwx-circl-ed448](https://github.com/lestrrat-go/jwx-circl-ed448).
 
