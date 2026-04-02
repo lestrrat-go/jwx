@@ -783,7 +783,7 @@ import (
   "github.com/lestrrat-go/jwx/v3/jwk"
   "github.com/lestrrat-go/jwx/v3/jws"
 
-  _ "github.com/lestrrat-go/jwx/v3/ed448"
+  _ "github.com/lestrrat-go/jwx-circl-ed448"
 )
 
 func Example() {
