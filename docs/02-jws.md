@@ -768,15 +768,9 @@ source: [examples/jws_custom_signer_verifier_example_test.go](https://github.com
 
 ## Registering extension algorithms at the low level
 
-The `jws.RegisterSigner`/`jws.RegisterVerifier` functions shown above operate at the `jws` layer. For extension modules that provide entirely new cryptographic primitives (e.g. Ed448 from a separate Go module), there is also [`jwsbb.RegisterAlgorithm()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws/jwsbb#RegisterAlgorithm) which registers sign and verify implementations directly at the building-block layer.
+The `jws.RegisterSigner`/`jws.RegisterVerifier` functions shown above operate at the `jws` layer. For extension modules that provide entirely new cryptographic primitives (e.g. Ed448 from a separate Go module), you can register custom algorithms directly with [`dsig.RegisterAlgorithm()`](https://pkg.go.dev/github.com/lestrrat-go/dsig#RegisterAlgorithm) using the `dsig.Custom` family. The `Meta` field must implement the [`dsig.Signer`](https://pkg.go.dev/github.com/lestrrat-go/dsig#Signer) and/or [`dsig.Verifier`](https://pkg.go.dev/github.com/lestrrat-go/dsig#Verifier) interfaces.
 
-`jwsbb.RegisterAlgorithm` accepts implementations of the `jwsbb.Signer[any]` and `jwsbb.Verifier[any]` interfaces. It must be called from `init()` (it is not concurrency-safe). Pass `nil` for either signer or verifier if only one direction is needed.
-
-The function returns an error if the algorithm name is empty, already registered, or collides with a built-in algorithm. Built-in names (e.g. `RS256`, `ES256`, `EdDSA`) are rejected because extensions registered under the same name would never be invoked — the built-in dsig layer always takes priority. To replace the implementation of a built-in algorithm, use `jws.RegisterSigner()`/`jws.RegisterVerifier()` at the higher `jws` layer instead.
-
-Note for extension module authors: if a future version of jwx adds built-in support for an algorithm that your module currently provides, `RegisterAlgorithm` will start returning an error on upgrade. This is intentional — it signals that the extension is no longer needed.
-
-Use `jwsbb.UnregisterAlgorithm()` to remove a previously registered algorithm.
+Custom algorithms registered with dsig are automatically available to `jws.Sign` and `jws.Verify` — no additional jwsbb or jws registration is needed.
 
 For a complete working example, see [github.com/lestrrat-go/jwx-circl-ed448](https://github.com/lestrrat-go/jwx-circl-ed448).
 

@@ -53,20 +53,6 @@ const (
 	edDSAEd25519 = "Ed25519"
 )
 
-// Signer is a generic interface that defines the method for signing payloads.
-// The type parameter K represents the key type (e.g., []byte for HMAC keys,
-// *rsa.PrivateKey for RSA keys, *ecdsa.PrivateKey for ECDSA keys).
-type Signer[K any] interface {
-	Sign(key K, payload []byte) ([]byte, error)
-}
-
-// Verifier is a generic interface that defines the method for verifying signatures.
-// The type parameter K represents the key type (e.g., []byte for HMAC keys,
-// *rsa.PublicKey for RSA keys, *ecdsa.PublicKey for ECDSA keys).
-type Verifier[K any] interface {
-	Verify(key K, buf []byte, signature []byte) error
-}
-
 // JWS to dsig algorithm mapping
 var jwsToDsigAlgorithm = map[string]string{
 	// HMAC algorithms
@@ -101,76 +87,6 @@ var jwsToDsigAlgorithm = map[string]string{
 func getDsigAlgorithm(jwsAlg string) (string, bool) {
 	dsigAlg, ok := jwsToDsigAlgorithm[jwsAlg]
 	return dsigAlg, ok
-}
-
-// Extension algorithm registries for algorithms not handled by dsig
-// (e.g. Ed448 from a separate module). Populated via RegisterAlgorithm.
-var extSigners = map[string]Signer[any]{}
-var extVerifiers = map[string]Verifier[any]{}
-
-// RegisterAlgorithm registers a signer and/or verifier for an extension
-// algorithm not handled by the built-in dsig mapping. This is intended
-// to be called from init() in external modules that provide the crypto
-// implementation (e.g. Ed448).
-//
-// At least one of signer or verifier must be non-nil. Pass nil for the
-// other when only one direction is needed (e.g. verify-only).
-//
-// Built-in algorithm names (e.g. "RS256", "ES256", "EdDSA") cannot be
-// registered through this function. Built-in algorithms are always
-// dispatched through the internal dsig layer, so an extension registered
-// under the same name would never be invoked — rejecting at registration
-// time prevents silent dead code. To replace the implementation of a
-// built-in algorithm, use [jws.RegisterSigner] and [jws.RegisterVerifier]
-// at the higher jws layer instead.
-//
-// Note for extension module authors: if a future version of jwx adds
-// built-in support for an algorithm that your module currently provides,
-// RegisterAlgorithm will start returning an error on upgrade. This is
-// intentional — it signals that the extension is no longer needed.
-//
-// Returns an error if:
-//   - alg is empty
-//   - alg collides with a built-in algorithm
-//   - alg is already registered (call [UnregisterAlgorithm] first to replace)
-//   - both signer and verifier are nil
-//
-// This function is NOT concurrency-safe. It must be called during init()
-// or before any Sign/Verify calls.
-func RegisterAlgorithm(alg string, signer Signer[any], verifier Verifier[any]) error {
-	if alg == "" {
-		return fmt.Errorf(`jwsbb.RegisterAlgorithm: algorithm name must not be empty`)
-	}
-	if _, ok := jwsToDsigAlgorithm[alg]; ok {
-		return fmt.Errorf(`jwsbb.RegisterAlgorithm: algorithm %q is a built-in algorithm and cannot be overridden`, alg)
-	}
-	if _, ok := extSigners[alg]; ok {
-		return fmt.Errorf(`jwsbb.RegisterAlgorithm: algorithm %q is already registered`, alg)
-	}
-	if _, ok := extVerifiers[alg]; ok {
-		return fmt.Errorf(`jwsbb.RegisterAlgorithm: algorithm %q is already registered`, alg)
-	}
-	if signer == nil && verifier == nil {
-		return fmt.Errorf(`jwsbb.RegisterAlgorithm: at least one of signer or verifier must be non-nil`)
-	}
-
-	if signer != nil {
-		extSigners[alg] = signer
-	}
-	if verifier != nil {
-		extVerifiers[alg] = verifier
-	}
-	return nil
-}
-
-// UnregisterAlgorithm removes a previously registered extension algorithm.
-// It is a no-op if the algorithm was not registered.
-//
-// This function is NOT concurrency-safe. It must be called during init()
-// or before any Sign/Verify calls.
-func UnregisterAlgorithm(alg string) {
-	delete(extSigners, alg)
-	delete(extVerifiers, alg)
 }
 
 // validateEdDSACurve enforces that fully-specified EdDSA algorithms (RFC 9864)
