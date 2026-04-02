@@ -766,6 +766,33 @@ func (s LegacyCirclEdDSASignerVerifier) Verify(payload []byte, signature []byte,
 source: [examples/jws_custom_signer_verifier_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_custom_signer_verifier_example_test.go)
 <!-- END INCLUDE -->
 
+## Registering extension algorithms at the low level
+
+The `jws.RegisterSigner`/`jws.RegisterVerifier` functions shown above operate at the `jws` layer. For extension modules that provide entirely new cryptographic primitives (e.g. Ed448 from a separate Go module), there is also [`jwsbb.RegisterAlgorithm()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws/jwsbb#RegisterAlgorithm) which registers sign and verify implementations directly at the building-block layer.
+
+`jwsbb.RegisterAlgorithm` accepts implementations of the `jwsbb.Signer[any]` and `jwsbb.Verifier[any]` interfaces. It must be called from `init()` (it is not concurrency-safe). Pass `nil` for either signer or verifier if only one direction is needed.
+
+```go
+// In an extension module's init():
+package ed448ext
+
+import "github.com/lestrrat-go/jwx/v3/jws/jwsbb"
+
+type ed448Signer struct{}
+func (ed448Signer) Sign(key any, payload []byte) ([]byte, error) { /* ... */ }
+
+type ed448Verifier struct{}
+func (ed448Verifier) Verify(key any, payload, signature []byte) error { /* ... */ }
+
+func init() {
+    if err := jwsbb.RegisterAlgorithm("Ed448", ed448Signer{}, ed448Verifier{}); err != nil {
+        panic(err)
+    }
+}
+```
+
+The function returns an error if the algorithm name is empty, collides with a built-in algorithm, or has already been registered. Use `jwsbb.UnregisterAlgorithm()` to remove a previously registered algorithm.
+
 # Enabling ES256K
 
 See [Enabling Optional Signature Methods](./20-global-settings.md#enabling-optional-signature-methods)
