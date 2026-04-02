@@ -63,7 +63,7 @@ func enableLegacySigners() {
 
 	// Ed448 is intentionally excluded: the legacy EdDSA signer/verifier
 	// only supports ed25519. Ed448 is handled via the defaultSigner/defaultVerifier
-	// path which routes to jwsbb (requires github.com/lestrrat-go/dsig-circl-ed448).
+	// path which routes to jwsbb (requires github.com/lestrrat-go/jwx/v3/ed448).
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.EdDSA(), jwa.EdDSAEd25519()} {
 		if err := RegisterSigner(alg, SignerFactoryFn(func() (Signer, error) {
 			return legacy.NewEdDSASigner(), nil

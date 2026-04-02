@@ -1,0 +1,10 @@
+go 1.25.0
+
+use (
+	.
+	./bench/comparison
+	./bench/performance
+	./cmd/jwx
+	./ed448
+	./examples
+)
