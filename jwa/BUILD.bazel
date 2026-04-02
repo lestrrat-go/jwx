@@ -30,10 +30,11 @@ go_test(
         "jwa_test.go",
         "key_encryption_gen_test.go",
         "key_type_gen_test.go",
+        "options_gen_test.go",
         "signature_gen_test.go",
     ],
+    embed = [":jwa"],
     deps = [
-        ":jwa",
         "@com_github_stretchr_testify//require",
         "@com_github_lestrrat_go_option_v2//:option",
     ],
