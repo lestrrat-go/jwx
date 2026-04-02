@@ -772,7 +772,10 @@ The `jws.RegisterSigner`/`jws.RegisterVerifier` functions shown above operate at
 
 Custom algorithms registered with dsig are automatically available to `jws.Sign` and `jws.Verify` — no additional jwsbb or jws registration is needed.
 
-For a complete working example, see the `ed448/` module in this repository.
+For Ed448 specifically, import the `ed448/` module in this repository for side effects. This registers Ed448 with jwa, jws, and jwk:
+
+<!-- INCLUDE(ed448/example_test.go) -->
+<!-- END INCLUDE -->
 
 # Enabling ES256K
 
