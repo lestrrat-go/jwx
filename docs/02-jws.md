@@ -772,7 +772,7 @@ The `jws.RegisterSigner`/`jws.RegisterVerifier` functions shown above operate at
 
 Custom algorithms registered with dsig are automatically available to `jws.Sign` and `jws.Verify` — no additional jwsbb or jws registration is needed.
 
-For a complete working example, see [github.com/lestrrat-go/jwx-circl-ed448](https://github.com/lestrrat-go/jwx-circl-ed448).
+For a complete working example, see [github.com/lestrrat-go/dsig-circl-ed448](https://github.com/lestrrat-go/dsig-circl-ed448).
 
 # Enabling ES256K
 

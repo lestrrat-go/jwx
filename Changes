@@ -18,9 +18,9 @@ v3.0.14 UNRELEASED
     Ed448 signing/verification requires `github.com/cloudflare/circl` because
     Go's standard library does not support Ed448. To avoid pulling in this
     extra dependency for all users, Ed448 support is provided as a separate
-    module (`github.com/lestrrat-go/jwx-circl-ed448`). Import it for side
+    module (`github.com/lestrrat-go/dsig-circl-ed448`). Import it for side
     effects to enable Ed448:
-      import _ "github.com/lestrrat-go/jwx-circl-ed448"
+      import _ "github.com/lestrrat-go/dsig-circl-ed448"
     Without this import, Ed448 is registered as an algorithm identifier but
     will return an error at sign/verify time.
 
