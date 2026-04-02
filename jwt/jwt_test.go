@@ -563,7 +563,7 @@ func TestSignErrors(t *testing.T) {
 	_, err = jwt.Sign(tok, jwt.WithKey(jwa.NewSignatureAlgorithm("BOGUS"), priv))
 	require.Error(t, err)
 
-	require.Contains(t, err.Error(), `unsupported signature algorithm "BOGUS"`)
+	require.Contains(t, err.Error(), `dsig algorithm "BOGUS" not registered`)
 
 	_, err = jwt.Sign(tok, jwt.WithKey(jwa.ES256(), nil))
 	require.Error(t, err)
