@@ -766,13 +766,9 @@ func (s LegacyCirclEdDSASignerVerifier) Verify(payload []byte, signature []byte,
 source: [examples/jws_custom_signer_verifier_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_custom_signer_verifier_example_test.go)
 <!-- END INCLUDE -->
 
-## Registering extension algorithms at the low level
+## Enabling Ed448
 
-The `jws.RegisterSigner`/`jws.RegisterVerifier` functions shown above operate at the `jws` layer. For extension modules that provide entirely new cryptographic primitives (e.g. Ed448 from a separate Go module), you can register custom algorithms directly with [`dsig.RegisterAlgorithm()`](https://pkg.go.dev/github.com/lestrrat-go/dsig#RegisterAlgorithm) using the `dsig.Custom` family. The `Meta` field must implement the [`dsig.Signer`](https://pkg.go.dev/github.com/lestrrat-go/dsig#Signer) and/or [`dsig.Verifier`](https://pkg.go.dev/github.com/lestrrat-go/dsig#Verifier) interfaces.
-
-Custom algorithms registered with dsig are automatically available to `jws.Sign` and `jws.Verify` — no additional jwsbb or jws registration is needed.
-
-For Ed448 specifically, import the `ed448/` module in this repository for side effects. This registers Ed448 with jwa, jws, and jwk:
+Ed448 support is not included by default. Import the `ed448` module for side effects to enable it:
 
 <!-- INCLUDE(ed448/example_test.go) -->
 <!-- END INCLUDE -->
