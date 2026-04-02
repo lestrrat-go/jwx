@@ -770,7 +770,7 @@ source: [examples/jws_custom_signer_verifier_example_test.go](https://github.com
 
 Ed448 support is not included by default. Import the `ed448` module for side effects to enable it:
 
-<!-- INCLUDE(ed448/example_test.go) -->
+<!-- INCLUDE(examples/jws_sign_ed448_example_test.go) -->
 ```go
 package ed448_test
 
@@ -856,7 +856,7 @@ func Example() {
   // Hello, Ed448!
 }
 ```
-source: [ed448/example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/ed448/example_test.go)
+source: [examples/jws_sign_ed448_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_sign_ed448_example_test.go)
 <!-- END INCLUDE -->
 
 # Enabling ES256K
