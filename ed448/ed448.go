@@ -1,17 +1,25 @@
-// Package ed448 provides Ed448 signing, verification, and JWK support for the jwx library.
+// Package ed448 is a companion module for github.com/lestrrat-go/jwx/v3 that
+// provides Ed448 signing, verification, and JWK support.
+//
+// This module exists solely to bridge github.com/lestrrat-go/dsig-circl-ed448
+// (which provides the cryptographic primitives) with jwx's registration system
+// (jwa, jws, jwk). It has no public API of its own — it is only meant to be
+// imported for side effects. As a companion module, it does not carry
+// independent API stability guarantees; its versioning follows the needs of
+// the parent jwx module, and breaking changes may occur in any release if
+// the jwx registration interfaces change.
 //
 // Ed448 is not included in the main jwx module because Go's standard library
 // does not support Ed448, requiring the external github.com/cloudflare/circl
-// module. To avoid adding this dependency for all users, Ed448 support is
-// provided as a separate module.
+// dependency. To avoid pulling this in for all users, Ed448 support is
+// provided as this separate, opt-in module.
 //
 // To enable Ed448 support, import this package for its side effects:
 //
 //	import _ "github.com/lestrrat-go/jwx/v3/ed448"
 //
-// This registers Ed448 signing/verification (via dsig-circl-ed448), JWK key
-// import/export, and algorithm-for-key-type mappings. After importing,
-// jwa.EdDSAEd448() can be used with jws.Sign, jws.Verify, jwk.Import, etc.
+// After importing, jwa.EdDSAEd448() can be used with jws.Sign, jws.Verify,
+// jwk.Import, and related functions.
 package ed448
 
 import (
