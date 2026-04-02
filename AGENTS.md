@@ -99,20 +99,14 @@ This repository contains multiple Go modules. The nested modules use `replace` d
 
 ### Local Development
 
-A `go.work` file is present at the repo root, linking all nested modules:
-
-```
-use (
-    .
-    ./ed448
-    ./examples
-    ./cmd/jwx
-    ./bench/performance
-    ./bench/comparison
-)
+The `examples/go.mod` contains:
+```go
+replace github.com/lestrrat-go/jwx/v3 v3.0.0 => ../
 ```
 
-This eliminates the need for `replace` directives in most nested modules.
+No `go.work` file is committed. When working across modules, either:
+1. Create a temporary `go.work` file (it is .gitignored)
+2. Rely on the `replace` directives already in place
 
 ## Development Commands
 
