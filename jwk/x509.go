@@ -154,7 +154,7 @@ func (f X509DecodeFunc) DecodeX509(dst any, block *pem.Block) error {
 	return f(dst, block)
 }
 
-var muX509Decoders sync.Mutex
+var muX509Decoders sync.RWMutex
 var x509Decoders = map[any]int{}
 var x509DecoderList = []X509Decoder{}
 
@@ -222,8 +222,12 @@ func decodeX509(dst any, src []byte) error {
 		return fmt.Errorf(`failed to decode PEM data`)
 	}
 
+	muX509Decoders.RLock()
+	decoders := x509DecoderList
+	muX509Decoders.RUnlock()
+
 	var errs []error
-	for _, d := range x509DecoderList {
+	for _, d := range decoders {
 		if err := d.DecodeX509(dst, block); err != nil {
 			errs = append(errs, err)
 			continue
