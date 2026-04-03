@@ -34,6 +34,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"sync"
 	"unicode"
 	"unicode/utf8"
@@ -558,10 +559,8 @@ func RegisterAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) {
 // This function is append-only and deduplicates entries, so builtin
 // registrations cannot be overwritten by external modules.
 func RegisterAlgorithmForCurve(crv jwa.EllipticCurveAlgorithm, alg jwa.SignatureAlgorithm) {
-	for _, existing := range curveToAlgorithms[crv] {
-		if existing == alg {
-			return
-		}
+	if slices.Contains(curveToAlgorithms[crv], alg) {
+		return
 	}
 	curveToAlgorithms[crv] = append(curveToAlgorithms[crv], alg)
 }
@@ -654,10 +653,8 @@ func filterAlgorithmsForCurve(ktyAlgs, crvAlgs []jwa.SignatureAlgorithm) []jwa.S
 
 func isRegisteredUnderAnyCurve(alg jwa.SignatureAlgorithm) bool {
 	for _, algs := range curveToAlgorithms {
-		for _, a := range algs {
-			if a == alg {
-				return true
-			}
+		if slices.Contains(algs, alg) {
+			return true
 		}
 	}
 	return false
