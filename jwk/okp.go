@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 )
@@ -131,27 +130,6 @@ func buildOKPPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte) (any, error)
 	default:
 		return nil, fmt.Errorf(`invalid curve algorithm %s`, alg)
 	}
-}
-
-// Raw returns the EC-DSA public key represented by this JWK
-func (k *okpPublicKey) Raw(v any) error {
-	k.mu.RLock()
-	defer k.mu.RUnlock()
-
-	crv, ok := k.Crv()
-	if !ok {
-		return fmt.Errorf(`missing "crv" field`)
-	}
-
-	pubk, err := buildOKPPublicKey(crv, k.x)
-	if err != nil {
-		return fmt.Errorf(`jwk.OKPPublicKey: failed to build public key: %w`, err)
-	}
-
-	if err := blackmagic.AssignIfCompatible(v, pubk); err != nil {
-		return fmt.Errorf(`jwk.OKPPublicKey: failed to assign to destination variable: %w`, err)
-	}
-	return nil
 }
 
 func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte) (any, error) {
