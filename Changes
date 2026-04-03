@@ -35,10 +35,18 @@ v3.0.14 UNRELEASED
   * [jws/jwsbb] Add `jwsbb.RegisterAlgorithm()` for external modules to
     register custom algorithm implementations (e.g. Ed448).
 
-  * [jws] `jws.Verify()` now validates the "crit" (Critical) header parameter per
-    RFC 7515 Section 4.1.11. Signatures with an empty "crit" array, standard JOSE
-    header names in "crit", or "crit"-listed extensions not present in the protected
-    header are now rejected.
+  * [jws] `jws.Verify()` and `jws.VerifyCompactFast()` now validate the "crit"
+    (Critical) header parameter per RFC 7515 Section 4.1.11. Signatures with an
+    empty "crit" array, standard JOSE header names in "crit", or "crit"-listed
+    extensions not present in the protected header are now rejected.
+
+  * [jws] Fixed probe field name in panic message. (#1597)
+
+  * [jws] Use standard Go deprecation markers for deprecated functions. (#1596)
+
+  * [jwk] Fixed inverted rlocker condition in RSA key export. (#1576)
+
+  * [jwe] Fixed typo in `jwe.Decrypt` error message. (#1577)
 
   * [jwe] Fixed X25519 ECDH-ES key agreement to include `apu` and `apv` parameters
     in the Concat KDF derivation, matching the ECDSA path. Previously these values
