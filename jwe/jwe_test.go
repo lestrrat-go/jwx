@@ -894,6 +894,46 @@ func TestMinPBES2Count(t *testing.T) {
 	})
 }
 
+func TestPBES2CountPerCall(t *testing.T) {
+	password := []byte(`supersecret`)
+	key, err := jwk.Import(password)
+	require.NoError(t, err, `jwk.Import should succeed`)
+
+	payload := []byte(`hello world`)
+	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	t.Run("per-call max rejects high p2c", func(t *testing.T) {
+		// Default p2c is 10000. Set per-call max to 100 — should fail.
+		_, err := jwe.Decrypt(encrypted,
+			jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+			jwe.WithMaxPBES2Count(100),
+		)
+		require.Error(t, err, `jwe.Decrypt should fail when p2c exceeds per-call max`)
+	})
+	t.Run("per-call min rejects low p2c", func(t *testing.T) {
+		// Default p2c is 10000. Set per-call min to 20000 — should fail.
+		_, err := jwe.Decrypt(encrypted,
+			jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+			jwe.WithMinPBES2Count(20000),
+		)
+		require.Error(t, err, `jwe.Decrypt should fail when p2c is below per-call min`)
+	})
+	t.Run("per-call override does not affect global", func(t *testing.T) {
+		// Use restrictive per-call setting, then verify default still works.
+		_, err := jwe.Decrypt(encrypted,
+			jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+			jwe.WithMaxPBES2Count(100),
+		)
+		require.Error(t, err, `jwe.Decrypt should fail with restrictive per-call max`)
+
+		// Without per-call override, should succeed with global defaults.
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.NoError(t, err, `jwe.Decrypt should succeed with global defaults`)
+		require.Equal(t, payload, decrypted, `decrypted payload should match`)
+	})
+}
+
 func TestCBCBufferSize(t *testing.T) {
 	// NOTE: This has GLOBAL EFFECT
 	jwe.Settings(jwe.WithCBCBufferSize(1))
