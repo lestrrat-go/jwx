@@ -28,6 +28,11 @@ func bigIntToBytes(n *big.Int) ([]byte, error) {
 	return n.Bytes(), nil
 }
 
+// maxPEMKeys is the maximum number of PEM blocks that Parse() will
+// decode from a single input. This prevents resource exhaustion from
+// inputs containing thousands of small PEM blocks.
+const maxPEMKeys = 1000
+
 func init() {
 	if err := RegisterProbeField(reflect.StructField{
 		Name: "Kty",
@@ -332,6 +337,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			pemDecoder = NewPEMDecoder()
 		}
 		src = bytes.TrimSpace(src)
+		var keyCount int
 		for len(src) > 0 {
 			raw, rest, err := pemDecoder.Decode(src)
 			if err != nil {
@@ -343,6 +349,10 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			}
 			if err := s.AddKey(key); err != nil {
 				return nil, parseerr(`failed to add jwk.Key to set: %w`, err)
+			}
+			keyCount++
+			if keyCount > maxPEMKeys {
+				return nil, parseerr(`too many PEM blocks (max %d)`, maxPEMKeys)
 			}
 			src = bytes.TrimSpace(rest)
 		}
