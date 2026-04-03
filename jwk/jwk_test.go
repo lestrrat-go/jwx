@@ -1743,6 +1743,26 @@ func TestFetch(t *testing.T) {
 			})
 		}
 	})
+	t.Run("MaxFetchBodySize", func(t *testing.T) {
+		t.Run("ExceedsLimit", func(t *testing.T) {
+			ctx := t.Context()
+			// The test server serves `expected` which is the JSON-encoded JWKS.
+			// Set a limit smaller than the response body size.
+			_, err := jwk.Fetch(ctx, srv.URL, jwk.WithMaxFetchBodySize(10))
+			require.Error(t, err, `jwk.Fetch should fail when response exceeds max body size`)
+			require.Contains(t, err.Error(), `exceeded max size`, `error should mention exceeded max size`)
+		})
+		t.Run("WithinLimit", func(t *testing.T) {
+			ctx := t.Context()
+			// Set a limit larger than the response body size.
+			fetched, err := jwk.Fetch(ctx, srv.URL, jwk.WithMaxFetchBodySize(1<<20))
+			require.NoError(t, err, `jwk.Fetch should succeed when response is within max body size`)
+
+			got, err := json.MarshalIndent(fetched, "", "  ")
+			require.NoError(t, err, `json.MarshalIndent should succeed`)
+			require.Equal(t, expected, got, `data should match`)
+		})
+	})
 }
 
 func TestGH567(t *testing.T) {

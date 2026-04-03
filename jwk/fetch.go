@@ -7,6 +7,10 @@ import (
 	"net/http"
 )
 
+// defaultMaxFetchBodySize is the default maximum number of bytes read
+// from an HTTP response body when fetching a JWKS (10 MB).
+const defaultMaxFetchBodySize int64 = 10 * 1024 * 1024
+
 // Fetcher is an interface that represents an object that fetches a JWKS.
 // Currently this is only used in the `jws.WithVerifyAuto` option.
 //
@@ -71,6 +75,7 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 	//nolint:revive // I want to keep the type of `wl` as `Whitelist` instead of `InsecureWhitelist`
 	var wl Whitelist = InsecureWhitelist{}
 	var client HTTPClient = http.DefaultClient
+	var maxBodySize int64 = defaultMaxFetchBodySize
 	for _, option := range options {
 		if parseOpt, ok := option.(ParseOption); ok {
 			parseOptions = append(parseOptions, parseOpt)
@@ -85,6 +90,10 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 		case identFetchWhitelist{}:
 			if err := option.Value(&wl); err != nil {
 				return nil, fmt.Errorf(`failed to retrieve fetch whitelist option value: %w`, err)
+			}
+		case identMaxFetchBodySize{}:
+			if err := option.Value(&maxBodySize); err != nil {
+				return nil, fmt.Errorf(`failed to retrieve MaxFetchBodySize option value: %w`, err)
 			}
 		}
 	}
@@ -108,9 +117,12 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 		return nil, fmt.Errorf(`jwk.Fetch: request returned status %d, expected 200`, res.StatusCode)
 	}
 
-	buf, err := io.ReadAll(res.Body)
+	buf, err := io.ReadAll(io.LimitReader(res.Body, maxBodySize+1))
 	if err != nil {
 		return nil, fmt.Errorf(`jwk.Fetch: failed to read response body for %q: %w`, u, err)
+	}
+	if int64(len(buf)) > maxBodySize {
+		return nil, fmt.Errorf(`jwk.Fetch: response body for %q exceeded max size of %d bytes`, u, maxBodySize)
 	}
 
 	return Parse(buf, parseOptions...)

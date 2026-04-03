@@ -29,7 +29,7 @@ Algorithm identifiers per RFC 7518. Registry pattern with thread-safe lookup.
 JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 
 - **Parse(src []byte, ...ParseOption) (Set, error)** / **ParseKey(data []byte, ...ParseOption) (Key, error)** — parse JWK/JWKS
-- **Fetch(ctx, url, ...FetchOption) (Set, error)** — HTTP fetch with optional whitelist
+- **Fetch(ctx, url, ...FetchOption) (Set, error)** — HTTP fetch with optional whitelist, body size limit (default 10 MB via `WithMaxFetchBodySize`)
 - **Import(raw any) (Key, error)** / **Export(key Key, dst any) error** — convert between Go crypto types and JWK
 - **PublicKeyOf(v any) (Key, error)** / **PublicSetOf(v Set) (Set, error)** — extract public keys
 - **NewCache(ctx, client) (*Cache, error)** — auto-refreshing JWKS cache

@@ -81,13 +81,22 @@ type Cache struct {
 // conjection with `httprc.NewResource` to create a `httprc.Resource` object
 // to auto-update `jwk.Set` objects.
 type Transformer struct {
-	parseOptions []ParseOption
+	parseOptions     []ParseOption
+	maxFetchBodySize int64
 }
 
 func (t Transformer) Transform(_ context.Context, res *http.Response) (Set, error) {
-	buf, err := io.ReadAll(res.Body)
+	maxBodySize := t.maxFetchBodySize
+	if maxBodySize <= 0 {
+		maxBodySize = defaultMaxFetchBodySize
+	}
+
+	buf, err := io.ReadAll(io.LimitReader(res.Body, maxBodySize+1))
 	if err != nil {
 		return nil, fmt.Errorf(`failed to read response body status: %w`, err)
+	}
+	if int64(len(buf)) > maxBodySize {
+		return nil, fmt.Errorf(`response body at %q exceeded max size of %d bytes`, res.Request.URL.String(), maxBodySize)
 	}
 
 	set, err := Parse(buf, t.parseOptions...)
@@ -125,6 +134,7 @@ func NewCache(ctx context.Context, client *httprc.Client) (*Cache, error) {
 func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOption) error {
 	var parseOptions []ParseOption
 	var resourceOptions []httprc.NewResourceOption
+	var maxFetchBodySize int64
 	waitReady := true
 	for _, option := range options {
 		switch option := option.(type) {
@@ -148,12 +158,17 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 				if err := option.Value(&waitReady); err != nil {
 					return fmt.Errorf(`failed to retrieve WaitReady option value: %w`, err)
 				}
+			case identMaxFetchBodySize{}:
+				if err := option.Value(&maxFetchBodySize); err != nil {
+					return fmt.Errorf(`failed to retrieve MaxFetchBodySize option value: %w`, err)
+				}
 			}
 		}
 	}
 
 	r, err := httprc.NewResource[Set](u, &Transformer{
-		parseOptions: parseOptions,
+		parseOptions:     parseOptions,
+		maxFetchBodySize: maxFetchBodySize,
 	}, resourceOptions...)
 	if err != nil {
 		return fmt.Errorf(`failed to create httprc.Resource: %w`, err)

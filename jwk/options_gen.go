@@ -149,6 +149,7 @@ type identFetchWhitelist struct{}
 type identHTTPClient struct{}
 type identIgnoreParseError struct{}
 type identLocalRegistry struct{}
+type identMaxFetchBodySize struct{}
 type identPEM struct{}
 type identPEMDecoder struct{}
 type identStrictKeyUsage struct{}
@@ -174,6 +175,10 @@ func (identIgnoreParseError) String() string {
 
 func (identLocalRegistry) String() string {
 	return "withLocalRegistry"
+}
+
+func (identMaxFetchBodySize) String() string {
+	return "WithMaxFetchBodySize"
 }
 
 func (identPEM) String() string {
@@ -244,6 +249,15 @@ func WithIgnoreParseError(v bool) ParseOption {
 // This option is only available for internal code. Users don't get to play with it
 func withLocalRegistry(v *json.Registry) ParseOption {
 	return &parseOption{option.New(identLocalRegistry{}, v)}
+}
+
+// WithMaxFetchBodySize specifies the maximum number of bytes to read from
+// an HTTP response body when fetching a JWKS. If the response body exceeds
+// this size, the fetch returns an error. The default value is 10MB (10485760).
+//
+// This option can be passed to `jwk.Fetch()` or `(*jwk.Cache).Register()`.
+func WithMaxFetchBodySize(v int64) RegisterFetchOption {
+	return &registerFetchOption{option.New(identMaxFetchBodySize{}, v)}
 }
 
 // WithPEM specifies that the input to `Parse()` is a PEM encoded key.
