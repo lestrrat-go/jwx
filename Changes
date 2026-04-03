@@ -63,6 +63,31 @@ v3.0.14 UNRELEASED
     failed (e.g. HTTP 500 responses). Each failure killed an httprc worker goroutine,
     and after all workers were exhausted, subsequent `Refresh()` calls would block forever. (#1551)
 
+  * [jws] Add `jws.RegisterAlgorithmForCurve()` for external modules to register
+    algorithm-to-curve mappings. `jws.AlgorithmsForKey()` now filters results
+    by the key's curve when applicable. (#1620)
+
+  * [jwk] Add `jwk.WithMaxFetchBodySize()` option to limit the response body size
+    when fetching remote JWK Sets via `jwk.Fetch()` and `jwk.Cache`. (#1622)
+
+  * [jwe] Add `jwe.WithMaxPBES2Count()` and `jwe.WithMinPBES2Count()` as per-call
+    options to `jwe.Decrypt()`, allowing callers to override the global PBES2
+    iteration count limits on a per-decryption basis. (#1623)
+
+  * [jwk] `jwk.X509CertChain()` now correctly returns `false` as the second return
+    value when the certificate chain is nil. (#1624)
+
+  * [jwk] Fixed a data race in the x509 decoder registry iteration. (#1625)
+
+  * [jwk] `jwk.Parse()` now limits PEM input to 1,000 blocks maximum to prevent
+    resource exhaustion from inputs containing thousands of small PEM blocks. (#1626)
+
+  * [jwt] `jwt.Validate()` now rejects negative durations passed to
+    `jwt.WithAcceptableSkew()`. (#1627)
+
+  * [jwt/openid] `openid.Birthdate` now accepts year `0000` as a valid value per
+    the OpenID Connect Core specification. (#1628)
+
 v3.0.13 12 Jan 2026
   * [jwt] The `jwt.WithContext()` option is now properly being passed to `jws.Verify()` from
     `jwt.Parse()`.
