@@ -114,10 +114,13 @@ func (b *BirthdateClaim) Accept(v any) error {
 		// strconv.ParseInt (and strconv.ParseUint that it uses internally)
 		// only returns range errors, so we should be safe.
 		year := parseBirthdayInt(v[indices[2]:indices[3]])
-		if year <= 0 {
+		if year < 0 {
 			return fmt.Errorf(`failed to parse birthdate year`)
 		}
-		tmp.year = &year
+		if year > 0 {
+			tmp.year = &year
+		}
+		// year == 0 (i.e. "0000") means omitted per OIDC spec; leave tmp.year as nil
 
 		month := parseBirthdayInt(v[indices[4]:indices[5]])
 		if month <= 0 {
