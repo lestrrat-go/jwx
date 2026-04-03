@@ -120,7 +120,10 @@ func (h *rsaPublicKey) N() ([]byte, bool) {
 }
 
 func (h *rsaPublicKey) X509CertChain() (*cert.Chain, bool) {
-	return h.x509CertChain, true
+	if h.x509CertChain != nil {
+		return h.x509CertChain, true
+	}
+	return nil, false
 }
 
 func (h *rsaPublicKey) X509CertThumbprint() (string, bool) {
@@ -807,7 +810,10 @@ func (h *rsaPrivateKey) QI() ([]byte, bool) {
 }
 
 func (h *rsaPrivateKey) X509CertChain() (*cert.Chain, bool) {
-	return h.x509CertChain, true
+	if h.x509CertChain != nil {
+		return h.x509CertChain, true
+	}
+	return nil, false
 }
 
 func (h *rsaPrivateKey) X509CertThumbprint() (string, bool) {

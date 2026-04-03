@@ -118,7 +118,10 @@ func (h *ecdsaPublicKey) X() ([]byte, bool) {
 }
 
 func (h *ecdsaPublicKey) X509CertChain() (*cert.Chain, bool) {
-	return h.x509CertChain, true
+	if h.x509CertChain != nil {
+		return h.x509CertChain, true
+	}
+	return nil, false
 }
 
 func (h *ecdsaPublicKey) X509CertThumbprint() (string, bool) {
@@ -804,7 +807,10 @@ func (h *ecdsaPrivateKey) X() ([]byte, bool) {
 }
 
 func (h *ecdsaPrivateKey) X509CertChain() (*cert.Chain, bool) {
-	return h.x509CertChain, true
+	if h.x509CertChain != nil {
+		return h.x509CertChain, true
+	}
+	return nil, false
 }
 
 func (h *ecdsaPrivateKey) X509CertThumbprint() (string, bool) {
