@@ -561,7 +561,9 @@ func TestBirthdateClaim(t *testing.T) {
 			},
 			{
 				Source: `"0000-01-01"`,
-				Error:  true,
+				Year:   0, // year 0000 means omitted per OIDC spec
+				Month:  1,
+				Day:    1,
 			},
 			{
 				Source: `"0001-00-01"`,
