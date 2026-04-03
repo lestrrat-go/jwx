@@ -73,6 +73,9 @@ func Validate(t Token, options ...ValidateOption) error {
 			if err := o.Value(&skew); err != nil {
 				return fmt.Errorf(`jwt.Validate: value for WithAcceptableSkew() option must be time.Duration: %w`, err)
 			}
+			if skew < 0 {
+				return fmt.Errorf(`jwt.Validate: WithAcceptableSkew() must not be negative`)
+			}
 		case identTruncation{}:
 			if err := o.Value(&trunc); err != nil {
 				return fmt.Errorf(`jwt.Validate: value for WithTruncation() option must be time.Duration: %w`, err)
