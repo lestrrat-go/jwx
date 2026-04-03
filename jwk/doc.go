@@ -22,7 +22,7 @@
 //
 //	jwkKey, _ := jwk.Import(rsaPrivateKey)
 //	var rawKey *rsa.PRrivateKey
-//	jwkKey.Raw(&rawKey)
+//	jwk.Export(jwkKey, &rawKey)
 //
 // You can use them to sign/verify/encrypt/decrypt:
 //
