@@ -34,7 +34,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"reflect"
 	"sync"
 	"unicode"
 	"unicode/utf8"
@@ -527,17 +526,9 @@ func RegisterCustomField(name string, object any) {
 }
 
 // Helpers for signature verification
-var rawKeyToKeyType = make(map[reflect.Type]jwa.KeyType)
 var keyTypeToAlgorithms = make(map[jwa.KeyType][]jwa.SignatureAlgorithm)
 
 func init() {
-	rawKeyToKeyType[reflect.TypeFor[[]byte]()] = jwa.OctetSeq()
-	rawKeyToKeyType[reflect.TypeFor[ed25519.PublicKey]()] = jwa.OKP()
-	rawKeyToKeyType[reflect.TypeFor[rsa.PublicKey]()] = jwa.RSA()
-	rawKeyToKeyType[reflect.TypeFor[*rsa.PublicKey]()] = jwa.RSA()
-	rawKeyToKeyType[reflect.TypeFor[ecdsa.PublicKey]()] = jwa.EC()
-	rawKeyToKeyType[reflect.TypeFor[*ecdsa.PublicKey]()] = jwa.EC()
-
 	RegisterAlgorithmForKeyType(jwa.OKP(), jwa.EdDSA())
 	RegisterAlgorithmForKeyType(jwa.OKP(), jwa.EdDSAEd25519())
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()} {
@@ -576,7 +567,11 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 	case []byte:
 		kty = jwa.OctetSeq()
 	default:
-		return nil, fmt.Errorf(`unknown key type %T`, key)
+		imported, err := jwk.Import(key)
+		if err != nil {
+			return nil, fmt.Errorf(`unknown key type %T`, key)
+		}
+		kty = imported.KeyType()
 	}
 
 	algs, ok := keyTypeToAlgorithms[kty]
