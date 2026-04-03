@@ -53,7 +53,7 @@ JSON Web Signatures per RFC 7515. Sign, verify, parse.
 - **SplitCompact(src []byte) ([]byte, []byte, []byte, error)** — split compact JWS into parts
 - Key types: `Message`, `Signature`, `Headers`, `KeyProvider`, `KeySink`
 - Options: `WithKey()`, `WithKeySet()`, `WithVerifyAuto()`, `WithJSON()`, `WithDetachedPayload()`
-- Registration: `RegisterSigner()`, `RegisterVerifier()`, `AlgorithmsForKey()`
+- Registration: `RegisterSigner()`, `RegisterVerifier()`, `AlgorithmsForKey()`, `RegisterAlgorithmForKeyType()`, `RegisterAlgorithmForCurve()`
 - Error sentinels: `SignError()`, `VerifyError()`, `VerificationError()`, `ParseError()`
 - Sub-package: `jws/jwsbb` — compact serialization, signing, verification building blocks
 - Files: `jws.go`, `message.go`, `signer.go`, `verifier.go`, `headers.go`, `interface.go`, `errors.go`, `options.go`, `key_provider.go`, `sign_context.go`, `verify_context.go`
