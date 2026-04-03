@@ -527,10 +527,11 @@ func RegisterCustomField(name string, object any) {
 
 // Helpers for signature verification
 var keyTypeToAlgorithms = make(map[jwa.KeyType][]jwa.SignatureAlgorithm)
+var curveToAlgorithms = make(map[jwa.EllipticCurveAlgorithm][]jwa.SignatureAlgorithm)
 
 func init() {
 	RegisterAlgorithmForKeyType(jwa.OKP(), jwa.EdDSA())
-	RegisterAlgorithmForKeyType(jwa.OKP(), jwa.EdDSAEd25519())
+	RegisterAlgorithmForCurve(jwa.Ed25519(), jwa.EdDSAEd25519())
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()} {
 		RegisterAlgorithmForKeyType(jwa.OctetSeq(), alg)
 	}
@@ -549,21 +550,58 @@ func RegisterAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) {
 	keyTypeToAlgorithms[kty] = append(keyTypeToAlgorithms[kty], alg)
 }
 
+// RegisterAlgorithmForCurve registers an algorithm as valid for the given
+// elliptic curve. When [AlgorithmsForKey] can determine the curve of a key,
+// it returns the union of key-type-level algorithms and curve-specific
+// algorithms instead of all algorithms for the key type.
+//
+// This function is append-only and deduplicates entries, so builtin
+// registrations cannot be overwritten by external modules.
+func RegisterAlgorithmForCurve(crv jwa.EllipticCurveAlgorithm, alg jwa.SignatureAlgorithm) {
+	for _, existing := range curveToAlgorithms[crv] {
+		if existing == alg {
+			return
+		}
+	}
+	curveToAlgorithms[crv] = append(curveToAlgorithms[crv], alg)
+}
+
 // AlgorithmsForKey returns the possible signature algorithms that can
 // be used for a given key. It only takes in consideration keys/algorithms
 // for verification purposes, as this is the only usage where one may need
 // dynamically figure out which method to use.
+//
+// When the key's curve can be determined (via [jwk.Key] Crv() method or
+// inferred from the raw Go type), curve-specific algorithms registered via
+// [RegisterAlgorithmForCurve] are combined with key-type-level algorithms
+// to produce a more precise result.
 func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 	var kty jwa.KeyType
+	var crv jwa.EllipticCurveAlgorithm
+	var hasCrv bool
+
 	switch key := key.(type) {
 	case jwk.Key:
 		kty = key.KeyType()
+		type curver interface {
+			Crv() (jwa.EllipticCurveAlgorithm, bool)
+		}
+		if ck, ok := key.(curver); ok {
+			crv, hasCrv = ck.Crv()
+		}
 	case rsa.PublicKey, *rsa.PublicKey, rsa.PrivateKey, *rsa.PrivateKey:
 		kty = jwa.RSA()
 	case ecdsa.PublicKey, *ecdsa.PublicKey, ecdsa.PrivateKey, *ecdsa.PrivateKey:
 		kty = jwa.EC()
-	case ed25519.PublicKey, ed25519.PrivateKey, *ecdh.PublicKey, ecdh.PublicKey, *ecdh.PrivateKey, ecdh.PrivateKey:
+	case ed25519.PublicKey, ed25519.PrivateKey:
 		kty = jwa.OKP()
+		crv = jwa.Ed25519()
+		hasCrv = true
+	case *ecdh.PublicKey, ecdh.PublicKey, *ecdh.PrivateKey, ecdh.PrivateKey:
+		kty = jwa.OKP()
+		// ecdh keys are for key agreement (X25519/X448), not signing.
+		// We still resolve kty so the caller gets a meaningful error
+		// or an empty curve-filtered result.
 	case []byte:
 		kty = jwa.OctetSeq()
 	default:
@@ -572,13 +610,57 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 			return nil, fmt.Errorf(`unknown key type %T`, key)
 		}
 		kty = imported.KeyType()
+		type curver interface {
+			Crv() (jwa.EllipticCurveAlgorithm, bool)
+		}
+		if ck, ok := imported.(curver); ok {
+			crv, hasCrv = ck.Crv()
+		}
 	}
 
-	algs, ok := keyTypeToAlgorithms[kty]
+	ktyAlgs, ok := keyTypeToAlgorithms[kty]
 	if !ok {
 		return nil, fmt.Errorf(`unregistered key type %q`, kty)
 	}
-	return algs, nil
+
+	// If we know the curve and there are curve-specific registrations,
+	// return only key-type-level algorithms (those not registered under
+	// any curve) plus curve-specific algorithms for this curve.
+	if hasCrv {
+		crvAlgs := curveToAlgorithms[crv]
+		return filterAlgorithmsForCurve(ktyAlgs, crvAlgs), nil
+	}
+
+	return ktyAlgs, nil
+}
+
+// filterAlgorithmsForCurve returns the subset of ktyAlgs that are not
+// registered under any curve (i.e., generic for the key type) plus the
+// curve-specific algorithms from crvAlgs.
+func filterAlgorithmsForCurve(ktyAlgs, crvAlgs []jwa.SignatureAlgorithm) []jwa.SignatureAlgorithm {
+	var result []jwa.SignatureAlgorithm
+
+	// Add key-type-level algorithms that are not claimed by any curve
+	for _, alg := range ktyAlgs {
+		if !isRegisteredUnderAnyCurve(alg) {
+			result = append(result, alg)
+		}
+	}
+
+	// Add curve-specific algorithms
+	result = append(result, crvAlgs...)
+	return result
+}
+
+func isRegisteredUnderAnyCurve(alg jwa.SignatureAlgorithm) bool {
+	for _, algs := range curveToAlgorithms {
+		for _, a := range algs {
+			if a == alg {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Settings allows you to set global settings for this JWS operations.

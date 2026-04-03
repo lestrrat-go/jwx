@@ -1272,6 +1272,16 @@ func TestAlgorithmsForKey(t *testing.T) {
 	ecdsapubkey, err := ecdsaprivkey.PublicKey()
 	require.NoError(t, err, `jwk (ECDSA) PublicKey() should succeed`)
 
+	ed25519privkey, err := jwxtest.GenerateEd25519Jwk()
+	require.NoError(t, err, `jwxtest.GenerateEd25519Jwk should succeed`)
+	ed25519pubkey, err := ed25519privkey.PublicKey()
+	require.NoError(t, err, `jwk (Ed25519) PublicKey() should succeed`)
+
+	x25519privkey, err := jwxtest.GenerateX25519Jwk()
+	require.NoError(t, err, `jwxtest.GenerateX25519Jwk should succeed`)
+	x25519pubkey, err := x25519privkey.PublicKey()
+	require.NoError(t, err, `jwk (X25519) PublicKey() should succeed`)
+
 	testcases := []struct {
 		Name     string
 		Key      any
@@ -1348,9 +1358,29 @@ func TestAlgorithmsForKey(t *testing.T) {
 			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA(), jwa.EdDSAEd25519()},
 		},
 		{
-			Name:     "x25519.PublicKey",
-			Key:      &ecdh.PublicKey{},
+			Name:     "jwk.OKPPublicKey (Ed25519)",
+			Key:      ed25519pubkey,
 			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA(), jwa.EdDSAEd25519()},
+		},
+		{
+			Name:     "jwk.OKPPrivateKey (Ed25519)",
+			Key:      ed25519privkey,
+			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA(), jwa.EdDSAEd25519()},
+		},
+		{
+			Name:     "ecdh.PublicKey (no curve filtering)",
+			Key:      &ecdh.PublicKey{},
+			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA()},
+		},
+		{
+			Name:     "jwk.OKPPublicKey (X25519)",
+			Key:      x25519pubkey,
+			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA()},
+		},
+		{
+			Name:     "jwk.OKPPrivateKey (X25519)",
+			Key:      x25519privkey,
+			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA()},
 		},
 	}
 
