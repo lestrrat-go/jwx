@@ -355,9 +355,11 @@ func WithMaxDecompressBufferSize(v int64) GlobalDecryptOption {
 // to use when decrypting a message. If not specified, the default
 // value of 10,000 is used.
 //
-// This option has a global effect.
-func WithMaxPBES2Count(v int) GlobalOption {
-	return &globalOption{option.New(identMaxPBES2Count{}, v)}
+// This option can be used for `jwe.Settings()`, which changes the behavior
+// globally, or for `jwe.Decrypt()`, which changes the behavior for that
+// specific call.
+func WithMaxPBES2Count(v int) GlobalDecryptOption {
+	return &globalDecryptOption{option.New(identMaxPBES2Count{}, v)}
 }
 
 // WithMergeProtectedHeaders specify that when given multiple headers
@@ -378,9 +380,11 @@ func WithMessage(v *Message) DecryptOption {
 // to accept when decrypting a message. If not specified, the default
 // value of 1,000 is used. Set to 0 to disable the minimum check.
 //
-// This option has a global effect.
-func WithMinPBES2Count(v int) GlobalOption {
-	return &globalOption{option.New(identMinPBES2Count{}, v)}
+// This option can be used for `jwe.Settings()`, which changes the behavior
+// globally, or for `jwe.Decrypt()`, which changes the behavior for that
+// specific call.
+func WithMinPBES2Count(v int) GlobalDecryptOption {
+	return &globalDecryptOption{option.New(identMinPBES2Count{}, v)}
 }
 
 // WithPretty specifies whether the JSON output should be formatted and

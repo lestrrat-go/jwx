@@ -232,6 +232,8 @@ type decryptContext struct {
 	cek                     *[]byte
 	dst                     *Message
 	maxDecompressBufferSize int64
+	maxPBES2Count           int
+	minPBES2Count           int
 	//nolint:containedctx
 	ctx context.Context
 }
@@ -250,14 +252,17 @@ func freeDecryptContext(dc *decryptContext) *decryptContext {
 	dc.cek = nil
 	dc.dst = nil
 	dc.maxDecompressBufferSize = 0
+	dc.maxPBES2Count = 0
+	dc.minPBES2Count = 0
 	dc.ctx = context.Background()
 	return dc
 }
 
 func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
-	// Set default max decompress buffer size
 	muSettings.RLock()
 	dc.maxDecompressBufferSize = maxDecompressBufferSize
+	dc.maxPBES2Count = maxPBES2Count
+	dc.minPBES2Count = minPBES2Count
 	muSettings.RUnlock()
 
 	for _, option := range options {
@@ -293,6 +298,14 @@ func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 		case identMaxDecompressBufferSize{}:
 			if err := option.Value(&dc.maxDecompressBufferSize); err != nil {
 				return fmt.Errorf("jwe.decrypt: WithMaxDecompressBufferSize must be int64: %w", err)
+			}
+		case identMaxPBES2Count{}:
+			if err := option.Value(&dc.maxPBES2Count); err != nil {
+				return fmt.Errorf("jwe.decrypt: WithMaxPBES2Count must be int: %w", err)
+			}
+		case identMinPBES2Count{}:
+			if err := option.Value(&dc.minPBES2Count); err != nil {
+				return fmt.Errorf("jwe.decrypt: WithMinPBES2Count must be int: %w", err)
 			}
 		case identContext{}:
 			if err := option.Value(&dc.ctx); err != nil {
@@ -528,10 +541,8 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 			countFlt = count
 		}
 
-		muSettings.RLock()
-		maxCount := maxPBES2Count
-		minCount := minPBES2Count
-		muSettings.RUnlock()
+		maxCount := dc.maxPBES2Count
+		minCount := dc.minPBES2Count
 		if countFlt > float64(maxCount) {
 			return nil, fmt.Errorf("invalid 'p2c' value")
 		}
