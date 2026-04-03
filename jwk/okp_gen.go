@@ -115,7 +115,10 @@ func (h *okpPublicKey) X() ([]byte, bool) {
 }
 
 func (h *okpPublicKey) X509CertChain() (*cert.Chain, bool) {
-	return h.x509CertChain, true
+	if h.x509CertChain != nil {
+		return h.x509CertChain, true
+	}
+	return nil, false
 }
 
 func (h *okpPublicKey) X509CertThumbprint() (string, bool) {
@@ -759,7 +762,10 @@ func (h *okpPrivateKey) X() ([]byte, bool) {
 }
 
 func (h *okpPrivateKey) X509CertChain() (*cert.Chain, bool) {
-	return h.x509CertChain, true
+	if h.x509CertChain != nil {
+		return h.x509CertChain, true
+	}
+	return nil, false
 }
 
 func (h *okpPrivateKey) X509CertThumbprint() (string, bool) {

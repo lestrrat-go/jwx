@@ -100,7 +100,10 @@ func (h *symmetricKey) Octets() ([]byte, bool) {
 }
 
 func (h *symmetricKey) X509CertChain() (*cert.Chain, bool) {
-	return h.x509CertChain, true
+	if h.x509CertChain != nil {
+		return h.x509CertChain, true
+	}
+	return nil, false
 }
 
 func (h *symmetricKey) X509CertThumbprint() (string, bool) {

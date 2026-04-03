@@ -344,7 +344,10 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 				o.L("return h.%s, true", f.Name(false))
 			}
 		} else {
-			o.L(`return h.%s, true`, f.Name(false))
+			o.L("if h.%s != nil {", f.Name(false))
+			o.L("return h.%s, true", f.Name(false))
+			o.L("}")
+			o.L("return nil, false")
 		}
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
