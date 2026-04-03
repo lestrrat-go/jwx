@@ -95,7 +95,8 @@ func dispatchECDSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([
 }
 
 func dispatchEdDSASign(key any, jwsAlg, dsigAlg string, payload []byte, rr io.Reader) ([]byte, error) {
-	// Note: Extension algorithms (e.g. Ed448) are handled in Sign() before this function is called.
+	// Note: Extension algorithms (e.g. Ed448) are registered as dsig.Custom family,
+	// so they take the dsig.Custom branch in Sign() and never reach this function.
 
 	// Try crypto.Signer first (dsig can handle it directly)
 	if signer, ok := key.(crypto.Signer); ok {
