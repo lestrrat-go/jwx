@@ -75,7 +75,7 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 	//nolint:revive // I want to keep the type of `wl` as `Whitelist` instead of `InsecureWhitelist`
 	var wl Whitelist = InsecureWhitelist{}
 	var client HTTPClient = http.DefaultClient
-	var maxBodySize int64 = defaultMaxFetchBodySize
+	var maxBodySize = defaultMaxFetchBodySize
 	for _, option := range options {
 		if parseOpt, ok := option.(ParseOption); ok {
 			parseOptions = append(parseOptions, parseOpt)
