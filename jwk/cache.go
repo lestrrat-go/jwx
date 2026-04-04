@@ -172,7 +172,7 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 	// client which includes timeout and redirect protections. Without this,
 	// httprc would fall back to http.DefaultClient which has no such protections.
 	if !hasHTTPClient {
-		resourceOptions = append(resourceOptions, httprc.WithHTTPClient(DefaultHTTPClient()))
+		resourceOptions = append(resourceOptions, httprc.WithHTTPClient(getFetchHTTPClient()))
 	}
 
 	r, err := httprc.NewResource[Set](u, &Transformer{
