@@ -649,6 +649,7 @@ func IsKeyValidationError(err error) bool {
 // Configure is used to configure global behavior of the jwk package.
 func Configure(options ...GlobalOption) {
 	var strictKeyUsagePtr *bool
+	var maxFetchBodySizePtr *int64
 	for _, option := range options {
 		switch option.Ident() {
 		case identStrictKeyUsage{}:
@@ -657,11 +658,21 @@ func Configure(options ...GlobalOption) {
 				continue
 			}
 			strictKeyUsagePtr = &v
+		case identMaxFetchBodySize{}:
+			var v int64
+			if err := option.Value(&v); err != nil {
+				continue
+			}
+			maxFetchBodySizePtr = &v
 		}
 	}
 
 	if strictKeyUsagePtr != nil {
 		strictKeyUsage.Store(*strictKeyUsagePtr)
+	}
+
+	if maxFetchBodySizePtr != nil {
+		maxFetchBodySize.Store(*maxFetchBodySizePtr)
 	}
 }
 

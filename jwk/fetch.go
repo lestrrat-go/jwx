@@ -5,11 +5,18 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync/atomic"
 )
 
-// defaultMaxFetchBodySize is the default maximum number of bytes read
+// defaultMaxFetchBodySize is the initial default maximum number of bytes read
 // from an HTTP response body when fetching a JWKS (10 MB).
 const defaultMaxFetchBodySize int64 = 10 * 1024 * 1024
+
+var maxFetchBodySize atomic.Int64
+
+func init() {
+	maxFetchBodySize.Store(defaultMaxFetchBodySize)
+}
 
 // Fetcher is an interface that represents an object that fetches a JWKS.
 // Currently this is only used in the `jws.WithVerifyAuto` option.
@@ -75,7 +82,7 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 	//nolint:revive // I want to keep the type of `wl` as `Whitelist` instead of `InsecureWhitelist`
 	var wl Whitelist = InsecureWhitelist{}
 	var client HTTPClient = http.DefaultClient
-	var maxBodySize = defaultMaxFetchBodySize
+	var maxBodySize = maxFetchBodySize.Load()
 	for _, option := range options {
 		if parseOpt, ok := option.(ParseOption); ok {
 			parseOptions = append(parseOptions, parseOpt)

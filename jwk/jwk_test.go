@@ -1762,6 +1762,30 @@ func TestFetch(t *testing.T) {
 			require.NoError(t, err, `json.MarshalIndent should succeed`)
 			require.Equal(t, expected, got, `data should match`)
 		})
+		t.Run("GlobalDefault", func(t *testing.T) {
+			ctx := t.Context()
+			// Set a global limit smaller than the response body size.
+			jwk.Configure(jwk.WithMaxFetchBodySize(10))
+			defer jwk.Configure(jwk.WithMaxFetchBodySize(10 * 1024 * 1024)) // restore
+
+			_, err := jwk.Fetch(ctx, srv.URL)
+			require.Error(t, err, `jwk.Fetch should fail when response exceeds global max body size`)
+			require.Contains(t, err.Error(), `exceeded max size`)
+		})
+		t.Run("PerCallOverridesGlobal", func(t *testing.T) {
+			ctx := t.Context()
+			// Set a global limit smaller than the response body size.
+			jwk.Configure(jwk.WithMaxFetchBodySize(10))
+			defer jwk.Configure(jwk.WithMaxFetchBodySize(10 * 1024 * 1024)) // restore
+
+			// Per-call with a larger limit should allow the fetch
+			fetched, err := jwk.Fetch(ctx, srv.URL, jwk.WithMaxFetchBodySize(1<<20))
+			require.NoError(t, err, `per-call option should override global`)
+
+			got, err := json.MarshalIndent(fetched, "", "  ")
+			require.NoError(t, err, `json.MarshalIndent should succeed`)
+			require.Equal(t, expected, got, `data should match`)
+		})
 	})
 }
 

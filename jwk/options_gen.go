@@ -56,6 +56,28 @@ func (*fetchOption) parseOption() {}
 
 func (*fetchOption) registerOption() {}
 
+// GlobalFetchOption describes an Option that can be passed to `jwk.Configure()`,
+// `jwk.Fetch()`, and `(*jwk.Cache).Register()`.
+type GlobalFetchOption interface {
+	Option
+	globalOption()
+	fetchOption()
+	registerOption()
+	parseOption()
+}
+
+type globalFetchOption struct {
+	Option
+}
+
+func (*globalFetchOption) globalOption() {}
+
+func (*globalFetchOption) fetchOption() {}
+
+func (*globalFetchOption) registerOption() {}
+
+func (*globalFetchOption) parseOption() {}
+
 // GlobalOption is a type of Option that can be passed to the `jwk.Configure()` to
 // change the global configuration of the jwk package.
 type GlobalOption interface {
@@ -255,9 +277,11 @@ func withLocalRegistry(v *json.Registry) ParseOption {
 // an HTTP response body when fetching a JWKS. If the response body exceeds
 // this size, the fetch returns an error. The default value is 10MB (10485760).
 //
-// This option can be passed to `jwk.Fetch()` or `(*jwk.Cache).Register()`.
-func WithMaxFetchBodySize(v int64) RegisterFetchOption {
-	return &registerFetchOption{option.New(identMaxFetchBodySize{}, v)}
+// This option can be passed to `jwk.Configure()` to change the default
+// globally, or to `jwk.Fetch()` / `(*jwk.Cache).Register()` for a per-call
+// override.
+func WithMaxFetchBodySize(v int64) GlobalFetchOption {
+	return &globalFetchOption{option.New(identMaxFetchBodySize{}, v)}
 }
 
 // WithPEM specifies that the input to `Parse()` is a PEM encoded key.
