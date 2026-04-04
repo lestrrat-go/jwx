@@ -337,8 +337,8 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 // struct. The input can be in either compact or full JSON serialization.
 //
 // On error, returns a jws.ParseError.
-func ParseString(src string) (*Message, error) {
-	msg, err := Parse([]byte(src))
+func ParseString(src string, options ...ParseOption) (*Message, error) {
+	msg, err := Parse([]byte(src), options...)
 	if err != nil {
 		return nil, makeParseError(`jws.ParseString`, `failed to parse string: %w`, err)
 	}
