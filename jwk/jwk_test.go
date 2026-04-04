@@ -1855,7 +1855,7 @@ func TestFetch(t *testing.T) {
 		// A redirect chain longer than 5 hops should fail.
 		ctx := t.Context()
 
-		var servers []*httptest.Server
+		servers := make([]*httptest.Server, 0, 7)
 		defer func() {
 			for _, s := range servers {
 				s.Close()
@@ -1865,8 +1865,8 @@ func TestFetch(t *testing.T) {
 		// Create 7 servers, each redirecting to the next.
 		// Server 0 → 1 → 2 → 3 → 4 → 5 → 6
 		// That's 6 redirects, exceeding the limit of 5.
-		for i := 0; i < 7; i++ {
-			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for range 7 {
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				// placeholder, will be replaced
 				w.WriteHeader(http.StatusOK)
 				w.Write(expected)
@@ -1875,7 +1875,7 @@ func TestFetch(t *testing.T) {
 		}
 
 		// Wire up the redirect chain: server[i] redirects to server[i+1].
-		for i := 0; i < len(servers)-1; i++ {
+		for i := range len(servers) - 1 {
 			next := servers[i+1].URL
 			servers[i].Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, next, http.StatusFound)
@@ -1891,7 +1891,7 @@ func TestFetch(t *testing.T) {
 		// library's default policy) because other tests in TestFetch may
 		// have replaced the global client without restoring CheckRedirect.
 		client := &http.Client{
-			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			CheckRedirect: func(_ *http.Request, via []*http.Request) error {
 				if len(via) >= 5 {
 					return fmt.Errorf("stopped after 5 redirects")
 				}
