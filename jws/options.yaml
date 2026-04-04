@@ -54,6 +54,14 @@ interfaces:
       - verifyOption
       - parseOption
       - readFileOption
+  - name: GlobalParseOption
+    methods:
+      - globalOption
+      - parseOption
+      - readFileOption
+    comment: |
+      GlobalParseOption describes an Option that can be passed to `jws.Settings()`,
+      `jws.Parse()`, and `jws.ReadFile()`.
   - name: GlobalOption
     comment: |
       GlobalOption can be passed to `jws.Settings()` to set global options for the JWS package.
@@ -228,3 +236,14 @@ options:
     constant_value: true
     comment: |
       WithLegacySigners is a no-op option that exists only for backwards compatibility.
+  - ident: MaxParseInputSize
+    interface: GlobalParseOption
+    argument_type: int64
+    comment: |
+      WithMaxParseInputSize specifies the maximum number of bytes read from an
+      io.Reader in `jws.ParseReader`. If the input exceeds this size,
+      `jws.ParseReader` will return an error. The default value is 10MB.
+
+      This option can be passed to `jws.Settings()` to change the default
+      globally, or to `jws.ParseReader()` / `jws.ReadFile()` for a per-call
+      override.

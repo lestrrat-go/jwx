@@ -26,7 +26,6 @@
 package jws
 
 import (
-	"bufio"
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -36,6 +35,7 @@ import (
 	"io"
 	"slices"
 	"sync"
+	"sync/atomic"
 	"unicode"
 	"unicode/utf8"
 
@@ -50,6 +50,12 @@ import (
 )
 
 var registry = json.NewRegistry()
+
+var maxParseInputSize atomic.Int64
+
+func init() {
+	maxParseInputSize.Store(10 * 1024 * 1024) // 10MB
+}
 
 var signers = make(map[jwa.SignatureAlgorithm]Signer)
 var muSigner = &sync.Mutex{}
@@ -328,46 +334,42 @@ func ParseString(src string) (*Message, error) {
 // struct. The input can be in either compact or full JSON serialization.
 //
 // On error, returns a jws.ParseError.
-func ParseReader(src io.Reader) (*Message, error) {
-	data, err := jwxio.ReadAllFromFiniteSource(src)
+func ParseReader(src io.Reader, options ...ParseOption) (*Message, error) {
+	maxSize := maxParseInputSize.Load()
+	for _, option := range options {
+		if option.Ident() == (identMaxParseInputSize{}) {
+			if err := option.Value(&maxSize); err != nil {
+				return nil, makeParseError(`jws.ParseReader`, `invalid WithMaxParseInputSize: %w`, err)
+			}
+			if maxSize <= 0 {
+				return nil, makeParseError(`jws.ParseReader`, `WithMaxParseInputSize must be greater than zero`)
+			}
+		}
+	}
+
+	limited := io.LimitReader(src, maxSize+1)
+	data, err := jwxio.ReadAllFromFiniteSource(limited)
 	if err == nil {
-		return Parse(data)
+		if int64(len(data)) > maxSize {
+			return nil, makeParseError(`jws.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
+		}
+		return Parse(data, options...)
 	}
 
 	if !errors.Is(err, jwxio.NonFiniteSourceError()) {
 		return nil, makeParseError(`jws.ParseReader`, `failed to read from finite source: %w`, err)
 	}
 
-	rdr := bufio.NewReader(src)
-	var first rune
-	for {
-		r, _, err := rdr.ReadRune()
-		if err != nil {
-			return nil, makeParseError(`jws.ParseReader`, `failed to read rune: %w`, err)
-		}
-		if !unicode.IsSpace(r) {
-			first = r
-			if err := rdr.UnreadRune(); err != nil {
-				return nil, makeParseError(`jws.ParseReader`, `failed to unread rune: %w`, err)
-			}
-
-			break
-		}
-	}
-
-	var parser func(io.Reader) (*Message, error)
-	if first == tokens.OpenCurlyBracket {
-		parser = parseJSONReader
-	} else {
-		parser = parseCompactReader
-	}
-
-	m, err := parser(rdr)
+	// Non-finite source: read all with size limit
+	buf, err := io.ReadAll(io.LimitReader(src, maxSize+1))
 	if err != nil {
-		return nil, makeParseError(`jws.ParseReader`, `failed to parse reader: %w`, err)
+		return nil, makeParseError(`jws.ParseReader`, `failed to read from io.Reader: %w`, err)
+	}
+	if int64(len(buf)) > maxSize {
+		return nil, makeParseError(`jws.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
 	}
 
-	return m, nil
+	return Parse(buf, options...)
 }
 
 func parseJSONReader(src io.Reader) (result *Message, err error) {
@@ -668,6 +670,15 @@ func Settings(options ...GlobalOption) {
 	for _, option := range options {
 		switch option.Ident() {
 		case identLegacySigners{}:
+		case identMaxParseInputSize{}:
+			var v int64
+			if err := option.Value(&v); err != nil {
+				panic(fmt.Sprintf("jws.Settings: value for WithMaxParseInputSize must be int64: %s", err))
+			}
+			if v <= 0 {
+				panic("jws.Settings: WithMaxParseInputSize must be greater than zero")
+			}
+			maxParseInputSize.Store(v)
 		}
 	}
 }

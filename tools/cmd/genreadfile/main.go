@@ -31,9 +31,10 @@ func _main() error {
 			ParseOptions: true,
 		},
 		{
-			Package:    "jws",
-			ReturnType: "*Message",
-			Filename:   "jws/io.go",
+			Package:      "jws",
+			ReturnType:   "*Message",
+			Filename:     "jws/io.go",
+			ParseOptions: true,
 		},
 		{
 			Package:      "jwe",
