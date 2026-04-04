@@ -535,6 +535,10 @@ To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fe
 
 If you are going to be using this key repeatedly in a long running process, consider using [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Cache) or [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#CachedSet) described elsewhere in this document.
 
+By default, `jwk.Fetch()` uses an HTTP client that blocks HTTPS-to-HTTP redirect downgrades and limits redirect chains to 5 hops. This prevents the most common SSRF vector where an attacker-controlled JWKS URL redirects to an internal HTTP service.
+
+For full SSRF protection (blocking redirects to private IP ranges, DNS rebinding prevention), provide a custom `http.Client` with an appropriate `Transport.DialContext` that validates resolved IP addresses, and pass it via `jwk.WithHTTPClient()` or `jwk.Configure()`.
+
 <!-- INCLUDE(examples/jwk_fetch_example_test.go) -->
 ```go
 package examples_test

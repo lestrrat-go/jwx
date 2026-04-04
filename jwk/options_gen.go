@@ -244,7 +244,13 @@ func WithFetchWhitelist(v Whitelist) FetchOption {
 //
 // When passed to `jwk.Configure()`, it sets the global default HTTP client
 // used by `jwk.Fetch()`. By default, `jwk.Fetch()` uses an HTTP client with
-// a 30-second timeout instead of `http.DefaultClient` (which has no timeout).
+// a 30-second timeout and a redirect policy that blocks HTTPS-to-HTTP
+// scheme downgrades (with a maximum of 5 redirects) instead of
+// `http.DefaultClient` (which has no timeout and allows up to 10 redirects).
+//
+// For full SSRF protection (blocking redirects to private IPs, DNS
+// rebinding prevention), provide a custom http.Client with an appropriate
+// Transport.DialContext that validates resolved IP addresses.
 //
 // Users can override the client per-call via `jwk.Fetch()` or per-resource
 // via `(*jwk.Cache).Register()`.
