@@ -1928,7 +1928,7 @@ func TestFetch(t *testing.T) {
 			if len(via) >= 5 {
 				return fmt.Errorf("stopped after 5 redirects")
 			}
-			if len(via) > 0 && via[len(via)-1].URL.Scheme == "https" && req.URL.Scheme != "https" {
+			if len(via) > 0 && via[len(via)-1].URL.Scheme == "https" && req.URL.Scheme != "https" { //nolint:goconst
 				return fmt.Errorf("redirect from HTTPS to non-HTTPS URL %q is not allowed", req.URL.Redacted())
 			}
 			return nil
