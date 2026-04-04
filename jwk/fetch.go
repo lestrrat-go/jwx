@@ -19,6 +19,11 @@ const defaultMaxFetchBodySize int64 = 10 * 1024 * 1024
 // hanging indefinitely (e.g. slowloris-style DoS).
 const defaultFetchTimeout = 30 * time.Second
 
+// defaultMaxRedirects is the maximum number of HTTP redirects the default
+// fetch client will follow. This is intentionally lower than Go's default
+// of 10 to limit redirect chain abuse.
+const defaultMaxRedirects = 5
+
 var maxFetchBodySize atomic.Int64
 
 var (
@@ -29,8 +34,28 @@ var (
 func init() {
 	maxFetchBodySize.Store(defaultMaxFetchBodySize)
 	fetchHTTPClient = &http.Client{
-		Timeout: defaultFetchTimeout,
+		Timeout:       defaultFetchTimeout,
+		CheckRedirect: defaultCheckRedirect,
 	}
+}
+
+// defaultCheckRedirect is the CheckRedirect policy for the default HTTP client
+// used by jwk.Fetch(). It prevents HTTPS-to-HTTP scheme downgrades and limits
+// the total number of redirects.
+//
+// This does NOT protect against redirects to private/internal IP addresses.
+// For full SSRF protection, callers should provide a custom http.Client via
+// WithHTTPClient that validates destination IPs in Transport.DialContext.
+func defaultCheckRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) >= defaultMaxRedirects {
+		return fmt.Errorf("jwk.Fetch: stopped after %d redirects", defaultMaxRedirects)
+	}
+
+	// Prevent HTTPS → HTTP scheme downgrade. The original request is via[0].
+	if len(via) > 0 && via[0].URL.Scheme == "https" && req.URL.Scheme != "https" {
+		return fmt.Errorf("jwk.Fetch: redirect from HTTPS to non-HTTPS URL %q is not allowed", req.URL.Redacted())
+	}
+	return nil
 }
 
 func getFetchHTTPClient() HTTPClient {

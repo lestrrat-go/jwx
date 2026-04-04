@@ -5,6 +5,12 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.0.14 UNRELEASED
+  * [jwk] The default HTTP client used by `jwk.Fetch()` now blocks
+    HTTPS-to-HTTP redirect downgrades and limits redirect chains to 5 hops
+    (reduced from Go's default of 10). This mitigates SSRF via redirect
+    chains from attacker-controlled JWKS URLs. Callers who provide their
+    own `http.Client` via `jwk.WithHTTPClient()` are not affected.
+
   * [jwt] `jwt.Parse()` now rejects JSON `null` for string registered claims
     (`iss`, `sub`, `jti`). Previously, null was silently accepted as an empty
     string due to Go's default JSON decoding behavior. This is a correctness fix

@@ -1827,6 +1827,145 @@ func TestFetch(t *testing.T) {
 			require.Equal(t, expected, got, `data should match`)
 		})
 	})
+	t.Run("RedirectHTTPAllowed", func(t *testing.T) {
+		// HTTP-to-HTTP redirects should be allowed (e.g. development servers).
+		ctx := t.Context()
+
+		// Target server serves the JWKS.
+		target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write(expected)
+		}))
+		defer target.Close()
+
+		// Redirect server sends 302 to the target.
+		redirect := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, target.URL, http.StatusFound)
+		}))
+		defer redirect.Close()
+
+		fetched, err := jwk.Fetch(ctx, redirect.URL)
+		require.NoError(t, err, `jwk.Fetch should follow HTTP-to-HTTP redirect`)
+
+		got, err := json.MarshalIndent(fetched, "", "  ")
+		require.NoError(t, err, `json.MarshalIndent should succeed`)
+		require.Equal(t, expected, got, `data should match`)
+	})
+	t.Run("RedirectExceedsLimit", func(t *testing.T) {
+		// A redirect chain longer than 5 hops should fail.
+		ctx := t.Context()
+
+		servers := make([]*httptest.Server, 0, 7)
+		defer func() {
+			for _, s := range servers {
+				s.Close()
+			}
+		}()
+
+		// Create 7 servers, each redirecting to the next.
+		// Server 0 → 1 → 2 → 3 → 4 → 5 → 6
+		// That's 6 redirects, exceeding the limit of 5.
+		for range 7 {
+			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				// placeholder, will be replaced
+				w.WriteHeader(http.StatusOK)
+				w.Write(expected)
+			}))
+			servers = append(servers, s)
+		}
+
+		// Wire up the redirect chain: server[i] redirects to server[i+1].
+		for i := range len(servers) - 1 {
+			next := servers[i+1].URL
+			servers[i].Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.Redirect(w, r, next, http.StatusFound)
+			})
+		}
+		// Last server serves the JWKS.
+		servers[len(servers)-1].Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write(expected)
+		})
+
+		// Use an explicit client with a 5-redirect limit (same as the
+		// library's default policy) because other tests in TestFetch may
+		// have replaced the global client without restoring CheckRedirect.
+		client := &http.Client{
+			CheckRedirect: func(_ *http.Request, via []*http.Request) error {
+				if len(via) >= 5 {
+					return fmt.Errorf("stopped after 5 redirects")
+				}
+				return nil
+			},
+		}
+
+		_, err := jwk.Fetch(ctx, servers[0].URL, jwk.WithHTTPClient(client))
+		require.Error(t, err, `jwk.Fetch should fail when redirect chain exceeds limit`)
+		require.Contains(t, err.Error(), `redirect`, `error should mention redirect`)
+	})
+	t.Run("RedirectHTTPStoHTTPBlocked", func(t *testing.T) {
+		// HTTPS-to-HTTP scheme downgrade should be blocked by the default
+		// redirect policy.
+		ctx := t.Context()
+
+		// HTTP target that serves valid JWKS.
+		httpTarget := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write(expected)
+		}))
+		defer httpTarget.Close()
+
+		// HTTPS server that redirects to the HTTP target.
+		tlsSrv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, httpTarget.URL, http.StatusFound)
+		}))
+		defer tlsSrv.Close()
+
+		// Use the TLS server's client (which trusts its self-signed cert)
+		// but install the same redirect policy as the library's default.
+		client := tlsSrv.Client()
+		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 5 {
+				return fmt.Errorf("stopped after 5 redirects")
+			}
+			if len(via) > 0 && via[0].URL.Scheme == "https" && req.URL.Scheme != "https" {
+				return fmt.Errorf("redirect from HTTPS to non-HTTPS URL %q is not allowed", req.URL.Redacted())
+			}
+			return nil
+		}
+
+		_, err := jwk.Fetch(ctx, tlsSrv.URL, jwk.WithHTTPClient(client))
+		require.Error(t, err, `jwk.Fetch should block HTTPS-to-HTTP redirect`)
+		require.Contains(t, err.Error(), `HTTPS to non-HTTPS`, `error should mention scheme downgrade`)
+	})
+	t.Run("RedirectCustomClientBypassesPolicy", func(t *testing.T) {
+		// A custom HTTP client without a CheckRedirect policy should be
+		// able to follow HTTPS-to-HTTP redirects (the caller opts out of
+		// the library's default protection).
+		ctx := t.Context()
+
+		httpTarget := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write(expected)
+		}))
+		defer httpTarget.Close()
+
+		tlsSrv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, httpTarget.URL, http.StatusFound)
+		}))
+		defer tlsSrv.Close()
+
+		// Use the TLS server's client (trusts self-signed cert) with NO
+		// CheckRedirect override — Go's default allows the downgrade.
+		client := tlsSrv.Client()
+
+		fetched, err := jwk.Fetch(ctx, tlsSrv.URL, jwk.WithHTTPClient(client))
+		require.NoError(t, err, `custom client should allow HTTPS-to-HTTP redirect`)
+
+		got, err := json.MarshalIndent(fetched, "", "  ")
+		require.NoError(t, err, `json.MarshalIndent should succeed`)
+		require.Equal(t, expected, got, `data should match`)
+	})
 }
 
 func TestGH567(t *testing.T) {
