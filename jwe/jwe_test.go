@@ -1290,3 +1290,96 @@ func TestMaxParseInputSize(t *testing.T) {
 		require.NotContains(t, err.Error(), `exceeded max size`)
 	})
 }
+
+func TestMaxRecipients(t *testing.T) {
+	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, `rsa.GenerateKey should succeed`)
+
+	pubkey := &privkey.PublicKey
+
+	// Build a valid JWE with a single recipient, then modify the JSON
+	// to duplicate recipients for testing limits.
+	encrypted, err := jwe.Encrypt(
+		[]byte("hello"),
+		jwe.WithKey(jwa.RSA_OAEP(), pubkey),
+		jwe.WithContentEncryption(jwa.A128CBC_HS256()),
+		jwe.WithJSON(),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	// Parse the JSON to extract a recipient, then build a message with many recipients.
+	var parsed map[string]interface{}
+	require.NoError(t, json.Unmarshal(encrypted, &parsed))
+
+	// The single-recipient JSON format uses "header" and "encrypted_key" at the top level.
+	// Build a recipients array from this.
+	singleRecipient := map[string]interface{}{
+		"encrypted_key": parsed["encrypted_key"],
+	}
+	if h, ok := parsed["header"]; ok {
+		singleRecipient["header"] = h
+	}
+
+	makeMessage := func(n int) []byte {
+		recipients := make([]interface{}, n)
+		for i := range recipients {
+			recipients[i] = singleRecipient
+		}
+
+		msg := map[string]interface{}{
+			"protected":  parsed["protected"],
+			"iv":         parsed["iv"],
+			"ciphertext": parsed["ciphertext"],
+			"tag":        parsed["tag"],
+			"recipients": recipients,
+		}
+
+		buf, err := json.Marshal(msg)
+		require.NoError(t, err)
+		return buf
+	}
+
+	t.Run("parse rejects over global limit", func(t *testing.T) {
+		// Default limit is 100
+		msg := makeMessage(101)
+		_, err := jwe.Parse(msg)
+		require.Error(t, err, `jwe.Parse should fail with too many recipients`)
+		require.Contains(t, err.Error(), `too many recipients`)
+	})
+
+	t.Run("parse accepts within global limit", func(t *testing.T) {
+		msg := makeMessage(100)
+		_, err := jwe.Parse(msg)
+		require.NoError(t, err, `jwe.Parse should succeed within limit`)
+	})
+
+	t.Run("global settings override", func(t *testing.T) {
+		jwe.Settings(jwe.WithMaxRecipients(5))
+		defer jwe.Settings(jwe.WithMaxRecipients(100))
+
+		msg := makeMessage(6)
+		_, err := jwe.Parse(msg)
+		require.Error(t, err, `jwe.Parse should fail with lowered limit`)
+		require.Contains(t, err.Error(), `too many recipients`)
+
+		msg = makeMessage(5)
+		_, err = jwe.Parse(msg)
+		require.NoError(t, err, `jwe.Parse should succeed at exactly the limit`)
+	})
+
+	t.Run("per-call decrypt override", func(t *testing.T) {
+		// Set global limit low
+		jwe.Settings(jwe.WithMaxRecipients(5))
+		defer jwe.Settings(jwe.WithMaxRecipients(100))
+
+		msg := makeMessage(10)
+
+		// Should fail with global limit
+		_, err := jwe.Decrypt(msg, jwe.WithKey(jwa.RSA_OAEP(), privkey))
+		require.Error(t, err, `jwe.Decrypt should fail with global limit of 5`)
+
+		// Should succeed with per-call override
+		_, err = jwe.Decrypt(msg, jwe.WithKey(jwa.RSA_OAEP(), privkey), jwe.WithMaxRecipients(10))
+		require.NoError(t, err, `jwe.Decrypt should succeed with per-call limit of 10`)
+	})
+}
