@@ -1641,14 +1641,11 @@ func TestGH1482(t *testing.T) {
 }
 
 // TestGH1484 tests that jwt.Parse rejects JSON null for string registered
-// claims (iss, sub, jti). Go's json.Decoder silently converts null to ""
-// for string targets, so the library must explicitly check for this.
-// Low real-world risk — legitimate issuers don't emit null — but correct
-// per the RFC StringOrURI type definitions.
+// claims (iss, sub, jti) when WithStrictStringClaims is enabled.
+// By default, null is silently accepted as "" (Go's standard behavior).
+// When strict mode is enabled, null causes an error per the RFC
+// StringOrURI type definitions.
 func TestGH1484(t *testing.T) {
-	// Tokens signed with HS256 key "abracadabra".
-	// null_sub generated from issue report; null_iss and null_jti
-	// constructed by signing matching payloads with the same key.
 	testcases := []struct {
 		Name    string
 		Payload string
@@ -1661,15 +1658,32 @@ func TestGH1484(t *testing.T) {
 	key, err := jwk.Import([]byte("abracadabra"))
 	require.NoError(t, err, `jwk.Import should succeed`)
 
-	for _, tc := range testcases {
-		t.Run(tc.Name, func(t *testing.T) {
-			signed, err := jws.Sign([]byte(tc.Payload), jws.WithKey(jwa.HS256(), key))
-			require.NoError(t, err, `jws.Sign should succeed`)
+	t.Run("default accepts null", func(t *testing.T) {
+		for _, tc := range testcases {
+			t.Run(tc.Name, func(t *testing.T) {
+				signed, err := jws.Sign([]byte(tc.Payload), jws.WithKey(jwa.HS256(), key))
+				require.NoError(t, err, `jws.Sign should succeed`)
 
-			_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), key))
-			require.Error(t, err, `jwt.Parse should reject null claim`)
-		})
-	}
+				_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), key))
+				require.NoError(t, err, `jwt.Parse should accept null claim by default`)
+			})
+		}
+	})
+
+	t.Run("strict rejects null", func(t *testing.T) {
+		jwt.Settings(jwt.WithStrictStringClaims(true))
+		defer jwt.Settings(jwt.WithStrictStringClaims(false))
+
+		for _, tc := range testcases {
+			t.Run(tc.Name, func(t *testing.T) {
+				signed, err := jws.Sign([]byte(tc.Payload), jws.WithKey(jwa.HS256(), key))
+				require.NoError(t, err, `jws.Sign should succeed`)
+
+				_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), key))
+				require.Error(t, err, `jwt.Parse should reject null claim when strict`)
+			})
+		}
+	})
 }
 
 func TestMaxParseInputSize(t *testing.T) {

@@ -74,6 +74,16 @@ func Settings(options ...GlobalOption) {
 				panic("jwt.Settings: WithMaxParseInputSize must be greater than zero")
 			}
 			maxParseInputSize.Store(v)
+		case identStrictStringClaims{}:
+			var v bool
+			if err := option.Value(&v); err != nil {
+				panic(fmt.Sprintf("jwt.Settings: value for WithStrictStringClaims must be bool: %s", err))
+			}
+			var newVal uint32
+			if v {
+				newVal = 1
+			}
+			atomic.StoreUint32(&json.RejectNullStrings, newVal)
 		}
 	}
 

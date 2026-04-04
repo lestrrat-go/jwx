@@ -133,6 +133,17 @@ options:
 
       See the documentation for `jwt.TokenOptionSet`, `(jwt.Token).Options`, and
       `jwt.FlattenAudience` for more details
+  - ident: StrictStringClaims
+    interface: GlobalOption
+    argument_type: bool
+    comment: |
+      WithStrictStringClaims controls whether JSON null values for string
+      claims (such as "iss", "sub", "jti") cause a parse error. By default,
+      null is silently accepted as an empty string (matching Go's standard
+      JSON decoding behavior). When set to true, null values are rejected
+      per the RFC type definitions (e.g. StringOrURI).
+
+      This option can only be set globally via `jwt.Settings()`.
   - ident: FormKey
     interface: ParseOption
     argument_type: string
