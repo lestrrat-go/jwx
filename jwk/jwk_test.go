@@ -1928,7 +1928,7 @@ func TestFetch(t *testing.T) {
 			if len(via) >= 5 {
 				return fmt.Errorf("stopped after 5 redirects")
 			}
-			if len(via) > 0 && via[0].URL.Scheme == "https" && req.URL.Scheme != "https" {
+			if len(via) > 0 && via[len(via)-1].URL.Scheme == "https" && req.URL.Scheme != "https" {
 				return fmt.Errorf("redirect from HTTPS to non-HTTPS URL %q is not allowed", req.URL.Redacted())
 			}
 			return nil
@@ -1936,6 +1936,47 @@ func TestFetch(t *testing.T) {
 
 		_, err := jwk.Fetch(ctx, tlsSrv.URL, jwk.WithHTTPClient(client))
 		require.Error(t, err, `jwk.Fetch should block HTTPS-to-HTTP redirect`)
+		require.Contains(t, err.Error(), `HTTPS to non-HTTPS`, `error should mention scheme downgrade`)
+	})
+	t.Run("RedirectHTTPtoHTTPStoHTTPBlocked", func(t *testing.T) {
+		// An HTTP→HTTPS→HTTP chain should be blocked on the second redirect
+		// (HTTPS→HTTP downgrade), even though the original request was HTTP.
+		ctx := t.Context()
+
+		// HTTP target that serves valid JWKS.
+		httpTarget := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			w.Write(expected)
+		}))
+		defer httpTarget.Close()
+
+		// HTTPS intermediate that redirects to the HTTP target.
+		tlsIntermediate := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, httpTarget.URL, http.StatusFound)
+		}))
+		defer tlsIntermediate.Close()
+
+		// HTTP origin that redirects to the HTTPS intermediate.
+		httpOrigin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, tlsIntermediate.URL, http.StatusFound)
+		}))
+		defer httpOrigin.Close()
+
+		// Use the TLS intermediate's client (trusts its self-signed cert)
+		// with the same redirect policy as the library's default.
+		client := tlsIntermediate.Client()
+		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 5 {
+				return fmt.Errorf("stopped after 5 redirects")
+			}
+			if len(via) > 0 && via[len(via)-1].URL.Scheme == "https" && req.URL.Scheme != "https" {
+				return fmt.Errorf("redirect from HTTPS to non-HTTPS URL %q is not allowed", req.URL.Redacted())
+			}
+			return nil
+		}
+
+		_, err := jwk.Fetch(ctx, httpOrigin.URL, jwk.WithHTTPClient(client))
+		require.Error(t, err, `jwk.Fetch should block HTTPS-to-HTTP downgrade even when chain starts with HTTP`)
 		require.Contains(t, err.Error(), `HTTPS to non-HTTPS`, `error should mention scheme downgrade`)
 	})
 	t.Run("RedirectCustomClientBypassesPolicy", func(t *testing.T) {
