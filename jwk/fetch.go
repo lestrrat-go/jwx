@@ -218,6 +218,11 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 		return nil, fmt.Errorf(`jwk.Fetch: request returned status %d, expected 200`, res.StatusCode)
 	}
 
+	// LimitReader caps memory at maxBodySize+1; reading +1 byte lets us detect
+	// oversized responses. We intentionally skip a Content-Length pre-check because
+	// the header is untrustworthy (server-controlled, absent in chunked transfers).
+	// Slow-trickle attacks are mitigated by context deadlines and http.Client.Timeout,
+	// not by header inspection.
 	buf, err := io.ReadAll(io.LimitReader(res.Body, maxBodySize+1))
 	if err != nil {
 		return nil, fmt.Errorf(`jwk.Fetch: failed to read response body for %q: %w`, u, err)
