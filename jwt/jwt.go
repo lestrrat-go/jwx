@@ -74,16 +74,6 @@ func Settings(options ...GlobalOption) {
 				panic("jwt.Settings: WithMaxParseInputSize must be greater than zero")
 			}
 			maxParseInputSize.Store(v)
-		case identStrictStringClaims{}:
-			var v bool
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf("jwt.Settings: value for WithStrictStringClaims must be bool: %s", err))
-			}
-			var newVal uint32
-			if v {
-				newVal = 1
-			}
-			json.RejectNullStrings.Store(newVal)
 		}
 	}
 
@@ -222,15 +212,16 @@ func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 }
 
 type parseCtx struct {
-	token            Token
-	validateOpts     []ValidateOption
-	verifyOpts       []jws.VerifyOption
-	localReg         *json.Registry
-	pedantic         bool
-	skipVerification bool
-	validate         bool
-	withKeyCount     int
-	withKey          *withKey // this is used to detect if we have a WithKey option
+	token              Token
+	validateOpts       []ValidateOption
+	verifyOpts         []jws.VerifyOption
+	localReg           *json.Registry
+	strictStringClaims *bool // per-call override; nil = use global
+	pedantic           bool
+	skipVerification   bool
+	validate           bool
+	withKeyCount       int
+	withKey            *withKey // this is used to detect if we have a WithKey option
 }
 
 func parseBytes(data []byte, options ...ParseOption) (Token, error) {
@@ -300,6 +291,12 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 				ctx.localReg = json.NewRegistry()
 			}
 			ctx.localReg.Register(pair.Name, pair.Value)
+		case identStrictStringClaims{}:
+			var v bool
+			if err := o.Value(&v); err != nil {
+				return nil, fmt.Errorf("jwt.parseBytes: value for WithStrictStringClaims must be bool: %w", err)
+			}
+			ctx.strictStringClaims = &v
 		}
 	}
 
@@ -453,12 +450,18 @@ OUTER:
 		ctx.token = New()
 	}
 
-	if ctx.localReg != nil {
+	if ctx.localReg != nil || ctx.strictStringClaims != nil {
 		dcToken, ok := ctx.token.(TokenWithDecodeCtx)
 		if !ok {
-			return nil, fmt.Errorf(`typed claim was requested, but the token (%T) does not support DecodeCtx`, ctx.token)
+			return nil, fmt.Errorf(`typed claim or strict string claims was requested, but the token (%T) does not support DecodeCtx`, ctx.token)
 		}
-		dc := json.NewDecodeCtx(ctx.localReg)
+
+		var strict bool
+		if ctx.strictStringClaims != nil {
+			strict = *ctx.strictStringClaims
+		}
+
+		dc := json.NewDecodeCtxStrictStrings(ctx.localReg, strict)
 		dcToken.SetDecodeCtx(dc)
 		defer func() { dcToken.SetDecodeCtx(nil) }()
 	}

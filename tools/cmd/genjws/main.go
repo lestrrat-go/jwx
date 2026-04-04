@@ -336,7 +336,7 @@ func generateHeaders(obj *codegen.Object) error {
 	for _, f := range obj.Fields() {
 		if f.Type() == "string" {
 			o.L("case %sKey:", f.Name(true))
-			o.L("if err := json.AssignNextStringToken(&h.%s, dec); err != nil {", f.Name(false))
+			o.L("if err := json.AssignNextStringToken(&h.%s, dec, nil); err != nil {", f.Name(false))
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 		} else if f.Type() == "[]byte" {

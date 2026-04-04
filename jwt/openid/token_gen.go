@@ -1059,7 +1059,7 @@ LOOP:
 				}
 				t.birthdate = &decoded
 			case EmailKey:
-				if err := json.AssignNextStringToken(&t.email, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.email, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, EmailKey, err)
 				}
 			case EmailVerifiedKey:
@@ -1075,15 +1075,15 @@ LOOP:
 				}
 				t.expiration = &decoded
 			case FamilyNameKey:
-				if err := json.AssignNextStringToken(&t.familyName, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.familyName, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, FamilyNameKey, err)
 				}
 			case GenderKey:
-				if err := json.AssignNextStringToken(&t.gender, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.gender, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, GenderKey, err)
 				}
 			case GivenNameKey:
-				if err := json.AssignNextStringToken(&t.givenName, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.givenName, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, GivenNameKey, err)
 				}
 			case IssuedAtKey:
@@ -1093,27 +1093,27 @@ LOOP:
 				}
 				t.issuedAt = &decoded
 			case IssuerKey:
-				if err := json.AssignNextStringToken(&t.issuer, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.issuer, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, IssuerKey, err)
 				}
 			case JwtIDKey:
-				if err := json.AssignNextStringToken(&t.jwtID, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.jwtID, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, JwtIDKey, err)
 				}
 			case LocaleKey:
-				if err := json.AssignNextStringToken(&t.locale, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.locale, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, LocaleKey, err)
 				}
 			case MiddleNameKey:
-				if err := json.AssignNextStringToken(&t.middleName, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.middleName, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, MiddleNameKey, err)
 				}
 			case NameKey:
-				if err := json.AssignNextStringToken(&t.name, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.name, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, NameKey, err)
 				}
 			case NicknameKey:
-				if err := json.AssignNextStringToken(&t.nickname, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.nickname, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, NicknameKey, err)
 				}
 			case NotBeforeKey:
@@ -1123,7 +1123,7 @@ LOOP:
 				}
 				t.notBefore = &decoded
 			case PhoneNumberKey:
-				if err := json.AssignNextStringToken(&t.phoneNumber, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.phoneNumber, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, PhoneNumberKey, err)
 				}
 			case PhoneNumberVerifiedKey:
@@ -1133,19 +1133,19 @@ LOOP:
 				}
 				t.phoneNumberVerified = &decoded
 			case PictureKey:
-				if err := json.AssignNextStringToken(&t.picture, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.picture, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, PictureKey, err)
 				}
 			case PreferredUsernameKey:
-				if err := json.AssignNextStringToken(&t.preferredUsername, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.preferredUsername, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, PreferredUsernameKey, err)
 				}
 			case ProfileKey:
-				if err := json.AssignNextStringToken(&t.profile, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.profile, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, ProfileKey, err)
 				}
 			case SubjectKey:
-				if err := json.AssignNextStringToken(&t.subject, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.subject, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, SubjectKey, err)
 				}
 			case UpdatedAtKey:
@@ -1155,11 +1155,11 @@ LOOP:
 				}
 				t.updatedAt = &decoded
 			case WebsiteKey:
-				if err := json.AssignNextStringToken(&t.website, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.website, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, WebsiteKey, err)
 				}
 			case ZoneinfoKey:
-				if err := json.AssignNextStringToken(&t.zoneinfo, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.zoneinfo, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, ZoneinfoKey, err)
 				}
 			default:

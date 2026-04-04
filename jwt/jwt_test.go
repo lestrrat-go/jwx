@@ -1671,15 +1671,12 @@ func TestGH1484(t *testing.T) {
 	})
 
 	t.Run("strict rejects null", func(t *testing.T) {
-		jwt.Settings(jwt.WithStrictStringClaims(true))
-		defer jwt.Settings(jwt.WithStrictStringClaims(false))
-
 		for _, tc := range testcases {
 			t.Run(tc.Name, func(t *testing.T) {
 				signed, err := jws.Sign([]byte(tc.Payload), jws.WithKey(jwa.HS256(), key))
 				require.NoError(t, err, `jws.Sign should succeed`)
 
-				_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), key))
+				_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), key), jwt.WithStrictStringClaims(true))
 				require.Error(t, err, `jwt.Parse should reject null claim when strict`)
 			})
 		}

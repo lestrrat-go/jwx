@@ -477,10 +477,8 @@ func WithSignOption(v jws.SignOption) SignOption {
 // null is silently accepted as an empty string (matching Go's standard
 // JSON decoding behavior). When set to true, null values are rejected
 // per the RFC type definitions (e.g. StringOrURI).
-//
-// This option can only be set globally via `jwt.Settings()`.
-func WithStrictStringClaims(v bool) GlobalOption {
-	return &globalOption{option.New(identStrictStringClaims{}, v)}
+func WithStrictStringClaims(v bool) ParseOption {
+	return &parseOption{option.New(identStrictStringClaims{}, v)}
 }
 
 // WithToken specifies the token instance in which the resulting JWT is stored

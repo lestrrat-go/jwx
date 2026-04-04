@@ -562,7 +562,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("switch tok {")
 	// kty is special. Hardcode it.
 	o.L("case KeyTypeKey:")
-	o.L("val, err := json.ReadNextStringToken(dec)")
+	o.L("val, err := json.ReadNextStringToken(dec, h.dc)")
 	o.L("if err != nil {")
 	o.L("return fmt.Errorf(`error reading token: %%w`, err)")
 	o.L("}")
@@ -573,7 +573,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	for _, f := range obj.Fields() {
 		if f.Type() == "string" {
 			o.L("case %sKey:", f.Name(true))
-			o.L("if err := json.AssignNextStringToken(&h.%s, dec); err != nil {", f.Name(false))
+			o.L("if err := json.AssignNextStringToken(&h.%s, dec, h.dc); err != nil {", f.Name(false))
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 		} else if f.Type() == "jwa.KeyAlgorithm" {

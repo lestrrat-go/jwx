@@ -448,7 +448,7 @@ func generateToken(obj *codegen.Object) error {
 	for _, f := range fields {
 		if f.Type() == "string" {
 			o.L("case %sKey:", f.Name(true))
-			o.L("if err := json.AssignNextStringToken(&t.%s, dec); err != nil {", f.Name(false))
+			o.L("if err := json.AssignNextStringToken(&t.%s, dec, t.dc); err != nil {", f.Name(false))
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
 		} else if f.Type() == byteSliceType {

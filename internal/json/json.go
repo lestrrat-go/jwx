@@ -11,12 +11,6 @@ import (
 
 var useNumber atomic.Uint32
 
-// RejectNullStrings controls whether ReadNextStringToken rejects JSON null
-// values. When false (the default), null is silently accepted as "".
-// When true, null causes an error. This can be enabled via
-// jwt.Settings(jwt.WithStrictStringClaims(true)).
-var RejectNullStrings atomic.Uint32
-
 func UseNumber() bool {
 	return useNumber.Load() == 1
 }
@@ -51,12 +45,21 @@ func AssignNextBytesToken(dst *[]byte, dec *Decoder) error {
 	return nil
 }
 
+func shouldRejectNullStrings(dc DecodeCtx) bool {
+	if dc != nil {
+		if sdc, ok := dc.(StrictStringDecodeCtx); ok {
+			return sdc.StrictStrings()
+		}
+	}
+	return false
+}
+
 // ReadNextStringToken reads the next JSON token from the decoder and
 // returns it as a string. By default, JSON null is silently accepted as "".
-// When RejectNullStrings is enabled (via jwt.Settings(jwt.WithStrictStringClaims(true))),
-// null is rejected per the RFC type definitions (e.g. StringOrURI).
-func ReadNextStringToken(dec *Decoder) (string, error) {
-	if RejectNullStrings.Load() == 1 {
+// When the given DecodeCtx implements StrictStringDecodeCtx and StrictStrings()
+// returns true, null values are rejected.
+func ReadNextStringToken(dec *Decoder, dc DecodeCtx) (string, error) {
+	if shouldRejectNullStrings(dc) {
 		var val any
 		if err := dec.Decode(&val); err != nil {
 			return "", fmt.Errorf(`error reading next value: %w`, err)
@@ -78,8 +81,8 @@ func ReadNextStringToken(dec *Decoder) (string, error) {
 	return val, nil
 }
 
-func AssignNextStringToken(dst **string, dec *Decoder) error {
-	val, err := ReadNextStringToken(dec)
+func AssignNextStringToken(dst **string, dec *Decoder, dc DecodeCtx) error {
+	val, err := ReadNextStringToken(dec, dc)
 	if err != nil {
 		return err
 	}
@@ -131,17 +134,35 @@ type DecodeCtxContainer interface {
 	SetDecodeCtx(DecodeCtx)
 }
 
-// stock decodeCtx. should cover 80% of the cases
-type decodeCtx struct {
-	registry *Registry
+// StrictStringDecodeCtx is an optional interface that DecodeCtx implementations
+// can satisfy to control per-call null string rejection.
+type StrictStringDecodeCtx interface {
+	StrictStrings() bool
 }
 
+// stock decodeCtx. should cover 80% of the cases
+type decodeCtx struct {
+	registry      *Registry
+	strictStrings bool
+}
+
+// NewDecodeCtx creates a new DecodeCtx with the given registry.
 func NewDecodeCtx(r *Registry) DecodeCtx {
 	return &decodeCtx{registry: r}
 }
 
+// NewDecodeCtxStrictStrings creates a new DecodeCtx with the given registry
+// and strict string rejection flag.
+func NewDecodeCtxStrictStrings(r *Registry, strict bool) DecodeCtx {
+	return &decodeCtx{registry: r, strictStrings: strict}
+}
+
 func (dc *decodeCtx) Registry() *Registry {
 	return dc.registry
+}
+
+func (dc *decodeCtx) StrictStrings() bool {
+	return dc.strictStrings
 }
 
 func Dump(v any) {
