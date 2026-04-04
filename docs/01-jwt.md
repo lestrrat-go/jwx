@@ -21,6 +21,7 @@ In this document we describe how to work with JWT using `github.com/lestrrat-go/
   - [Validate for specific claim values](#validate-for-specific-claim-values)
   - [Use a custom validator](#use-a-custom-validator)
   - [Detecting error types](#detecting-error-types)
+  - [Replay protection (jti)](#replay-protection-jti)
 - [Filtering Claims](#filtering-claims)
   - [Filtering Using Standard Claim Names](#filtering-using-standard-claim-names)
   - [Advanced filtering scenarios](#advanced-filtering-scenarios)
@@ -975,6 +976,52 @@ func Example_jwt_validate_detect_error_type() {
 ```
 source: [examples/jwt_validate_detect_error_type_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_validate_detect_error_type_example_test.go)
 <!-- END INCLUDE -->
+
+## Replay protection (jti)
+
+The `jti` (JWT ID) claim provides a unique identifier for a token. While this library supports reading and validating the `jti` claim value, it does **not** provide built-in replay protection — that is, it does not track previously seen `jti` values or reject reused tokens.
+
+This is by design: the JWT specification (RFC 7519 Section 4.1.7) defines `jti` as a means to prevent the JWT from being replayed, but leaves the implementation of such tracking to the application. A replay cache requires application-specific decisions about storage backend, token lifetime, and distributed coordination that are outside the scope of a JWT library.
+
+### What the library provides
+
+You can validate that a token's `jti` matches an expected value using `jwt.WithJwtID()`:
+
+```go
+err := jwt.Validate(tok, jwt.WithJwtID("expected-unique-id"))
+```
+
+You can also require the `jti` claim to be present using `jwt.WithRequiredClaim()`:
+
+```go
+err := jwt.Validate(tok, jwt.WithRequiredClaim(jwt.JwtIDKey))
+```
+
+### What callers must implement
+
+To prevent token replay, callers should:
+
+1. **Generate unique `jti` values** when issuing tokens (e.g., using UUIDs)
+2. **Track seen `jti` values** in a store appropriate for the deployment (in-memory, Redis, database, etc.)
+3. **Reject tokens with previously seen `jti` values**, typically using a custom validator:
+
+```go
+validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
+    jti, ok := t.JwtID()
+    if !ok {
+        return jwt.NewValidationError(fmt.Errorf(`"jti" claim is required`))
+    }
+    if replayCache.HasSeen(jti) {
+        return jwt.NewValidationError(fmt.Errorf(`token with jti %q has already been used`, jti))
+    }
+    replayCache.MarkSeen(jti, t.Expiration())
+    return nil
+})
+
+err := jwt.Validate(tok, jwt.WithValidator(validator))
+```
+
+4. **Expire cache entries** when the corresponding token's `exp` time passes, to bound cache growth
 
 # Filtering Claims
 
