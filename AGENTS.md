@@ -56,16 +56,24 @@ Files matching `*_gen.go` are generated. Examples:
 ### Regeneration Commands
 
 ```bash
-# Regenerate all code
+# Regenerate all code (includes options via `go generate .`)
 make generate
 
-# Regenerate specific package
+# Regenerate specific package (objects/types only, NOT options)
 make generate-jwt
 make generate-jws
 make generate-jwe
 make generate-jwk
 make generate-jwa
+
+# Regenerate options only (options.yaml → options_gen.go for all packages)
+go generate .
+# or directly:
+./tools/cmd/genoptions.sh
 ```
+
+**Important:** `make generate-<pkg>` does **not** regenerate options. If you
+edit an `options.yaml` file, run `make generate` or `go generate .`.
 
 ## Functional Options Pattern
 
@@ -199,7 +207,7 @@ Use `github.com/stretchr/testify/require` for assertions (not `assert`).
 
 | Task | Edit This | Then Run |
 |------|-----------|----------|
-| Add new JWT option | `jwt/options.yaml` | `make generate-jwt` |
+| Add/edit any option | `{pkg}/options.yaml` | `make generate` or `go generate .` |
 | Add new JWS header field | `tools/cmd/genjws/objects.yml` | `make generate-jws` |
 | Add new JWK key field | `tools/cmd/genjwk/objects.yml` | `make generate-jwk` |
 | Add new algorithm | `tools/cmd/genjwa/objects.yml` | `make generate-jwa` |

@@ -68,6 +68,12 @@ options:
       scheme downgrades (with a maximum of 5 redirects) instead of
       `http.DefaultClient` (which has no timeout and allows up to 10 redirects).
 
+      The client is used as-is: the library does NOT automatically apply its
+      default timeout or redirect policy to a user-supplied client. If you want
+      to bring your own client (e.g. for custom TLS or proxy settings) while
+      retaining the library's defaults, wrap it with `jwk.WrapHTTPClientDefaults()`
+      before passing it to this option.
+
       For full SSRF protection (blocking redirects to private IPs, DNS
       rebinding prevention), provide a custom http.Client with an appropriate
       Transport.DialContext that validates resolved IP addresses.
