@@ -537,6 +537,15 @@ If you are going to be using this key repeatedly in a long running process, cons
 
 By default, `jwk.Fetch()` uses an HTTP client that blocks HTTPS-to-HTTP redirect downgrades and limits redirect chains to 5 hops. This prevents the most common SSRF vector where an attacker-controlled JWKS URL redirects to an internal HTTP service.
 
+When you supply your own client via `jwk.WithHTTPClient()` or `jwk.Configure(jwk.WithHTTPClient(...))`, the library uses it as-is — it does **not** automatically apply the default timeout or redirect policy. If you need to bring your own client (e.g. for custom TLS or proxy settings) while retaining the library's defaults, wrap it with [`jwk.WrapHTTPClientDefaults()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#WrapHTTPClientDefaults) before passing it:
+
+```go
+myClient := &http.Client{
+  Transport: myCustomTransport,
+}
+jwk.Configure(jwk.WithHTTPClient(jwk.WrapHTTPClientDefaults(myClient)))
+```
+
 For full SSRF protection (blocking redirects to private IP ranges, DNS rebinding prevention), provide a custom `http.Client` with an appropriate `Transport.DialContext` that validates resolved IP addresses, and pass it via `jwk.WithHTTPClient()` or `jwk.Configure()`.
 
 <!-- INCLUDE(examples/jwk_fetch_example_test.go) -->
