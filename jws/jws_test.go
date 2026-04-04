@@ -1850,3 +1850,95 @@ func TestMaxParseInputSize(t *testing.T) {
 		require.Contains(t, err.Error(), `greater than zero`)
 	})
 }
+
+func TestMaxSignatures(t *testing.T) {
+	key1, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err, `GenerateRsaKey should succeed`)
+	key2, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err, `GenerateRsaKey should succeed`)
+
+	// Build a valid JWS with JSON serialization (two signatures to get array format).
+	signed, err := jws.Sign(
+		[]byte("hello"),
+		jws.WithJSON(),
+		jws.WithKey(jwa.RS256(), key1),
+		jws.WithKey(jwa.RS256(), key2),
+	)
+	require.NoError(t, err, `jws.Sign should succeed`)
+
+	// Parse the JSON and extract a signature entry so we can duplicate it.
+	var parsed map[string]any
+	require.NoError(t, json.Unmarshal(signed, &parsed))
+
+	sigs, ok := parsed["signatures"].([]any)
+	require.True(t, ok, `signatures field must be an array`)
+	require.True(t, len(sigs) > 0)
+
+	singleSig := sigs[0]
+
+	makeMessage := func(n int) []byte {
+		signatures := make([]any, n)
+		for i := range signatures {
+			signatures[i] = singleSig
+		}
+		msg := map[string]any{
+			"payload":    parsed["payload"],
+			"signatures": signatures,
+		}
+		buf, err := json.Marshal(msg)
+		require.NoError(t, err)
+		return buf
+	}
+
+	t.Run("parse rejects over global limit", func(t *testing.T) {
+		msg := makeMessage(101)
+		_, err := jws.Parse(msg)
+		require.Error(t, err, `jws.Parse should fail with too many signatures`)
+		require.Contains(t, err.Error(), `too many signatures`)
+	})
+
+	t.Run("parse accepts within global limit", func(t *testing.T) {
+		msg := makeMessage(100)
+		_, err := jws.Parse(msg)
+		require.NoError(t, err, `jws.Parse should succeed within limit`)
+	})
+
+	t.Run("global settings override", func(t *testing.T) {
+		jws.Settings(jws.WithMaxSignatures(5))
+		defer jws.Settings(jws.WithMaxSignatures(100))
+
+		msg := makeMessage(6)
+		_, err := jws.Parse(msg)
+		require.Error(t, err, `jws.Parse should fail with lowered limit`)
+		require.Contains(t, err.Error(), `too many signatures`)
+
+		msg = makeMessage(5)
+		_, err = jws.Parse(msg)
+		require.NoError(t, err, `jws.Parse should succeed at exactly the limit`)
+	})
+
+	t.Run("per-call parse override", func(t *testing.T) {
+		jws.Settings(jws.WithMaxSignatures(5))
+		defer jws.Settings(jws.WithMaxSignatures(100))
+
+		msg := makeMessage(10)
+
+		// Should fail with global limit
+		_, err := jws.Parse(msg)
+		require.Error(t, err, `jws.Parse should fail with global limit of 5`)
+
+		// Should succeed with per-call override
+		_, err = jws.Parse(msg, jws.WithMaxSignatures(10))
+		require.NoError(t, err, `jws.Parse should succeed with per-call limit of 10`)
+	})
+
+	t.Run("verify inherits limit", func(t *testing.T) {
+		jws.Settings(jws.WithMaxSignatures(5))
+		defer jws.Settings(jws.WithMaxSignatures(100))
+
+		msg := makeMessage(6)
+
+		_, err := jws.Verify(msg, jws.WithKey(jwa.RS256(), &key1.PublicKey))
+		require.Error(t, err, `jws.Verify should fail when signatures exceed limit`)
+	})
+}

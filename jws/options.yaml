@@ -247,3 +247,15 @@ options:
       This option can be passed to `jws.Settings()` to change the default
       globally, or to `jws.ParseReader()` / `jws.ReadFile()` for a per-call
       override.
+  - ident: MaxSignatures
+    interface: GlobalParseOption
+    argument_type: int
+    comment: |
+      WithMaxSignatures specifies the maximum number of signatures allowed
+      in a JWS message using JSON serialization. If a JWS message contains
+      more signatures than this value, parsing will return an error.
+      The default value is 100.
+
+      This option can be passed to `jws.Settings()` to change the default
+      globally, or to `jws.Parse()` / `jws.ReadFile()` for a per-call
+      override.

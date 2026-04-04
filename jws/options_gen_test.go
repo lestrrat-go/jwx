@@ -20,6 +20,7 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithKeyUsed", identKeyUsed{}.String())
 	require.Equal(t, "WithLegacySigners", identLegacySigners{}.String())
 	require.Equal(t, "WithMaxParseInputSize", identMaxParseInputSize{}.String())
+	require.Equal(t, "WithMaxSignatures", identMaxSignatures{}.String())
 	require.Equal(t, "WithMessage", identMessage{}.String())
 	require.Equal(t, "WithMultipleKeysPerKeyID", identMultipleKeysPerKeyID{}.String())
 	require.Equal(t, "WithPretty", identPretty{}.String())
