@@ -287,6 +287,9 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 			if err := option.Value(&maxSigs); err != nil {
 				return nil, makeParseError(`jws.Parse`, `failed to retrieve max signatures option value: %w`, err)
 			}
+			if maxSigs <= 0 {
+				return nil, makeParseError(`jws.Parse`, `WithMaxSignatures must be greater than zero`)
+			}
 		}
 	}
 
@@ -679,6 +682,9 @@ func Settings(options ...GlobalOption) {
 			var v int
 			if err := option.Value(&v); err != nil {
 				panic(fmt.Sprintf("jws.Settings: value for WithMaxSignatures must be an int: %s", err))
+			}
+			if v <= 0 {
+				panic("jws.Settings: WithMaxSignatures must be greater than zero")
 			}
 			maxSignatures.Store(int64(v))
 		}
