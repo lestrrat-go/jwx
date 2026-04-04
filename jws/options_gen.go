@@ -213,6 +213,7 @@ type identKeyProvider struct{}
 type identKeyUsed struct{}
 type identLegacySigners struct{}
 type identMaxParseInputSize struct{}
+type identMaxSignatures struct{}
 type identMessage struct{}
 type identMultipleKeysPerKeyID struct{}
 type identPretty struct{}
@@ -265,6 +266,10 @@ func (identLegacySigners) String() string {
 
 func (identMaxParseInputSize) String() string {
 	return "WithMaxParseInputSize"
+}
+
+func (identMaxSignatures) String() string {
+	return "WithMaxSignatures"
 }
 
 func (identMessage) String() string {
@@ -394,6 +399,18 @@ func WithLegacySigners() GlobalOption {
 // override.
 func WithMaxParseInputSize(v int64) GlobalParseOption {
 	return &globalParseOption{option.New(identMaxParseInputSize{}, v)}
+}
+
+// WithMaxSignatures specifies the maximum number of signatures allowed
+// in a JWS message using JSON serialization. If a JWS message contains
+// more signatures than this value, parsing will return an error.
+// The default value is 100.
+//
+// This option can be passed to `jws.Settings()` to change the default
+// globally, or to `jws.Parse()` / `jws.ReadFile()` for a per-call
+// override.
+func WithMaxSignatures(v int) GlobalParseOption {
+	return &globalParseOption{option.New(identMaxSignatures{}, v)}
 }
 
 // WithMessage can be passed to Verify() to obtain the jws.Message upon
