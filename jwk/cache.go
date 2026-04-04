@@ -135,6 +135,7 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 	var parseOptions []ParseOption
 	var resourceOptions []httprc.NewResourceOption
 	var maxFetchBodySize int64
+	var hasHTTPClient bool
 	waitReady := true
 	for _, option := range options {
 		switch option := option.(type) {
@@ -154,6 +155,7 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 					return fmt.Errorf(`failed to retrieve HTTPClient option value: %w`, err)
 				}
 				resourceOptions = append(resourceOptions, httprc.WithHTTPClient(cli))
+				hasHTTPClient = true
 			case identWaitReady{}:
 				if err := option.Value(&waitReady); err != nil {
 					return fmt.Errorf(`failed to retrieve WaitReady option value: %w`, err)
@@ -164,6 +166,13 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 				}
 			}
 		}
+	}
+
+	// If no HTTP client was explicitly provided, use the library's default
+	// client which includes timeout and redirect protections. Without this,
+	// httprc would fall back to http.DefaultClient which has no such protections.
+	if !hasHTTPClient {
+		resourceOptions = append(resourceOptions, httprc.WithHTTPClient(DefaultHTTPClient()))
 	}
 
 	r, err := httprc.NewResource[Set](u, &Transformer{
