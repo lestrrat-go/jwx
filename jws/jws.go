@@ -51,11 +51,11 @@ import (
 
 var registry = json.NewRegistry()
 
-var muSettings sync.RWMutex
-var maxSignatures = 100
+var maxSignatures atomic.Int64
 var maxParseInputSize atomic.Int64
 
 func init() {
+	maxSignatures.Store(100)
 	maxParseInputSize.Store(10 * 1024 * 1024) // 10MB
 }
 
@@ -267,9 +267,7 @@ func getB64Value(hdr Headers) bool {
 //
 // On error, returns a jws.ParseError.
 func Parse(src []byte, options ...ParseOption) (*Message, error) {
-	muSettings.RLock()
-	maxSigs := maxSignatures
-	muSettings.RUnlock()
+	maxSigs := int(maxSignatures.Load())
 
 	var formats int
 	for _, option := range options {
@@ -665,8 +663,6 @@ func isRegisteredUnderAnyCurve(alg jwa.SignatureAlgorithm) bool {
 // Currently, the only setting available is `jws.WithLegacySigners()`,
 // which for various reason is now a no-op.
 func Settings(options ...GlobalOption) {
-	muSettings.Lock()
-	defer muSettings.Unlock()
 	for _, option := range options {
 		switch option.Ident() {
 		case identLegacySigners{}:
@@ -680,9 +676,11 @@ func Settings(options ...GlobalOption) {
 			}
 			maxParseInputSize.Store(v)
 		case identMaxSignatures{}:
-			if err := option.Value(&maxSignatures); err != nil {
+			var v int
+			if err := option.Value(&v); err != nil {
 				panic(fmt.Sprintf("jws.Settings: value for WithMaxSignatures must be an int: %s", err))
 			}
+			maxSignatures.Store(int64(v))
 		}
 	}
 }

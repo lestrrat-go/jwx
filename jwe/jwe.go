@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"sync"
 	"sync/atomic"
 
 	"github.com/lestrrat-go/blackmagic"
@@ -29,38 +28,47 @@ import (
 
 // #region globals
 
-var muSettings sync.RWMutex
-var maxPBES2Count = 10000
-var minPBES2Count = 1000
-var maxRecipients = 100
-var maxDecompressBufferSize int64 = 10 * 1024 * 1024 // 10MB
+var maxPBES2Count atomic.Int64
+var minPBES2Count atomic.Int64
+var maxRecipients atomic.Int64
+var maxDecompressBufferSize atomic.Int64
 var maxParseInputSize atomic.Int64
 
 func init() {
-	maxParseInputSize.Store(10 * 1024 * 1024) // 10MB
+	maxPBES2Count.Store(10000)
+	minPBES2Count.Store(1000)
+	maxRecipients.Store(100)
+	maxDecompressBufferSize.Store(10 * 1024 * 1024) // 10MB
+	maxParseInputSize.Store(10 * 1024 * 1024)       // 10MB
 }
 
 func Settings(options ...GlobalOption) {
-	muSettings.Lock()
-	defer muSettings.Unlock()
 	for _, option := range options {
 		switch option.Ident() {
 		case identMaxPBES2Count{}:
-			if err := option.Value(&maxPBES2Count); err != nil {
+			var v int
+			if err := option.Value(&v); err != nil {
 				panic(fmt.Sprintf("jwe.Settings: value for option WithMaxPBES2Count must be an int: %s", err))
 			}
+			maxPBES2Count.Store(int64(v))
 		case identMinPBES2Count{}:
-			if err := option.Value(&minPBES2Count); err != nil {
+			var v int
+			if err := option.Value(&v); err != nil {
 				panic(fmt.Sprintf("jwe.Settings: value for option WithMinPBES2Count must be an int: %s", err))
 			}
+			minPBES2Count.Store(int64(v))
 		case identMaxRecipients{}:
-			if err := option.Value(&maxRecipients); err != nil {
+			var v int
+			if err := option.Value(&v); err != nil {
 				panic(fmt.Sprintf("jwe.Settings: value for option WithMaxRecipients must be an int: %s", err))
 			}
+			maxRecipients.Store(int64(v))
 		case identMaxDecompressBufferSize{}:
-			if err := option.Value(&maxDecompressBufferSize); err != nil {
+			var v int64
+			if err := option.Value(&v); err != nil {
 				panic(fmt.Sprintf("jwe.Settings: value for option WithMaxDecompressBufferSize must be an int64: %s", err))
 			}
+			maxDecompressBufferSize.Store(v)
 		case identCBCBufferSize{}:
 			var v int64
 			if err := option.Value(&v); err != nil {
@@ -281,12 +289,10 @@ func freeDecryptContext(dc *decryptContext) *decryptContext {
 }
 
 func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
-	muSettings.RLock()
-	dc.maxRecipients = maxRecipients
-	dc.maxDecompressBufferSize = maxDecompressBufferSize
-	dc.maxPBES2Count = maxPBES2Count
-	dc.minPBES2Count = minPBES2Count
-	muSettings.RUnlock()
+	dc.maxRecipients = int(maxRecipients.Load())
+	dc.maxDecompressBufferSize = maxDecompressBufferSize.Load()
+	dc.maxPBES2Count = int(maxPBES2Count.Load())
+	dc.minPBES2Count = int(minPBES2Count.Load())
 
 	for _, option := range options {
 		switch option.Ident() {
@@ -996,10 +1002,7 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 // without filtering. Options such as WithMaxParseInputSize are handled
 // by ParseReader before the data reaches this function.
 func Parse(buf []byte, _ ...ParseOption) (*Message, error) {
-	muSettings.RLock()
-	maxR := maxRecipients
-	muSettings.RUnlock()
-	return parseJSONOrCompact(buf, false, maxR)
+	return parseJSONOrCompact(buf, false, int(maxRecipients.Load()))
 }
 
 // errors are wrapped within this function, because we call it directly

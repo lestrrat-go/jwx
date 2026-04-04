@@ -9,16 +9,16 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 )
 
-var useNumber uint32 // TODO: at some point, change to atomic.Bool
+var useNumber atomic.Uint32
 
 // RejectNullStrings controls whether ReadNextStringToken rejects JSON null
 // values. When false (the default), null is silently accepted as "".
 // When true, null causes an error. This can be enabled via
 // jwt.Settings(jwt.WithStrictStringClaims(true)).
-var RejectNullStrings uint32
+var RejectNullStrings atomic.Uint32
 
 func UseNumber() bool {
-	return atomic.LoadUint32(&useNumber) == 1
+	return useNumber.Load() == 1
 }
 
 // Sets the global configuration for json decoding
@@ -27,7 +27,7 @@ func DecoderSettings(inUseNumber bool) {
 	if inUseNumber {
 		val = 1
 	}
-	atomic.StoreUint32(&useNumber, val)
+	useNumber.Store(val)
 }
 
 // Unmarshal respects the values specified in DecoderSettings,
@@ -56,7 +56,7 @@ func AssignNextBytesToken(dst *[]byte, dec *Decoder) error {
 // When RejectNullStrings is enabled (via jwt.Settings(jwt.WithStrictStringClaims(true))),
 // null is rejected per the RFC type definitions (e.g. StringOrURI).
 func ReadNextStringToken(dec *Decoder) (string, error) {
-	if atomic.LoadUint32(&RejectNullStrings) == 1 {
+	if RejectNullStrings.Load() == 1 {
 		var val any
 		if err := dec.Decode(&val); err != nil {
 			return "", fmt.Errorf(`error reading next value: %w`, err)
