@@ -70,6 +70,9 @@ func Settings(options ...GlobalOption) {
 			if err := option.Value(&v); err != nil {
 				panic(fmt.Sprintf("jwt.Settings: value for WithMaxParseInputSize must be int64: %s", err))
 			}
+			if v <= 0 {
+				panic("jwt.Settings: WithMaxParseInputSize must be greater than zero")
+			}
 			maxParseInputSize.Store(v)
 		}
 	}
@@ -187,6 +190,9 @@ func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 		if option.Ident() == (identMaxParseInputSize{}) {
 			if err := option.Value(&maxSize); err != nil {
 				return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `invalid WithMaxParseInputSize: %w`, err)
+			}
+			if maxSize <= 0 {
+				return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `WithMaxParseInputSize must be greater than zero`)
 			}
 		}
 	}

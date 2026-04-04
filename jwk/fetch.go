@@ -102,6 +102,9 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 			if err := option.Value(&maxBodySize); err != nil {
 				return nil, fmt.Errorf(`failed to retrieve MaxFetchBodySize option value: %w`, err)
 			}
+			if maxBodySize <= 0 {
+				return nil, fmt.Errorf(`jwk.Fetch: WithMaxFetchBodySize must be greater than zero`)
+			}
 		}
 	}
 

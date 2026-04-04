@@ -663,6 +663,9 @@ func Configure(options ...GlobalOption) {
 			if err := option.Value(&v); err != nil {
 				continue
 			}
+			if v <= 0 {
+				continue
+			}
 			maxFetchBodySizePtr = &v
 		}
 	}

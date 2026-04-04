@@ -1792,3 +1792,61 @@ func BenchmarkSplitCompatString(b *testing.B) {
 		}
 	}
 }
+
+func TestMaxParseInputSize(t *testing.T) {
+	t.Run("default rejects oversized input", func(t *testing.T) {
+		data := make([]byte, 10*1024*1024+1)
+		_, err := jws.ParseReader(bytes.NewReader(data))
+		require.Error(t, err, `jws.ParseReader should reject input exceeding default max size`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("per-call option overrides default", func(t *testing.T) {
+		data := make([]byte, 200)
+		_, err := jws.ParseReader(bytes.NewReader(data), jws.WithMaxParseInputSize(100))
+		require.Error(t, err, `jws.ParseReader should reject input exceeding per-call max size`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("input within limit is accepted", func(t *testing.T) {
+		data := []byte(`not-valid-jws-but-small`)
+		_, err := jws.ParseReader(bytes.NewReader(data), jws.WithMaxParseInputSize(1024))
+		// The error (if any) should NOT be about size
+		if err != nil {
+			require.NotContains(t, err.Error(), `exceeded max size`)
+		}
+	})
+	t.Run("global setting changes default", func(t *testing.T) {
+		jws.Settings(jws.WithMaxParseInputSize(50))
+		defer jws.Settings(jws.WithMaxParseInputSize(10 * 1024 * 1024)) // restore
+
+		data := make([]byte, 100)
+		_, err := jws.ParseReader(bytes.NewReader(data))
+		require.Error(t, err, `jws.ParseReader should reject input exceeding global max size`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("per-call option overrides global setting", func(t *testing.T) {
+		jws.Settings(jws.WithMaxParseInputSize(50))
+		defer jws.Settings(jws.WithMaxParseInputSize(10 * 1024 * 1024)) // restore
+
+		data := []byte(`not-valid-jws-but-small`)
+		_, err := jws.ParseReader(bytes.NewReader(data), jws.WithMaxParseInputSize(1024))
+		if err != nil {
+			require.NotContains(t, err.Error(), `exceeded max size`)
+		}
+	})
+	t.Run("negative value panics in Settings", func(t *testing.T) {
+		require.Panics(t, func() {
+			jws.Settings(jws.WithMaxParseInputSize(-1))
+		})
+	})
+	t.Run("zero value panics in Settings", func(t *testing.T) {
+		require.Panics(t, func() {
+			jws.Settings(jws.WithMaxParseInputSize(0))
+		})
+	})
+	t.Run("negative per-call value returns error", func(t *testing.T) {
+		data := []byte(`test`)
+		_, err := jws.ParseReader(bytes.NewReader(data), jws.WithMaxParseInputSize(-1))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `greater than zero`)
+	})
+}

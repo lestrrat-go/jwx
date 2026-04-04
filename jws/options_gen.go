@@ -35,6 +35,25 @@ type globalOption struct {
 
 func (*globalOption) globalOption() {}
 
+// GlobalParseOption describes an Option that can be passed to `jws.Settings()`,
+// `jws.Parse()`, and `jws.ReadFile()`.
+type GlobalParseOption interface {
+	Option
+	globalOption()
+	parseOption()
+	readFileOption()
+}
+
+type globalParseOption struct {
+	Option
+}
+
+func (*globalParseOption) globalOption() {}
+
+func (*globalParseOption) parseOption() {}
+
+func (*globalParseOption) readFileOption() {}
+
 // ReadFileOption is a type of `Option` that can be passed to `jwe.Parse`
 type ParseOption interface {
 	Option
@@ -193,6 +212,7 @@ type identKey struct{}
 type identKeyProvider struct{}
 type identKeyUsed struct{}
 type identLegacySigners struct{}
+type identMaxParseInputSize struct{}
 type identMessage struct{}
 type identMultipleKeysPerKeyID struct{}
 type identPretty struct{}
@@ -241,6 +261,10 @@ func (identKeyUsed) String() string {
 
 func (identLegacySigners) String() string {
 	return "WithLegacySigners"
+}
+
+func (identMaxParseInputSize) String() string {
+	return "WithMaxParseInputSize"
 }
 
 func (identMessage) String() string {
@@ -359,6 +383,17 @@ func WithKeyUsed(v any) VerifyOption {
 // WithLegacySigners is a no-op option that exists only for backwards compatibility.
 func WithLegacySigners() GlobalOption {
 	return &globalOption{option.New(identLegacySigners{}, true)}
+}
+
+// WithMaxParseInputSize specifies the maximum number of bytes read from an
+// io.Reader in `jws.ParseReader`. If the input exceeds this size,
+// `jws.ParseReader` will return an error. The default value is 10MB.
+//
+// This option can be passed to `jws.Settings()` to change the default
+// globally, or to `jws.ParseReader()` / `jws.ReadFile()` for a per-call
+// override.
+func WithMaxParseInputSize(v int64) GlobalParseOption {
+	return &globalParseOption{option.New(identMaxParseInputSize{}, v)}
 }
 
 // WithMessage can be passed to Verify() to obtain the jws.Message upon

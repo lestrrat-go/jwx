@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
@@ -32,7 +33,11 @@ var muSettings sync.RWMutex
 var maxPBES2Count = 10000
 var minPBES2Count = 1000
 var maxDecompressBufferSize int64 = 10 * 1024 * 1024 // 10MB
-var maxParseInputSize int64 = 10 * 1024 * 1024       // 10MB
+var maxParseInputSize atomic.Int64
+
+func init() {
+	maxParseInputSize.Store(10 * 1024 * 1024) // 10MB
+}
 
 func Settings(options ...GlobalOption) {
 	muSettings.Lock()
@@ -58,9 +63,14 @@ func Settings(options ...GlobalOption) {
 			}
 			aescbc.SetMaxBufferSize(v)
 		case identMaxParseInputSize{}:
-			if err := option.Value(&maxParseInputSize); err != nil {
+			var v int64
+			if err := option.Value(&v); err != nil {
 				panic(fmt.Sprintf("jwe.Settings: value for option WithMaxParseInputSize must be an int64: %s", err))
 			}
+			if v <= 0 {
+				panic("jwe.Settings: WithMaxParseInputSize must be greater than zero")
+			}
+			maxParseInputSize.Store(v)
 		}
 	}
 }
@@ -969,8 +979,10 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 // Parse parses the JWE message into a Message object. The JWE message
 // can be either compact or full JSON format.
 //
-// Parse() currently does not take any options, but the API accepts it
-// in anticipation of future addition.
+// Parse() currently does not process any options, but the API accepts
+// them so that callers like ParseReader can forward their option lists
+// without filtering. Options such as WithMaxParseInputSize are handled
+// by ParseReader before the data reaches this function.
 func Parse(buf []byte, _ ...ParseOption) (*Message, error) {
 	return parseJSONOrCompact(buf, false)
 }
@@ -1008,14 +1020,15 @@ func ParseString(s string, options ...ParseOption) (*Message, error) {
 
 // ParseReader is the same as Parse, but takes an io.Reader.
 func ParseReader(src io.Reader, options ...ParseOption) (*Message, error) {
-	muSettings.RLock()
-	maxSize := maxParseInputSize
-	muSettings.RUnlock()
+	maxSize := maxParseInputSize.Load()
 
 	for _, option := range options {
 		if option.Ident() == (identMaxParseInputSize{}) {
 			if err := option.Value(&maxSize); err != nil {
 				return nil, makeParseError(`jwe.ParseReader`, `invalid WithMaxParseInputSize: %w`, err)
+			}
+			if maxSize <= 0 {
+				return nil, makeParseError(`jwe.ParseReader`, `WithMaxParseInputSize must be greater than zero`)
 			}
 		}
 	}
