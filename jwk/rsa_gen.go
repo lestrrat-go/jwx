@@ -456,7 +456,7 @@ LOOP:
 		case string: // Objects can only have string keys
 			switch tok {
 			case KeyTypeKey:
-				val, err := json.ReadNextStringToken(dec)
+				val, err := json.ReadNextStringToken(dec, h.dc)
 				if err != nil {
 					return fmt.Errorf(`error reading token: %w`, err)
 				}
@@ -478,7 +478,7 @@ LOOP:
 					return fmt.Errorf(`failed to decode value for key %s: %w`, RSAEKey, err)
 				}
 			case KeyIDKey:
-				if err := json.AssignNextStringToken(&h.keyID, dec); err != nil {
+				if err := json.AssignNextStringToken(&h.keyID, dec, h.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyIDKey, err)
 				}
 			case KeyOpsKey:
@@ -488,7 +488,7 @@ LOOP:
 				}
 				h.keyOps = &decoded
 			case KeyUsageKey:
-				if err := json.AssignNextStringToken(&h.keyUsage, dec); err != nil {
+				if err := json.AssignNextStringToken(&h.keyUsage, dec, h.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyUsageKey, err)
 				}
 			case RSANKey:
@@ -502,15 +502,15 @@ LOOP:
 				}
 				h.x509CertChain = &decoded
 			case X509CertThumbprintKey:
-				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec); err != nil {
+				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec, h.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintKey, err)
 				}
 			case X509CertThumbprintS256Key:
-				if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec); err != nil {
+				if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec, h.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintS256Key, err)
 				}
 			case X509URLKey:
-				if err := json.AssignNextStringToken(&h.x509URL, dec); err != nil {
+				if err := json.AssignNextStringToken(&h.x509URL, dec, h.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, X509URLKey, err)
 				}
 			default:
@@ -1260,7 +1260,7 @@ LOOP:
 		case string: // Objects can only have string keys
 			switch tok {
 			case KeyTypeKey:
-				val, err := json.ReadNextStringToken(dec)
+				val, err := json.ReadNextStringToken(dec, h.dc)
 				if err != nil {
 					return fmt.Errorf(`error reading token: %w`, err)
 				}
@@ -1294,7 +1294,7 @@ LOOP:
 					return fmt.Errorf(`failed to decode value for key %s: %w`, RSAEKey, err)
 				}
 			case KeyIDKey:
-				if err := json.AssignNextStringToken(&h.keyID, dec); err != nil {
+				if err := json.AssignNextStringToken(&h.keyID, dec, h.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyIDKey, err)
 				}
 			case KeyOpsKey:
@@ -1304,7 +1304,7 @@ LOOP:
 				}
 				h.keyOps = &decoded
 			case KeyUsageKey:
-				if err := json.AssignNextStringToken(&h.keyUsage, dec); err != nil {
+				if err := json.AssignNextStringToken(&h.keyUsage, dec, h.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyUsageKey, err)
 				}
 			case RSANKey:
@@ -1330,15 +1330,15 @@ LOOP:
 				}
 				h.x509CertChain = &decoded
 			case X509CertThumbprintKey:
-				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec); err != nil {
+				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec, h.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintKey, err)
 				}
 			case X509CertThumbprintS256Key:
-				if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec); err != nil {
+				if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec, h.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintS256Key, err)
 				}
 			case X509URLKey:
-				if err := json.AssignNextStringToken(&h.x509URL, dec); err != nil {
+				if err := json.AssignNextStringToken(&h.x509URL, dec, h.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, X509URLKey, err)
 				}
 			default:

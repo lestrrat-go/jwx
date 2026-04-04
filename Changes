@@ -36,11 +36,10 @@ v3.0.14 UNRELEASED
     `*http.Client`. Existing client settings (Transport, Jar, etc.) are
     preserved; CheckRedirect is wrapped rather than overwritten.
 
-  * [jwt] Add `jwt.WithStrictStringClaims(true)` global option to reject
-    JSON `null` for string registered claims (`iss`, `sub`, `jti`). By default,
-    null is silently accepted as an empty string (matching Go's standard JSON
-    decoding behavior). When enabled via `jwt.Settings(jwt.WithStrictStringClaims(true))`,
-    null values are rejected per the RFC type definitions (StringOrURI). (#1484)
+  * [jwt] Add `jwt.WithStrictStringClaims(true)` option for `jwt.Parse()` and
+    `jwt.ReadFile()` to reject JSON `null` for string registered claims
+    (`iss`, `sub`, `jti`). By default, null is silently accepted as an empty
+    string. (#1484)
 
   * [jwa] Add fully-specified EdDSA signature algorithms `Ed25519` and `Ed448` per
     RFC 9864. The polymorphic `EdDSA` algorithm is now marked as deprecated.

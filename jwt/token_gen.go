@@ -440,11 +440,11 @@ LOOP:
 				}
 				t.issuedAt = &decoded
 			case IssuerKey:
-				if err := json.AssignNextStringToken(&t.issuer, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.issuer, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, IssuerKey, err)
 				}
 			case JwtIDKey:
-				if err := json.AssignNextStringToken(&t.jwtID, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.jwtID, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, JwtIDKey, err)
 				}
 			case NotBeforeKey:
@@ -454,7 +454,7 @@ LOOP:
 				}
 				t.notBefore = &decoded
 			case SubjectKey:
-				if err := json.AssignNextStringToken(&t.subject, dec); err != nil {
+				if err := json.AssignNextStringToken(&t.subject, dec, t.dc); err != nil {
 					return fmt.Errorf(`failed to decode value for key %s: %w`, SubjectKey, err)
 				}
 			default:
