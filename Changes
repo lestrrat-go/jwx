@@ -11,11 +11,11 @@ v3.0.14 UNRELEASED
     chains from attacker-controlled JWKS URLs. Callers who provide their
     own `http.Client` via `jwk.WithHTTPClient()` are not affected.
 
-  * [jwt] `jwt.Parse()` now rejects JSON `null` for string registered claims
-    (`iss`, `sub`, `jti`). Previously, null was silently accepted as an empty
-    string due to Go's default JSON decoding behavior. This is a correctness fix
-    per the RFC type definitions (StringOrURI) rather than a security fix —
-    legitimate token issuers do not emit null for these claims. (#1484)
+  * [jwt] Add `jwt.WithStrictStringClaims(true)` global option to reject
+    JSON `null` for string registered claims (`iss`, `sub`, `jti`). By default,
+    null is silently accepted as an empty string (matching Go's standard JSON
+    decoding behavior). When enabled via `jwt.Settings(jwt.WithStrictStringClaims(true))`,
+    null values are rejected per the RFC type definitions (StringOrURI). (#1484)
 
   * [jwa] Add fully-specified EdDSA signature algorithms `Ed25519` and `Ed448` per
     RFC 9864. The polymorphic `EdDSA` algorithm is now marked as deprecated.

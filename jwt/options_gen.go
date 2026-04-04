@@ -201,6 +201,7 @@ type identNumericDateParsePrecision struct{}
 type identPedantic struct{}
 type identResetValidators struct{}
 type identSignOption struct{}
+type identStrictStringClaims struct{}
 type identToken struct{}
 type identTruncation struct{}
 type identValidate struct{}
@@ -281,6 +282,10 @@ func (identResetValidators) String() string {
 
 func (identSignOption) String() string {
 	return "WithSignOption"
+}
+
+func (identStrictStringClaims) String() string {
+	return "WithStrictStringClaims"
 }
 
 func (identToken) String() string {
@@ -465,6 +470,17 @@ func WithResetValidators(v bool) ValidateOption {
 // need to use this.
 func WithSignOption(v jws.SignOption) SignOption {
 	return &signOption{option.New(identSignOption{}, v)}
+}
+
+// WithStrictStringClaims controls whether JSON null values for string
+// claims (such as "iss", "sub", "jti") cause a parse error. By default,
+// null is silently accepted as an empty string (matching Go's standard
+// JSON decoding behavior). When set to true, null values are rejected
+// per the RFC type definitions (e.g. StringOrURI).
+//
+// This option can only be set globally via `jwt.Settings()`.
+func WithStrictStringClaims(v bool) GlobalOption {
+	return &globalOption{option.New(identStrictStringClaims{}, v)}
 }
 
 // WithToken specifies the token instance in which the resulting JWT is stored
