@@ -168,6 +168,18 @@ options:
       This option can be used for `jwe.Settings()`, which changes the behavior
       globally, or for `jwe.Decrypt()`, which changes the behavior for that
       specific call.
+  - ident: MaxRecipients
+    interface: GlobalDecryptOption
+    argument_type: int
+    comment: |
+      WithMaxRecipients specifies the maximum number of recipients allowed
+      in a JWE message. If a JWE message contains more recipients than this
+      value, parsing or decryption will return an error. The default value
+      is 100.
+
+      This option can be used for `jwe.Settings()`, which changes the behavior
+      globally, or for `jwe.Decrypt()`, which changes the behavior for that
+      specific call.
   - ident: MaxDecompressBufferSize
     interface: GlobalDecryptOption
     argument_type: int64

@@ -167,6 +167,7 @@ type identLegacyHeaderMerging struct{}
 type identMaxDecompressBufferSize struct{}
 type identMaxPBES2Count struct{}
 type identMaxParseInputSize struct{}
+type identMaxRecipients struct{}
 type identMergeProtectedHeaders struct{}
 type identMessage struct{}
 type identMinPBES2Count struct{}
@@ -226,6 +227,10 @@ func (identMaxPBES2Count) String() string {
 
 func (identMaxParseInputSize) String() string {
 	return "WithMaxParseInputSize"
+}
+
+func (identMaxRecipients) String() string {
+	return "WithMaxRecipients"
 }
 
 func (identMergeProtectedHeaders) String() string {
@@ -391,6 +396,18 @@ func WithMaxPBES2Count(v int) GlobalDecryptOption {
 // globally, or to `jwe.ReadFile()` for a per-call override.
 func WithMaxParseInputSize(v int64) GlobalParseOption {
 	return &globalParseOption{option.New(identMaxParseInputSize{}, v)}
+}
+
+// WithMaxRecipients specifies the maximum number of recipients allowed
+// in a JWE message. If a JWE message contains more recipients than this
+// value, parsing or decryption will return an error. The default value
+// is 100.
+//
+// This option can be used for `jwe.Settings()`, which changes the behavior
+// globally, or for `jwe.Decrypt()`, which changes the behavior for that
+// specific call.
+func WithMaxRecipients(v int) GlobalDecryptOption {
+	return &globalDecryptOption{option.New(identMaxRecipients{}, v)}
 }
 
 // WithMergeProtectedHeaders specify that when given multiple headers

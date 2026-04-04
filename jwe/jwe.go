@@ -32,6 +32,7 @@ import (
 var muSettings sync.RWMutex
 var maxPBES2Count = 10000
 var minPBES2Count = 1000
+var maxRecipients = 100
 var maxDecompressBufferSize int64 = 10 * 1024 * 1024 // 10MB
 var maxParseInputSize atomic.Int64
 
@@ -51,6 +52,10 @@ func Settings(options ...GlobalOption) {
 		case identMinPBES2Count{}:
 			if err := option.Value(&minPBES2Count); err != nil {
 				panic(fmt.Sprintf("jwe.Settings: value for option WithMinPBES2Count must be an int: %s", err))
+			}
+		case identMaxRecipients{}:
+			if err := option.Value(&maxRecipients); err != nil {
+				panic(fmt.Sprintf("jwe.Settings: value for option WithMaxRecipients must be an int: %s", err))
 			}
 		case identMaxDecompressBufferSize{}:
 			if err := option.Value(&maxDecompressBufferSize); err != nil {
@@ -246,6 +251,7 @@ type decryptContext struct {
 	keyUsed                 any
 	cek                     *[]byte
 	dst                     *Message
+	maxRecipients           int
 	maxDecompressBufferSize int64
 	maxPBES2Count           int
 	minPBES2Count           int
@@ -266,6 +272,7 @@ func freeDecryptContext(dc *decryptContext) *decryptContext {
 	dc.keyUsed = nil
 	dc.cek = nil
 	dc.dst = nil
+	dc.maxRecipients = 0
 	dc.maxDecompressBufferSize = 0
 	dc.maxPBES2Count = 0
 	dc.minPBES2Count = 0
@@ -275,6 +282,7 @@ func freeDecryptContext(dc *decryptContext) *decryptContext {
 
 func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 	muSettings.RLock()
+	dc.maxRecipients = maxRecipients
 	dc.maxDecompressBufferSize = maxDecompressBufferSize
 	dc.maxPBES2Count = maxPBES2Count
 	dc.minPBES2Count = minPBES2Count
@@ -310,6 +318,10 @@ func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 			if err := option.Value(&dc.cek); err != nil {
 				return fmt.Errorf("jwe.decrypt: WithCEK must be a *[]byte: %w", err)
 			}
+		case identMaxRecipients{}:
+			if err := option.Value(&dc.maxRecipients); err != nil {
+				return fmt.Errorf("jwe.decrypt: WithMaxRecipients must be int: %w", err)
+			}
 		case identMaxDecompressBufferSize{}:
 			if err := option.Value(&dc.maxDecompressBufferSize); err != nil {
 				return fmt.Errorf("jwe.decrypt: WithMaxDecompressBufferSize must be int64: %w", err)
@@ -337,7 +349,7 @@ func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 }
 
 func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
-	msg, err := parseJSONOrCompact(buf, true)
+	msg, err := parseJSONOrCompact(buf, true, dc.maxRecipients)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to parse buffer for Decrypt: %w`, err)
 	}
@@ -984,12 +996,15 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 // without filtering. Options such as WithMaxParseInputSize are handled
 // by ParseReader before the data reaches this function.
 func Parse(buf []byte, _ ...ParseOption) (*Message, error) {
-	return parseJSONOrCompact(buf, false)
+	muSettings.RLock()
+	maxR := maxRecipients
+	muSettings.RUnlock()
+	return parseJSONOrCompact(buf, false, maxR)
 }
 
 // errors are wrapped within this function, because we call it directly
 // from Decrypt as well.
-func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
+func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool, maxR int) (*Message, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
 		return nil, makeParseError(`jwe.Parse`, `empty buffer`)
@@ -1006,6 +1021,11 @@ func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error
 	if err != nil {
 		return nil, makeParseError(`jwe.Parse`, `%w`, err)
 	}
+
+	if maxR > 0 && len(msg.recipients) > maxR {
+		return nil, makeParseError(`jwe.Parse`, `too many recipients in JWE message (%d > %d)`, len(msg.recipients), maxR)
+	}
+
 	return msg, nil
 }
 
