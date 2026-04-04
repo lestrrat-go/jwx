@@ -1922,17 +1922,8 @@ func TestFetch(t *testing.T) {
 		defer tlsSrv.Close()
 
 		// Use the TLS server's client (which trusts its self-signed cert)
-		// but install the same redirect policy as the library's default.
-		client := tlsSrv.Client()
-		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 5 {
-				return fmt.Errorf("stopped after 5 redirects")
-			}
-			if len(via) > 0 && via[len(via)-1].URL.Scheme == "https" && req.URL.Scheme != "https" { //nolint:goconst
-				return fmt.Errorf("redirect from HTTPS to non-HTTPS URL %q is not allowed", req.URL.Redacted())
-			}
-			return nil
-		}
+		// hardened with the library's actual redirect policy.
+		client := jwk.WrapHTTPClientDefaults(tlsSrv.Client())
 
 		_, err := jwk.Fetch(ctx, tlsSrv.URL, jwk.WithHTTPClient(client))
 		require.Error(t, err, `jwk.Fetch should block HTTPS-to-HTTP redirect`)
@@ -1963,17 +1954,8 @@ func TestFetch(t *testing.T) {
 		defer httpOrigin.Close()
 
 		// Use the TLS intermediate's client (trusts its self-signed cert)
-		// with the same redirect policy as the library's default.
-		client := tlsIntermediate.Client()
-		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 5 {
-				return fmt.Errorf("stopped after 5 redirects")
-			}
-			if len(via) > 0 && via[len(via)-1].URL.Scheme == "https" && req.URL.Scheme != "https" {
-				return fmt.Errorf("redirect from HTTPS to non-HTTPS URL %q is not allowed", req.URL.Redacted())
-			}
-			return nil
-		}
+		// hardened with the library's actual redirect policy.
+		client := jwk.WrapHTTPClientDefaults(tlsIntermediate.Client())
 
 		_, err := jwk.Fetch(ctx, httpOrigin.URL, jwk.WithHTTPClient(client))
 		require.Error(t, err, `jwk.Fetch should block HTTPS-to-HTTP downgrade even when chain starts with HTTP`)
