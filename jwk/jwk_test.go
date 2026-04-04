@@ -1682,6 +1682,46 @@ func TestFetch(t *testing.T) {
 		require.Error(t, err, `jwk.Fetch should fail`)
 		require.Contains(t, err.Error(), `418`, `error should contain 418`)
 	})
+	t.Run("DefaultTimeout", func(t *testing.T) {
+		// Create a server that delays longer than the context deadline.
+		// The default HTTP client has a 30s timeout, but we use a short
+		// context deadline to test that the fetch respects context cancellation.
+		slowSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			select {
+			case <-time.After(5 * time.Second):
+				w.WriteHeader(http.StatusOK)
+			case <-r.Context().Done():
+			}
+		}))
+		defer slowSrv.Close()
+
+		ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+		defer cancel()
+
+		_, err := jwk.Fetch(ctx, slowSrv.URL)
+		require.Error(t, err, `jwk.Fetch should fail with timeout`)
+	})
+	t.Run("ConfigureHTTPClient", func(t *testing.T) {
+		// Configure a global HTTP client that returns 418 (teapot).
+		teapotClient := &http.Client{
+			Transport: &DummyRoundTripper{},
+		}
+		jwk.Configure(jwk.WithHTTPClient(teapotClient))
+		defer jwk.Configure(jwk.WithHTTPClient(&http.Client{Timeout: 30 * time.Second})) // restore
+
+		ctx := t.Context()
+		_, err := jwk.Fetch(ctx, srv.URL)
+		require.Error(t, err, `jwk.Fetch should fail with globally configured client`)
+		require.Contains(t, err.Error(), `418`, `error should contain 418 from global client`)
+
+		// Per-call override should take precedence
+		fetched, err := jwk.Fetch(ctx, srv.URL, jwk.WithHTTPClient(http.DefaultClient))
+		require.NoError(t, err, `per-call WithHTTPClient should override global`)
+
+		got, err := json.MarshalIndent(fetched, "", "  ")
+		require.NoError(t, err, `json.MarshalIndent should succeed`)
+		require.Equal(t, expected, got, `data should match`)
+	})
 	t.Run("Whitelist", func(t *testing.T) {
 		testcases := []struct {
 			Name      string

@@ -56,11 +56,18 @@ interfaces:
       `jwk.Fetch()`, and `(*jwk.Cache).Register()`.
 options:
   - ident: HTTPClient
-    interface: RegisterFetchOption
+    interface: GlobalFetchOption
     argument_type: HTTPClient
     comment: |
       WithHTTPClient allows users to specify the "net/http".Client object that
       is used when fetching jwk.Set objects.
+
+      When passed to `jwk.Configure()`, it sets the global default HTTP client
+      used by `jwk.Fetch()`. By default, `jwk.Fetch()` uses an HTTP client with
+      a 30-second timeout instead of `http.DefaultClient` (which has no timeout).
+
+      Users can override the client per-call via `jwk.Fetch()` or per-resource
+      via `(*jwk.Cache).Register()`.
   - ident: MaxFetchBodySize
     interface: GlobalFetchOption
     argument_type: int64

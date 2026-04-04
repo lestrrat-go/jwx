@@ -241,8 +241,15 @@ func WithFetchWhitelist(v Whitelist) FetchOption {
 
 // WithHTTPClient allows users to specify the "net/http".Client object that
 // is used when fetching jwk.Set objects.
-func WithHTTPClient(v HTTPClient) RegisterFetchOption {
-	return &registerFetchOption{option.New(identHTTPClient{}, v)}
+//
+// When passed to `jwk.Configure()`, it sets the global default HTTP client
+// used by `jwk.Fetch()`. By default, `jwk.Fetch()` uses an HTTP client with
+// a 30-second timeout instead of `http.DefaultClient` (which has no timeout).
+//
+// Users can override the client per-call via `jwk.Fetch()` or per-resource
+// via `(*jwk.Cache).Register()`.
+func WithHTTPClient(v HTTPClient) GlobalFetchOption {
+	return &globalFetchOption{option.New(identHTTPClient{}, v)}
 }
 
 // WithIgnoreParseError is only applicable when used with `jwk.Parse()`
