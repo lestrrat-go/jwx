@@ -62,8 +62,9 @@ func defaultCheckRedirect(req *http.Request, via []*http.Request) error {
 		return fmt.Errorf("jwk.Fetch: stopped after %d redirects", defaultMaxRedirects)
 	}
 
-	// Prevent HTTPS → HTTP scheme downgrade. The original request is via[0].
-	if len(via) > 0 && via[0].URL.Scheme == "https" && req.URL.Scheme != "https" {
+	// Prevent HTTPS → HTTP scheme downgrade at any hop.
+	// via[len(via)-1] is the immediately previous request in the chain.
+	if len(via) > 0 && via[len(via)-1].URL.Scheme == "https" && req.URL.Scheme != "https" {
 		return fmt.Errorf("jwk.Fetch: redirect from HTTPS to non-HTTPS URL %q is not allowed", req.URL.Redacted())
 	}
 	return nil
