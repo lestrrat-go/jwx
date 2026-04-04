@@ -88,7 +88,7 @@ type Transformer struct {
 func (t Transformer) Transform(_ context.Context, res *http.Response) (Set, error) {
 	maxBodySize := t.maxFetchBodySize
 	if maxBodySize <= 0 {
-		maxBodySize = defaultMaxFetchBodySize
+		maxBodySize = maxFetchBodySize.Load()
 	}
 
 	buf, err := io.ReadAll(io.LimitReader(res.Body, maxBodySize+1))
