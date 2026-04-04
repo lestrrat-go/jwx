@@ -372,14 +372,6 @@ func ParseReader(src io.Reader, options ...ParseOption) (*Message, error) {
 	return Parse(buf, options...)
 }
 
-func parseJSONReader(src io.Reader) (result *Message, err error) {
-	var m Message
-	if err := json.NewDecoder(src).Decode(&m); err != nil {
-		return nil, fmt.Errorf(`failed to unmarshal jws message: %w`, err)
-	}
-	return &m, nil
-}
-
 func parseJSON(data []byte) (result *Message, err error) {
 	var m Message
 	if err := json.Unmarshal(data, &m); err != nil {
@@ -428,15 +420,6 @@ func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
 		return nil, nil, nil, makeParseError(`jws.Parse`, `%w`, err)
 	}
 	return hdr, payload, signature, nil
-}
-
-// parseCompactReader parses a JWS value serialized via compact serialization.
-func parseCompactReader(rdr io.Reader) (m *Message, err error) {
-	protected, payload, signature, err := SplitCompactReader(rdr)
-	if err != nil {
-		return nil, fmt.Errorf(`invalid compact serialization format: %w`, err)
-	}
-	return parse(protected, payload, signature)
 }
 
 func parseCompact(data []byte) (m *Message, err error) {
