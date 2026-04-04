@@ -5,17 +5,44 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 	"sync/atomic"
+	"time"
 )
 
 // defaultMaxFetchBodySize is the initial default maximum number of bytes read
 // from an HTTP response body when fetching a JWKS (10 MB).
 const defaultMaxFetchBodySize int64 = 10 * 1024 * 1024
 
+// defaultFetchTimeout is the default timeout for HTTP requests made by
+// jwk.Fetch(). This prevents malicious or unresponsive JWKS endpoints from
+// hanging indefinitely (e.g. slowloris-style DoS).
+const defaultFetchTimeout = 30 * time.Second
+
 var maxFetchBodySize atomic.Int64
+
+var (
+	fetchHTTPClientMu sync.RWMutex
+	fetchHTTPClient   HTTPClient
+)
 
 func init() {
 	maxFetchBodySize.Store(defaultMaxFetchBodySize)
+	fetchHTTPClient = &http.Client{
+		Timeout: defaultFetchTimeout,
+	}
+}
+
+func getFetchHTTPClient() HTTPClient {
+	fetchHTTPClientMu.RLock()
+	defer fetchHTTPClientMu.RUnlock()
+	return fetchHTTPClient
+}
+
+func setFetchHTTPClient(c HTTPClient) {
+	fetchHTTPClientMu.Lock()
+	defer fetchHTTPClientMu.Unlock()
+	fetchHTTPClient = c
 }
 
 // Fetcher is an interface that represents an object that fetches a JWKS.
@@ -81,7 +108,7 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 	var parseOptions []ParseOption
 	//nolint:revive // I want to keep the type of `wl` as `Whitelist` instead of `InsecureWhitelist`
 	var wl Whitelist = InsecureWhitelist{}
-	var client HTTPClient = http.DefaultClient
+	var client HTTPClient = getFetchHTTPClient()
 	var maxBodySize = maxFetchBodySize.Load()
 	for _, option := range options {
 		if parseOpt, ok := option.(ParseOption); ok {

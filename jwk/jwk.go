@@ -650,6 +650,7 @@ func IsKeyValidationError(err error) bool {
 func Configure(options ...GlobalOption) {
 	var strictKeyUsagePtr *bool
 	var maxFetchBodySizePtr *int64
+	var httpClientPtr *HTTPClient
 	for _, option := range options {
 		switch option.Ident() {
 		case identStrictKeyUsage{}:
@@ -667,6 +668,12 @@ func Configure(options ...GlobalOption) {
 				continue
 			}
 			maxFetchBodySizePtr = &v
+		case identHTTPClient{}:
+			var v HTTPClient
+			if err := option.Value(&v); err != nil {
+				continue
+			}
+			httpClientPtr = &v
 		}
 	}
 
@@ -676,6 +683,10 @@ func Configure(options ...GlobalOption) {
 
 	if maxFetchBodySizePtr != nil {
 		maxFetchBodySize.Store(*maxFetchBodySizePtr)
+	}
+
+	if httpClientPtr != nil {
+		setFetchHTTPClient(*httpClientPtr)
 	}
 }
 
