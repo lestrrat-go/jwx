@@ -1308,12 +1308,12 @@ func TestMaxRecipients(t *testing.T) {
 	require.NoError(t, err, `jwe.Encrypt should succeed`)
 
 	// Parse the JSON to extract a recipient, then build a message with many recipients.
-	var parsed map[string]interface{}
+	var parsed map[string]any
 	require.NoError(t, json.Unmarshal(encrypted, &parsed))
 
 	// The single-recipient JSON format uses "header" and "encrypted_key" at the top level.
 	// Build a recipients array from this.
-	singleRecipient := map[string]interface{}{
+	singleRecipient := map[string]any{
 		"encrypted_key": parsed["encrypted_key"],
 	}
 	if h, ok := parsed["header"]; ok {
@@ -1321,12 +1321,12 @@ func TestMaxRecipients(t *testing.T) {
 	}
 
 	makeMessage := func(n int) []byte {
-		recipients := make([]interface{}, n)
+		recipients := make([]any, n)
 		for i := range recipients {
 			recipients[i] = singleRecipient
 		}
 
-		msg := map[string]interface{}{
+		msg := map[string]any{
 			"protected":  parsed["protected"],
 			"iv":         parsed["iv"],
 			"ciphertext": parsed["ciphertext"],
