@@ -36,10 +36,10 @@ v3.0.14 UNRELEASED
     `*http.Client`. Existing client settings (Transport, Jar, etc.) are
     preserved; CheckRedirect is wrapped rather than overwritten.
 
-  * [jwt] `jwt.WithStrictStringClaims(true)` is now a per-call `ParseOption`
-    instead of a global `jwt.Settings()` option. Pass it to `jwt.Parse()` or
+  * [jwt] Add `jwt.WithStrictStringClaims(true)` option for `jwt.Parse()` and
     `jwt.ReadFile()` to reject JSON `null` for string registered claims
-    (`iss`, `sub`, `jti`). (#1484)
+    (`iss`, `sub`, `jti`). By default, null is silently accepted as an empty
+    string. (#1484)
 
   * [jwa] Add fully-specified EdDSA signature algorithms `Ed25519` and `Ed448` per
     RFC 9864. The polymorphic `EdDSA` algorithm is now marked as deprecated.
