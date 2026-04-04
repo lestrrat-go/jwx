@@ -33,7 +33,18 @@ var (
 
 func init() {
 	maxFetchBodySize.Store(defaultMaxFetchBodySize)
-	fetchHTTPClient = &http.Client{
+	fetchHTTPClient = DefaultHTTPClient()
+}
+
+// DefaultHTTPClient returns a new http.Client configured with the same
+// defaults used by jwk.Fetch(): a 30-second timeout, a redirect policy
+// that blocks HTTPS-to-HTTP scheme downgrades, and a maximum of 5 redirects.
+//
+// This is useful for callers who need the library's default protections
+// but want to wrap or augment the client (e.g. adding a custom Transport),
+// and for restoring defaults after calling jwk.Configure(jwk.WithHTTPClient(...)).
+func DefaultHTTPClient() *http.Client {
+	return &http.Client{
 		Timeout:       defaultFetchTimeout,
 		CheckRedirect: defaultCheckRedirect,
 	}

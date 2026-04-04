@@ -1707,7 +1707,7 @@ func TestFetch(t *testing.T) {
 			Transport: &DummyRoundTripper{},
 		}
 		jwk.Configure(jwk.WithHTTPClient(teapotClient))
-		defer jwk.Configure(jwk.WithHTTPClient(&http.Client{Timeout: 30 * time.Second})) // restore
+		defer jwk.Configure(jwk.WithHTTPClient(jwk.DefaultHTTPClient())) // restore
 
 		ctx := t.Context()
 		_, err := jwk.Fetch(ctx, srv.URL)
