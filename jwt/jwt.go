@@ -83,43 +83,43 @@ func Settings(options ...GlobalOption) {
 			if v {
 				newVal = 1
 			}
-			atomic.StoreUint32(&json.RejectNullStrings, newVal)
+			json.RejectNullStrings.Store(newVal)
 		}
 	}
 
 	if parsePrecision <= types.MaxPrecision { // remember we set default to max + 1
-		v := atomic.LoadUint32(&types.ParsePrecision)
+		v := types.ParsePrecision.Load()
 		if v != parsePrecision {
-			atomic.CompareAndSwapUint32(&types.ParsePrecision, v, parsePrecision)
+			types.ParsePrecision.CompareAndSwap(v, parsePrecision)
 		}
 	}
 
 	if formatPrecision <= types.MaxPrecision { // remember we set default to max + 1
-		v := atomic.LoadUint32(&types.FormatPrecision)
+		v := types.FormatPrecision.Load()
 		if v != formatPrecision {
-			atomic.CompareAndSwapUint32(&types.FormatPrecision, v, formatPrecision)
+			types.FormatPrecision.CompareAndSwap(v, formatPrecision)
 		}
 	}
 
 	{
-		v := atomic.LoadUint32(&types.Pedantic)
+		v := types.Pedantic.Load()
 		if (v == 1) != parsePedantic {
 			var newVal uint32
 			if parsePedantic {
 				newVal = 1
 			}
-			atomic.CompareAndSwapUint32(&types.Pedantic, v, newVal)
+			types.Pedantic.CompareAndSwap(v, newVal)
 		}
 	}
 
 	{
-		defaultOptionsMu.Lock()
+		opts := TokenOptionSet(defaultOptions.Load())
 		if flattenAudience {
-			defaultOptions.Enable(FlattenAudience)
+			opts.Enable(FlattenAudience)
 		} else {
-			defaultOptions.Disable(FlattenAudience)
+			opts.Disable(FlattenAudience)
 		}
-		defaultOptionsMu.Unlock()
+		defaultOptions.Store(opts.Value())
 	}
 
 	if truncation >= 0 {
