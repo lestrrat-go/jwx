@@ -20,6 +20,11 @@ import (
 )
 
 var defaultTruncation atomic.Int64
+var maxParseInputSize atomic.Int64
+
+func init() {
+	maxParseInputSize.Store(10 * 1024 * 1024) // 10MB
+}
 
 // Settings controls global settings that are specific to JWTs.
 func Settings(options ...GlobalOption) {
@@ -60,6 +65,12 @@ func Settings(options ...GlobalOption) {
 			if v >= 0 && v <= int(types.MaxPrecision) {
 				formatPrecision = uint32(v)
 			}
+		case identMaxParseInputSize{}:
+			var v int64
+			if err := option.Value(&v); err != nil {
+				panic(fmt.Sprintf("jwt.Settings: value for WithMaxParseInputSize must be int64: %s", err))
+			}
+			maxParseInputSize.Store(v)
 		}
 	}
 
@@ -171,10 +182,21 @@ func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
 
 // ParseReader calls Parse against an io.Reader
 func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
-	// We're going to need the raw bytes regardless. Read it.
-	data, err := io.ReadAll(src)
+	maxSize := maxParseInputSize.Load()
+	for _, option := range options {
+		if option.Ident() == (identMaxParseInputSize{}) {
+			if err := option.Value(&maxSize); err != nil {
+				return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `invalid WithMaxParseInputSize: %w`, err)
+			}
+		}
+	}
+
+	data, err := io.ReadAll(io.LimitReader(src, maxSize+1))
 	if err != nil {
 		return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `failed to read from token data source: %w`, err)
+	}
+	if int64(len(data)) > maxSize {
+		return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
 	}
 	tok, err := parseBytes(data, options...)
 	if err != nil {

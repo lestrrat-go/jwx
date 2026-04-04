@@ -36,9 +36,10 @@ func _main() error {
 			Filename:   "jws/io.go",
 		},
 		{
-			Package:    "jwe",
-			ReturnType: "*Message",
-			Filename:   "jwe/io.go",
+			Package:      "jwe",
+			ReturnType:   "*Message",
+			Filename:     "jwe/io.go",
+			ParseOptions: true,
 		},
 		{
 			Package:      "jwt",

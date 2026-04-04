@@ -1240,3 +1240,53 @@ func TestGH1470(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestMaxParseInputSize(t *testing.T) {
+	t.Run("default rejects oversized input", func(t *testing.T) {
+		data := make([]byte, 10*1024*1024+1)
+		_, err := jwe.ParseReader(bytes.NewReader(data))
+		require.Error(t, err, `jwe.ParseReader should reject input exceeding default max size`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("per-call option overrides default", func(t *testing.T) {
+		data := make([]byte, 200)
+		_, err := jwe.ParseReader(bytes.NewReader(data), jwe.WithMaxParseInputSize(100))
+		require.Error(t, err, `jwe.ParseReader should reject input exceeding per-call max size`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("input within limit is accepted", func(t *testing.T) {
+		data := []byte(`not-valid-jwe-but-small`)
+		_, err := jwe.ParseReader(bytes.NewReader(data), jwe.WithMaxParseInputSize(1024))
+		// The error (if any) should NOT be about size
+		if err != nil {
+			require.NotContains(t, err.Error(), `exceeded max size`)
+		}
+	})
+	t.Run("global setting changes default", func(t *testing.T) {
+		jwe.Settings(jwe.WithMaxParseInputSize(50))
+		defer jwe.Settings(jwe.WithMaxParseInputSize(10 * 1024 * 1024)) // restore
+
+		data := make([]byte, 100)
+		_, err := jwe.ParseReader(bytes.NewReader(data))
+		require.Error(t, err, `jwe.ParseReader should reject input exceeding global max size`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("per-call option overrides global setting", func(t *testing.T) {
+		jwe.Settings(jwe.WithMaxParseInputSize(50))
+		defer jwe.Settings(jwe.WithMaxParseInputSize(10 * 1024 * 1024)) // restore
+
+		data := []byte(`not-valid-jwe-but-small`)
+		_, err := jwe.ParseReader(bytes.NewReader(data), jwe.WithMaxParseInputSize(1024))
+		if err != nil {
+			require.NotContains(t, err.Error(), `exceeded max size`)
+		}
+	})
+	t.Run("ParseReader with no options still works", func(t *testing.T) {
+		// Verify backwards compatibility: calling ParseReader without options compiles and runs
+		data := []byte(`not-valid-jwe`)
+		_, err := jwe.ParseReader(bytes.NewReader(data))
+		// Should fail with a parse error, not a compilation or size error
+		require.Error(t, err)
+		require.NotContains(t, err.Error(), `exceeded max size`)
+	})
+}

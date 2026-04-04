@@ -90,6 +90,22 @@ type globalOption struct {
 
 func (*globalOption) globalOption() {}
 
+// GlobalParseOption describes an Option that can be passed to `jwe.Settings()`
+// and `jwe.ReadFile()`.
+type GlobalParseOption interface {
+	Option
+	globalOption()
+	readFileOption()
+}
+
+type globalParseOption struct {
+	Option
+}
+
+func (*globalParseOption) globalOption() {}
+
+func (*globalParseOption) readFileOption() {}
+
 // ReadFileOption is a type of `Option` that can be passed to `jwe.Parse`
 type ParseOption interface {
 	Option
@@ -150,6 +166,7 @@ type identKeyUsed struct{}
 type identLegacyHeaderMerging struct{}
 type identMaxDecompressBufferSize struct{}
 type identMaxPBES2Count struct{}
+type identMaxParseInputSize struct{}
 type identMergeProtectedHeaders struct{}
 type identMessage struct{}
 type identMinPBES2Count struct{}
@@ -205,6 +222,10 @@ func (identMaxDecompressBufferSize) String() string {
 
 func (identMaxPBES2Count) String() string {
 	return "WithMaxPBES2Count"
+}
+
+func (identMaxParseInputSize) String() string {
+	return "WithMaxParseInputSize"
 }
 
 func (identMergeProtectedHeaders) String() string {
@@ -360,6 +381,16 @@ func WithMaxDecompressBufferSize(v int64) GlobalDecryptOption {
 // specific call.
 func WithMaxPBES2Count(v int) GlobalDecryptOption {
 	return &globalDecryptOption{option.New(identMaxPBES2Count{}, v)}
+}
+
+// WithMaxParseInputSize specifies the maximum number of bytes read from an
+// io.Reader in `jwe.ParseReader`. If the input exceeds this size,
+// `jwe.ParseReader` will return an error. The default value is 10MB.
+//
+// This option can be passed to `jwe.Settings()` to change the default
+// globally, or to `jwe.ReadFile()` for a per-call override.
+func WithMaxParseInputSize(v int64) GlobalParseOption {
+	return &globalParseOption{option.New(identMaxParseInputSize{}, v)}
 }
 
 // WithMergeProtectedHeaders specify that when given multiple headers
