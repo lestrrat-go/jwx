@@ -44,10 +44,37 @@ func init() {
 // but want to wrap or augment the client (e.g. adding a custom Transport),
 // and for restoring defaults after calling jwk.Configure(jwk.WithHTTPClient(...)).
 func DefaultHTTPClient() *http.Client {
-	return &http.Client{
-		Timeout:       defaultFetchTimeout,
-		CheckRedirect: defaultCheckRedirect,
+	return WrapHTTPClientDefaults(&http.Client{})
+}
+
+// WrapHTTPClientDefaults returns a shallow copy of the given http.Client with the
+// library's default safety behaviors applied. Existing client settings
+// (Transport, Jar, etc.) are preserved.
+//
+//   - Timeout: applied only when the client has no timeout set (zero value).
+//   - CheckRedirect: if the client already has one, the library's redirect
+//     policy runs first; if it passes, the original CheckRedirect is called.
+//     If the client has no CheckRedirect, the library's policy is used directly.
+//
+// This is useful when you need to bring your own http.Client (e.g. for custom
+// TLS configuration) but still want the library's redirect hardening.
+func WrapHTTPClientDefaults(client *http.Client) *http.Client {
+	cloned := *client
+	if cloned.Timeout == 0 {
+		cloned.Timeout = defaultFetchTimeout
 	}
+	orig := cloned.CheckRedirect
+	if orig == nil {
+		cloned.CheckRedirect = defaultCheckRedirect
+	} else {
+		cloned.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			if err := defaultCheckRedirect(req, via); err != nil {
+				return err
+			}
+			return orig(req, via)
+		}
+	}
+	return &cloned
 }
 
 // defaultCheckRedirect is the CheckRedirect policy for the default HTTP client

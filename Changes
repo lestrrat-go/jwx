@@ -11,6 +11,11 @@ v3.0.14 UNRELEASED
     chains from attacker-controlled JWKS URLs. Callers who provide their
     own `http.Client` via `jwk.WithHTTPClient()` are not affected.
 
+  * [jwk] Add `jwk.WrapHTTPClientDefaults()` to apply the library's default
+    safety behaviors (timeout, redirect policy) to a caller-provided
+    `*http.Client`. Existing client settings (Transport, Jar, etc.) are
+    preserved; CheckRedirect is wrapped rather than overwritten.
+
   * [jwt] Add `jwt.WithStrictStringClaims(true)` global option to reject
     JSON `null` for string registered claims (`iss`, `sub`, `jti`). By default,
     null is silently accepted as an empty string (matching Go's standard JSON
