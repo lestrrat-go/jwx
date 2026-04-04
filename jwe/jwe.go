@@ -32,6 +32,7 @@ var muSettings sync.RWMutex
 var maxPBES2Count = 10000
 var minPBES2Count = 1000
 var maxDecompressBufferSize int64 = 10 * 1024 * 1024 // 10MB
+var maxParseInputSize int64 = 10 * 1024 * 1024       // 10MB
 
 func Settings(options ...GlobalOption) {
 	muSettings.Lock()
@@ -56,6 +57,10 @@ func Settings(options ...GlobalOption) {
 				panic(fmt.Sprintf("jwe.Settings: value for option WithCBCBufferSize must be an int64: %s", err))
 			}
 			aescbc.SetMaxBufferSize(v)
+		case identMaxParseInputSize{}:
+			if err := option.Value(&maxParseInputSize); err != nil {
+				panic(fmt.Sprintf("jwe.Settings: value for option WithMaxParseInputSize must be an int64: %s", err))
+			}
 		}
 	}
 }
@@ -993,8 +998,8 @@ func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool) (*Message, error
 }
 
 // ParseString is the same as Parse, but takes a string.
-func ParseString(s string) (*Message, error) {
-	msg, err := Parse([]byte(s))
+func ParseString(s string, options ...ParseOption) (*Message, error) {
+	msg, err := Parse([]byte(s), options...)
 	if err != nil {
 		return nil, makeParseError(`jwe.ParseString`, `%w`, err)
 	}
@@ -1002,12 +1007,27 @@ func ParseString(s string) (*Message, error) {
 }
 
 // ParseReader is the same as Parse, but takes an io.Reader.
-func ParseReader(src io.Reader) (*Message, error) {
-	buf, err := io.ReadAll(src)
+func ParseReader(src io.Reader, options ...ParseOption) (*Message, error) {
+	muSettings.RLock()
+	maxSize := maxParseInputSize
+	muSettings.RUnlock()
+
+	for _, option := range options {
+		if option.Ident() == (identMaxParseInputSize{}) {
+			if err := option.Value(&maxSize); err != nil {
+				return nil, makeParseError(`jwe.ParseReader`, `invalid WithMaxParseInputSize: %w`, err)
+			}
+		}
+	}
+
+	buf, err := io.ReadAll(io.LimitReader(src, maxSize+1))
 	if err != nil {
 		return nil, makeParseError(`jwe.ParseReader`, `failed to read from io.Reader: %w`, err)
 	}
-	msg, err := Parse(buf)
+	if int64(len(buf)) > maxSize {
+		return nil, makeParseError(`jwe.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
+	}
+	msg, err := Parse(buf, options...)
 	if err != nil {
 		return nil, makeParseError(`jwe.ParseReader`, `%w`, err)
 	}

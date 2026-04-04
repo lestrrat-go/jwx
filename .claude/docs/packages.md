@@ -68,7 +68,7 @@ JSON Web Encryption per RFC 7516. Encrypt, decrypt, parse.
 - **Parse(buf []byte, ...ParseOption) (*Message, error)** — parse without decryption
 - Key types: `Message`, `Recipient`, `Headers`, `KeyProvider`, `KeyEncrypter`, `KeyDecrypter`
 - Options: `WithKey()`, `WithKeySet()`, `WithContentEncryption()`, `WithCompress()`, `WithJSON()`, `WithProtectedHeaders()`
-- Global/per-call settings: `WithMaxPBES2Count()`, `WithMinPBES2Count()`, `WithMaxDecompressBufferSize()` (usable in both `Settings()` and `Decrypt()`); `WithCBCBufferSize()` (global only)
+- Global/per-call settings: `WithMaxPBES2Count()`, `WithMinPBES2Count()`, `WithMaxDecompressBufferSize()` (usable in both `Settings()` and `Decrypt()`); `WithMaxParseInputSize()` (usable in both `Settings()` and `ParseReader()`/`ReadFile()`); `WithCBCBufferSize()` (global only)
 - Error sentinels: `EncryptError()`, `DecryptError()`, `RecipientError()`, `ParseError()`
 - Internal subpackages: `jwe/internal/{aescbc,cipher,concatkdf,content_crypt,keygen}`, `jwe/jwebb`
 - Files: `jwe.go`, `message.go`, `interface.go`, `headers.go`, `errors.go`, `options.go`, `key_provider.go`, `compress.go`, `filter.go`
@@ -87,6 +87,7 @@ JSON Web Tokens per RFC 7519. Parse, sign, validate.
 - Validator factories: `IsExpirationValid()`, `IsIssuedAtValid()`, `IsNbfValid()`, `IsRequired()`, `ClaimValueIs()`, `ClaimContainsString()`
 - Key types: `Token` (interface), `Validator`, `ValidatorFunc`, `Clock`, `ClockFunc`, `Serializer`, `TokenFilter`
 - Token options: `FlattenAudience` per-token option
+- Global/per-call settings: `WithMaxParseInputSize()` (usable in both `Settings()` and `ParseReader()`/`ReadFile()`)
 - Error sentinels: `TokenExpiredError()`, `TokenNotYetValidError()`, `InvalidIssuerError()`, `InvalidAudienceError()`, `ValidateError()`, `ParseError()`
 - Files: `jwt.go`, `validate.go`, `serialize.go`, `http.go`, `filter.go`, `errors.go`, `options.go`, `fastpath.go`, `token_options.go`
 - Imports: jwa, jws, jwe, jwk, transform, internal/json

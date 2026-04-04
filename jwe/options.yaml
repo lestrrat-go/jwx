@@ -37,6 +37,13 @@ interfaces:
       - readFileOption
     comment: |
       ReadFileOption is a type of `Option` that can be passed to `jwe.Parse`
+  - name: GlobalParseOption
+    methods:
+      - globalOption
+      - readFileOption
+    comment: |
+      GlobalParseOption describes an Option that can be passed to `jwe.Settings()`
+      and `jwe.ReadFile()`.
   - name: ReadFileOption
     comment: |
       ReadFileOption is a type of `Option` that can be passed to `jwe.ReadFile`
@@ -183,6 +190,16 @@ options:
       In v2, this option was called MaxBufferSize.
 
       This option has a global effect.
+  - ident: MaxParseInputSize
+    interface: GlobalParseOption
+    argument_type: int64
+    comment: |
+      WithMaxParseInputSize specifies the maximum number of bytes read from an
+      io.Reader in `jwe.ParseReader`. If the input exceeds this size,
+      `jwe.ParseReader` will return an error. The default value is 10MB.
+
+      This option can be passed to `jwe.Settings()` to change the default
+      globally, or to `jwe.ReadFile()` for a per-call override.
   - ident: LegacyHeaderMerging
     interface: EncryptOption
     argument_type: bool
