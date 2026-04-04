@@ -5,11 +5,31 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.0.14 UNRELEASED
-  * [jwk] The default HTTP client used by `jwk.Fetch()` now blocks
-    HTTPS-to-HTTP redirect downgrades and limits redirect chains to 5 hops
-    (reduced from Go's default of 10). This mitigates SSRF via redirect
-    chains from attacker-controlled JWKS URLs. Callers who provide their
-    own `http.Client` via `jwk.WithHTTPClient()` are not affected.
+  * [jwt][jwe][jws] Add `WithMaxParseInputSize(int64)` to limit bytes read from
+    an `io.Reader` in `ParseReader` and `ReadFile`. Default is 10 MB. Can be set
+    globally via `Settings()` or per-call. (#1630, #1632)
+
+  * [jwe] Add `WithMaxRecipients(int)` to reject JWE messages with more recipients
+    than the configured limit. Default is 100. Can be set globally via
+    `jwe.Settings()` or per-call in `jwe.Decrypt()` / `jwe.Parse()`. (#1633)
+
+  * [jws] Add `WithMaxSignatures(int)` to reject JWS JSON-serialized messages with
+    more signatures than the configured limit. Default is 100. Can be set globally
+    via `jws.Settings()` or per-call in `jws.Parse()`. (#1636)
+
+  * [jwk] The default HTTP client used by `jwk.Fetch()` and `jwk.Cache` now
+    enforces a 30-second timeout, blocks HTTPS-to-HTTP redirect downgrades at
+    every hop, and limits redirect chains to 5 hops. This mitigates SSRF via
+    redirect chains and slowloris-style DoS from unresponsive JWKS endpoints.
+    Callers who provide their own `http.Client` via `jwk.WithHTTPClient()` are
+    not affected. (#1634, #1637, #1639, #1640)
+
+  * [jwk] Add `jwk.DefaultHTTPClient()` which returns a new `*http.Client`
+    configured with the library's default protections. Useful for restoring
+    defaults after calling `jwk.Configure(jwk.WithHTTPClient(...))`. (#1638)
+
+  * [jwk] `WithMaxFetchBodySize(int64)` can now be set globally via
+    `jwk.Configure()` in addition to per-call. (#1631)
 
   * [jwt] Add `jwt.WithStrictStringClaims(true)` global option to reject
     JSON `null` for string registered claims (`iss`, `sub`, `jti`). By default,
