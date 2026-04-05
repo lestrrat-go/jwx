@@ -1099,7 +1099,7 @@ func (k *okpPrivateKey) SetDecodeCtx(dc json.DecodeCtx) {
 	k.dc = dc
 }
 
-func (h *okpPrivateKey) UnmarshalJSON(buf []byte) error {
+func (h *okpPrivateKey) UnmarshalJSON(buf []byte) (retErr error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.algorithm = nil
@@ -1113,6 +1113,14 @@ func (h *okpPrivateKey) UnmarshalJSON(buf []byte) error {
 	h.x509CertThumbprint = nil
 	h.x509CertThumbprintS256 = nil
 	h.x509URL = nil
+	defer func() {
+		if retErr != nil {
+			clear(h.d)
+			h.d = nil
+			clear(h.x)
+			h.x = nil
+		}
+	}()
 	dec := json.NewDecoder(bytes.NewReader(buf))
 LOOP:
 	for {

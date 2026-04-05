@@ -1272,7 +1272,7 @@ func (k *rsaPrivateKey) SetDecodeCtx(dc json.DecodeCtx) {
 	k.dc = dc
 }
 
-func (h *rsaPrivateKey) UnmarshalJSON(buf []byte) error {
+func (h *rsaPrivateKey) UnmarshalJSON(buf []byte) (retErr error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.algorithm = nil
@@ -1291,6 +1291,26 @@ func (h *rsaPrivateKey) UnmarshalJSON(buf []byte) error {
 	h.x509CertThumbprint = nil
 	h.x509CertThumbprintS256 = nil
 	h.x509URL = nil
+	defer func() {
+		if retErr != nil {
+			clear(h.d)
+			h.d = nil
+			clear(h.dp)
+			h.dp = nil
+			clear(h.dq)
+			h.dq = nil
+			clear(h.e)
+			h.e = nil
+			clear(h.n)
+			h.n = nil
+			clear(h.p)
+			h.p = nil
+			clear(h.q)
+			h.q = nil
+			clear(h.qi)
+			h.qi = nil
+		}
+	}()
 	dec := json.NewDecoder(bytes.NewReader(buf))
 LOOP:
 	for {
