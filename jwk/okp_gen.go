@@ -332,7 +332,12 @@ func (h *okpPublicKey) setNoLock(name string, value any) error {
 		}
 	case OKPXKey:
 		if v, ok := value.([]byte); ok {
-			h.x = v
+			if v == nil {
+				h.x = nil
+			} else {
+				h.x = make([]byte, len(v))
+				copy(h.x, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, OKPXKey, value)
@@ -961,7 +966,12 @@ func (h *okpPrivateKey) setNoLock(name string, value any) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, OKPCrvKey, value)
 	case OKPDKey:
 		if v, ok := value.([]byte); ok {
-			h.d = v
+			if v == nil {
+				h.d = nil
+			} else {
+				h.d = make([]byte, len(v))
+				copy(h.d, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, OKPDKey, value)
@@ -995,7 +1005,12 @@ func (h *okpPrivateKey) setNoLock(name string, value any) error {
 		}
 	case OKPXKey:
 		if v, ok := value.([]byte); ok {
-			h.x = v
+			if v == nil {
+				h.x = nil
+			} else {
+				h.x = make([]byte, len(v))
+				copy(h.x, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, OKPXKey, value)

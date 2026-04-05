@@ -301,7 +301,12 @@ func (h *symmetricKey) setNoLock(name string, value any) error {
 		}
 	case SymmetricOctetsKey:
 		if v, ok := value.([]byte); ok {
-			h.octets = v
+			if v == nil {
+				h.octets = nil
+			} else {
+				h.octets = make([]byte, len(v))
+				copy(h.octets, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, SymmetricOctetsKey, value)

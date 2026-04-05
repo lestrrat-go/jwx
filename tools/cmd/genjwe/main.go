@@ -265,6 +265,13 @@ func generateHeaders(obj *codegen.Object) error {
 
 			if fieldStorageTypeIsIndirect(f.Type()) {
 				o.L("h.%s = &v", f.Name(false))
+			} else if strings.HasPrefix(f.Type(), "[]") {
+				o.L("if v == nil {")
+				o.L("h.%s = nil", f.Name(false))
+				o.L("} else {")
+				o.L("h.%s = make(%s, len(v))", f.Name(false), f.Type())
+				o.L("copy(h.%s, v)", f.Name(false))
+				o.L("}")
 			} else {
 				o.L("h.%s = v", f.Name(false))
 			}

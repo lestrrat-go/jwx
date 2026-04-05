@@ -430,13 +430,23 @@ func (h *stdHeaders) setNoLock(name string, value any) error {
 	switch name {
 	case AgreementPartyUInfoKey:
 		if v, ok := value.([]byte); ok {
-			h.agreementPartyUInfo = v
+			if v == nil {
+				h.agreementPartyUInfo = nil
+			} else {
+				h.agreementPartyUInfo = make([]byte, len(v))
+				copy(h.agreementPartyUInfo, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, AgreementPartyUInfoKey, value)
 	case AgreementPartyVInfoKey:
 		if v, ok := value.([]byte); ok {
-			h.agreementPartyVInfo = v
+			if v == nil {
+				h.agreementPartyVInfo = nil
+			} else {
+				h.agreementPartyVInfo = make([]byte, len(v))
+				copy(h.agreementPartyVInfo, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, AgreementPartyVInfoKey, value)
@@ -469,7 +479,12 @@ func (h *stdHeaders) setNoLock(name string, value any) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, ContentTypeKey, value)
 	case CriticalKey:
 		if v, ok := value.([]string); ok {
-			h.critical = v
+			if v == nil {
+				h.critical = nil
+			} else {
+				h.critical = make([]string, len(v))
+				copy(h.critical, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, CriticalKey, value)
