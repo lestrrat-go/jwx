@@ -16,7 +16,7 @@ import (
 // This function loads the verifier registered in the jwsbb package _ONLY_.
 // It does not support custom verifiers that the user might have registered.
 func Verify(key any, alg string, payload, signature []byte) error {
-	dsigAlg, ok := getDsigAlgorithm(alg)
+	dsigAlg, ok := GetDsigAlgorithm(alg)
 	if !ok {
 		// For custom algorithms registered with dsig, JWS name = dsig name
 		dsigAlg = alg
