@@ -535,11 +535,29 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("k.dc = dc")
 	o.L("}")
 
-	o.LL("func (h *%s) UnmarshalJSON(buf []byte) error {", structName)
+	hasSensitiveFields := obj.Name(true) == "PrivateKey" || obj.Name(true) == "SymmetricKey"
+	if hasSensitiveFields {
+		o.LL("func (h *%s) UnmarshalJSON(buf []byte) (retErr error) {", structName)
+	} else {
+		o.LL("func (h *%s) UnmarshalJSON(buf []byte) error {", structName)
+	}
 	o.L(`h.mu.Lock()`)
 	o.L(`defer h.mu.Unlock()`)
 	for _, f := range obj.Fields() {
 		o.L("h.%s = nil", f.Name(false))
+	}
+
+	if hasSensitiveFields {
+		o.L("defer func() {")
+		o.L("if retErr != nil {")
+		for _, f := range obj.Fields() {
+			if f.Type() == "[]byte" {
+				o.L("clear(h.%s)", f.Name(false))
+				o.L("h.%s = nil", f.Name(false))
+			}
+		}
+		o.L("}")
+		o.L("}()")
 	}
 
 	o.L("dec := json.NewDecoder(bytes.NewReader(buf))")

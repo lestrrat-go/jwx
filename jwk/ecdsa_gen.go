@@ -1154,7 +1154,7 @@ func (k *ecdsaPrivateKey) SetDecodeCtx(dc json.DecodeCtx) {
 	k.dc = dc
 }
 
-func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) error {
+func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) (retErr error) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	h.algorithm = nil
@@ -1169,6 +1169,16 @@ func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) error {
 	h.x509CertThumbprintS256 = nil
 	h.x509URL = nil
 	h.y = nil
+	defer func() {
+		if retErr != nil {
+			clear(h.d)
+			h.d = nil
+			clear(h.x)
+			h.x = nil
+			clear(h.y)
+			h.y = nil
+		}
+	}()
 	dec := json.NewDecoder(bytes.NewReader(buf))
 LOOP:
 	for {
