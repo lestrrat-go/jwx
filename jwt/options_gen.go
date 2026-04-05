@@ -478,7 +478,7 @@ func WithSignOption(v jws.SignOption) SignOption {
 // JSON decoding behavior). When set to true, null values are rejected
 // per the RFC type definitions (e.g. StringOrURI).
 //
-// This option only affects JWT claims. JWE and JWS header fields are
+// This option only affects JWT claims. JWK, JWE, and JWS fields are
 // not subject to this check and will always accept null as an empty string.
 func WithStrictStringClaims(v bool) ParseOption {
 	return &parseOption{option.New(identStrictStringClaims{}, v)}
