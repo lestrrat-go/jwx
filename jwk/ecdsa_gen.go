@@ -352,7 +352,12 @@ func (h *ecdsaPublicKey) setNoLock(name string, value any) error {
 		}
 	case ECDSAXKey:
 		if v, ok := value.([]byte); ok {
-			h.x = v
+			if v == nil {
+				h.x = nil
+			} else {
+				h.x = make([]byte, len(v))
+				copy(h.x, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, ECDSAXKey, value)
@@ -382,7 +387,12 @@ func (h *ecdsaPublicKey) setNoLock(name string, value any) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
 	case ECDSAYKey:
 		if v, ok := value.([]byte); ok {
-			h.y = v
+			if v == nil {
+				h.y = nil
+			} else {
+				h.y = make([]byte, len(v))
+				copy(h.y, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, ECDSAYKey, value)
@@ -1023,7 +1033,12 @@ func (h *ecdsaPrivateKey) setNoLock(name string, value any) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, ECDSACrvKey, value)
 	case ECDSADKey:
 		if v, ok := value.([]byte); ok {
-			h.d = v
+			if v == nil {
+				h.d = nil
+			} else {
+				h.d = make([]byte, len(v))
+				copy(h.d, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, ECDSADKey, value)
@@ -1057,7 +1072,12 @@ func (h *ecdsaPrivateKey) setNoLock(name string, value any) error {
 		}
 	case ECDSAXKey:
 		if v, ok := value.([]byte); ok {
-			h.x = v
+			if v == nil {
+				h.x = nil
+			} else {
+				h.x = make([]byte, len(v))
+				copy(h.x, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, ECDSAXKey, value)
@@ -1087,7 +1107,12 @@ func (h *ecdsaPrivateKey) setNoLock(name string, value any) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
 	case ECDSAYKey:
 		if v, ok := value.([]byte); ok {
-			h.y = v
+			if v == nil {
+				h.y = nil
+			} else {
+				h.y = make([]byte, len(v))
+				copy(h.y, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, ECDSAYKey, value)

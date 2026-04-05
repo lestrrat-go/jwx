@@ -391,7 +391,12 @@ func (h *stdHeaders) setNoLock(name string, value any) error {
 		return fmt.Errorf(`invalid value for %s key: %T`, ContentTypeKey, value)
 	case CriticalKey:
 		if v, ok := value.([]string); ok {
-			h.critical = v
+			if v == nil {
+				h.critical = nil
+			} else {
+				h.critical = make([]string, len(v))
+				copy(h.critical, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, CriticalKey, value)

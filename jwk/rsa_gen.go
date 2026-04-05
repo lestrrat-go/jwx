@@ -303,7 +303,12 @@ func (h *rsaPublicKey) setNoLock(name string, value any) error {
 		return nil
 	case RSAEKey:
 		if v, ok := value.([]byte); ok {
-			h.e = v
+			if v == nil {
+				h.e = nil
+			} else {
+				h.e = make([]byte, len(v))
+				copy(h.e, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, RSAEKey, value)
@@ -337,7 +342,12 @@ func (h *rsaPublicKey) setNoLock(name string, value any) error {
 		}
 	case RSANKey:
 		if v, ok := value.([]byte); ok {
-			h.n = v
+			if v == nil {
+				h.n = nil
+			} else {
+				h.n = make([]byte, len(v))
+				copy(h.n, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, RSANKey, value)
@@ -1053,25 +1063,45 @@ func (h *rsaPrivateKey) setNoLock(name string, value any) error {
 		return nil
 	case RSADKey:
 		if v, ok := value.([]byte); ok {
-			h.d = v
+			if v == nil {
+				h.d = nil
+			} else {
+				h.d = make([]byte, len(v))
+				copy(h.d, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, RSADKey, value)
 	case RSADPKey:
 		if v, ok := value.([]byte); ok {
-			h.dp = v
+			if v == nil {
+				h.dp = nil
+			} else {
+				h.dp = make([]byte, len(v))
+				copy(h.dp, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, RSADPKey, value)
 	case RSADQKey:
 		if v, ok := value.([]byte); ok {
-			h.dq = v
+			if v == nil {
+				h.dq = nil
+			} else {
+				h.dq = make([]byte, len(v))
+				copy(h.dq, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, RSADQKey, value)
 	case RSAEKey:
 		if v, ok := value.([]byte); ok {
-			h.e = v
+			if v == nil {
+				h.e = nil
+			} else {
+				h.e = make([]byte, len(v))
+				copy(h.e, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, RSAEKey, value)
@@ -1105,25 +1135,45 @@ func (h *rsaPrivateKey) setNoLock(name string, value any) error {
 		}
 	case RSANKey:
 		if v, ok := value.([]byte); ok {
-			h.n = v
+			if v == nil {
+				h.n = nil
+			} else {
+				h.n = make([]byte, len(v))
+				copy(h.n, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, RSANKey, value)
 	case RSAPKey:
 		if v, ok := value.([]byte); ok {
-			h.p = v
+			if v == nil {
+				h.p = nil
+			} else {
+				h.p = make([]byte, len(v))
+				copy(h.p, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, RSAPKey, value)
 	case RSAQKey:
 		if v, ok := value.([]byte); ok {
-			h.q = v
+			if v == nil {
+				h.q = nil
+			} else {
+				h.q = make([]byte, len(v))
+				copy(h.q, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, RSAQKey, value)
 	case RSAQIKey:
 		if v, ok := value.([]byte); ok {
-			h.qi = v
+			if v == nil {
+				h.qi = nil
+			} else {
+				h.qi = make([]byte, len(v))
+				copy(h.qi, v)
+			}
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, RSAQIKey, value)
