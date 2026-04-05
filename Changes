@@ -114,6 +114,14 @@ v3.0.14 UNRELEASED
   * [jwt/openid] `openid.Birthdate` now accepts year `0000` as a valid value per
     the OpenID Connect Core specification. (#1628)
 
+  * [jwk][jws][jwe] Generated `Set()` methods now deep-copy slice and byte-slice
+    values so callers cannot mutate internal header or key state after setting
+    a field. (#1659)
+
+  * [jwk] When `UnmarshalJSON` fails on a private key (RSA, EC, OKP, Symmetric),
+    all sensitive fields are now zeroed before the error is returned. This
+    prevents leaking partial key material through half-constructed objects. (#1660)
+
 v3.0.13 12 Jan 2026
   * [jwt] The `jwt.WithContext()` option is now properly being passed to `jws.Verify()` from
     `jwt.Parse()`.
