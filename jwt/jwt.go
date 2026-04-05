@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 )
 
+var muSettings sync.Mutex
 var defaultTruncation atomic.Int64
 var maxParseInputSize atomic.Int64
 
@@ -28,6 +30,9 @@ func init() {
 
 // Settings controls global settings that are specific to JWTs.
 func Settings(options ...GlobalOption) {
+	muSettings.Lock()
+	defer muSettings.Unlock()
+
 	var flattenAudience bool
 	var parsePedantic bool
 	var parsePrecision = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
@@ -78,28 +83,19 @@ func Settings(options ...GlobalOption) {
 	}
 
 	if parsePrecision <= types.MaxPrecision { // remember we set default to max + 1
-		v := types.ParsePrecision.Load()
-		if v != parsePrecision {
-			types.ParsePrecision.CompareAndSwap(v, parsePrecision)
-		}
+		types.ParsePrecision.Store(parsePrecision)
 	}
 
 	if formatPrecision <= types.MaxPrecision { // remember we set default to max + 1
-		v := types.FormatPrecision.Load()
-		if v != formatPrecision {
-			types.FormatPrecision.CompareAndSwap(v, formatPrecision)
-		}
+		types.FormatPrecision.Store(formatPrecision)
 	}
 
 	{
-		v := types.Pedantic.Load()
-		if (v == 1) != parsePedantic {
-			var newVal uint32
-			if parsePedantic {
-				newVal = 1
-			}
-			types.Pedantic.CompareAndSwap(v, newVal)
+		var newVal uint32
+		if parsePedantic {
+			newVal = 1
 		}
+		types.Pedantic.Store(newVal)
 	}
 
 	{
