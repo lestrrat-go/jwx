@@ -187,3 +187,62 @@ func TestCriticalHeaderValidationFastPath(t *testing.T) {
 		require.ErrorContains(t, err, `x-absent`)
 	})
 }
+
+func TestWithStrictCriticalHeaders(t *testing.T) {
+	payload := []byte(`hello world`)
+
+	key, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`)
+
+	sign := func(t *testing.T, hdrs jws.Headers) []byte {
+		t.Helper()
+		signed, err := jws.Sign(payload, jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs)))
+		require.NoError(t, err, `jws.Sign should succeed`)
+		return signed
+	}
+
+	t.Run("empty crit rejected by default", func(t *testing.T) {
+		hdrs := jws.NewHeaders()
+		require.NoError(t, hdrs.Set(jws.CriticalKey, []string{}))
+		signed := sign(t, hdrs)
+
+		_, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key))
+		require.Error(t, err, `jws.Verify should fail with strict crit by default`)
+	})
+
+	t.Run("empty crit accepted when strict disabled", func(t *testing.T) {
+		hdrs := jws.NewHeaders()
+		require.NoError(t, hdrs.Set(jws.CriticalKey, []string{}))
+		signed := sign(t, hdrs)
+
+		_, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key), jws.WithStrictCriticalHeaders(false))
+		require.NoError(t, err, `jws.Verify should succeed when strict crit is disabled`)
+	})
+
+	t.Run("missing crit extension accepted when strict disabled", func(t *testing.T) {
+		hdrs := jws.NewHeaders()
+		require.NoError(t, hdrs.Set(jws.CriticalKey, []string{"x-missing"}))
+		signed := sign(t, hdrs)
+
+		_, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key), jws.WithStrictCriticalHeaders(false))
+		require.NoError(t, err, `jws.Verify should succeed when strict crit is disabled`)
+	})
+
+	t.Run("standard header in crit accepted when strict disabled", func(t *testing.T) {
+		hdrs := jws.NewHeaders()
+		require.NoError(t, hdrs.Set(jws.CriticalKey, []string{"alg"}))
+		signed := sign(t, hdrs)
+
+		_, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key), jws.WithStrictCriticalHeaders(false))
+		require.NoError(t, err, `jws.Verify should succeed when strict crit is disabled`)
+	})
+
+	t.Run("explicit true still validates", func(t *testing.T) {
+		hdrs := jws.NewHeaders()
+		require.NoError(t, hdrs.Set(jws.CriticalKey, []string{}))
+		signed := sign(t, hdrs)
+
+		_, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key), jws.WithStrictCriticalHeaders(true))
+		require.Error(t, err, `jws.Verify should fail with explicit strict crit`)
+	})
+}
