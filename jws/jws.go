@@ -528,6 +528,7 @@ func RegisterCustomField(name string, object any) {
 }
 
 // Helpers for signature verification
+var muAlgorithmMaps sync.RWMutex
 var keyTypeToAlgorithms = make(map[jwa.KeyType][]jwa.SignatureAlgorithm)
 var curveToAlgorithms = make(map[jwa.EllipticCurveAlgorithm][]jwa.SignatureAlgorithm)
 
@@ -549,6 +550,8 @@ func init() {
 // the given key type. This is used internally by init() and can also be called
 // from external modules that provide support for additional algorithms (e.g. Ed448).
 func RegisterAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) {
+	muAlgorithmMaps.Lock()
+	defer muAlgorithmMaps.Unlock()
 	keyTypeToAlgorithms[kty] = append(keyTypeToAlgorithms[kty], alg)
 }
 
@@ -560,6 +563,8 @@ func RegisterAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) {
 // This function is append-only and deduplicates entries, so builtin
 // registrations cannot be overwritten by external modules.
 func RegisterAlgorithmForCurve(crv jwa.EllipticCurveAlgorithm, alg jwa.SignatureAlgorithm) {
+	muAlgorithmMaps.Lock()
+	defer muAlgorithmMaps.Unlock()
 	if slices.Contains(curveToAlgorithms[crv], alg) {
 		return
 	}
@@ -617,6 +622,9 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 			crv, hasCrv = ck.Crv()
 		}
 	}
+
+	muAlgorithmMaps.RLock()
+	defer muAlgorithmMaps.RUnlock()
 
 	ktyAlgs, ok := keyTypeToAlgorithms[kty]
 	if !ok {

@@ -7,6 +7,7 @@ import (
 	"crypto/ed25519"
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -57,6 +58,8 @@ func (k *okpPublicKey) Import(rawKeyIf any) error {
 		crv = jwa.X25519()
 		k.crv = &crv
 	default:
+		muOKPRawKeyImporters.RLock()
+		defer muOKPRawKeyImporters.RUnlock()
 		for _, fn := range okpRawKeyImporters {
 			c, x, _, ok := fn(rawKeyIf)
 			if ok {
@@ -90,6 +93,8 @@ func (k *okpPrivateKey) Import(rawKeyIf any) error {
 		crv = jwa.X25519()
 		k.crv = &crv
 	default:
+		muOKPRawKeyImporters.RLock()
+		defer muOKPRawKeyImporters.RUnlock()
 		for _, fn := range okpRawKeyImporters {
 			c, x, d, ok := fn(rawKeyIf)
 			if ok {
@@ -110,10 +115,13 @@ func (k *okpPrivateKey) Import(rawKeyIf any) error {
 // Returns the curve, x, d (nil for public), and true if handled.
 type OKPRawKeyImporter func(key any) (crv jwa.EllipticCurveAlgorithm, x, d []byte, ok bool)
 
+var muOKPRawKeyImporters sync.RWMutex
 var okpRawKeyImporters []OKPRawKeyImporter
 
 // RegisterOKPRawKeyImporter registers a function that can import raw keys as OKP keys.
 func RegisterOKPRawKeyImporter(fn OKPRawKeyImporter) {
+	muOKPRawKeyImporters.Lock()
+	defer muOKPRawKeyImporters.Unlock()
 	okpRawKeyImporters = append(okpRawKeyImporters, fn)
 }
 

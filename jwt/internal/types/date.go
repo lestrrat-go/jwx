@@ -58,8 +58,7 @@ func parseNumericString(x string) (time.Time, error) {
 
 	// Only check for the escape hatch if it's the pedantic
 	// flag is off
-	pedantic := Pedantic.Load()
-	if pedantic != 1 {
+	if Pedantic.Load() != 1 {
 		// This is an escape hatch for non-conformant providers
 		// that gives us RFC3339 instead of epoch time
 		for _, r := range x {
