@@ -23,6 +23,7 @@ type verifyContext struct {
 	keyProviders    []KeyProvider
 	keyUsed         any
 	validateKey     bool
+	strictCritical  bool
 	encoder         Base64Encoder
 	//nolint:containedctx
 	ctx context.Context
@@ -32,8 +33,9 @@ var verifyContextPool = pool.New[*verifyContext](allocVerifyContext, freeVerifyC
 
 func allocVerifyContext() *verifyContext {
 	return &verifyContext{
-		encoder: base64.DefaultEncoder(),
-		ctx:     context.Background(),
+		strictCritical: true,
+		encoder:        base64.DefaultEncoder(),
+		ctx:            context.Background(),
 	}
 }
 
@@ -44,6 +46,7 @@ func freeVerifyContext(vc *verifyContext) *verifyContext {
 	vc.keyProviders = vc.keyProviders[:0]
 	vc.keyUsed = nil
 	vc.validateKey = false
+	vc.strictCritical = true
 	vc.encoder = base64.DefaultEncoder()
 	vc.ctx = context.Background()
 	return vc
@@ -87,6 +90,10 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 		case identValidateKey{}:
 			if err := option.Value(&vc.validateKey); err != nil {
 				return makeVerifyError(`failed to retrieve validate-key option value: %w`, err)
+			}
+		case identStrictCriticalHeaders{}:
+			if err := option.Value(&vc.strictCritical); err != nil {
+				return makeVerifyError(`failed to retrieve strict-critical-headers option value: %w`, err)
 			}
 		case identSerialization{}:
 			vc.parseOptions = append(vc.parseOptions, option.(ParseOption))
@@ -152,11 +159,11 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 			rawHeaders = protected
 		}
 
-		// Validate the "crit" header per RFC 7515 Section 4.1.11 before
-		// attempting signature verification with any keys.
-		if err := validateCritical(sig.protected); err != nil {
-			errs = append(errs, makeVerifyError(`signature #%d has invalid "crit" header: %w`, idx+1, err))
-			continue
+		if vc.strictCritical {
+			if err := validateCritical(sig.protected); err != nil {
+				errs = append(errs, makeVerifyError(`signature #%d has invalid "crit" header: %w`, idx+1, err))
+				continue
+			}
 		}
 
 		verifyBuf = verifyBuf[:0]

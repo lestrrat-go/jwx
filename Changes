@@ -69,7 +69,9 @@ v3.0.14 UNRELEASED
   * [jws] `jws.Verify()` and `jws.VerifyCompactFast()` now validate the "crit"
     (Critical) header parameter per RFC 7515 Section 4.1.11. Signatures with an
     empty "crit" array, standard JOSE header names in "crit", or "crit"-listed
-    extensions not present in the protected header are now rejected.
+    extensions not present in the protected header are now rejected. To disable
+    this validation on a per-call basis, pass
+    `jws.WithStrictCriticalHeaders(false)` to `jws.Verify()`.
 
   * [jws] Fixed probe field name in panic message. (#1597)
 

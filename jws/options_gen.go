@@ -221,6 +221,7 @@ type identProtectedHeaders struct{}
 type identPublicHeaders struct{}
 type identRequireKid struct{}
 type identSerialization struct{}
+type identStrictCriticalHeaders struct{}
 type identUseDefault struct{}
 type identValidateKey struct{}
 
@@ -298,6 +299,10 @@ func (identRequireKid) String() string {
 
 func (identSerialization) String() string {
 	return "WithSerialization"
+}
+
+func (identStrictCriticalHeaders) String() string {
+	return "WithStrictCriticalHeaders"
 }
 
 func (identUseDefault) String() string {
@@ -467,6 +472,16 @@ func WithRequireKid(v bool) WithKeySetSuboption {
 // do not need to specify this option other than to be explicit about it
 func WithCompact() SignVerifyParseOption {
 	return &signVerifyParseOption{option.New(identSerialization{}, fmtCompact)}
+}
+
+// WithStrictCriticalHeaders specifies whether the "crit" (Critical)
+// header parameter should be validated per RFC 7515 Section 4.1.11
+// during verification. The default is true.
+//
+// When set to false, the "crit" header is silently ignored during
+// jws.Verify(), matching the behavior of v3.0.13 and earlier.
+func WithStrictCriticalHeaders(v bool) VerifyOption {
+	return &verifyOption{option.New(identStrictCriticalHeaders{}, v)}
 }
 
 // WithUseDefault specifies that if and only if a jwk.Key contains
