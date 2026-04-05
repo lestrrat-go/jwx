@@ -9,6 +9,7 @@ import (
 	"hash"
 	"io"
 
+	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/dsig"
 	internbase64 "github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
@@ -51,6 +52,8 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 	var key any
 	var keyFound bool
 	var validateKey bool
+	var strictCritical = true
+	var keyUsed any
 	var encoder Base64Encoder = internbase64.DefaultEncoder()
 
 	for _, option := range options {
@@ -74,12 +77,22 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 			if err := option.Value(&validateKey); err != nil {
 				return makeVerifyError(`failed to retrieve validate-key option value: %w`, err)
 			}
+		case identStrictCriticalHeaders{}:
+			if err := option.Value(&strictCritical); err != nil {
+				return makeVerifyError(`failed to retrieve strict-critical-headers option value: %w`, err)
+			}
+		case identKeyUsed{}:
+			if err := option.Value(&keyUsed); err != nil {
+				return makeVerifyError(`failed to retrieve key-used option value: %w`, err)
+			}
 		case identBase64Encoder{}:
 			if err := option.Value(&encoder); err != nil {
 				return makeVerifyError(`failed to retrieve base64-encoder option value: %w`, err)
 			}
 		case identKeyProvider{}, identDetachedPayload{}, identMessage{}, identSerialization{}:
 			return makeVerifyError(`option %T is not supported by VerifyDetached; use jws.WithKey() to specify a single key`, option)
+		default:
+			return makeVerifyError(`invalid jws.VerifyOption %q passed`, fmt.Sprintf(`%T`, option.Ident()))
 		}
 	}
 
@@ -141,6 +154,12 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 
 	encodePayload := getB64Value(hdr)
 
+	if strictCritical {
+		if err := validateCritical(hdr); err != nil {
+			return makeVerifyError(`invalid "crit" header: %w`, err)
+		}
+	}
+
 	// Decode the signature
 	decodedSig, err := internbase64.Decode(signatureSegment)
 	if err != nil {
@@ -168,6 +187,12 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 
 	if err := dsig.VerifyDigest(rawKey, dsigAlg, digest, decodedSig); err != nil {
 		return makeVerifyError(`failed to verify signature: %w`, verificationError{err})
+	}
+
+	if keyUsed != nil {
+		if err := blackmagic.AssignIfCompatible(keyUsed, key); err != nil {
+			return makeVerifyError(`failed to assign used key (%T) to %T: %w`, key, keyUsed, err)
+		}
 	}
 
 	return nil

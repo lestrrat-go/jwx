@@ -128,6 +128,7 @@ func TestVerifyDetached(t *testing.T) {
 		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &wrongKey.PublicKey))
 		require.Error(t, err, `jws.VerifyDetached with wrong key should fail`)
 		require.True(t, errors.Is(err, jws.VerifyError()), `error should be a VerifyError`)
+		require.True(t, errors.Is(err, jws.VerificationError()), `error should be a VerificationError`)
 	})
 
 	t.Run("Cross-verify with jws.Verify", func(t *testing.T) {
