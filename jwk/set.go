@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json/jsontext"
 	"fmt"
+	"iter"
 	"maps"
 	"reflect"
 	"slices"
@@ -286,6 +287,18 @@ func (s *set) LookupKeyID(kid string) (Key, bool) {
 		}
 	}
 	return nil, false
+}
+
+func (s *set) All() iter.Seq2[int, Key] {
+	return func(yield func(int, Key) bool) {
+		s.mu.RLock()
+		defer s.mu.RUnlock()
+		for i, k := range s.keys {
+			if !yield(i, k) {
+				return
+			}
+		}
+	}
 }
 
 func (s *set) DecodeCtx() DecodeCtx {

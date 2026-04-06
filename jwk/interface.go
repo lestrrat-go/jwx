@@ -1,6 +1,7 @@
 package jwk
 
 import (
+	"iter"
 	"sync"
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
@@ -113,6 +114,10 @@ type Set interface {
 	//
 	// TODO: name is confusing between this and Key()
 	Keys() []string
+
+	// All returns an iterator over all keys in the set.
+	// The iterator yields (index, key) pairs.
+	All() iter.Seq2[int, Key]
 
 	// Clone create a new set with identical keys. Keys themselves are not cloned.
 	Clone() (Set, error)
