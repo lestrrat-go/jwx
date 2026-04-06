@@ -20,7 +20,6 @@ go_library(
         "//internal/tokens",
         "//jwt",
         "//jwt/internal/types",
-        "//jwt/internal/errors",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
     ],
 )

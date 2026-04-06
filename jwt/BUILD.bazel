@@ -34,7 +34,6 @@ go_library(
         "//jws",
         "//jws/jwsbb",
         "//jwt/internal/types",
-        "//jwt/internal/errors",
         "@com_github_lestrrat_go_blackmagic//:blackmagic",
         "@com_github_lestrrat_go_option_v2//:option",
     ],
