@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"

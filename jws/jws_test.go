@@ -3,6 +3,7 @@ package jws_test
 import (
 	"bufio"
 	"bytes"
+	"cmp"
 	"crypto"
 	"crypto/ecdh"
 	"crypto/ecdsa"
@@ -13,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"cmp"
 	"maps"
 	"math/big"
 	"net/http"
@@ -23,7 +23,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
@@ -1070,7 +1069,7 @@ func TestJKU(t *testing.T) {
 	set.AddKey(pubkey)
 	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		json.MarshalEncode(json.NewEncoder(w),set)
+		json.MarshalEncode(json.NewEncoder(w), set)
 	}))
 	defer srv.Close()
 
@@ -1183,7 +1182,7 @@ func TestJKU(t *testing.T) {
 		}
 		srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			json.MarshalEncode(json.NewEncoder(w),set)
+			json.MarshalEncode(json.NewEncoder(w), set)
 		}))
 		defer srv.Close()
 
@@ -1489,16 +1488,12 @@ type s256SignerVerifier struct{}
 
 var sha256Algo = jwa.NewSignatureAlgorithm("SillyTest256")
 
-func (s256SignerVerifier) Algorithm() jwa.SignatureAlgorithm {
-	return sha256Algo
-}
-
-func (s256SignerVerifier) Sign(payload []byte, _ any) ([]byte, error) {
+func (s256SignerVerifier) Sign(_ any, payload []byte) ([]byte, error) {
 	h := sha256.Sum256(payload)
 	return h[:], nil
 }
 
-func (s256SignerVerifier) Verify(payload, signature []byte, _ any) error {
+func (s256SignerVerifier) Verify(_ any, payload, signature []byte) error {
 	h := sha256.Sum256(payload)
 	if !bytes.Equal(h[:], signature) {
 		return fmt.Errorf("invalid signature: expected %q, got %q", base64.EncodeToString(h[:]), base64.EncodeToString(signature))
@@ -1508,16 +1503,12 @@ func (s256SignerVerifier) Verify(payload, signature []byte, _ any) error {
 
 func TestGH910(t *testing.T) {
 	// Note: This has global effect. You can't run this in parallel with other tests
-	jws.RegisterSigner(sha256Algo, jws.SignerFactoryFn(func() (jws.Signer, error) {
-		return s256SignerVerifier{}, nil
-	}))
+	require.NoError(t, jws.RegisterSigner(sha256Algo, s256SignerVerifier{}))
 	t.Cleanup(func() {
 		jws.UnregisterSigner(sha256Algo)
 	})
 
-	jws.RegisterVerifier(sha256Algo, jws.VerifierFactoryFn(func() (jws.Verifier, error) {
-		return s256SignerVerifier{}, nil
-	}))
+	require.NoError(t, jws.RegisterVerifier(sha256Algo, s256SignerVerifier{}))
 	t.Cleanup(func() {
 		jws.UnregisterVerifier(sha256Algo)
 		jwa.UnregisterSignatureAlgorithm(sha256Algo)
@@ -1540,9 +1531,7 @@ func TestGH910(t *testing.T) {
 	_, err = jws.Sign([]byte(src), jws.WithKey(sha256Algo, nil))
 	require.Error(t, err, `jws.Sign should succeed`)
 
-	jws.RegisterSigner(sha256Algo, jws.SignerFactoryFn(func() (jws.Signer, error) {
-		return s256SignerVerifier{}, nil
-	}))
+	require.NoError(t, jws.RegisterSigner(sha256Algo, s256SignerVerifier{}))
 
 	_, err = jws.Sign([]byte(src), jws.WithKey(sha256Algo, nil))
 	require.NoError(t, err, `jws.Sign should succeed`)

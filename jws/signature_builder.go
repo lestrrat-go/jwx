@@ -31,7 +31,6 @@ var signatureBuilderPool = pool.New[*signatureBuilder](allocSignatureBuilder, fr
 type signatureBuilder struct {
 	alg       jwa.SignatureAlgorithm
 	signer    Signer
-	signer2   Signer2
 	key       any
 	protected Headers
 	public    Headers
@@ -44,7 +43,6 @@ func allocSignatureBuilder() *signatureBuilder {
 func freeSignatureBuilder(sb *signatureBuilder) *signatureBuilder {
 	sb.alg = jwa.EmptySignatureAlgorithm()
 	sb.signer = nil
-	sb.signer2 = nil
 	sb.key = nil
 	sb.protected = nil
 	sb.public = nil
@@ -94,24 +92,10 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, 
 	sig.protected = protected
 	sig.headers = sb.public
 
-	if sb.signer2 != nil {
-		signature, err := sb.signer2.Sign(sb.key, combined)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to sign payload: %w`, err)
-		}
-		sig.signature = signature
-		return &sig, nil
-	}
-
-	if sb.signer == nil {
-		panic("can't get here")
-	}
-
-	signature, err := sb.signer.Sign(combined, sb.key)
+	signature, err := sb.signer.Sign(sb.key, combined)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to sign payload: %w`, err)
 	}
-
 	sig.signature = signature
 
 	return &sig, nil
