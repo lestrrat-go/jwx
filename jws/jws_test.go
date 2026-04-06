@@ -13,12 +13,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"cmp"
 	"maps"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"sort"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -1391,15 +1392,15 @@ func TestAlgorithmsForKey(t *testing.T) {
 			}
 		}
 
-		sort.Slice(tc.Expected, func(i, j int) bool {
-			return tc.Expected[i].String() < tc.Expected[j].String()
+		slices.SortFunc(tc.Expected, func(a, b jwa.SignatureAlgorithm) int {
+			return cmp.Compare(a.String(), b.String())
 		})
 		t.Run(tc.Name, func(t *testing.T) {
 			algs, err := jws.AlgorithmsForKey(tc.Key)
 			require.NoError(t, err, `jws.AlgorithmsForKey should succeed`)
 
-			sort.Slice(algs, func(i, j int) bool {
-				return algs[i].String() < algs[j].String()
+			slices.SortFunc(algs, func(a, b jwa.SignatureAlgorithm) int {
+				return cmp.Compare(a.String(), b.String())
 			})
 			require.Equal(t, tc.Expected, algs, `results should match`)
 		})
