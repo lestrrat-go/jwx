@@ -7,6 +7,7 @@ import (
 	"cmp"
 	"encoding/json/jsontext"
 	"fmt"
+	"iter"
 	"slices"
 	"sync"
 	"time"
@@ -100,6 +101,8 @@ type Token interface {
 	Options() *TokenOptionSet
 	Clone() (Token, error)
 	Keys() []string
+	// Claims returns an iterator over all claims (standard and private) in the token.
+	Claims() iter.Seq2[string, any]
 }
 type stdToken struct {
 	mu            sync.RWMutex
@@ -514,6 +517,53 @@ func (t *stdToken) Keys() []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+func (t *stdToken) Claims() iter.Seq2[string, any] {
+	return func(yield func(string, any) bool) {
+		t.mu.RLock()
+		defer t.mu.RUnlock()
+		if t.audience != nil {
+			if !yield(AudienceKey, t.audience) {
+				return
+			}
+		}
+		if t.expiration != nil {
+			if !yield(ExpirationKey, *(t.expiration)) {
+				return
+			}
+		}
+		if t.issuedAt != nil {
+			if !yield(IssuedAtKey, *(t.issuedAt)) {
+				return
+			}
+		}
+		if t.issuer != nil {
+			if !yield(IssuerKey, *(t.issuer)) {
+				return
+			}
+		}
+		if t.jwtID != nil {
+			if !yield(JwtIDKey, *(t.jwtID)) {
+				return
+			}
+		}
+		if t.notBefore != nil {
+			if !yield(NotBeforeKey, *(t.notBefore)) {
+				return
+			}
+		}
+		if t.subject != nil {
+			if !yield(SubjectKey, *(t.subject)) {
+				return
+			}
+		}
+		for k, v := range t.privateClaims {
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
 }
 
 type claimPair struct {
