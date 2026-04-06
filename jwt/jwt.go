@@ -575,9 +575,9 @@ func (t *stdToken) Clone() (Token, error) {
 
 	dst.Options().Set(*(t.Options()))
 	for _, k := range t.Keys() {
-		var v any
-		if err := t.Get(k, &v); err != nil {
-			return nil, fmt.Errorf(`jwt.Clone: failed to get %s: %w`, k, err)
+		v, ok := t.Field(k)
+		if !ok {
+			return nil, fmt.Errorf(`jwt.Clone: failed to get %s`, k)
 		}
 		if err := dst.Set(k, v); err != nil {
 			return nil, fmt.Errorf(`jwt.Clone failed to set %s: %w`, k, err)

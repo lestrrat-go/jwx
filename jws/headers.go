@@ -6,9 +6,9 @@ import (
 
 func (h *stdHeaders) Copy(dst Headers) error {
 	for _, k := range h.Keys() {
-		var v any
-		if err := h.Get(k, &v); err != nil {
-			return fmt.Errorf(`failed to get header %q: %w`, k, err)
+		v, ok := h.Field(k)
+		if !ok {
+			return fmt.Errorf(`failed to get header %q`, k)
 		}
 		if err := dst.Set(k, v); err != nil {
 			return fmt.Errorf(`failed to set header %q: %w`, k, err)

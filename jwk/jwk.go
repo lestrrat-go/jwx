@@ -157,8 +157,8 @@ func PublicRawKeyOf(v any) (any, error) {
 		return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to obtain public key from %T: %w`, v, err)
 	}
 
-	var raw any
-	if err := Export(pubk, &raw); err != nil {
+	raw, err := Export(pubk)
+	if err != nil {
 		return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to obtain raw key from %T: %w`, pubk, err)
 	}
 	return raw, nil
@@ -174,9 +174,21 @@ func ParseRawKey(data []byte, rawkey any) error {
 		return fmt.Errorf(`failed to parse key: %w`, err)
 	}
 
-	if err := Export(key, rawkey); err != nil {
-		return fmt.Errorf(`failed to assign to raw key variable: %w`, err)
+	raw, err := Export(key)
+	if err != nil {
+		return fmt.Errorf(`failed to export raw key: %w`, err)
 	}
+
+	rv := reflect.ValueOf(rawkey)
+	if rv.Kind() != reflect.Ptr || rv.IsNil() {
+		return fmt.Errorf(`rawkey must be a non-nil pointer`)
+	}
+	elem := rv.Elem()
+	rawVal := reflect.ValueOf(raw)
+	if !rawVal.Type().AssignableTo(elem.Type()) {
+		return fmt.Errorf(`cannot assign %T to %s`, raw, elem.Type())
+	}
+	elem.Set(rawVal)
 
 	return nil
 }
@@ -236,18 +248,18 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 
 	if parsePEM {
 		var raw any
+		var err error
 
 		// PEMDecoder should probably be deprecated, because of being a misnomer.
 		if pemDecoder != nil {
-			if err := decodeX509WithPEMDEcoder(&raw, data, pemDecoder); err != nil {
-				return nil, fmt.Errorf(`failed to decode PEM encoded key: %w`, err)
-			}
+			raw, err = decodeX509WithPEMDEcoder(data, pemDecoder)
 		} else {
 			// This version takes into account the various X509 decoders that are
 			// pre-registered.
-			if err := decodeX509(&raw, data); err != nil {
-				return nil, fmt.Errorf(`failed to decode X.509 encoded key: %w`, err)
-			}
+			raw, err = decodeX509(data)
+		}
+		if err != nil {
+			return nil, fmt.Errorf(`failed to decode PEM/X.509 encoded key: %w`, err)
 		}
 		return Import(raw)
 	}
@@ -457,10 +469,9 @@ func cloneKey(src Key) (Key, error) {
 	}
 
 	for _, k := range src.Keys() {
-		// It's absolutely
-		var v any
-		if err := src.Get(k, &v); err != nil {
-			return nil, fmt.Errorf(`jwk.cloneKey: failed to get %q: %w`, k, err)
+		v, ok := src.Field(k)
+		if !ok {
+			return nil, fmt.Errorf(`jwk.cloneKey: failed to get %q`, k)
 		}
 		if err := dst.Set(k, v); err != nil {
 			return nil, fmt.Errorf(`jwk.cloneKey: failed to set %q: %w`, k, err)
@@ -510,18 +521,22 @@ func Pem(v any) ([]byte, error) {
 func asnEncode(key Key) (string, []byte, error) {
 	switch key := key.(type) {
 	case ECDSAPrivateKey:
-		var rawkey ecdsa.PrivateKey
-		if err := Export(key, &rawkey); err != nil {
+		rawV, err := Export(key)
+		if err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
 		}
-		buf, err := x509.MarshalECPrivateKey(&rawkey)
+		rawkey, ok := rawV.(*ecdsa.PrivateKey)
+		if !ok {
+			return "", nil, fmt.Errorf(`expected *ecdsa.PrivateKey, got %T`, rawV)
+		}
+		buf, err := x509.MarshalECPrivateKey(rawkey)
 		if err != nil {
 			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
 		}
 		return pmECPrivateKey, buf, nil
 	case RSAPrivateKey, OKPPrivateKey:
-		var rawkey any
-		if err := Export(key, &rawkey); err != nil {
+		rawkey, err := Export(key)
+		if err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
 		}
 		buf, err := x509.MarshalPKCS8PrivateKey(rawkey)
@@ -530,8 +545,8 @@ func asnEncode(key Key) (string, []byte, error) {
 		}
 		return pmPrivateKey, buf, nil
 	case RSAPublicKey, ECDSAPublicKey, OKPPublicKey:
-		var rawkey any
-		if err := Export(key, &rawkey); err != nil {
+		rawkey, err := Export(key)
+		if err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
 		}
 		buf, err := x509.MarshalPKIXPublicKey(rawkey)

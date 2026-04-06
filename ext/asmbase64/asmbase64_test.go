@@ -35,9 +35,12 @@ func TestJWKRoundTrip(t *testing.T) {
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 	// Verify the key fields survived the round-trip through asm base64
-	var origD, parsedD []byte
-	require.NoError(t, jwkKey.Get("d", &origD), `original key.Get("d") should succeed`)
-	require.NoError(t, parsed.Get("d", &parsedD), `parsed key.Get("d") should succeed`)
+	origDV, ok := jwkKey.Field("d")
+	require.True(t, ok, `original key.Field("d") should succeed`)
+	origD := origDV.([]byte)
+	parsedDV, ok := parsed.Field("d")
+	require.True(t, ok, `parsed key.Field("d") should succeed`)
+	parsedD := parsedDV.([]byte)
 	require.Equal(t, origD, parsedD, `"d" field should match after round-trip`)
 }
 

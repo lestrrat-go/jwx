@@ -348,11 +348,9 @@ func WithKeyProvider(v KeyProvider) VerifyOption {
 // and you want to know which key was successful at verifying the
 // signature.
 //
-// `v` must be a pointer to an empty `any`. Do not use
-// `jwk.Key` here unless you are 100% sure that all keys that you
-// have provided are instances of `jwk.Key` (remember that the
-// jwx API allows users to specify a raw key such as *rsa.PublicKey)
-func WithKeyUsed(v any) VerifyOption {
+// `v` must be a pointer to an `any` variable. After a successful
+// verification, the key used will be assigned to the variable.
+func WithKeyUsed(v *any) VerifyOption {
 	return &verifyOption{option.New(identKeyUsed{}, v)}
 }
 

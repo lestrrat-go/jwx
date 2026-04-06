@@ -279,11 +279,10 @@ func makeOKPPublicKey(src Key) (Key, error) {
 		case OKPDKey:
 			continue
 		default:
-			var v any
-			if err := src.Get(k, &v); err != nil {
-				return nil, fmt.Errorf(`failed to get field %q: %w`, k, err)
+			v, ok := src.Field(k)
+			if !ok {
+				return nil, fmt.Errorf(`failed to get field %q`, k)
 			}
-
 			if err := newKey.Set(k, v); err != nil {
 				return nil, fmt.Errorf(`failed to set field %q: %w`, k, err)
 			}

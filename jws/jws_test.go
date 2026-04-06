@@ -695,10 +695,10 @@ func TestVerifyNonUniqueKid(t *testing.T) {
 		for _, set := range []jwk.Set{makeSet(wrongKey, correctKey), makeSet(correctKey, wrongKey)} {
 			t.Run(tc.Name, func(t *testing.T) {
 				// Try matching in different orders
-				var usedKey jwk.Key
+				var usedKey any
 				_, err = jws.Verify(signed, jws.WithKeySet(set, jws.WithMultipleKeysPerKeyID(true)), jws.WithKeyUsed(&usedKey))
 				require.NoError(t, err, `jws.Verify should succeed`)
-				require.Equal(t, usedKey, correctKey)
+				require.Equal(t, correctKey, usedKey)
 			})
 		}
 	}
@@ -741,13 +741,14 @@ func TestVerifySet(t *testing.T) {
 					require.NoError(t, err, `json.Marshal should succeed`)
 				}
 
-				var used jwk.Key
+				var used any
 				verified, err := jws.Verify(signed, jws.WithKeySet(set, jws.WithRequireKid(false)), jws.WithKeyUsed(&used))
 				require.NoError(t, err, `jws.Verify should succeed`)
 				require.Equal(t, []byte(payload), verified, `payload should match`)
+				usedKey := used.(jwk.Key)
 				expected, _ := jwk.PublicKeyOf(key)
 				thumb1, _ := expected.Thumbprint(crypto.SHA1)
-				thumb2, _ := used.Thumbprint(crypto.SHA1)
+				thumb2, _ := usedKey.Thumbprint(crypto.SHA1)
 				require.Equal(t, thumb1, thumb2, `keys should match`)
 			})
 			t.Run(`match via "kid"`, func(t *testing.T) {
@@ -767,13 +768,14 @@ func TestVerifySet(t *testing.T) {
 					require.NoError(t, err, `json.Marshal should succeed`)
 				}
 
-				var used jwk.Key
+				var used any
 				verified, err := jws.Verify(signed, jws.WithKeySet(set), jws.WithKeyUsed(&used))
 				require.NoError(t, err, `jws.Verify should succeed`)
 				require.Equal(t, []byte(payload), verified, `payload should match`)
+				usedKey := used.(jwk.Key)
 				expected, _ := jwk.PublicKeyOf(key)
 				thumb1, _ := expected.Thumbprint(crypto.SHA1)
-				thumb2, _ := used.Thumbprint(crypto.SHA1)
+				thumb2, _ := usedKey.Thumbprint(crypto.SHA1)
 				require.Equal(t, thumb1, thumb2, `keys should match`)
 			})
 		})
@@ -814,8 +816,10 @@ func TestCustomField(t *testing.T) {
 		msg, err := jws.Parse(encrypted)
 		require.NoError(t, err, `jws.Parse should succeed`)
 		for _, key := range []string{rfc3339Key, rfc1123Key} {
-			var v time.Time
-			require.NoError(t, msg.Signatures()[0].ProtectedHeaders().Get(key, &v), `msg.Get(%q) should succeed`, key)
+			fieldV, ok := msg.Signatures()[0].ProtectedHeaders().Field(key)
+			require.True(t, ok, `msg.Field(%q) should succeed`, key)
+			v, ok := fieldV.(time.Time)
+			require.True(t, ok, `value should be time.Time`)
 			require.Equal(t, expected, v, `values should match`)
 		}
 	})
@@ -830,8 +834,10 @@ func TestCustomField(t *testing.T) {
 		require.NoError(t, json.Unmarshal(encrypted, msg), `json.Unmarshal should succeed`)
 
 		for _, key := range []string{rfc3339Key, rfc1123Key} {
-			var v time.Time
-			require.NoError(t, msg.Signatures()[0].ProtectedHeaders().Get(key, &v), `msg.Get(%q) should succeed`, key)
+			fieldV, ok := msg.Signatures()[0].ProtectedHeaders().Field(key)
+			require.True(t, ok, `msg.Field(%q) should succeed`, key)
+			v, ok := fieldV.(time.Time)
+			require.True(t, ok, `value should be time.Time`)
 			require.Equal(t, expected, v, `values should match`)
 		}
 	})
@@ -858,8 +864,8 @@ func TestCustomField(t *testing.T) {
 			msg, err := jws.Parse(signed)
 			require.NoError(t, err, `jws.Parse should succeed`)
 
-			var v any
-			require.NoError(t, msg.Signatures()[0].ProtectedHeaders().Get(`x-birthday`, &v), `msg.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
+			v, ok := msg.Signatures()[0].ProtectedHeaders().Field(`x-birthday`)
+			require.True(t, ok, `msg.Signatures()[0].ProtectedHeaders().Field("x-birthday") should succeed`)
 
 			require.Equal(t, expected, v, `values should match`)
 
@@ -870,8 +876,8 @@ func TestCustomField(t *testing.T) {
 			var msg2 jws.Message
 			require.NoError(t, json.Unmarshal(buf, &msg2), `json.Unmarshal should succeed`)
 
-			v = nil
-			require.NoError(t, msg2.Signatures()[0].ProtectedHeaders().Get(`x-birthday`, &v), `msg2.Signatures()[0].ProtectedHeaders().Get("x-birthday") should succeed`)
+			v, ok = msg2.Signatures()[0].ProtectedHeaders().Field(`x-birthday`)
+			require.True(t, ok, `msg2.Signatures()[0].ProtectedHeaders().Field("x-birthday") should succeed`)
 
 			require.Equal(t, expected, v, `values should match`)
 		})

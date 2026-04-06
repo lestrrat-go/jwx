@@ -111,8 +111,8 @@ func TestAdressClaim(t *testing.T) {
 
 func TestOpenIDClaims(t *testing.T) {
 	getVerify := func(token openid.Token, key string, expected any) bool {
-		var v any
-		if assert.NoError(t, token.Get(key, &v), `token.Get %#v should succeed`, key) {
+		v, ok := token.Field(key)
+		if !assert.True(t, ok, `token.Field %#v should succeed`, key) {
 			return false
 		}
 		return assert.Equal(t, v, expected)
@@ -417,8 +417,8 @@ func TestOpenIDClaims(t *testing.T) {
 			Value: `dummy`,
 			Key:   `dummy`,
 			Check: func(token openid.Token) {
-				var v any
-				require.NoError(t, token.Get(`dummy`, &v), `token.Get should return valid value`)
+				v, ok := token.Field(`dummy`)
+				require.True(t, ok, `token.Field should succeed`)
 				require.Equal(t, `dummy`, v, `values should match`)
 			},
 		},
@@ -514,8 +514,8 @@ func TestOpenIDClaims(t *testing.T) {
 		t.Run("Iterate", func(t *testing.T) {
 			seen := make(map[string]any)
 			for _, k := range tok.Keys() {
-				var v any
-				require.NoError(t, tok.Get(k, &v), `tok.Get should succeed`)
+				v, ok := tok.Field(k)
+				require.True(t, ok, `tok.Field should succeed`)
 				seen[k] = v
 			}
 			require.Equal(t, expected, seen, `values should match`)

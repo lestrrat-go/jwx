@@ -31,35 +31,12 @@ func TestKeyconv(t *testing.T) {
 			}
 
 			for _, tc := range testcases {
-				t.Run("Assign to rsa.PrivateKey", func(t *testing.T) {
-					var dst rsa.PrivateKey
-					var checker func(require.TestingT, error, ...any)
+				t.Run("Convert to *rsa.PrivateKey", func(t *testing.T) {
+					dst, err := keyconv.RSAPrivateKey(tc.Src)
 					if tc.Error {
-						checker = require.Error
+						require.Error(t, err, `keyconv.RSAPrivateKey should fail`)
 					} else {
-						checker = require.NoError
-					}
-
-					checker(t, keyconv.RSAPrivateKey(&dst, tc.Src), `keyconv.RSAPrivateKey should succeed`)
-					if !tc.Error {
-						// Reset precomputed values; they will be computed as necessary,
-						// and their values are not necessarily stable across runs
-						key.Precomputed = rsa.PrecomputedValues{}
-						dst.Precomputed = rsa.PrecomputedValues{}
-						require.Equal(t, key, &dst, `keyconv.RSAPrivateKey should produce same value`)
-					}
-				})
-				t.Run("Assign to *rsa.PrivateKey", func(t *testing.T) {
-					dst := &rsa.PrivateKey{}
-					var checker func(require.TestingT, error, ...any)
-					if tc.Error {
-						checker = require.Error
-					} else {
-						checker = require.NoError
-					}
-
-					checker(t, keyconv.RSAPrivateKey(dst, tc.Src), `keyconv.RSAPrivateKey should succeed`)
-					if !tc.Error {
+						require.NoError(t, err, `keyconv.RSAPrivateKey should succeed`)
 						// Reset precomputed values; they will be computed as necessary,
 						// and their values are not necessarily stable across runs
 						key.Precomputed = rsa.PrecomputedValues{}
@@ -83,31 +60,12 @@ func TestKeyconv(t *testing.T) {
 			}
 
 			for _, tc := range testcases {
-				t.Run("Assign to rsa.PublicKey", func(t *testing.T) {
-					var dst rsa.PublicKey
-					var checker func(require.TestingT, error, ...any)
+				t.Run("Convert to *rsa.PublicKey", func(t *testing.T) {
+					dst, err := keyconv.RSAPublicKey(tc.Src)
 					if tc.Error {
-						checker = require.Error
+						require.Error(t, err, `keyconv.RSAPublicKey should fail`)
 					} else {
-						checker = require.NoError
-					}
-
-					checker(t, keyconv.RSAPublicKey(&dst, tc.Src), `keyconv.RSAPublicKey should succeed`)
-					if !tc.Error {
-						require.Equal(t, pubkey, &dst, `keyconv.RSAPublicKey should produce same value`)
-					}
-				})
-				t.Run("Assign to *rsa.PublicKey", func(t *testing.T) {
-					dst := &rsa.PublicKey{}
-					var checker func(require.TestingT, error, ...any)
-					if tc.Error {
-						checker = require.Error
-					} else {
-						checker = require.NoError
-					}
-
-					checker(t, keyconv.RSAPublicKey(dst, tc.Src), `keyconv.RSAPublicKey should succeed`)
-					if !tc.Error {
+						require.NoError(t, err, `keyconv.RSAPublicKey should succeed`)
 						require.Equal(t, pubkey, dst, `keyconv.RSAPublicKey should produce same value`)
 					}
 				})
@@ -131,31 +89,12 @@ func TestKeyconv(t *testing.T) {
 			}
 
 			for _, tc := range testcases {
-				t.Run("Assign to ecdsa.PrivateKey", func(t *testing.T) {
-					var dst ecdsa.PrivateKey
-					var checker func(require.TestingT, error, ...any)
+				t.Run("Convert to *ecdsa.PrivateKey", func(t *testing.T) {
+					dst, err := keyconv.ECDSAPrivateKey(tc.Src)
 					if tc.Error {
-						checker = require.Error
+						require.Error(t, err, `keyconv.ECDSAPrivateKey should fail`)
 					} else {
-						checker = require.NoError
-					}
-
-					checker(t, keyconv.ECDSAPrivateKey(&dst, tc.Src), `keyconv.ECDSAPrivateKey should succeed`)
-					if !tc.Error {
-						require.Equal(t, key, &dst, `keyconv.ECDSAPrivateKey should produce same value`)
-					}
-				})
-				t.Run("Assign to *ecdsa.PrivateKey", func(t *testing.T) {
-					dst := &ecdsa.PrivateKey{}
-					var checker func(require.TestingT, error, ...any)
-					if tc.Error {
-						checker = require.Error
-					} else {
-						checker = require.NoError
-					}
-
-					checker(t, keyconv.ECDSAPrivateKey(dst, tc.Src), `keyconv.ECDSAPrivateKey should succeed`)
-					if !tc.Error {
+						require.NoError(t, err, `keyconv.ECDSAPrivateKey should succeed`)
 						require.Equal(t, key, dst, `keyconv.ECDSAPrivateKey should produce same value`)
 					}
 				})
@@ -175,31 +114,12 @@ func TestKeyconv(t *testing.T) {
 			}
 
 			for _, tc := range testcases {
-				t.Run("Assign to ecdsa.PublicKey", func(t *testing.T) {
-					var dst ecdsa.PublicKey
-					var checker func(require.TestingT, error, ...any)
+				t.Run("Convert to *ecdsa.PublicKey", func(t *testing.T) {
+					dst, err := keyconv.ECDSAPublicKey(tc.Src)
 					if tc.Error {
-						checker = require.Error
+						require.Error(t, err, `keyconv.ECDSAPublicKey should fail`)
 					} else {
-						checker = require.NoError
-					}
-
-					checker(t, keyconv.ECDSAPublicKey(&dst, tc.Src), `keyconv.ECDSAPublicKey should succeed`)
-					if !tc.Error {
-						require.Equal(t, pubkey, &dst, `keyconv.ECDSAPublicKey should produce same value`)
-					}
-				})
-				t.Run("Assign to *ecdsa.PublicKey", func(t *testing.T) {
-					dst := &ecdsa.PublicKey{}
-					var checker func(require.TestingT, error, ...any)
-					if tc.Error {
-						checker = require.Error
-					} else {
-						checker = require.NoError
-					}
-
-					checker(t, keyconv.ECDSAPublicKey(dst, tc.Src), `keyconv.ECDSAPublicKey should succeed`)
-					if !tc.Error {
+						require.NoError(t, err, `keyconv.ECDSAPublicKey should succeed`)
 						require.Equal(t, pubkey, dst, `keyconv.ECDSAPublicKey should produce same value`)
 					}
 				})
@@ -243,14 +163,14 @@ func TestECDHToECDSA(t *testing.T) {
 
 				for _, tc := range testcases {
 					t.Run(tc.name, func(t *testing.T) {
-						var dst *ecdsa.PrivateKey
-						err := keyconv.ECDHToECDSA(&dst, tc.src)
+						result, err := keyconv.ECDHToECDSA(tc.src)
 
 						if tc.error {
 							require.Error(t, err, `ECDHToECDSA should fail for invalid input`)
 						} else {
 							require.NoError(t, err, `ECDHToECDSA should succeed`)
-							require.NotNil(t, dst, `destination should not be nil`)
+							require.NotNil(t, result, `result should not be nil`)
+							dst := result.(*ecdsa.PrivateKey)
 
 							// Verify the converted key has the same curve
 							require.Equal(t, ecdsaKey.Curve, dst.Curve, `curves should match`)
@@ -279,14 +199,14 @@ func TestECDHToECDSA(t *testing.T) {
 
 				for _, tc := range testcases {
 					t.Run(tc.name, func(t *testing.T) {
-						var dst *ecdsa.PublicKey
-						err := keyconv.ECDHToECDSA(&dst, tc.src)
+						result, err := keyconv.ECDHToECDSA(tc.src)
 
 						if tc.error {
 							require.Error(t, err, `ECDHToECDSA should fail for invalid input`)
 						} else {
 							require.NoError(t, err, `ECDHToECDSA should succeed`)
-							require.NotNil(t, dst, `destination should not be nil`)
+							require.NotNil(t, result, `result should not be nil`)
+							dst := result.(*ecdsa.PublicKey)
 
 							// Verify the converted key has the same curve
 							require.Equal(t, ecdsaKey.PublicKey.Curve, dst.Curve, `curves should match`)
@@ -301,13 +221,13 @@ func TestECDHToECDSA(t *testing.T) {
 
 			t.Run("RoundTrip", func(t *testing.T) {
 				// Test that ECDSA -> ECDH -> ECDSA produces the same key
-				var convertedPrivKey *ecdsa.PrivateKey
-				err := keyconv.ECDHToECDSA(&convertedPrivKey, ecdhPrivKey)
+				convertedPrivResult, err := keyconv.ECDHToECDSA(ecdhPrivKey)
 				require.NoError(t, err, `ECDHToECDSA should succeed`)
+				convertedPrivKey := convertedPrivResult.(*ecdsa.PrivateKey)
 
-				var convertedPubKey *ecdsa.PublicKey
-				err = keyconv.ECDHToECDSA(&convertedPubKey, ecdhPubKey)
+				convertedPubResult, err := keyconv.ECDHToECDSA(ecdhPubKey)
 				require.NoError(t, err, `ECDHToECDSA should succeed`)
+				convertedPubKey := convertedPubResult.(*ecdsa.PublicKey)
 
 				// Verify the keys are equivalent
 				require.Equal(t, ecdsaKey.D, convertedPrivKey.D, `private key values should match`)
@@ -324,8 +244,7 @@ func TestECDHToECDSA(t *testing.T) {
 		x25519Key, err := ecdh.X25519().GenerateKey(rand.Reader)
 		require.NoError(t, err, `X25519 key generation should succeed`)
 
-		var dst *ecdsa.PrivateKey
-		err = keyconv.ECDHToECDSA(&dst, x25519Key)
+		_, err = keyconv.ECDHToECDSA(x25519Key)
 		require.Error(t, err, `ECDHToECDSA should fail for unsupported curve`)
 		require.Contains(t, err.Error(), "unsupported ECDH curve", `error should mention unsupported curve`)
 	})

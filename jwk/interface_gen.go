@@ -53,14 +53,9 @@ type Key interface {
 	// explicitly set.
 	Has(string) bool
 
-	// Get is used to extract the value of any field, including non-standard fields, out of the key.
-	//
-	// The first argument is the name of the field. The second argument is a pointer
-	// to a variable that will receive the value of the field. The method returns
-	// an error if the field does not exist, or if the value cannot be assigned to
-	// the destination variable. Note that a field is considered to "exist" even if
-	// the value is empty-ish (e.g. 0, false, ""), as long as it is explicitly set.
-	Get(string, any) error
+	// Field returns the value of a key field by name, along with a boolean indicating
+	// whether the field was found. For type-safe access, use the `jwk.Get[T]()` generic accessor.
+	Field(string) (any, bool)
 
 	// Set sets the value of a single field. Note that certain fields,
 	// notably "kty", cannot be altered, but will not return an error

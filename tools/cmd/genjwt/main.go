@@ -161,21 +161,11 @@ func generateToken(obj *codegen.Object) error {
 		}
 		o.L("%s() (%s, bool)", field.GetterMethod(true), rv)
 	}
-	o.LL("// Get is used to extract the value of any claim, including non-standard claims, out of the token.")
-	o.L("//")
-	o.L("// The first argument is the name of the claim. The second argument is a pointer")
-	o.L("// to a variable that will receive the value of the claim. The method returns")
-	o.L("// an error if the claim does not exist, or if the value cannot be assigned to")
-	o.L("// the destination variable.  Note that a field is considered to \"exist\" even if")
-	o.L("// the value is empty-ish (e.g. 0, false, \"\"), as long as it is explicitly set.")
-	o.L("//")
-	o.L("// For standard claims, you can use the corresponding getter method, such as")
-	o.L("// `Issuer()`, `Subject()`, `Audience()`, `IssuedAt()`, `NotBefore()`, `ExpiresAt()`")
-	o.L("//")
-	o.L("// Note that fields of JWS/JWE are NOT accessible through this method. You need")
-	o.L("// to use `jws.Parse` and `jwe.Parse` to obtain the JWS/JWE message (and NOT")
-	o.L("// the payload, which presumably is the JWT), and then use their `Get` methods in their respective packages")
-	o.L("Get(string, any) error")
+	o.LL("// Field returns the value of a claim by name, along with a boolean indicating")
+	o.L("// whether the claim was found. For standard claims, you can also use the")
+	o.L("// corresponding getter method, such as `Issuer()`, `Subject()`, etc.")
+	o.L("// For type-safe access to claims, use the `jwt.Get[T]()` generic accessor.")
+	o.L("Field(string) (any, bool)")
 
 	o.LL("// Set assigns a value to the corresponding field in the token. Some")
 	o.L("// pre-defined fields such as `nbf`, `iat`, `iss` need their values to")
@@ -255,41 +245,28 @@ func generateToken(obj *codegen.Object) error {
 	o.L("}")
 	o.L("}")
 
-	o.LL("func (t *%s) Get(name string, dst any) error {", obj.Name(false))
+	o.LL("func (t *%s) Field(name string) (any, bool) {", obj.Name(false))
 	o.L("t.mu.RLock()")
 	o.L("defer t.mu.RUnlock()")
 	o.L("switch name {")
 	for _, f := range fields {
 		o.L("case %sKey:", f.Name(true))
 		o.L("if t.%s == nil {", f.Name(false))
-		o.L("return jwterrs.ClaimNotFoundError{Name: name}")
+		o.L("return nil, false")
 		o.L("}")
-		o.L("if err := blackmagic.AssignIfCompatible(dst, ")
 		if f.Bool(`hasGet`) {
-			o.R("t.%s.Get()", f.Name(false))
+			o.L("return t.%s.Get(), true", f.Name(false))
+		} else if fieldStorageTypeIsIndirect(f.Type()) {
+			o.L("return *(t.%s), true", f.Name(false))
 		} else {
-			if fieldStorageTypeIsIndirect(f.Type()) {
-				o.R("*(t.%s)", f.Name(false))
-			} else {
-				o.R("t.%s", f.Name(false))
-			}
+			o.L("return t.%s, true", f.Name(false))
 		}
-		o.R("); err != nil {")
-		o.L("return jwterrs.ClaimAssignmentFailedError{Err: err}")
-		o.L("}")
-		o.L("return nil")
 	}
 	o.L("default:")
 	o.L("v, ok := t.privateClaims[name]")
-	o.L("if !ok {")
-	o.L("return jwterrs.ClaimNotFoundError{Name: name}")
-	o.L("}")
-	o.L("if err := blackmagic.AssignIfCompatible(dst, v); err != nil {")
-	o.L("return jwterrs.ClaimAssignmentFailedError{Err: err}")
-	o.L("}")
-	o.L("return nil")
+	o.L("return v, ok")
 	o.L("}") // end switch name
-	o.L("}") // end of Get
+	o.L("}") // end of Field
 
 	o.LL("func (t *stdToken) Remove(key string) error {")
 	o.L("t.mu.Lock()")

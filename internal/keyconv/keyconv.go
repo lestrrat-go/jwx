@@ -10,120 +10,154 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-// convertPrivateKey is a generic helper for the common pattern:
-// 1. If src is jwk.Key, export to T
-// 2. Accept T or *T as src
-// 3. Assign *T to dst
-func convertPrivateKey[T any](dst, src any) error {
+func RSAPrivateKey(src any) (*rsa.PrivateKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		var raw T
-		if err := jwk.Export(jwkKey, &raw); err != nil {
-			return fmt.Errorf(`keyconv: failed to produce %T from %T: %w`, raw, src, err)
+		rawV, err := jwk.Export(jwkKey)
+		if err != nil {
+			return nil, fmt.Errorf(`keyconv: failed to produce rsa.PrivateKey from %T: %w`, src, err)
 		}
-		return blackmagic.AssignIfCompatible(dst, &raw)
+		ptr, ok := rawV.(*rsa.PrivateKey)
+		if !ok {
+			return nil, fmt.Errorf(`keyconv: expected *rsa.PrivateKey from export, got %T`, rawV)
+		}
+		return ptr, nil
 	}
-
 	switch src := src.(type) {
-	case *T:
-		return blackmagic.AssignIfCompatible(dst, src)
-	case T:
-		return blackmagic.AssignIfCompatible(dst, &src)
+	case *rsa.PrivateKey:
+		return src, nil
+	case rsa.PrivateKey:
+		return &src, nil
 	default:
-		return fmt.Errorf(`keyconv: expected %T or *%T, got %T`, *new(T), *new(T), src)
+		return nil, fmt.Errorf(`keyconv: expected rsa.PrivateKey or *rsa.PrivateKey, got %T`, src)
 	}
 }
 
-func RSAPrivateKey(dst, src any) error {
-	return convertPrivateKey[rsa.PrivateKey](dst, src)
-}
-
-// RSAPublicKey assigns src to dst.
+// RSAPublicKey extracts an *rsa.PublicKey from src.
 // src may be rsa.PublicKey, *rsa.PublicKey, rsa.PrivateKey, *rsa.PrivateKey, or jwk.Key.
-func RSAPublicKey(dst, src any) error {
+func RSAPublicKey(src any) (*rsa.PublicKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		pk, err := jwk.PublicRawKeyOf(jwkKey)
 		if err != nil {
-			return fmt.Errorf(`keyconv: failed to produce public key from %T: %w`, src, err)
+			return nil, fmt.Errorf(`keyconv: failed to produce public key from %T: %w`, src, err)
 		}
 		src = pk
 	}
 
-	var ptr *rsa.PublicKey
 	switch src := src.(type) {
 	case rsa.PrivateKey:
-		ptr = &src.PublicKey
+		return &src.PublicKey, nil
 	case *rsa.PrivateKey:
-		ptr = &src.PublicKey
+		return &src.PublicKey, nil
 	case rsa.PublicKey:
-		ptr = &src
+		return &src, nil
 	case *rsa.PublicKey:
-		ptr = src
+		return src, nil
 	default:
-		return fmt.Errorf(`keyconv: expected rsa.PublicKey/rsa.PrivateKey or *rsa.PublicKey/*rsa.PrivateKey, got %T`, src)
+		return nil, fmt.Errorf(`keyconv: expected rsa.PublicKey/rsa.PrivateKey or *rsa.PublicKey/*rsa.PrivateKey, got %T`, src)
 	}
-
-	return blackmagic.AssignIfCompatible(dst, ptr)
 }
 
-func ECDSAPrivateKey(dst, src any) error {
-	return convertPrivateKey[ecdsa.PrivateKey](dst, src)
+func ECDSAPrivateKey(src any) (*ecdsa.PrivateKey, error) {
+	if jwkKey, ok := src.(jwk.Key); ok {
+		rawV, err := jwk.Export(jwkKey)
+		if err != nil {
+			return nil, fmt.Errorf(`keyconv: failed to produce ecdsa.PrivateKey from %T: %w`, src, err)
+		}
+		ptr, ok := rawV.(*ecdsa.PrivateKey)
+		if !ok {
+			return nil, fmt.Errorf(`keyconv: expected *ecdsa.PrivateKey from export, got %T`, rawV)
+		}
+		return ptr, nil
+	}
+	switch src := src.(type) {
+	case *ecdsa.PrivateKey:
+		return src, nil
+	case ecdsa.PrivateKey:
+		return &src, nil
+	default:
+		return nil, fmt.Errorf(`keyconv: expected ecdsa.PrivateKey or *ecdsa.PrivateKey, got %T`, src)
+	}
 }
 
-// ECDSAPublicKey assigns src to dst.
+// ECDSAPublicKey extracts an *ecdsa.PublicKey from src.
 // src may be ecdsa.PublicKey, *ecdsa.PublicKey, ecdsa.PrivateKey, *ecdsa.PrivateKey, or jwk.Key.
-func ECDSAPublicKey(dst, src any) error {
+func ECDSAPublicKey(src any) (*ecdsa.PublicKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		pk, err := jwk.PublicRawKeyOf(jwkKey)
 		if err != nil {
-			return fmt.Errorf(`keyconv: failed to produce public key from %T: %w`, src, err)
+			return nil, fmt.Errorf(`keyconv: failed to produce public key from %T: %w`, src, err)
 		}
 		src = pk
 	}
 
-	var ptr *ecdsa.PublicKey
 	switch src := src.(type) {
 	case ecdsa.PrivateKey:
-		ptr = &src.PublicKey
+		return &src.PublicKey, nil
 	case *ecdsa.PrivateKey:
-		ptr = &src.PublicKey
+		return &src.PublicKey, nil
 	case ecdsa.PublicKey:
-		ptr = &src
+		return &src, nil
 	case *ecdsa.PublicKey:
-		ptr = src
+		return src, nil
 	default:
-		return fmt.Errorf(`keyconv: expected ecdsa.PublicKey/ecdsa.PrivateKey or *ecdsa.PublicKey/*ecdsa.PrivateKey, got %T`, src)
+		return nil, fmt.Errorf(`keyconv: expected ecdsa.PublicKey/ecdsa.PrivateKey or *ecdsa.PublicKey/*ecdsa.PrivateKey, got %T`, src)
 	}
-	return blackmagic.AssignIfCompatible(dst, ptr)
 }
 
-func ByteSliceKey(dst, src any) error {
+func ByteSliceKey(src any) ([]byte, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		var raw []byte
-		if err := jwk.Export(jwkKey, &raw); err != nil {
-			return fmt.Errorf(`keyconv: failed to produce []byte from %T: %w`, src, err)
+		rawV, err := jwk.Export(jwkKey)
+		if err != nil {
+			return nil, fmt.Errorf(`keyconv: failed to produce []byte from %T: %w`, src, err)
 		}
-		src = raw
+		raw, ok := rawV.([]byte)
+		if !ok {
+			return nil, fmt.Errorf(`keyconv: expected []byte from export, got %T`, rawV)
+		}
+		return raw, nil
 	}
 
-	if _, ok := src.([]byte); !ok {
-		return fmt.Errorf(`keyconv: expected []byte, got %T`, src)
+	b, ok := src.([]byte)
+	if !ok {
+		return nil, fmt.Errorf(`keyconv: expected []byte, got %T`, src)
 	}
-	return blackmagic.AssignIfCompatible(dst, src)
+	return b, nil
 }
 
-func Ed25519PrivateKey(dst, src any) error {
-	return convertPrivateKey[ed25519.PrivateKey](dst, src)
+func Ed25519PrivateKey(src any) (*ed25519.PrivateKey, error) {
+	if jwkKey, ok := src.(jwk.Key); ok {
+		rawV, err := jwk.Export(jwkKey)
+		if err != nil {
+			return nil, fmt.Errorf(`keyconv: failed to produce ed25519.PrivateKey from %T: %w`, src, err)
+		}
+		ptr, ok := rawV.(*ed25519.PrivateKey)
+		if !ok {
+			// Export may return ed25519.PrivateKey (not pointer)
+			if v, ok := rawV.(ed25519.PrivateKey); ok {
+				return &v, nil
+			}
+			return nil, fmt.Errorf(`keyconv: expected ed25519.PrivateKey from export, got %T`, rawV)
+		}
+		return ptr, nil
+	}
+	switch src := src.(type) {
+	case *ed25519.PrivateKey:
+		return src, nil
+	case ed25519.PrivateKey:
+		return &src, nil
+	default:
+		return nil, fmt.Errorf(`keyconv: expected ed25519.PrivateKey or *ed25519.PrivateKey, got %T`, src)
+	}
 }
 
-func Ed25519PublicKey(dst, src any) error {
+func Ed25519PublicKey(src any) (*ed25519.PublicKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		pk, err := jwk.PublicRawKeyOf(jwkKey)
 		if err != nil {
-			return fmt.Errorf(`keyconv: failed to produce public key from %T: %w`, src, err)
+			return nil, fmt.Errorf(`keyconv: failed to produce public key from %T: %w`, src, err)
 		}
 		src = pk
 	}
@@ -135,100 +169,98 @@ func Ed25519PublicKey(dst, src any) error {
 		src = key.Public()
 	}
 
-	var ptr *ed25519.PublicKey
 	switch src := src.(type) {
 	case ed25519.PublicKey:
-		ptr = &src
+		return &src, nil
 	case *ed25519.PublicKey:
-		ptr = src
+		return src, nil
 	case *crypto.PublicKey:
 		tmp, ok := (*src).(ed25519.PublicKey)
 		if !ok {
-			return fmt.Errorf(`failed to retrieve ed25519.PublicKey out of *crypto.PublicKey`)
+			return nil, fmt.Errorf(`failed to retrieve ed25519.PublicKey out of *crypto.PublicKey`)
 		}
-		ptr = &tmp
+		return &tmp, nil
 	case crypto.PublicKey:
 		tmp, ok := src.(ed25519.PublicKey)
 		if !ok {
-			return fmt.Errorf(`failed to retrieve ed25519.PublicKey out of crypto.PublicKey`)
+			return nil, fmt.Errorf(`failed to retrieve ed25519.PublicKey out of crypto.PublicKey`)
 		}
-		ptr = &tmp
+		return &tmp, nil
 	default:
-		return fmt.Errorf(`expected ed25519.PublicKey or *ed25519.PublicKey, got %T`, src)
+		return nil, fmt.Errorf(`expected ed25519.PublicKey or *ed25519.PublicKey, got %T`, src)
 	}
-	return blackmagic.AssignIfCompatible(dst, ptr)
 }
 
 type privECDHer interface {
 	ECDH() (*ecdh.PrivateKey, error)
 }
 
-func ECDHPrivateKey(dst, src any) error {
-	var privECDH *ecdh.PrivateKey
+func ECDHPrivateKey(src any) (*ecdh.PrivateKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		var rawECDH ecdh.PrivateKey
-		if err := jwk.Export(jwkKey, &rawECDH); err == nil {
-			privECDH = &rawECDH
-		} else {
-			// If we cannot export the key as an ecdh.PrivateKey, we try to export it as an ecdsa.PrivateKey
-			var rawECDSA ecdsa.PrivateKey
-			if err := jwk.Export(jwkKey, &rawECDSA); err != nil {
-				return fmt.Errorf(`keyconv: failed to produce ecdh.PrivateKey or ecdsa.PrivateKey from %T: %w`, src, err)
-			}
-			src = &rawECDSA
+		rawV, err := jwk.Export(jwkKey)
+		if err != nil {
+			return nil, fmt.Errorf(`keyconv: failed to produce ecdh.PrivateKey or ecdsa.PrivateKey from %T: %w`, src, err)
+		}
+		switch raw := rawV.(type) {
+		case *ecdh.PrivateKey:
+			return raw, nil
+		case *ecdsa.PrivateKey:
+			src = raw
+		default:
+			return nil, fmt.Errorf(`keyconv: expected *ecdh.PrivateKey or *ecdsa.PrivateKey from export, got %T`, rawV)
 		}
 	}
 
 	switch src := src.(type) {
 	case ecdh.PrivateKey:
-		privECDH = &src
+		return &src, nil
 	case *ecdh.PrivateKey:
-		privECDH = src
+		return src, nil
 	case privECDHer:
 		priv, err := src.ECDH()
 		if err != nil {
-			return fmt.Errorf(`keyconv: failed to convert ecdsa.PrivateKey to ecdh.PrivateKey: %w`, err)
+			return nil, fmt.Errorf(`keyconv: failed to convert ecdsa.PrivateKey to ecdh.PrivateKey: %w`, err)
 		}
-		privECDH = priv
+		return priv, nil
+	default:
+		return nil, fmt.Errorf(`keyconv: expected ecdh.PrivateKey or privECDHer, got %T`, src)
 	}
-
-	return blackmagic.AssignIfCompatible(dst, privECDH)
 }
 
 type pubECDHer interface {
 	ECDH() (*ecdh.PublicKey, error)
 }
 
-func ECDHPublicKey(dst, src any) error {
-	var pubECDH *ecdh.PublicKey
+func ECDHPublicKey(src any) (*ecdh.PublicKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		var rawECDH ecdh.PublicKey
-		if err := jwk.Export(jwkKey, &rawECDH); err == nil {
-			pubECDH = &rawECDH
-		} else {
-			// If we cannot export the key as an ecdh.PublicKey, we try to export it as an ecdsa.PublicKey
-			var rawECDSA ecdsa.PublicKey
-			if err := jwk.Export(jwkKey, &rawECDSA); err != nil {
-				return fmt.Errorf(`keyconv: failed to produce ecdh.PublicKey or ecdsa.PublicKey from %T: %w`, src, err)
-			}
-			src = &rawECDSA
+		rawV, err := jwk.Export(jwkKey)
+		if err != nil {
+			return nil, fmt.Errorf(`keyconv: failed to produce ecdh.PublicKey or ecdsa.PublicKey from %T: %w`, src, err)
+		}
+		switch raw := rawV.(type) {
+		case *ecdh.PublicKey:
+			return raw, nil
+		case *ecdsa.PublicKey:
+			src = raw
+		default:
+			return nil, fmt.Errorf(`keyconv: expected *ecdh.PublicKey or *ecdsa.PublicKey from export, got %T`, rawV)
 		}
 	}
 
 	switch src := src.(type) {
 	case ecdh.PublicKey:
-		pubECDH = &src
+		return &src, nil
 	case *ecdh.PublicKey:
-		pubECDH = src
+		return src, nil
 	case pubECDHer:
 		pub, err := src.ECDH()
 		if err != nil {
-			return fmt.Errorf(`keyconv: failed to convert ecdsa.PublicKey to ecdh.PublicKey: %w`, err)
+			return nil, fmt.Errorf(`keyconv: failed to convert ecdsa.PublicKey to ecdh.PublicKey: %w`, err)
 		}
-		pubECDH = pub
+		return pub, nil
+	default:
+		return nil, fmt.Errorf(`keyconv: expected ecdh.PublicKey or pubECDHer, got %T`, src)
 	}
-
-	return blackmagic.AssignIfCompatible(dst, pubECDH)
 }
 
 // ecdhCurveToElliptic maps ECDH curves to elliptic curves
@@ -274,9 +306,9 @@ func ecdhPublicKeyToECDSA(ecdhPubKey *ecdh.PublicKey) (*ecdsa.PublicKey, error) 
 	}, nil
 }
 
-func ECDHToECDSA(dst, src any) error {
-	// convert ecdh.PublicKey to ecdsa.PublicKey, ecdh.PrivateKey to ecdsa.PrivateKey
-
+// ECDHToECDSA converts an ECDH key to an ECDSA key.
+// Returns *ecdsa.PublicKey for public keys, *ecdsa.PrivateKey for private keys.
+func ECDHToECDSA(src any) (any, error) {
 	// First, handle value types by converting to pointers
 	switch s := src.(type) {
 	case ecdh.PrivateKey:
@@ -287,7 +319,6 @@ func ECDHToECDSA(dst, src any) error {
 
 	var privBytes []byte
 	var pubkey *ecdh.PublicKey
-	// Now handle the actual conversion with pointer types
 	switch src := src.(type) {
 	case *ecdh.PrivateKey:
 		pubkey = src.PublicKey()
@@ -295,25 +326,23 @@ func ECDHToECDSA(dst, src any) error {
 	case *ecdh.PublicKey:
 		pubkey = src
 	default:
-		return fmt.Errorf(`keyconv: expected ecdh.PrivateKey, *ecdh.PrivateKey, ecdh.PublicKey, or *ecdh.PublicKey, got %T`, src)
+		return nil, fmt.Errorf(`keyconv: expected ecdh.PrivateKey, *ecdh.PrivateKey, ecdh.PublicKey, or *ecdh.PublicKey, got %T`, src)
 	}
 
 	// convert the public key
 	ecdsaPubKey, err := ecdhPublicKeyToECDSA(pubkey)
 	if err != nil {
-		return fmt.Errorf(`keyconv.ECDHToECDSA: failed to convert ECDH public key to ECDSA public key: %w`, err)
+		return nil, fmt.Errorf(`keyconv.ECDHToECDSA: failed to convert ECDH public key to ECDSA public key: %w`, err)
 	}
 
-	// return if we were being asked to convert *ecdh.PublicKey
 	if privBytes == nil {
-		return blackmagic.AssignIfCompatible(dst, ecdsaPubKey)
+		return ecdsaPubKey, nil
 	}
 
-	// Then create the private key with the public key embedded
 	ecdsaPrivKey := &ecdsa.PrivateKey{
 		D:         new(big.Int).SetBytes(privBytes),
 		PublicKey: *ecdsaPubKey,
 	}
 
-	return blackmagic.AssignIfCompatible(dst, ecdsaPrivKey)
+	return ecdsaPrivKey, nil
 }

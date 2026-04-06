@@ -98,7 +98,7 @@ func (jsonSerializer) Serialize(_ SerializeCtx, v any) (any, error) {
 }
 
 type genericHeader interface {
-	Get(string, any) error
+	Field(string) (any, bool)
 	Set(string, any) error
 	Has(string) bool
 }
@@ -150,9 +150,8 @@ func (s *jwsSerializer) Serialize(ctx SerializeCtx, v any) (any, error) {
 
 		// JWTs MUST NOT use b64 = false
 		// https://datatracker.ietf.org/doc/html/rfc7797#section-7
-		var b64 bool
-		if err := hdrs.Get("b64", &b64); err == nil {
-			if !b64 { // b64 = false
+		if v, ok := hdrs.Field("b64"); ok {
+			if b64, ok := v.(bool); ok && !b64 {
 				return nil, fmt.Errorf(`b64 cannot be false for JWTs`)
 			}
 		}

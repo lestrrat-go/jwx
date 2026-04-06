@@ -54,8 +54,8 @@ func TestFieldNameFilter(t *testing.T) {
 		require.False(t, filtered.Has("e"), "filtered key should not have field 'e'")
 
 		// Verify values are preserved
-		var val string
-		require.NoError(t, filtered.Get("a", &val), "filtered.Get should succeed")
+		val, ok := filtered.Field("a")
+		require.True(t, ok, "filtered.Field should succeed")
 		require.Equal(t, "value_a", val, "value for field 'a' should be preserved")
 	})
 
@@ -100,8 +100,8 @@ func TestFieldNameFilter(t *testing.T) {
 		require.True(t, rejected.Has("e"), "rejected key should have field 'e'")
 
 		// Verify values are preserved
-		var val string
-		require.NoError(t, rejected.Get("d", &val), "rejected.Get should succeed")
+		val, ok := rejected.Field("d")
+		require.True(t, ok, "rejected.Field should succeed")
 		require.Equal(t, "value_d", val, "value for field 'd' should be preserved")
 	})
 
@@ -234,8 +234,8 @@ func TestStandardFieldsFilter(t *testing.T) {
 			require.NotContains(t, filteredKeys, "custom2", "filtered key should not have custom2 field")
 
 			// Verify values are preserved
-			var kid string
-			require.NoError(t, filtered.Get(jwk.KeyIDKey, &kid), "filtered.Get should succeed")
+			kid, ok := filtered.Field(jwk.KeyIDKey)
+			require.True(t, ok, "filtered.Field should succeed")
 			require.Equal(t, "kid-value", kid, "value for kid field should be preserved")
 		})
 
@@ -265,8 +265,8 @@ func TestStandardFieldsFilter(t *testing.T) {
 			require.True(t, rejected.Has("custom2"), "rejected key should have custom2 field")
 
 			// Verify values are preserved
-			var customValue string
-			require.NoError(t, rejected.Get("custom1", &customValue), "rejected.Get should succeed")
+			customValue, ok := rejected.Field("custom1")
+			require.True(t, ok, "rejected.Field should succeed")
 			require.Equal(t, "value1", customValue, "value for custom1 field should be preserved")
 		})
 	})

@@ -41,11 +41,10 @@ func (h *stdHeaders) Clone() (Headers, error) {
 
 func (h *stdHeaders) Copy(dst Headers) error {
 	for _, key := range h.Keys() {
-		var v any
-		if err := h.Get(key, &v); err != nil {
-			return fmt.Errorf(`jwe.Headers: Copy: failed to get header %q: %w`, key, err)
+		v, ok := h.Field(key)
+		if !ok {
+			return fmt.Errorf(`jwe.Headers: Copy: failed to get header %q`, key)
 		}
-
 		if err := dst.Set(key, v); err != nil {
 			return fmt.Errorf(`jwe.Headers: Copy: failed to set header %q: %w`, key, err)
 		}

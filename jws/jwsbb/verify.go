@@ -45,8 +45,8 @@ func Verify(key any, alg string, payload, signature []byte) error {
 }
 
 func dispatchHMACVerify(key any, dsigAlg string, payload, signature []byte) error {
-	var hmackey []byte
-	if err := keyconv.ByteSliceKey(&hmackey, key); err != nil {
+	hmackey, err := keyconv.ByteSliceKey(key)
+	if err != nil {
 		return fmt.Errorf(`jwsbb.Verify: invalid key type %T. []byte is required: %w`, key, err)
 	}
 
@@ -63,8 +63,8 @@ func dispatchRSAVerify(key any, dsigAlg string, payload, signature []byte) error
 	}
 
 	// Fall back to concrete key types
-	var pubkey *rsa.PublicKey
-	if err := keyconv.RSAPublicKey(&pubkey, key); err != nil {
+	pubkey, err := keyconv.RSAPublicKey(key)
+	if err != nil {
 		return fmt.Errorf(`jwsbb.Verify: invalid key type %T. *rsa.PublicKey is required: %w`, key, err)
 	}
 
@@ -81,8 +81,8 @@ func dispatchECDSAVerify(key any, dsigAlg string, payload, signature []byte) err
 	}
 
 	// Fall back to concrete key types
-	var pubkey *ecdsa.PublicKey
-	if err := keyconv.ECDSAPublicKey(&pubkey, key); err != nil {
+	pubkey, err := keyconv.ECDSAPublicKey(key)
+	if err != nil {
 		return fmt.Errorf(`jwsbb.Verify: invalid key type %T. *ecdsa.PublicKey is required: %w`, key, err)
 	}
 
@@ -105,10 +105,11 @@ func dispatchEdDSAVerify(key any, jwsAlg, dsigAlg string, payload, signature []b
 	}
 
 	// Fall back to concrete key types
-	var pubkey ed25519.PublicKey
-	if err := keyconv.Ed25519PublicKey(&pubkey, key); err != nil {
+	pubkeyPtr, err := keyconv.Ed25519PublicKey(key)
+	if err != nil {
 		return fmt.Errorf(`jwsbb.Verify: invalid key type %T. ed25519.PublicKey is required: %w`, key, err)
 	}
+	pubkey := *pubkeyPtr
 
 	if err := validateEdDSACurve(jwsAlg, pubkey); err != nil {
 		return fmt.Errorf(`jwsbb.Verify: %w`, err)

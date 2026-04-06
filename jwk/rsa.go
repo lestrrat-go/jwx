@@ -285,9 +285,9 @@ func makeRSAPublicKey(src Key) (Key, error) {
 		case RSADKey, RSADPKey, RSADQKey, RSAPKey, RSAQKey, RSAQIKey:
 			continue
 		default:
-			var v any
-			if err := src.Get(k, &v); err != nil {
-				return nil, fmt.Errorf(`rsa: makeRSAPublicKey: failed to get field %q: %w`, k, err)
+			v, ok := src.Field(k)
+			if !ok {
+				return nil, fmt.Errorf(`rsa: makeRSAPublicKey: failed to get field %q`, k)
 			}
 			if err := newKey.Set(k, v); err != nil {
 				return nil, fmt.Errorf(`rsa: makeRSAPublicKey: failed to set field %q: %w`, k, err)
@@ -312,9 +312,13 @@ func (k *rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	var key rsa.PrivateKey
-	if err := Export(k, &key); err != nil {
+	keyV, err := Export(k)
+	if err != nil {
 		return nil, fmt.Errorf(`failed to export RSA private key: %w`, err)
+	}
+	key, ok := keyV.(*rsa.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf(`expected *rsa.PrivateKey, got %T`, keyV)
 	}
 	return rsaThumbprint(hash, &key.PublicKey)
 }
@@ -323,11 +327,15 @@ func (k *rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	var key rsa.PublicKey
-	if err := Export(k, &key); err != nil {
+	keyV, err := Export(k)
+	if err != nil {
 		return nil, fmt.Errorf(`failed to export RSA public key: %w`, err)
 	}
-	return rsaThumbprint(hash, &key)
+	key, ok := keyV.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf(`expected *rsa.PublicKey, got %T`, keyV)
+	}
+	return rsaThumbprint(hash, key)
 }
 
 func rsaThumbprint(hash crypto.Hash, key *rsa.PublicKey) ([]byte, error) {

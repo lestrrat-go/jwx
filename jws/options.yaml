@@ -110,18 +110,16 @@ options:
       a successful verification.
   - ident: KeyUsed
     interface: VerifyOption
-    argument_type: 'any'
+    argument_type: '*any'
     comment: |
       WithKeyUsed allows you to specify the `jws.Verify()` function to
       return the key used for verification. This may be useful when
       you specify multiple key sources or if you pass a `jwk.Set`
       and you want to know which key was successful at verifying the
       signature.
-      
-      `v` must be a pointer to an empty `any`. Do not use
-      `jwk.Key` here unless you are 100% sure that all keys that you
-      have provided are instances of `jwk.Key` (remember that the
-      jwx API allows users to specify a raw key such as *rsa.PublicKey)
+
+      `v` must be a pointer to an `any` variable. After a successful
+      verification, the key used will be assigned to the variable.
   - ident: ValidateKey
     interface: SignVerifyOption
     argument_type: bool

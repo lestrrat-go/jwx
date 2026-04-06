@@ -38,8 +38,8 @@ func TestClaimNames(t *testing.T) {
 		require.False(t, filtered.Has("e"), "filtered token should not have claim 'e'")
 
 		// Verify values are preserved
-		var val string
-		require.NoError(t, filtered.Get("a", &val), "filtered.Get should succeed")
+		val, ok := filtered.Field("a")
+		require.True(t, ok, "filtered.Field should succeed")
 		require.Equal(t, "value_a", val, "value for claim 'a' should be preserved")
 	})
 
@@ -67,8 +67,8 @@ func TestClaimNames(t *testing.T) {
 		require.True(t, rejected.Has("e"), "rejected token should have claim 'e'")
 
 		// Verify values are preserved
-		var val string
-		require.NoError(t, rejected.Get("d", &val), "rejected.Get should succeed")
+		val, ok := rejected.Field("d")
+		require.True(t, ok, "rejected.Field should succeed")
 		require.Equal(t, "value_d", val, "value for claim 'd' should be preserved")
 	})
 
@@ -173,8 +173,8 @@ func TestStandardClaimsFilter(t *testing.T) {
 			require.False(t, filtered.Has("custom2"), "filtered token should not have custom2 claim")
 
 			// Verify values are preserved
-			var issuer string
-			require.NoError(t, filtered.Get(jwt.IssuerKey, &issuer), "filtered.Get should succeed")
+			issuer, ok := filtered.Field(jwt.IssuerKey)
+			require.True(t, ok, "filtered.Field should succeed")
 			require.Equal(t, "issuer", issuer, "value for issuer claim should be preserved")
 		})
 		t.Run("Reject standard claims", func(t *testing.T) {
@@ -196,8 +196,8 @@ func TestStandardClaimsFilter(t *testing.T) {
 			require.True(t, rejected.Has("custom2"), "rejected token should have custom2 claim")
 
 			// Verify values are preserved
-			var customValue string
-			require.NoError(t, rejected.Get("custom1", &customValue), "rejected.Get should succeed")
+			customValue, ok := rejected.Field("custom1")
+			require.True(t, ok, "rejected.Field should succeed")
 			require.Equal(t, "value1", customValue, "value for custom1 claim should be preserved")
 		})
 	})

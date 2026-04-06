@@ -12,7 +12,6 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
 )
 
@@ -331,34 +330,33 @@ func importSymmetricKey(raw []byte) (Key, error) {
 // to Do The Right Thing, but it is not guaranteed to work in all cases,
 // especially when the object implements the `jwk.Key` interface via
 // embedding.
-func Export(key Key, dst any) error {
-	// dst better be a pointer
-	rv := reflect.ValueOf(dst)
-	if rv.Kind() != reflect.Ptr {
-		return fmt.Errorf(`jwk.Export: destination object must be a pointer`)
-	}
-
+// Export converts a jwk.Key into a raw key type, returning the raw key.
+// The returned value is typically *rsa.PrivateKey, *ecdsa.PrivateKey,
+// ed25519.PrivateKey, []byte, etc.
+//
+// If you know the expected type, use a type assertion on the result:
+//
+//	raw, err := jwk.Export(key)
+//	privkey := raw.(*rsa.PrivateKey)
+func Export(key Key) (any, error) {
 	muKeyExporters.RLock()
 	exporters := findExporters(key)
 	muKeyExporters.RUnlock()
 
 	if len(exporters) == 0 {
-		return fmt.Errorf(`jwk.Export: no exporters registered for key type '%T'`, key)
+		return nil, fmt.Errorf(`jwk.Export: no exporters registered for key type '%T'`, key)
 	}
 	for _, conv := range exporters {
-		v, err := conv.Export(key, dst)
+		v, err := conv.Export(key, nil)
 		if err != nil {
 			if errors.Is(err, ContinueError()) {
 				continue
 			}
-			return fmt.Errorf(`jwk.Export: failed to export jwk.Key to raw format: %w`, err)
+			return nil, fmt.Errorf(`jwk.Export: failed to export jwk.Key to raw format: %w`, err)
 		}
-		if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
-			return fmt.Errorf(`jwk.Export: failed to assign key: %w`, err)
-		}
-		return nil
+		return v, nil
 	}
-	return fmt.Errorf(`jwk.Export: no suitable exporter found for key type '%T'`, key)
+	return nil, fmt.Errorf(`jwk.Export: no suitable exporter found for key type '%T'`, key)
 }
 
 // findExporters returns exporters for the key, trying the specific

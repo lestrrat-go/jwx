@@ -81,9 +81,13 @@ func octetSeqToRaw(key Key, hint any) (any, error) {
 func (k *symmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
-	var octets []byte
-	if err := Export(k, &octets); err != nil {
+	octetsV, err := Export(k)
+	if err != nil {
 		return nil, fmt.Errorf(`failed to export symmetric key: %w`, err)
+	}
+	octets, ok := octetsV.([]byte)
+	if !ok {
+		return nil, fmt.Errorf(`expected []byte, got %T`, octetsV)
 	}
 
 	h := hash.New()
@@ -96,14 +100,13 @@ func (k *symmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 func (k *symmetricKey) PublicKey() (Key, error) {
 	newKey := newSymmetricKey()
 
-	for _, key := range k.Keys() {
-		var v any
-		if err := k.Get(key, &v); err != nil {
-			return nil, fmt.Errorf(`failed to get field %q: %w`, key, err)
+	for _, fk := range k.Keys() {
+		v, ok := k.Field(fk)
+		if !ok {
+			return nil, fmt.Errorf(`failed to get field %q`, fk)
 		}
-
-		if err := newKey.Set(key, v); err != nil {
-			return nil, fmt.Errorf(`failed to set field %q: %w`, key, err)
+		if err := newKey.Set(fk, v); err != nil {
+			return nil, fmt.Errorf(`failed to set field %q: %w`, fk, err)
 		}
 	}
 	return newKey, nil

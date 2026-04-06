@@ -11,9 +11,14 @@ import "fmt"
 //	kid, err := jws.Get[string](headers, jws.KeyIDKey)
 //	custom, err := jws.Get[MyType](headers, "my-custom-field")
 func Get[T any](headers Headers, name string) (T, error) {
-	var dst T
-	if err := headers.Get(name, &dst); err != nil {
-		return dst, fmt.Errorf(`jws.Get: %w`, err)
+	var zero T
+	v, ok := headers.Field(name)
+	if !ok {
+		return zero, fmt.Errorf(`jws.Get: field %q not found`, name)
 	}
-	return dst, nil
+	result, ok := v.(T)
+	if !ok {
+		return zero, fmt.Errorf(`jws.Get: field %q is %T, not %T`, name, v, zero)
+	}
+	return result, nil
 }

@@ -343,9 +343,13 @@ func ClaimContainsString(name, value string) Validator {
 }
 
 func (ccs claimContainsString) Validate(_ context.Context, t Token) error {
-	var list []string
-	if err := t.Get(ccs.name, &list); err != nil {
-		return ccs.makeErr(`claim %q does not exist or is not a []string: %w`, ccs.name, err)
+	v, ok := t.Field(ccs.name)
+	if !ok {
+		return ccs.makeErr(`claim %q does not exist`, ccs.name)
+	}
+	list, ok := v.([]string)
+	if !ok {
+		return ccs.makeErr(`claim %q is not a []string`, ccs.name)
 	}
 
 	if !slices.Contains(list, ccs.value) {
@@ -383,9 +387,9 @@ func ClaimValueIs(name string, value any) Validator {
 }
 
 func (cv *claimValueIs) Validate(_ context.Context, t Token) error {
-	var v any
-	if err := t.Get(cv.name, &v); err != nil {
-		return cv.makeErr(`claim %[1]q does not exist or is not a []string: %[2]w`, cv.name, err)
+	v, ok := t.Field(cv.name)
+	if !ok {
+		return cv.makeErr(`claim %[1]q does not exist`, cv.name)
 	}
 	if v != cv.value {
 		return cv.makeErr(`claim %[1]q does not have the expected value`, cv.name)

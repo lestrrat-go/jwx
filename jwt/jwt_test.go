@@ -48,7 +48,7 @@ func TestOption(t *testing.T) {
 }
 */
 
-func TestToken_Get(t *testing.T) {
+func TestToken_Field(t *testing.T) {
 	tok, _ := jwt.NewBuilder().
 		Issuer("github.com/lestrrat-go/jwx").
 		IssuedAt(time.Now().Round(0)).
@@ -56,17 +56,14 @@ func TestToken_Get(t *testing.T) {
 		Build()
 
 	for _, name := range []string{`aud`, `unknown`} {
-		var v any
-		err := tok.Get(name, v)
-		require.Error(t, err, `tok.Get should fail if value is not set`)
-		require.ErrorIs(t, err, jwt.ClaimNotFoundError(), `tok.Get should return ClaimNotFoundError if value is not set`)
+		_, ok := tok.Field(name)
+		require.False(t, ok, `tok.Field should return false for unset claim %q`, name)
 	}
 
 	for _, name := range []string{`iss`, `exp`} {
-		var i byte // a type that can't be assigned to from the fields
-		err := tok.Get(name, &i)
-		require.Error(t, err, `tok.Get should fail if value is not assignable`)
-		require.ErrorIs(t, err, jwt.ClaimAssignmentFailedError(), `tok.Get should return ClaimAssignmentFailedError if value is not assignable`)
+		v, ok := tok.Field(name)
+		require.True(t, ok, `tok.Field should return true for set claim %q`, name)
+		require.NotNil(t, v, `tok.Field value should not be nil for %q`, name)
 	}
 }
 
@@ -381,8 +378,8 @@ func TestJWTParseVerify(t *testing.T) {
 
 			dummyHeader := jws.NewHeaders()
 			for _, k := range hdrs.Keys() {
-				var v any
-				require.NoError(t, hdrs.Get(k, &v), `hdrs.Get should succeed`)
+				v, ok := hdrs.Field(k)
+				require.True(t, ok, `hdrs.Field should succeed`)
 				require.NoError(t, dummyHeader.Set(k, v), `dummyHeader.Set should succeed`)
 			}
 			dummyHeader.Set(jws.AlgorithmKey, jwa.NoSignature)
@@ -548,8 +545,8 @@ func TestUnmarshalJSON(t *testing.T) {
 		t1 := jwt.New()
 		require.NoError(t, json.Unmarshal([]byte(`{"aud":["foo", "bar", "baz"]}`), &t1), `jwt.Parse should succeed`)
 
-		var aud []string
-		require.NoError(t, t1.Get(jwt.AudienceKey, &aud), `jwt.Get(jwt.AudienceKey) should succeed`)
+		aud, ok := t1.Audience()
+		require.True(t, ok, `t1.Audience() should succeed`)
 
 		require.Equal(t, aud, []string{"foo", "bar", "baz"}, "audience should match. got %v", aud)
 	})
@@ -689,8 +686,10 @@ func TestCustomField(t *testing.T) {
 		token, err := jwt.ParseInsecure([]byte(src))
 		require.NoError(t, err, `jwt.Parse should succeed`)
 		for _, key := range []string{rfc3339Key, rfc1123Key} {
-			var v time.Time
-			require.NoError(t, token.Get(key, &v), `token.Get(%q) should succeed`, key)
+			fieldV, ok := token.Field(key)
+			require.True(t, ok, `token.Field(%q) should succeed`, key)
+			v, ok := fieldV.(time.Time)
+			require.True(t, ok, `value should be time.Time`)
 			require.Equal(t, expected, v, `values should match`)
 		}
 	})
@@ -698,8 +697,10 @@ func TestCustomField(t *testing.T) {
 		token := jwt.New()
 		require.NoError(t, json.Unmarshal([]byte(src), token), `json.Unmarshal should succeed`)
 		for _, key := range []string{rfc3339Key, rfc1123Key} {
-			var v time.Time
-			require.NoError(t, token.Get(key, &v), `token.Get(%q) should succeed`, key)
+			fieldV, ok := token.Field(key)
+			require.True(t, ok, `token.Field(%q) should succeed`, key)
+			v, ok := fieldV.(time.Time)
+			require.True(t, ok, `value should be time.Time`)
 			require.Equal(t, expected, v, `values should match`)
 		}
 	})
@@ -1085,8 +1086,8 @@ func TestJWTParseWithTypedClaim(t *testing.T) {
 			got, err := jwt.Parse(signed, options...)
 			require.NoError(t, err, `jwt.Parse should succeed`)
 
-			var v any
-			require.NoError(t, got.Get("typed-claim", &v), `got.Get() should succeed`)
+			v, ok := got.Field("typed-claim")
+			require.True(t, ok, `got.Field() should succeed`)
 
 			claim, err := tc.PostProcess(t, v)
 			require.NoError(t, err, `tc.PostProcess should succeed`)
