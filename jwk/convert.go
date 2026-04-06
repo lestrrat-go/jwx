@@ -45,10 +45,22 @@ var keyExporters = make(map[KeyKind][]KeyExporter)
 var muKeyImporters sync.RWMutex
 var muKeyExporters sync.RWMutex
 
-// RegisterKeyImporter registers a KeyImporter for the given raw key. When `jwk.Import()` is called,
-// the library will look up the appropriate KeyImporter for the given raw key type (via `reflect`)
-// and execute the KeyImporters in succession until either one of them succeeds, or all of them fail.
-func RegisterKeyImporter(from any, conv KeyImporter) {
+// RegisterKeyImporter registers a typed import function for converting raw keys of
+// type T to jwk.Key. The type is derived from the type parameter, eliminating the
+// need to pass a zero value.
+//
+// When `jwk.Import()` is called, the library will look up the appropriate importer
+// for the given raw key type (via `reflect`) and execute it.
+func RegisterKeyImporter[T any](fn func(T) (Key, error)) {
+	muKeyImporters.Lock()
+	defer muKeyImporters.Unlock()
+	keyImporters[reflect.TypeFor[T]()] = &keyImportAdapter[T]{fn: fn}
+}
+
+// RegisterKeyImporterI registers a KeyImporter interface for the given raw key type.
+// This is the interface-based variant for cases where a full KeyImporter implementation
+// is needed instead of a simple function.
+func RegisterKeyImporterI(from any, conv KeyImporter) {
 	muKeyImporters.Lock()
 	defer muKeyImporters.Unlock()
 	keyImporters[reflect.TypeOf(from)] = conv
@@ -87,6 +99,19 @@ func (f KeyImportFunc) Import(raw any) (Key, error) {
 	return f(raw)
 }
 
+// keyImportAdapter wraps a typed function into a KeyImporter.
+type keyImportAdapter[T any] struct {
+	fn func(T) (Key, error)
+}
+
+func (a *keyImportAdapter[T]) Import(raw any) (Key, error) {
+	v, ok := raw.(T)
+	if !ok {
+		return nil, fmt.Errorf(`cannot convert key type '%T' to %T`, raw, *new(T))
+	}
+	return a.fn(v)
+}
+
 // KeyExporter is used to convert from a `jwk.Key` to a raw key. mneumonic: from the PoV of the `jwk.Key`,
 // we're _exporting_ it to a raw key.
 type KeyExporter interface {
@@ -117,71 +142,102 @@ func (f KeyExportFunc) Export(key Key, hint any) (any, error) {
 }
 
 func init() {
-	{
-		f := KeyImportFunc(rsaPrivateKeyToJWK)
-		k := rsa.PrivateKey{}
-		RegisterKeyImporter(k, f)
-		RegisterKeyImporter(&k, f)
-	}
-	{
-		f := KeyImportFunc(rsaPublicKeyToJWK)
-		k := rsa.PublicKey{}
-		RegisterKeyImporter(k, f)
-		RegisterKeyImporter(&k, f)
-	}
-	{
-		f := KeyImportFunc(ecdsaPrivateKeyToJWK)
-		k := ecdsa.PrivateKey{}
-		RegisterKeyImporter(k, f)
-		RegisterKeyImporter(&k, f)
-	}
-	{
-		f := KeyImportFunc(ecdsaPublicKeyToJWK)
-		k := ecdsa.PublicKey{}
-		RegisterKeyImporter(k, f)
-		RegisterKeyImporter(&k, f)
-	}
-	{
-		f := KeyImportFunc(okpPrivateKeyToJWK)
-		for _, k := range []any{ed25519.PrivateKey(nil)} {
-			RegisterKeyImporter(k, f)
-		}
-	}
-	{
-		f := KeyImportFunc(ecdhPrivateKeyToJWK)
-		for _, k := range []any{ecdh.PrivateKey{}, &ecdh.PrivateKey{}} {
-			RegisterKeyImporter(k, f)
-		}
-	}
-	{
-		f := KeyImportFunc(okpPublicKeyToJWK)
-		for _, k := range []any{ed25519.PublicKey(nil)} {
-			RegisterKeyImporter(k, f)
-		}
-	}
-	{
-		f := KeyImportFunc(ecdhPublicKeyToJWK)
-		for _, k := range []any{ecdh.PublicKey{}, &ecdh.PublicKey{}} {
-			RegisterKeyImporter(k, f)
-		}
-	}
-	RegisterKeyImporter([]byte(nil), KeyImportFunc(bytesToKey))
+	RegisterKeyImporter(importRSAPrivateKey)
+	RegisterKeyImporter(importRSAPrivateKeyPtr)
+	RegisterKeyImporter(importRSAPublicKey)
+	RegisterKeyImporter(importRSAPublicKeyPtr)
+	RegisterKeyImporter(importECDSAPrivateKey)
+	RegisterKeyImporter(importECDSAPrivateKeyPtr)
+	RegisterKeyImporter(importECDSAPublicKey)
+	RegisterKeyImporter(importECDSAPublicKeyPtr)
+	RegisterKeyImporter(importEd25519PrivateKey)
+	RegisterKeyImporter(importECDHPrivateKey)
+	RegisterKeyImporter(importECDHPrivateKeyPtr)
+	RegisterKeyImporter(importEd25519PublicKey)
+	RegisterKeyImporter(importECDHPublicKey)
+	RegisterKeyImporter(importECDHPublicKeyPtr)
+	RegisterKeyImporter(importSymmetricKey)
 }
 
-func ecdhPrivateKeyToJWK(src any) (Key, error) {
-	var raw *ecdh.PrivateKey
-	switch src := src.(type) {
-	case *ecdh.PrivateKey:
-		raw = src
-	case ecdh.PrivateKey:
-		raw = &src
-	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to ECDH jwk.Key`, src)
-	}
+// Typed importer functions. Each accepts the concrete type directly,
+// eliminating the type-switch boilerplate from v3.
 
+func importRSAPrivateKey(raw rsa.PrivateKey) (Key, error) {
+	return importRSAPrivateKeyPtr(&raw)
+}
+
+func importRSAPrivateKeyPtr(raw *rsa.PrivateKey) (Key, error) {
+	k := newRSAPrivateKey()
+	if err := k.Import(raw); err != nil {
+		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+	}
+	return k, nil
+}
+
+func importRSAPublicKey(raw rsa.PublicKey) (Key, error) {
+	return importRSAPublicKeyPtr(&raw)
+}
+
+func importRSAPublicKeyPtr(raw *rsa.PublicKey) (Key, error) {
+	k := newRSAPublicKey()
+	if err := k.Import(raw); err != nil {
+		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+	}
+	return k, nil
+}
+
+func importECDSAPrivateKey(raw ecdsa.PrivateKey) (Key, error) {
+	return importECDSAPrivateKeyPtr(&raw)
+}
+
+func importECDSAPrivateKeyPtr(raw *ecdsa.PrivateKey) (Key, error) {
+	k := newECDSAPrivateKey()
+	if err := k.Import(raw); err != nil {
+		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+	}
+	return k, nil
+}
+
+func importECDSAPublicKey(raw ecdsa.PublicKey) (Key, error) {
+	return importECDSAPublicKeyPtr(&raw)
+}
+
+func importECDSAPublicKeyPtr(raw *ecdsa.PublicKey) (Key, error) {
+	k := newECDSAPublicKey()
+	if err := k.Import(raw); err != nil {
+		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+	}
+	return k, nil
+}
+
+func importEd25519PrivateKey(raw ed25519.PrivateKey) (Key, error) {
+	k := newOKPPrivateKey()
+	if err := k.Import(raw); err != nil {
+		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+	}
+	return k, nil
+}
+
+func importEd25519PublicKey(raw ed25519.PublicKey) (Key, error) {
+	k := newOKPPublicKey()
+	if err := k.Import(raw); err != nil {
+		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+	}
+	return k, nil
+}
+
+func importECDHPrivateKey(raw ecdh.PrivateKey) (Key, error) {
+	return importECDHPrivateKeyPtr(&raw)
+}
+
+func importECDHPrivateKeyPtr(raw *ecdh.PrivateKey) (Key, error) {
 	switch raw.Curve() {
 	case ecdh.X25519():
-		return okpPrivateKeyToJWK(raw)
+		k := newOKPPrivateKey()
+		if err := k.Import(raw); err != nil {
+			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+		}
+		return k, nil
 	case ecdh.P256():
 		return ecdhPrivateKeyToECJWK(raw, elliptic.P256())
 	case ecdh.P384():
@@ -208,23 +264,21 @@ func ecdhPrivateKeyToECJWK(raw *ecdh.PrivateKey, crv elliptic.Curve) (Key, error
 	ecdsaPriv.D = &d
 	ecdsaPriv.X = &x
 	ecdsaPriv.Y = &y
-	return ecdsaPrivateKeyToJWK(&ecdsaPriv)
+	return importECDSAPrivateKeyPtr(&ecdsaPriv)
 }
 
-func ecdhPublicKeyToJWK(src any) (Key, error) {
-	var raw *ecdh.PublicKey
-	switch src := src.(type) {
-	case *ecdh.PublicKey:
-		raw = src
-	case ecdh.PublicKey:
-		raw = &src
-	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to ECDH jwk.Key`, src)
-	}
+func importECDHPublicKey(raw ecdh.PublicKey) (Key, error) {
+	return importECDHPublicKeyPtr(&raw)
+}
 
+func importECDHPublicKeyPtr(raw *ecdh.PublicKey) (Key, error) {
 	switch raw.Curve() {
 	case ecdh.X25519():
-		return okpPublicKeyToJWK(raw)
+		k := newOKPPublicKey()
+		if err := k.Import(raw); err != nil {
+			return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
+		}
+		return k, nil
 	case ecdh.P256():
 		return ecdhPublicKeyToECJWK(raw, elliptic.P256())
 	case ecdh.P384():
@@ -243,128 +297,14 @@ func ecdhPublicKeyToECJWK(raw *ecdh.PublicKey, crv elliptic.Curve) (Key, error) 
 
 	x.SetBytes(rawbytes[1 : 1+size])
 	y.SetBytes(rawbytes[1+size:])
-	var ecdsaPriv ecdsa.PublicKey
-	ecdsaPriv.Curve = crv
-	ecdsaPriv.X = &x
-	ecdsaPriv.Y = &y
-	return ecdsaPublicKeyToJWK(&ecdsaPriv)
+	var ecdsaPub ecdsa.PublicKey
+	ecdsaPub.Curve = crv
+	ecdsaPub.X = &x
+	ecdsaPub.Y = &y
+	return importECDSAPublicKeyPtr(&ecdsaPub)
 }
 
-// These may seem a bit repetitive and redandunt, but the problem is that
-// each key type has its own Import method -- for example, Import(*ecdsa.PrivateKey)
-// vs Import(*rsa.PrivateKey), and therefore they can't just be bundled into
-// a single function.
-func rsaPrivateKeyToJWK(src any) (Key, error) {
-	var raw *rsa.PrivateKey
-	switch src := src.(type) {
-	case *rsa.PrivateKey:
-		raw = src
-	case rsa.PrivateKey:
-		raw = &src
-	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to RSA jwk.Key`, src)
-	}
-	k := newRSAPrivateKey()
-	if err := k.Import(raw); err != nil {
-		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
-	}
-	return k, nil
-}
-
-func rsaPublicKeyToJWK(src any) (Key, error) {
-	var raw *rsa.PublicKey
-	switch src := src.(type) {
-	case *rsa.PublicKey:
-		raw = src
-	case rsa.PublicKey:
-		raw = &src
-	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to RSA jwk.Key`, src)
-	}
-	k := newRSAPublicKey()
-	if err := k.Import(raw); err != nil {
-		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
-	}
-	return k, nil
-}
-
-func ecdsaPrivateKeyToJWK(src any) (Key, error) {
-	var raw *ecdsa.PrivateKey
-	switch src := src.(type) {
-	case *ecdsa.PrivateKey:
-		raw = src
-	case ecdsa.PrivateKey:
-		raw = &src
-	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to ECDSA jwk.Key`, src)
-	}
-	k := newECDSAPrivateKey()
-	if err := k.Import(raw); err != nil {
-		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
-	}
-	return k, nil
-}
-
-func ecdsaPublicKeyToJWK(src any) (Key, error) {
-	var raw *ecdsa.PublicKey
-	switch src := src.(type) {
-	case *ecdsa.PublicKey:
-		raw = src
-	case ecdsa.PublicKey:
-		raw = &src
-	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to ECDSA jwk.Key`, src)
-	}
-	k := newECDSAPublicKey()
-	if err := k.Import(raw); err != nil {
-		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
-	}
-	return k, nil
-}
-
-func okpPrivateKeyToJWK(src any) (Key, error) {
-	var raw any
-	switch src.(type) {
-	case ed25519.PrivateKey, *ecdh.PrivateKey:
-		raw = src
-	case ecdh.PrivateKey:
-		raw = &src
-	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to OKP jwk.Key`, src)
-	}
-	k := newOKPPrivateKey()
-	if err := k.Import(raw); err != nil {
-		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
-	}
-	return k, nil
-}
-
-func okpPublicKeyToJWK(src any) (Key, error) {
-	var raw any
-	switch src.(type) {
-	case ed25519.PublicKey, *ecdh.PublicKey:
-		raw = src
-	case ecdh.PublicKey:
-		raw = &src
-	default:
-		return nil, fmt.Errorf(`jwk: convert raw to OKP jwk.Key: cannot convert key type '%T' to OKP jwk.Key`, src)
-	}
-	k := newOKPPublicKey()
-	if err := k.Import(raw); err != nil {
-		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)
-	}
-	return k, nil
-}
-
-func bytesToKey(src any) (Key, error) {
-	var raw []byte
-	switch src := src.(type) {
-	case []byte:
-		raw = src
-	default:
-		return nil, fmt.Errorf(`cannot convert key type '%T' to symmetric jwk.Key`, src)
-	}
-
+func importSymmetricKey(raw []byte) (Key, error) {
 	k := newSymmetricKey()
 	if err := k.Import(raw); err != nil {
 		return nil, fmt.Errorf(`failed to initialize %T from %T: %w`, k, raw, err)

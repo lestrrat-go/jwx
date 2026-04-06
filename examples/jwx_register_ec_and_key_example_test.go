@@ -37,17 +37,13 @@ func init() {
 
 	// We only need one converter for the private key, because the public key
 	// is exactly the same type as *ecdsa.PublicKey
-	jwk.RegisterKeyImporter(&sm2.PrivateKey{}, jwk.KeyImportFunc(convertShangMiSm2))
+	jwk.RegisterKeyImporter(convertShangMiSm2)
 
 	jwk.RegisterKeyExporter(jwk.KeyKind(jwa.EC().String()), jwk.KeyExportFunc(convertJWKToShangMiSm2))
 }
 
-func convertShangMiSm2(key any) (jwk.Key, error) {
-	shangmi2pk, ok := key.(*sm2.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf("invalid SM2 private key")
-	}
-	return jwk.Import(shangmi2pk.PrivateKey)
+func convertShangMiSm2(key *sm2.PrivateKey) (jwk.Key, error) {
+	return jwk.Import(key.PrivateKey)
 }
 
 func convertJWKToShangMiSm2(key jwk.Key, hint any) (any, error) {

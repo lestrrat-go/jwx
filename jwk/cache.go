@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"iter"
 	"net/http"
 
 	"github.com/lestrrat-go/httprc/v3"
@@ -383,4 +384,12 @@ func (cs *cachedSet) LookupKeyID(kid string) (Key, bool) {
 	}
 
 	return set.LookupKeyID(kid)
+}
+
+func (cs *cachedSet) All() iter.Seq2[int, Key] {
+	set, err := cs.cached()
+	if err != nil {
+		return func(func(int, Key) bool) {}
+	}
+	return set.All()
 }
