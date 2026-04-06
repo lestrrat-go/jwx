@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"encoding/json"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 

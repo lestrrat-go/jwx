@@ -1,9 +1,10 @@
 package examples_test
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jws"
@@ -12,7 +13,12 @@ import (
 func Example_jws_verify_with_jwk_set() {
 	// Setup payload, private key, and signed payload first...
 	const payload = "Lorem ipsum"
-	privkey, err := jwxtest.GenerateRsaJwk()
+	rawkey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		fmt.Printf("failed to generate RSA key: %s\n", err)
+		return
+	}
+	privkey, err := jwk.Import(rawkey)
 	if err != nil {
 		fmt.Printf("failed to create private key: %s\n", err)
 		return

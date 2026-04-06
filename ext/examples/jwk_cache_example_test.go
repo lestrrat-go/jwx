@@ -6,7 +6,8 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/httprc/v3"
-	"github.com/lestrrat-go/jwx/v3/jwk"
+
+	"github.com/jwx-go/jwkcache"
 )
 
 func Example_jwk_cache() {
@@ -15,15 +16,15 @@ func Example_jwk_cache() {
 
 	const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
 
-	// First, set up the `jwk.Cache` object. You need to pass it a
+	// First, set up the `jwkcache.Cache` object. You need to pass it a
 	// `context.Context` object to control the lifecycle of the background fetching goroutine.
-	c, err := jwk.NewCache(ctx, httprc.NewClient())
+	c, err := jwkcache.NewCache(ctx, httprc.NewClient())
 	if err != nil {
 		fmt.Printf("failed to create cache: %s\n", err)
 		return
 	}
 
-	// Tell *jwk.Cache that we only want to refresh this JWKS periodically.
+	// Tell the cache that we only want to refresh this JWKS periodically.
 	if err := c.Register(ctx, googleCerts); err != nil {
 		fmt.Printf("failed to register google JWKS: %s\n", err)
 		return
@@ -47,7 +48,7 @@ MAIN:
 		//
 		// By "reasonably" we mean that we cannot guarantee that the keys will be refreshed
 		// immediately after it has been rotated in the remote source. But it should be close\
-		// enough, and should you need to forcefully refresh the token using the `(jwk.Cache).Refresh()` method.
+		// enough, and should you need to forcefully refresh the token using the `(jwkcache.Cache).Refresh()` method.
 		//
 		// If refetching the keyset fails, a cached version will be returned from the previous
 		// successful sync
