@@ -65,6 +65,15 @@ v3.0.14 UNRELEASED
   * [jws/jwsbb] Add `jwsbb.RegisterAlgorithm()` for external modules to
     register custom algorithm implementations (e.g. Ed448).
 
+  * [jws] Add `jws.VerifyDetached()` for streaming verification of JWS compact
+    serializations with detached payloads. Unlike `jws.Verify()` with
+    `jws.WithDetachedPayload()`, this function never loads the entire payload
+    into memory — it streams the payload through the hash function. Use this
+    when the detached payload is too large to fit in memory. Note that in
+    general, splitting large payloads into smaller chunks and signing each chunk
+    individually is preferable, especially for newer algorithms including
+    Post-Quantum algorithms that require the entire payload at sign/verify time.
+
   * [jws] `jws.Verify()` and `jws.VerifyCompactFast()` now validate the "crit"
     (Critical) header parameter per RFC 7515 Section 4.1.11. Signatures with an
     empty "crit" array, standard JOSE header names in "crit", or "crit"-listed
