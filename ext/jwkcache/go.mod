@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/lestrrat-go/httprc/v3 v3.0.5
 	github.com/lestrrat-go/jwx/v3 v3.0.0
-	github.com/lestrrat-go/option/v2 v2.0.0
+	github.com/lestrrat-go/option/v3 v3.0.0-alpha1
 	github.com/stretchr/testify v1.11.1
 )
 
@@ -18,3 +18,4 @@ require (
 )
 
 replace github.com/lestrrat-go/jwx/v3 => ../../
+

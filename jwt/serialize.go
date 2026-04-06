@@ -6,6 +6,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwe"
 	"github.com/lestrrat-go/jwx/v3/jws"
+	"github.com/lestrrat-go/option/v3"
 )
 
 type SerializeCtx interface {
@@ -138,9 +139,9 @@ func (s *jwsSerializer) Serialize(ctx SerializeCtx, v any) (any, error) {
 		return nil, fmt.Errorf(`expected []byte as input`)
 	}
 
-	for _, option := range s.options {
-		var pc interface{ Protected(jws.Headers) jws.Headers }
-		if err := option.Value(&pc); err != nil {
+	for _, opt := range s.options {
+		pc, ok := option.Get[interface{ Protected(jws.Headers) jws.Headers }](opt)
+		if !ok {
 			continue
 		}
 		hdrs := pc.Protected(jws.NewHeaders())
@@ -165,8 +166,8 @@ func (s *Serializer) Sign(options ...SignOption) *Serializer {
 		// we need to from SignOption to Option because ... reasons
 		// (todo: when go1.18 prevails, use type parameters
 		rawoptions := make([]Option, l)
-		for i, option := range options {
-			rawoptions[i] = option
+		for i, opt := range options {
+			rawoptions[i] = opt
 		}
 
 		converted, err := toSignOptions(rawoptions...)
@@ -216,8 +217,8 @@ func (s *Serializer) Encrypt(options ...EncryptOption) *Serializer {
 		// we need to from SignOption to Option because ... reasons
 		// (todo: when go1.18 prevails, use type parameters
 		rawoptions := make([]Option, l)
-		for i, option := range options {
-			rawoptions[i] = option
+		for i, opt := range options {
+			rawoptions[i] = opt
 		}
 
 		converted, err := toEncryptOptions(rawoptions...)

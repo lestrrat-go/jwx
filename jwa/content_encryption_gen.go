@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
+	"github.com/lestrrat-go/option/v3"
 )
 
 var muAllContentEncryptionAlgorithm sync.RWMutex
@@ -94,12 +95,10 @@ func EmptyContentEncryptionAlgorithm() ContentEncryptionAlgorithm {
 // NewContentEncryptionAlgorithm creates a new ContentEncryptionAlgorithm object with the given name.
 func NewContentEncryptionAlgorithm(name string, options ...NewAlgorithmOption) ContentEncryptionAlgorithm {
 	var deprecated bool
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identDeprecated{}:
-			if err := option.Value(&deprecated); err != nil {
-				panic("jwa.NewContentEncryptionAlgorithm: WithDeprecated option must be a boolean")
-			}
+			deprecated = option.MustGet[bool](opt)
 		}
 	}
 	return ContentEncryptionAlgorithm{name: name, deprecated: deprecated}

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"slices"
 	"sync"
+
+	"github.com/lestrrat-go/option/v3"
 )
 
 var muAllEllipticCurveAlgorithm sync.RWMutex
@@ -99,12 +101,10 @@ func EmptyEllipticCurveAlgorithm() EllipticCurveAlgorithm {
 // NewEllipticCurveAlgorithm creates a new EllipticCurveAlgorithm object with the given name.
 func NewEllipticCurveAlgorithm(name string, options ...NewAlgorithmOption) EllipticCurveAlgorithm {
 	var deprecated bool
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identDeprecated{}:
-			if err := option.Value(&deprecated); err != nil {
-				panic("jwa.NewEllipticCurveAlgorithm: WithDeprecated option must be a boolean")
-			}
+			deprecated = option.MustGet[bool](opt)
 		}
 	}
 	return EllipticCurveAlgorithm{name: name, deprecated: deprecated}

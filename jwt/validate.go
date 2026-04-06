@@ -8,6 +8,7 @@ import (
 	"time"
 
 	jwterrs "github.com/lestrrat-go/jwx/v3/jwt/internal/errors"
+	"github.com/lestrrat-go/option/v3"
 )
 
 type Clock interface {
@@ -66,33 +67,20 @@ func Validate(t Token, options ...ValidateOption) error {
 	for _, o := range options {
 		switch o.Ident() {
 		case identClock{}:
-			if err := o.Value(&clock); err != nil {
-				return fmt.Errorf(`jwt.Validate: value for WithClock() option must be jwt.Clock: %w`, err)
-			}
+			clock = option.MustGet[Clock](o)
 		case identAcceptableSkew{}:
-			if err := o.Value(&skew); err != nil {
-				return fmt.Errorf(`jwt.Validate: value for WithAcceptableSkew() option must be time.Duration: %w`, err)
-			}
+			skew = option.MustGet[time.Duration](o)
 			if skew < 0 {
 				return fmt.Errorf(`jwt.Validate: WithAcceptableSkew() must not be negative`)
 			}
 		case identTruncation{}:
-			if err := o.Value(&trunc); err != nil {
-				return fmt.Errorf(`jwt.Validate: value for WithTruncation() option must be time.Duration: %w`, err)
-			}
+			trunc = option.MustGet[time.Duration](o)
 		case identContext{}:
-			if err := o.Value(&ctx); err != nil {
-				return fmt.Errorf(`jwt.Validate: value for WithContext() option must be context.Context: %w`, err)
-			}
+			ctx = option.MustGet[context.Context](o)
 		case identResetValidators{}:
-			if err := o.Value(&resetValidators); err != nil {
-				return fmt.Errorf(`jwt.Validate: value for WithResetValidators() option must be bool: %w`, err)
-			}
+			resetValidators = option.MustGet[bool](o)
 		case identValidator{}:
-			var v Validator
-			if err := o.Value(&v); err != nil {
-				return fmt.Errorf(`jwt.Validate: value for WithValidator() option must be jwt.Validator: %w`, err)
-			}
+			v := option.MustGet[Validator](o)
 			switch v := v.(type) {
 			case *isInTimeRange:
 				if v.c1 != "" {

@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/lestrrat-go/option/v3"
+
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
@@ -394,16 +396,12 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 
 	var detached bool
 	var encoder Base64Encoder = base64.DefaultEncoder()
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identDetached{}:
-			if err := option.Value(&detached); err != nil {
-				return nil, fmt.Errorf(`jws.Compact: failed to retrieve detached option value: %w`, err)
-			}
+			detached = option.MustGet[bool](opt)
 		case identBase64Encoder{}:
-			if err := option.Value(&encoder); err != nil {
-				return nil, fmt.Errorf(`jws.Compact: failed to retrieve base64 encoder option value: %w`, err)
-			}
+			encoder = option.MustGet[Base64Encoder](opt)
 		}
 	}
 

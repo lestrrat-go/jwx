@@ -7,6 +7,8 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/lestrrat-go/option/v3"
+
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
@@ -53,21 +55,14 @@ func freeVerifyContext(vc *verifyContext) *verifyContext {
 
 func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 	//nolint:forcetypeassert
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identMessage{}:
-			if err := option.Value(&vc.dst); err != nil {
-				return makeVerifyError(`invalid value for option WithMessage: %w`, err)
-			}
+			vc.dst = option.MustGet[*Message](opt)
 		case identDetachedPayload{}:
-			if err := option.Value(&vc.detachedPayload); err != nil {
-				return makeVerifyError(`invalid value for option WithDetachedPayload: %w`, err)
-			}
+			vc.detachedPayload = option.MustGet[[]byte](opt)
 		case identKey{}:
-			var pair *withKey
-			if err := option.Value(&pair); err != nil {
-				return makeVerifyError(`invalid value for option WithKey: %w`, err)
-			}
+			pair := option.MustGet[*withKey](opt)
 
 			alg, ok := pair.alg.(jwa.SignatureAlgorithm)
 			if !ok {
@@ -83,35 +78,21 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 				key: pair.key,
 			})
 		case identKeyProvider{}:
-			var kp KeyProvider
-			if err := option.Value(&kp); err != nil {
-				return makeVerifyError(`failed to retrieve key-provider option value: %w`, err)
-			}
-			vc.keyProviders = append(vc.keyProviders, kp)
+			vc.keyProviders = append(vc.keyProviders, option.MustGet[KeyProvider](opt))
 		case identKeyUsed{}:
-			if err := option.Value(&vc.keyUsed); err != nil {
-				return makeVerifyError(`failed to retrieve key-used option value: %w`, err)
-			}
+			vc.keyUsed = option.MustGet[*any](opt)
 		case identContext{}:
-			if err := option.Value(&vc.ctx); err != nil {
-				return makeVerifyError(`failed to retrieve context option value: %w`, err)
-			}
+			vc.ctx = option.MustGet[context.Context](opt)
 		case identValidateKey{}:
-			if err := option.Value(&vc.validateKey); err != nil {
-				return makeVerifyError(`failed to retrieve validate-key option value: %w`, err)
-			}
+			vc.validateKey = option.MustGet[bool](opt)
 		case identStrictCriticalHeaders{}:
-			if err := option.Value(&vc.strictCritical); err != nil {
-				return makeVerifyError(`failed to retrieve strict-critical-headers option value: %w`, err)
-			}
+			vc.strictCritical = option.MustGet[bool](opt)
 		case identSerialization{}:
-			vc.parseOptions = append(vc.parseOptions, option.(ParseOption))
+			vc.parseOptions = append(vc.parseOptions, opt.(ParseOption))
 		case identBase64Encoder{}:
-			if err := option.Value(&vc.encoder); err != nil {
-				return makeVerifyError(`failed to retrieve base64-encoder option value: %w`, err)
-			}
+			vc.encoder = option.MustGet[Base64Encoder](opt)
 		default:
-			return makeVerifyError(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
+			return makeVerifyError(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, opt.Ident()), `jws.ident`))
 		}
 	}
 

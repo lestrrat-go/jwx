@@ -8,6 +8,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/lestrrat-go/option/v3"
 )
 
 // defaultMaxFetchBodySize is the initial default maximum number of bytes read
@@ -152,25 +154,19 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 	var wl Whitelist = InsecureWhitelist{}
 	var client = getFetchHTTPClient()
 	var maxBodySize = maxFetchBodySize.Load()
-	for _, option := range options {
-		if parseOpt, ok := option.(ParseOption); ok {
+	for _, opt := range options {
+		if parseOpt, ok := opt.(ParseOption); ok {
 			parseOptions = append(parseOptions, parseOpt)
 			continue
 		}
 
-		switch option.Ident() {
+		switch opt.Ident() {
 		case identHTTPClient{}:
-			if err := option.Value(&client); err != nil {
-				return nil, fmt.Errorf(`failed to retrieve HTTPClient option value: %w`, err)
-			}
+			client = option.MustGet[HTTPClient](opt)
 		case identFetchWhitelist{}:
-			if err := option.Value(&wl); err != nil {
-				return nil, fmt.Errorf(`failed to retrieve fetch whitelist option value: %w`, err)
-			}
+			wl = option.MustGet[Whitelist](opt)
 		case identMaxFetchBodySize{}:
-			if err := option.Value(&maxBodySize); err != nil {
-				return nil, fmt.Errorf(`failed to retrieve MaxFetchBodySize option value: %w`, err)
-			}
+			maxBodySize = option.MustGet[int64](opt)
 			if maxBodySize <= 0 {
 				return nil, fmt.Errorf(`jwk.Fetch: WithMaxFetchBodySize must be greater than zero`)
 			}

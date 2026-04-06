@@ -17,6 +17,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/option/v3"
 )
 
 var fieldRegistry = json.NewRegistry()
@@ -218,25 +219,16 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var parsePEM bool
 	var localReg *json.Registry
 	var pemDecoder PEMDecoder
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identPEM{}:
-			if err := option.Value(&parsePEM); err != nil {
-				return nil, fmt.Errorf(`failed to retrieve PEM option value: %w`, err)
-			}
+			parsePEM = option.MustGet[bool](opt)
 		case identPEMDecoder{}:
-			if err := option.Value(&pemDecoder); err != nil {
-				return nil, fmt.Errorf(`failed to retrieve PEMDecoder option value: %w`, err)
-			}
+			pemDecoder = option.MustGet[PEMDecoder](opt)
 		case identLocalRegistry{}:
-			if err := option.Value(&localReg); err != nil {
-				return nil, fmt.Errorf(`failed to retrieve local registry option value: %w`, err)
-			}
+			localReg = option.MustGet[*json.Registry](opt)
 		case identTypedField{}:
-			var pair typedFieldPair // temporary var needed for typed field
-			if err := option.Value(&pair); err != nil {
-				return nil, fmt.Errorf(`failed to retrieve typed field option value: %w`, err)
-			}
+			pair := option.MustGet[typedFieldPair](opt)
 			if localReg == nil {
 				localReg = json.NewRegistry()
 			}
@@ -312,29 +304,18 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var localReg *json.Registry
 	var ignoreParseError bool
 	var pemDecoder PEMDecoder
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identPEM{}:
-			if err := option.Value(&parsePEM); err != nil {
-				return nil, parseerr(`failed to retrieve PEM option value: %w`, err)
-			}
+			parsePEM = option.MustGet[bool](opt)
 		case identX509{}:
-			if err := option.Value(&parseX509); err != nil {
-				return nil, parseerr(`failed to retrieve X509 option value: %w`, err)
-			}
+			parseX509 = option.MustGet[bool](opt)
 		case identPEMDecoder{}:
-			if err := option.Value(&pemDecoder); err != nil {
-				return nil, parseerr(`failed to retrieve PEMDecoder option value: %w`, err)
-			}
+			pemDecoder = option.MustGet[PEMDecoder](opt)
 		case identIgnoreParseError{}:
-			if err := option.Value(&ignoreParseError); err != nil {
-				return nil, parseerr(`failed to retrieve IgnoreParseError option value: %w`, err)
-			}
+			ignoreParseError = option.MustGet[bool](opt)
 		case identTypedField{}:
-			var pair typedFieldPair // temporary var needed for typed field
-			if err := option.Value(&pair); err != nil {
-				return nil, parseerr(`failed to retrieve typed field option value: %w`, err)
-			}
+			pair := option.MustGet[typedFieldPair](opt)
 			if localReg == nil {
 				localReg = json.NewRegistry()
 			}
@@ -425,12 +406,10 @@ func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
 	}
 
 	hash := crypto.SHA256
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identThumbprintHash{}:
-			if err := option.Value(&hash); err != nil {
-				return fmt.Errorf(`failed to retrieve thumbprint hash option value: %w`, err)
-			}
+			hash = option.MustGet[crypto.Hash](opt)
 		}
 	}
 
@@ -666,28 +645,19 @@ func Configure(options ...GlobalOption) {
 	var strictKeyUsagePtr *bool
 	var maxFetchBodySizePtr *int64
 	var httpClientPtr *HTTPClient
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identStrictKeyUsage{}:
-			var v bool
-			if err := option.Value(&v); err != nil {
-				continue
-			}
+			v := option.MustGet[bool](opt)
 			strictKeyUsagePtr = &v
 		case identMaxFetchBodySize{}:
-			var v int64
-			if err := option.Value(&v); err != nil {
-				continue
-			}
+			v := option.MustGet[int64](opt)
 			if v <= 0 {
 				continue
 			}
 			maxFetchBodySizePtr = &v
 		case identHTTPClient{}:
-			var v HTTPClient
-			if err := option.Value(&v); err != nil {
-				continue
-			}
+			v := option.MustGet[HTTPClient](opt)
 			httpClientPtr = &v
 		}
 	}

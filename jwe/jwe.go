@@ -23,6 +23,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/aescbc"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
+	"github.com/lestrrat-go/option/v3"
 )
 
 // #region globals
@@ -42,43 +43,20 @@ func init() {
 }
 
 func Settings(options ...GlobalOption) {
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identMaxPBES2Count{}:
-			var v int
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf("jwe.Settings: value for option WithMaxPBES2Count must be an int: %s", err))
-			}
-			maxPBES2Count.Store(int64(v))
+			maxPBES2Count.Store(int64(option.MustGet[int](opt)))
 		case identMinPBES2Count{}:
-			var v int
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf("jwe.Settings: value for option WithMinPBES2Count must be an int: %s", err))
-			}
-			minPBES2Count.Store(int64(v))
+			minPBES2Count.Store(int64(option.MustGet[int](opt)))
 		case identMaxRecipients{}:
-			var v int
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf("jwe.Settings: value for option WithMaxRecipients must be an int: %s", err))
-			}
-			maxRecipients.Store(int64(v))
+			maxRecipients.Store(int64(option.MustGet[int](opt)))
 		case identMaxDecompressBufferSize{}:
-			var v int64
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf("jwe.Settings: value for option WithMaxDecompressBufferSize must be an int64: %s", err))
-			}
-			maxDecompressBufferSize.Store(v)
+			maxDecompressBufferSize.Store(option.MustGet[int64](opt))
 		case identCBCBufferSize{}:
-			var v int64
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf("jwe.Settings: value for option WithCBCBufferSize must be an int64: %s", err))
-			}
-			aescbc.SetMaxBufferSize(v)
+			aescbc.SetMaxBufferSize(option.MustGet[int64](opt))
 		case identMaxParseInputSize{}:
-			var v int64
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf("jwe.Settings: value for option WithMaxParseInputSize must be an int64: %s", err))
-			}
+			v := option.MustGet[int64](opt)
 			if v <= 0 {
 				panic("jwe.Settings: WithMaxParseInputSize must be greater than zero")
 			}
@@ -289,56 +267,33 @@ func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 	dc.maxPBES2Count = int(maxPBES2Count.Load())
 	dc.minPBES2Count = int(minPBES2Count.Load())
 
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identMessage{}:
-			if err := option.Value(&dc.dst); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithMessage must be a *jwe.Message: %w", err)
-			}
+			dc.dst = option.MustGet[*Message](opt)
 		case identKeyProvider{}:
-			var kp KeyProvider
-			if err := option.Value(&kp); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithKeyProvider must be a KeyProvider: %w", err)
-			}
-			dc.keyProviders = append(dc.keyProviders, kp)
+			dc.keyProviders = append(dc.keyProviders, option.MustGet[KeyProvider](opt))
 		case identKeyUsed{}:
-			if err := option.Value(&dc.keyUsed); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithKeyUsed must be an any: %w", err)
-			}
+			dc.keyUsed = option.MustGet[*any](opt)
 		case identKey{}:
-			var pair *withKey
-			if err := option.Value(&pair); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithKey must be a *withKey: %w", err)
-			}
+			pair := option.MustGet[*withKey](opt)
 			alg, ok := pair.alg.(jwa.KeyEncryptionAlgorithm)
 			if !ok {
 				return fmt.Errorf("jwe.decrypt: WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", pair.alg)
 			}
 			dc.keyProviders = append(dc.keyProviders, &staticKeyProvider{alg: alg, key: pair.key})
 		case identCEK{}:
-			if err := option.Value(&dc.cek); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithCEK must be a *[]byte: %w", err)
-			}
+			dc.cek = option.MustGet[*[]byte](opt)
 		case identMaxRecipients{}:
-			if err := option.Value(&dc.maxRecipients); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithMaxRecipients must be int: %w", err)
-			}
+			dc.maxRecipients = option.MustGet[int](opt)
 		case identMaxDecompressBufferSize{}:
-			if err := option.Value(&dc.maxDecompressBufferSize); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithMaxDecompressBufferSize must be int64: %w", err)
-			}
+			dc.maxDecompressBufferSize = option.MustGet[int64](opt)
 		case identMaxPBES2Count{}:
-			if err := option.Value(&dc.maxPBES2Count); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithMaxPBES2Count must be int: %w", err)
-			}
+			dc.maxPBES2Count = option.MustGet[int](opt)
 		case identMinPBES2Count{}:
-			if err := option.Value(&dc.minPBES2Count); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithMinPBES2Count must be int: %w", err)
-			}
+			dc.minPBES2Count = option.MustGet[int](opt)
 		case identContext{}:
-			if err := option.Value(&dc.ctx); err != nil {
-				return fmt.Errorf("jwe.decrypt: WithContext must be a context.Context: %w", err)
-			}
+			dc.ctx = option.MustGet[context.Context](opt)
 		}
 	}
 
@@ -632,13 +587,10 @@ func freeEncryptContext(ec *encryptContext) *encryptContext {
 func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 	var mergeProtected bool
 	var useRawCEK bool
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identKey{}:
-			var wk *withKey
-			if err := option.Value(&wk); err != nil {
-				return fmt.Errorf("jwe.encrypt: WithKey must be a *withKey: %w", err)
-			}
+			wk := option.MustGet[*withKey](opt)
 			v, ok := wk.alg.(jwa.KeyEncryptionAlgorithm)
 			if !ok {
 				return fmt.Errorf("jwe.encrypt: WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", wk.alg)
@@ -652,28 +604,13 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 				headers: wk.headers,
 			})
 		case identContentEncryptionAlgorithm{}:
-			var c jwa.ContentEncryptionAlgorithm
-			if err := option.Value(&c); err != nil {
-				return err
-			}
-			ec.calg = c
+			ec.calg = option.MustGet[jwa.ContentEncryptionAlgorithm](opt)
 		case identCompress{}:
-			var comp jwa.CompressionAlgorithm
-			if err := option.Value(&comp); err != nil {
-				return err
-			}
-			ec.compression = comp
+			ec.compression = option.MustGet[jwa.CompressionAlgorithm](opt)
 		case identMergeProtectedHeaders{}:
-			var mp bool
-			if err := option.Value(&mp); err != nil {
-				return err
-			}
-			mergeProtected = mp
+			mergeProtected = option.MustGet[bool](opt)
 		case identProtectedHeaders{}:
-			var hdrs Headers
-			if err := option.Value(&hdrs); err != nil {
-				return err
-			}
+			hdrs := option.MustGet[Headers](opt)
 			if !mergeProtected || ec.protected == nil {
 				ec.protected = hdrs
 			} else {
@@ -684,11 +621,7 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 				ec.protected = merged
 			}
 		case identSerialization{}:
-			var fmtOpt int
-			if err := option.Value(&fmtOpt); err != nil {
-				return err
-			}
-			ec.format = fmtOpt
+			ec.format = option.MustGet[int](opt)
 		}
 	}
 
@@ -1014,11 +947,9 @@ func ParseString(s string, options ...ParseOption) (*Message, error) {
 func ParseReader(src io.Reader, options ...ParseOption) (*Message, error) {
 	maxSize := maxParseInputSize.Load()
 
-	for _, option := range options {
-		if option.Ident() == (identMaxParseInputSize{}) {
-			if err := option.Value(&maxSize); err != nil {
-				return nil, makeParseError(`jwe.ParseReader`, `invalid WithMaxParseInputSize: %w`, err)
-			}
+	for _, opt := range options {
+		if opt.Ident() == (identMaxParseInputSize{}) {
+			maxSize = option.MustGet[int64](opt)
 			if maxSize <= 0 {
 				return nil, makeParseError(`jwe.ParseReader`, `WithMaxParseInputSize must be greater than zero`)
 			}
