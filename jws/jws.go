@@ -372,52 +372,10 @@ func parseJSON(data []byte) (result *Message, err error) {
 	return &m, nil
 }
 
-// SplitCompact splits a JWS in compact format and returns its three parts
-// separately: protected headers, payload and signature.
-// On error, returns a jws.ParseError.
-//
-// Deprecated: This is a low-level API that will be removed in v4.
-// Use the jwsbb package directly instead.
-func SplitCompact(src []byte) ([]byte, []byte, []byte, error) {
-	hdr, payload, signature, err := jwsbb.SplitCompact(src)
-	if err != nil {
-		return nil, nil, nil, makeParseError(`jws.Parse`, `%w`, err)
-	}
-	return hdr, payload, signature, nil
-}
-
-// SplitCompactString splits a JWT and returns its three parts
-// separately: protected headers, payload and signature.
-// On error, returns a jws.ParseError.
-//
-// Deprecated: This is a low-level API that will be removed in v4.
-// Use the jwsbb package directly instead.
-func SplitCompactString(src string) ([]byte, []byte, []byte, error) {
-	hdr, payload, signature, err := jwsbb.SplitCompactString(src)
-	if err != nil {
-		return nil, nil, nil, makeParseError(`jws.Parse`, `%w`, err)
-	}
-	return hdr, payload, signature, nil
-}
-
-// SplitCompactReader splits a JWT and returns its three parts
-// separately: protected headers, payload and signature.
-// On error, returns a jws.ParseError.
-//
-// Deprecated: This is a low-level API that will be removed in v4.
-// Use the jwsbb package directly instead.
-func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
-	hdr, payload, signature, err := jwsbb.SplitCompactReader(rdr)
-	if err != nil {
-		return nil, nil, nil, makeParseError(`jws.Parse`, `%w`, err)
-	}
-	return hdr, payload, signature, nil
-}
-
 func parseCompact(data []byte) (m *Message, err error) {
-	protected, payload, signature, err := SplitCompact(data)
+	protected, payload, signature, err := jwsbb.SplitCompact(data)
 	if err != nil {
-		return nil, fmt.Errorf(`invalid compact serialization format: %w`, err)
+		return nil, fmt.Errorf(`invalid compact serialization format: %w`, makeParseError(`jws.Parse`, `%w`, err))
 	}
 	return parse(protected, payload, signature)
 }

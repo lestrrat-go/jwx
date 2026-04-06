@@ -31,6 +31,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jws"
+	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 	"github.com/stretchr/testify/require"
 )
@@ -593,11 +594,11 @@ func TestEncode(t *testing.T) {
 					var err error
 					switch method {
 					case 0: // bytes
-						x, y, z, err = jws.SplitCompact(payload)
+						x, y, z, err = jwsbb.SplitCompact(payload)
 					case 1: // un-optimized io.Reader
-						x, y, z, err = jws.SplitCompactReader(bytes.NewReader(payload))
+						x, y, z, err = jwsbb.SplitCompactReader(bytes.NewReader(payload))
 					default: // optimized io.Reader
-						x, y, z, err = jws.SplitCompactReader(bufio.NewReader(bytes.NewReader(payload)))
+						x, y, z, err = jwsbb.SplitCompactReader(bufio.NewReader(bytes.NewReader(payload)))
 					}
 					require.NoError(t, err, "SplitCompact should succeed")
 					require.Len(t, x, size, "Length of header")
@@ -1673,8 +1674,8 @@ func TestEmptyProtectedField(t *testing.T) {
 	signed, err := jws.Sign([]byte("Lorem Ipsum"), jws.WithKey(jwa.RS256(), privKey))
 	require.NoError(t, err, `jws.Sign should succeed`)
 
-	_, payload, signature, err := jws.SplitCompact(signed)
-	require.NoError(t, err, `jws.SplitCompact should succeed`)
+	_, payload, signature, err := jwsbb.SplitCompact(signed)
+	require.NoError(t, err, `jwsbb.SplitCompact should succeed`)
 
 	// This fails as well. we have a valid signature and a valid
 	// key to verify it, but no protected headers
@@ -1751,7 +1752,7 @@ func TestParseFormat(t *testing.T) {
 
 func BenchmarkSplitCompat(b *testing.B) {
 	for b.Loop() {
-		_, _, _, err := jws.SplitCompact([]byte(exampleCompactSerialization))
+		_, _, _, err := jwsbb.SplitCompact([]byte(exampleCompactSerialization))
 		if err != nil {
 			panic(err)
 		}
@@ -1760,7 +1761,7 @@ func BenchmarkSplitCompat(b *testing.B) {
 
 func BenchmarkSplitCompatString(b *testing.B) {
 	for b.Loop() {
-		_, _, _, err := jws.SplitCompactString(exampleCompactSerialization)
+		_, _, _, err := jwsbb.SplitCompactString(exampleCompactSerialization)
 		if err != nil {
 			panic(err)
 		}
