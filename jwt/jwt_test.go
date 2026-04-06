@@ -28,6 +28,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
 	"github.com/lestrrat-go/jwx/v3/jws"
+	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 	"github.com/stretchr/testify/require"
@@ -374,8 +375,8 @@ func TestJWTParseVerify(t *testing.T) {
 		t.Run("Check alg=none", func(t *testing.T) {
 			t.Parallel()
 			// Create a signed payload, but use alg=none
-			_, payload, signature, err := jws.SplitCompact(signed)
-			require.NoError(t, err, `jws.SplitCompact should succeed`)
+			_, payload, signature, err := jwsbb.SplitCompact(signed)
+			require.NoError(t, err, `jwsbb.SplitCompact should succeed`)
 
 			dummyHeader := jws.NewHeaders()
 			for _, k := range hdrs.Keys() {
