@@ -9,6 +9,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jws"
+	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
 
@@ -37,7 +38,7 @@ func Example_jwt_parse_with_key_provider_use_token() {
 	// This next example assumes that you want to minimize the number of
 	// times you parse the JWT JSON
 	{
-		_, b64payload, _, err := jws.SplitCompact(signed)
+		_, b64payload, _, err := jwsbb.SplitCompact(signed)
 		if err != nil {
 			fmt.Printf("failed to split jws: %s\n", err)
 			return
