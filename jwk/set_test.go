@@ -1,7 +1,7 @@
 package jwk_test
 
 import (
-	"sort"
+	"slices"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
@@ -58,6 +58,6 @@ func TestSetKeys(t *testing.T) {
 	require.NoError(t, set.Set("b", "bar"), `Set should succeed`)
 
 	keys := set.Keys()
-	sort.Strings(keys) // sorting is necessary because the order of keys obtained from a regular map is not guaranteed
+	slices.Sort(keys) // sorting is necessary because the order of keys obtained from a regular map is not guaranteed
 	require.EqualValues(t, []string{"a", "b"}, keys, `Keys should return "a" and "b"`)
 }

@@ -3,9 +3,10 @@
 package jwa
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
-	"sort"
+	"slices"
 	"sync"
 )
 
@@ -137,8 +138,8 @@ func rebuildKeyType() {
 		list = append(list, v)
 	}
 	muAllKeyType.RUnlock()
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].String() < list[j].String()
+	slices.SortFunc(list, func(a, b KeyType) int {
+		return cmp.Compare(a.String(), b.String())
 	})
 	muListKeyType.Lock()
 	listKeyType = list

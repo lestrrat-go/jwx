@@ -1,11 +1,12 @@
 package main
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"io"
 	"os"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/lestrrat-go/jwx/v3/jwk"
@@ -53,8 +54,8 @@ func main() {
 	app.Commands = topLevelCommands
 	app.Usage = "Tools for various JWE/JWK/JWS/JWT operations"
 
-	sort.Slice(app.Commands, func(i, j int) bool {
-		return strings.Compare(app.Commands[i].Name, app.Commands[j].Name) < 0
+	slices.SortFunc(app.Commands, func(a, b *cli.Command) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	if err := app.Run(os.Args); err != nil {
