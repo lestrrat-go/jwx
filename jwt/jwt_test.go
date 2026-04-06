@@ -504,9 +504,9 @@ func TestUnmarshal(t *testing.T) {
 			require.NoError(t, json.Unmarshal([]byte(tc.Source), &token), `json.Unmarshal should succeed`)
 			require.Equal(t, tc.Expected(), token, `token should match expected value`)
 
-			var buf bytes.Buffer
-			require.NoError(t, json.NewEncoder(&buf).Encode(token), `json.Marshal should succeed`)
-			require.Equal(t, tc.ExpectedJSON, strings.TrimSpace(buf.String()), `json should match`)
+			b, err := json.Marshal(token)
+			require.NoError(t, err, `json.Marshal should succeed`)
+			require.Equal(t, tc.ExpectedJSON, string(b), `json should match`)
 		})
 	}
 }
@@ -642,7 +642,10 @@ func TestReadFile(t *testing.T) {
 
 	token := jwt.New()
 	token.Set(jwt.IssuerKey, `lestrrat`)
-	require.NoError(t, json.NewEncoder(f).Encode(token), `json.NewEncoder.Encode should succeed`)
+	b, err := json.Marshal(token)
+	require.NoError(t, err, `json.Marshal should succeed`)
+	_, err = f.Write(b)
+	require.NoError(t, err, `f.Write should succeed`)
 	_, err = jwt.ReadFile(f.Name(), jwt.WithVerify(false), jwt.WithValidate(true), jwt.WithIssuer("lestrrat"))
 	require.NoError(t, err, `jwt.ReadFile should succeed`)
 	_, err = jwt.ReadFile(f.Name(), jwt.WithVerify(false), jwt.WithValidate(true), jwt.WithIssuer("lestrrrrrat"))
@@ -1260,7 +1263,7 @@ func TestVerifyAuto(t *testing.T) {
 			}
 		}
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(set)
+		json.MarshalEncode(json.NewEncoder(w), set)
 	}))
 	defer srv.Close()
 

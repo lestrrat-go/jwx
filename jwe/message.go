@@ -2,9 +2,9 @@ package jwe
 
 import (
 	"bytes"
+	"cmp"
 	"fmt"
-	"sort"
-	"strings"
+	"slices"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
@@ -196,35 +196,36 @@ type jsonKV struct {
 	Value string
 }
 
+func marshalField(v any) (string, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
 func (m *Message) MarshalJSON() ([]byte, error) {
 	// This is slightly convoluted, but we need to encode the
 	// protected headers, so we do it by hand
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
-	enc := json.NewEncoder(buf)
 
 	var fields []jsonKV
 
 	if cipherText := m.CipherText(); len(cipherText) > 0 {
-		buf.Reset()
-		if err := enc.Encode(base64.EncodeToString(cipherText)); err != nil {
+		v, err := marshalField(base64.EncodeToString(cipherText))
+		if err != nil {
 			return nil, fmt.Errorf(`failed to encode %s field: %w`, CipherTextKey, err)
 		}
-		fields = append(fields, jsonKV{
-			Key:   CipherTextKey,
-			Value: strings.TrimSpace(buf.String()),
-		})
+		fields = append(fields, jsonKV{Key: CipherTextKey, Value: v})
 	}
 
 	if iv := m.InitializationVector(); len(iv) > 0 {
-		buf.Reset()
-		if err := enc.Encode(base64.EncodeToString(iv)); err != nil {
+		v, err := marshalField(base64.EncodeToString(iv))
+		if err != nil {
 			return nil, fmt.Errorf(`failed to encode %s field: %w`, InitializationVectorKey, err)
 		}
-		fields = append(fields, jsonKV{
-			Key:   InitializationVectorKey,
-			Value: strings.TrimSpace(buf.String()),
-		})
+		fields = append(fields, jsonKV{Key: InitializationVectorKey, Value: v})
 	}
 
 	var encodedProtectedHeaders []byte
@@ -252,14 +253,11 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 			aad = append(tmp, aad...)
 		}
 
-		buf.Reset()
-		if err := enc.Encode(aad); err != nil {
+		v, err := marshalField(aad)
+		if err != nil {
 			return nil, fmt.Errorf(`failed to encode %s field: %w`, AuthenticatedDataKey, err)
 		}
-		fields = append(fields, jsonKV{
-			Key:   AuthenticatedDataKey,
-			Value: strings.TrimSpace(buf.String()),
-		})
+		fields = append(fields, jsonKV{Key: AuthenticatedDataKey, Value: v})
 	}
 
 	if recipients := m.Recipients(); len(recipients) > 0 {
@@ -273,48 +271,36 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 				}
 
 				if !skipHeaders {
-					buf.Reset()
-					if err := enc.Encode(hdrs); err != nil {
+					v, err := marshalField(hdrs)
+					if err != nil {
 						return nil, fmt.Errorf(`failed to encode %s field: %w`, HeadersKey, err)
 					}
-					fields = append(fields, jsonKV{
-						Key:   HeadersKey,
-						Value: strings.TrimSpace(buf.String()),
-					})
+					fields = append(fields, jsonKV{Key: HeadersKey, Value: v})
 				}
 			}
 
 			if ek := recipients[0].EncryptedKey(); len(ek) > 0 {
-				buf.Reset()
-				if err := enc.Encode(base64.EncodeToString(ek)); err != nil {
+				v, err := marshalField(base64.EncodeToString(ek))
+				if err != nil {
 					return nil, fmt.Errorf(`failed to encode %s field: %w`, EncryptedKeyKey, err)
 				}
-				fields = append(fields, jsonKV{
-					Key:   EncryptedKeyKey,
-					Value: strings.TrimSpace(buf.String()),
-				})
+				fields = append(fields, jsonKV{Key: EncryptedKeyKey, Value: v})
 			}
 		} else {
-			buf.Reset()
-			if err := enc.Encode(recipients); err != nil {
+			v, err := marshalField(recipients)
+			if err != nil {
 				return nil, fmt.Errorf(`failed to encode %s field: %w`, RecipientsKey, err)
 			}
-			fields = append(fields, jsonKV{
-				Key:   RecipientsKey,
-				Value: strings.TrimSpace(buf.String()),
-			})
+			fields = append(fields, jsonKV{Key: RecipientsKey, Value: v})
 		}
 	}
 
 	if tag := m.Tag(); len(tag) > 0 {
-		buf.Reset()
-		if err := enc.Encode(base64.EncodeToString(tag)); err != nil {
+		v, err := marshalField(base64.EncodeToString(tag))
+		if err != nil {
 			return nil, fmt.Errorf(`failed to encode %s field: %w`, TagKey, err)
 		}
-		fields = append(fields, jsonKV{
-			Key:   TagKey,
-			Value: strings.TrimSpace(buf.String()),
-		})
+		fields = append(fields, jsonKV{Key: TagKey, Value: v})
 	}
 
 	if h := m.UnprotectedHeaders(); h != nil {
@@ -331,8 +317,8 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	sort.Slice(fields, func(i, j int) bool {
-		return fields[i].Key < fields[j].Key
+	slices.SortFunc(fields, func(a, b jsonKV) int {
+		return cmp.Compare(a.Key, b.Key)
 	})
 	buf.Reset()
 	fmt.Fprintf(buf, `{`)

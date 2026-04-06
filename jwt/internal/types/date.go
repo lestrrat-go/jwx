@@ -124,12 +124,6 @@ func (n *NumericDate) Accept(v any) error {
 			return fmt.Errorf(`failed to accept float32 %.9f: %w`, x, err)
 		}
 		t = tv
-	case json.Number:
-		tv, err := parseNumericString(x.String())
-		if err != nil {
-			return fmt.Errorf(`failed to accept json.Number %q: %w`, x.String(), err)
-		}
-		t = tv
 	case string:
 		tv, err := parseNumericString(x)
 		if err != nil {

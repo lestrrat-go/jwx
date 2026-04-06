@@ -553,25 +553,9 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 			return nil, fmt.Errorf(`failed to get %q field`, SaltKey)
 		}
 
-		// check if WithUseNumber is effective, because it will change the
-		// type of the underlying value (#1140)
 		var countFlt float64
-		if json.UseNumber() {
-			var count json.Number
-			if err := h2.Get(CountKey, &count); err != nil {
-				return nil, fmt.Errorf(`failed to get %q field`, CountKey)
-			}
-			v, err := count.Float64()
-			if err != nil {
-				return nil, fmt.Errorf("failed to convert 'p2c' to float64: %w", err)
-			}
-			countFlt = v
-		} else {
-			var count float64
-			if err := h2.Get(CountKey, &count); err != nil {
-				return nil, fmt.Errorf(`failed to get %q field`, CountKey)
-			}
-			countFlt = count
+		if err := h2.Get(CountKey, &countFlt); err != nil {
+			return nil, fmt.Errorf(`failed to get %q field`, CountKey)
 		}
 
 		maxCount := dc.maxPBES2Count

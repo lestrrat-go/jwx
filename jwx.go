@@ -21,25 +21,3 @@
 //
 // FAQ style documentation can be found in the repository (https://github.com/lestrrat-go/jwx/tree/develop/v3/docs)
 package jwx
-
-import (
-	"github.com/lestrrat-go/jwx/v3/internal/json"
-)
-
-// DecoderSettings gives you a access to configure the "encoding/json".Decoder
-// used to decode JSON objects within the jwx framework.
-func DecoderSettings(options ...JSONOption) {
-	// XXX We're using this format instead of just passing a single boolean
-	// in case a new option is to be added some time later
-	var useNumber bool
-	for _, option := range options {
-		switch option.Ident() {
-		case identUseNumber{}:
-			if err := option.Value(&useNumber); err != nil {
-				panic("jwx.DecoderSettings: useNumber option must be a boolean")
-			}
-		}
-	}
-
-	json.DecoderSettings(useNumber)
-}
