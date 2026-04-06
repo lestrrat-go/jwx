@@ -4,27 +4,44 @@
 
 ## Pattern
 
-Sentinel errors exposed via functions, not variables. Use `errors.Is()` for checking.
+Error types are defined directly in their respective packages.
+Use `errors.Is()` with a zero-value struct for type checks, and `errors.AsType[T]()` to
+extract structured fields:
 
 ```go
-if errors.Is(err, jwt.TokenExpiredError()) { ... }
+// Type check (zero-value matching)
+if errors.Is(err, jwt.TokenExpiredError{}) { ... }
+
+// Extract structured detail
+if expErr, ok := errors.AsType[jwt.TokenExpiredError](err); ok {
+    log.Printf("expired at %s, checked at %s", expErr.Expiration, expErr.Now)
+}
 ```
 
-## Sentinel Error Registry
+Only `jwt.UnknownPayloadTypeError()` remains a sentinel function (no struct type).
+
+## Exported Error Types (jwt)
+
+| Type | Structured Fields | Meaning |
+|------|------------------|---------|
+| `TokenExpiredError` | `Expiration`, `Now`, `Skew` | `exp` claim not satisfied |
+| `TokenNotYetValidError` | `NotBefore`, `Now`, `Skew` | `nbf` claim not satisfied |
+| `InvalidIssuedAtError` | `IssuedAt`, `Now`, `Skew` | `iat` claim not satisfied |
+| `InvalidIssuerError` | *(none)* | `iss` claim not satisfied |
+| `InvalidAudienceError` | *(none)* | `aud` claim not satisfied |
+| `ClaimValidationError` | `Claim`, `Expected`, `Actual` | Generic claim validator mismatch |
+| `TimeDeltaError` | `Claim1`, `Claim2`, `Value1`, `Value2`, `Delta`, `Limit`, `Skew` | Time delta out of range |
+| `ValidationError` | *(wraps inner)* | Blanket validation failure |
+| `ParseError` | *(wraps inner)* | Parse failed |
+| `MissingRequiredClaimError` | `Claim` | Required claim missing |
+| `ClaimNotFoundError` | `Name` | Claim not present |
+| `ClaimAssignmentFailedError` | `Err` | Claim value assignment failed |
+
+## Sentinel Function Registry
 
 | Package | Function | Meaning |
 |---------|----------|---------|
-| `jwt` | `TokenExpiredError()` | `exp` claim not satisfied |
-| `jwt` | `TokenNotYetValidError()` | `nbf` claim not satisfied |
-| `jwt` | `InvalidIssuerError()` | `iss` claim not satisfied |
-| `jwt` | `InvalidAudienceError()` | `aud` claim not satisfied |
-| `jwt` | `ValidateError()` | Generic validation failure |
-| `jwt` | `ParseError()` | Parse failed |
-| `jwt` | `ClaimNotFoundError()` | Claim not present |
-| `jwt` | `ClaimAssignmentFailedError()` | Claim value assignment failed |
 | `jwt` | `UnknownPayloadTypeError()` | Unrecognized payload format |
-| `jwt` | `InvalidIssuedAtError()` | `iat` claim not satisfied |
-| `jwt` | `MissingRequiredClaimError()` | Required claim missing |
 | `jws` | `SignError()` | Signing failed |
 | `jws` | `VerifyError()` | Verification process error |
 | `jws` | `VerificationError()` | Signature mismatch |
@@ -43,18 +60,29 @@ if errors.Is(err, jwt.TokenExpiredError()) { ... }
 
 - `jwk.IsKeyValidationError(err error) bool` — returns `true` if `err` indicates a key validation failure.
 
+## Collect-All Validation Errors
+
+By default, `jwt.Validate()` returns on first failure (v3 behavior).
+Use `jwt.WithCollectErrors(true)` to gather all validation errors:
+
+```go
+err := jwt.Validate(token, jwt.WithIssuer("x"), jwt.WithCollectErrors(true))
+// err wraps all failures via errors.Join; each cause is reachable via errors.Is / errors.AsType
+```
+
 ## Error Wrapping
 
-Errors wrap sentinels with `fmt.Errorf("context: %w", sentinel)`. Chain checking works:
+Errors wrap typed errors with `fmt.Errorf("context: %w", inner)`. Chain checking works:
 
 ```go
 // Both match:
-errors.Is(err, jwt.ValidateError())       // outer
-errors.Is(err, jwt.TokenExpiredError())    // inner (wrapped by ValidateError)
+errors.Is(err, jwt.ValidationError{})    // outer
+errors.Is(err, jwt.TokenExpiredError{})   // inner (wrapped by ValidationError)
 ```
 
 ## Rules
 
-- NEVER compare errors with `==`. ALWAYS use `errors.Is()`.
-- Sentinel functions return the same error value each call — safe for `errors.Is()`.
-- Custom error types use unexported structs; no type assertions needed.
+- NEVER compare errors with `==`. ALWAYS use `errors.Is()` or `errors.AsType[T]()`.
+- For jwt error types, use zero-value struct for `errors.Is` checks: `jwt.TokenExpiredError{}`.
+- Error types are defined directly in the `jwt` package (not in `jwt/internal/errors`).
+- Constructor helpers (`parseErrorf`, `validateErrorf`, etc.) are unexported functions in the `jwt` package.

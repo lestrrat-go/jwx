@@ -243,6 +243,18 @@ options:
        return nil
       })
       err := jwt.Validate(token, jwt.WithValidator(validator))
+  - ident: CollectErrors
+    interface: ValidateOption
+    argument_type: bool
+    comment: |
+      WithCollectErrors specifies that all validators should be run and
+      all errors collected, instead of returning on the first failure.
+      The resulting error wraps all individual errors via errors.Join,
+      so each cause can be inspected using errors.Is or errors.AsType.
+
+      By default, jwt.Validate returns on the first validation error,
+      matching v3 behavior. Use WithCollectErrors(true) to gather all
+      validation errors in a single call.
   - ident: NumericDateParsePrecision
     interface: GlobalOption
     argument_type: int
