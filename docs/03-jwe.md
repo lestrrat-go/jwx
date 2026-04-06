@@ -199,7 +199,6 @@ func Example_jwe_encrypt_json() {
   encrypted, err := jwe.Encrypt(
     []byte(payload),
     jwe.WithJSON(),                      // Toggle JSON serialization. Because there's only one key (recipient), this will produce Flattened JSON serialization
-    jwe.WithLegacyHeaderMerging(false),  // Disable legacy header merging
     jwe.WithKey(jwa.RSA_OAEP(), pubkey), // Public key for encryption
   )
   if err != nil {
