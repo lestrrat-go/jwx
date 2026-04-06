@@ -119,29 +119,18 @@ var rsaConvertibleKeys = []reflect.Type{
 	reflect.TypeFor[RSAPublicKey](),
 }
 
-func rsaJWKToRaw(key Key, hint any) (any, error) {
+func rsaJWKToRaw(key Key, _ any) (any, error) {
 	extracted, err := extractEmbeddedKey(key, rsaConvertibleKeys)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to extract embedded key: %w`, err)
 	}
 	switch key := extracted.(type) {
 	case RSAPrivateKey:
-		switch hint.(type) {
-		case *rsa.PrivateKey, *any:
-		default:
-			return nil, fmt.Errorf(`invalid destination object type %T for private RSA JWK: %w`, hint, ContinueError())
-		}
-
-		// rlocker is unexported with unexported methods, so only our
-		// concrete types implement it. A successful assertion lets us
-		// type-assert to the concrete struct and read fields directly
-		// under a single batch lock. This avoids nested RLock (which
-		// deadlocks when a writer is pending) while preserving an
-		// atomic snapshot of all fields.
 		var od, oq, op, on, oe []byte
 		var odp, odq, oqi []byte
 		var hasDp, hasDq, hasQi bool
-		if locker, ok := key.(rlocker); ok {
+		locker, ok := key.(rlocker)
+		if ok {
 			locker.rlock()
 			concrete := key.(*rsaPrivateKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
 			od, oq, op, on, oe = concrete.d, concrete.q, concrete.p, concrete.n, concrete.e
@@ -236,15 +225,9 @@ func rsaJWKToRaw(key Key, hint any) (any, error) {
 		privkey.Precomputed.CRTValues = []rsa.CRTValue{}
 		return &privkey, nil
 	case RSAPublicKey:
-		switch hint.(type) {
-		case *rsa.PublicKey, *any:
-		default:
-			return nil, fmt.Errorf(`invalid destination object type %T for public RSA JWK: %w`, hint, ContinueError())
-		}
-
 		var n, e []byte
-		// See RSAPrivateKey case above for explanation of the rlocker pattern.
-		if locker, ok := key.(rlocker); ok {
+		locker, ok := key.(rlocker)
+		if ok {
 			locker.rlock()
 			concrete := key.(*rsaPublicKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
 			n, e = concrete.n, concrete.e

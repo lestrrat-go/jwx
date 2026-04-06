@@ -2244,7 +2244,7 @@ func TestGH1262(t *testing.T) {
 		require.NoError(t, err, `jwk.Import should succeed`)
 		_ = jwkCliPriv
 
-		rawCliPrivV, err := jwk.Export(jwkCliPriv)
+		rawCliPrivV, err := jwk.Export(jwkCliPriv, (*ecdh.PrivateKey)(nil))
 		require.NoError(t, err, `jwk.Export should succeed`)
 		rawCliPriv := rawCliPrivV.(*ecdh.PrivateKey)
 		_ = rawCliPriv
@@ -2269,7 +2269,7 @@ func TestGH1262(t *testing.T) {
 		jwkCli, err := jwk.ParseKey(jwkBuf) // extract jwkBuf
 		require.NoError(t, err, `jwk.ParseKey should succeed`)
 
-		pubSrvV, err := jwk.Export(jwkCli)
+		pubSrvV, err := jwk.Export(jwkCli, (*ecdh.PublicKey)(nil))
 		require.NoError(t, err, `jwk.Export should succeed`)
 		pubSrv := pubSrvV.(*ecdh.PublicKey)
 		secretCli, err := keyCli.ECDH(pubSrv)

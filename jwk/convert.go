@@ -111,25 +111,15 @@ func (a *keyImportAdapter[T]) Import(raw any) (Key, error) {
 	return a.fn(v)
 }
 
-// KeyExporter is used to convert from a `jwk.Key` to a raw key. mneumonic: from the PoV of the `jwk.Key`,
+// KeyExporter is used to convert from a `jwk.Key` to a raw key. From the PoV of the `jwk.Key`,
 // we're _exporting_ it to a raw key.
 type KeyExporter interface {
-	// Export takes the `jwk.Key` to be converted, and a hint (the raw key to be converted to).
-	// The hint is the object that the user requested the result to be assigned to.
-	// The method should return the converted raw key, or an error if the conversion fails.
+	// Export takes the `jwk.Key` to be converted, and an optional hint
+	// indicating the desired output type. The hint may be nil, in which
+	// case the exporter should return the default/natural type for the key.
 	//
-	// Third party modules MUST NOT modifiy the hint object.
-	//
-	// When the user calls `key.Export(dst)`, the `dst` object is a _pointer_ to the
-	// object that the user wants the result to be assigned to, but the converter
-	// receives the _value_ that this pointer points to, to make it easier to
-	// detect the type of the result.
-	//
-	// Note that the second argument may be an `any` (which means that the
-	// user has delegated the type detection to the converter).
-	//
-	// Export must NOT modify the hint object, and should return jwk.ContinueError
-	// if the hint object is not compatible with the converter.
+	// Export should return jwk.ContinueError if the key is not compatible
+	// with this exporter, so that the next exporter can be tried.
 	Export(Key, any) (any, error)
 }
 
@@ -338,7 +328,17 @@ func importSymmetricKey(raw []byte) (Key, error) {
 //
 //	raw, err := jwk.Export(key)
 //	privkey := raw.(*rsa.PrivateKey)
-func Export(key Key) (any, error) {
+//
+// You may optionally pass a hint value to indicate the desired output
+// type. This is used by certain exporters (e.g. EC keys) to choose
+// between compatible output formats (e.g. *ecdsa.PrivateKey vs *ecdh.PrivateKey).
+// If no hint is given, the exporter returns the default type for the key.
+func Export(key Key, hints ...any) (any, error) {
+	var hint any
+	if len(hints) > 0 {
+		hint = hints[0]
+	}
+
 	muKeyExporters.RLock()
 	exporters := findExporters(key)
 	muKeyExporters.RUnlock()
@@ -347,7 +347,7 @@ func Export(key Key) (any, error) {
 		return nil, fmt.Errorf(`jwk.Export: no exporters registered for key type '%T'`, key)
 	}
 	for _, conv := range exporters {
-		v, err := conv.Export(key, nil)
+		v, err := conv.Export(key, hint)
 		if err != nil {
 			if errors.Is(err, ContinueError()) {
 				continue
