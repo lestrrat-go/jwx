@@ -77,8 +77,8 @@ func TestTimeValidation(t *testing.T) {
 		err = jwt.Validate(t1, jwt.WithIssuer("poop"))
 
 		require.Error(t, err, "jwt.Validate should fail")
-		require.ErrorIs(t, err, jwt.InvalidIssuerError(), "error should be jwt.InvalidIssuerError")
-		require.ErrorIs(t, err, jwt.ValidateError(), "error should be a validation error")
+		require.ErrorIs(t, err, jwt.InvalidIssuerError{}, "error should be jwt.InvalidIssuerError")
+		require.ErrorIs(t, err, jwt.ValidationError{}, "error should be a validation error")
 	})
 	t.Run(jwt.IssuedAtKey, func(t *testing.T) {
 		t.Parallel()
@@ -118,9 +118,9 @@ func TestTimeValidation(t *testing.T) {
 				}
 
 				require.Error(t, err, `jwt.Validate should fail`)
-				require.ErrorIs(t, err, jwt.InvalidIssuedAtError(), `error should be jwt.ErrInvalidIssuedAt`)
-				require.NotErrorIs(t, err, jwt.TokenNotYetValidError(), `error should be not ErrNotYetValid`)
-				require.ErrorIs(t, err, jwt.ValidateError(), `error should be a validation error`)
+				require.ErrorIs(t, err, jwt.InvalidIssuedAtError{}, `error should be jwt.ErrInvalidIssuedAt`)
+				require.NotErrorIs(t, err, jwt.TokenNotYetValidError{}, `error should be not ErrNotYetValid`)
+				require.ErrorIs(t, err, jwt.ValidationError{}, `error should be a validation error`)
 			})
 		}
 	})
@@ -149,8 +149,8 @@ func TestTimeValidation(t *testing.T) {
 			t.Parallel()
 			err := jwt.Validate(t1, jwt.WithAudience("poop"))
 			require.Error(t, err, "token.Validate should fail")
-			require.ErrorIs(t, err, jwt.InvalidAudienceError(), `error should be ErrInvalidAudience`)
-			require.True(t, errors.Is(err, jwt.ValidateError()), `error should be a validation error`)
+			require.ErrorIs(t, err, jwt.InvalidAudienceError{}, `error should be ErrInvalidAudience`)
+			require.True(t, errors.Is(err, jwt.ValidationError{}), `error should be a validation error`)
 		})
 	})
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
@@ -234,9 +234,9 @@ func TestTimeValidation(t *testing.T) {
 				}
 
 				require.Error(t, err, "token.Validate should fail")
-				require.ErrorIs(t, err, jwt.TokenNotYetValidError(), `error should be ErrTokenNotYetValid`)
-				require.NotErrorIs(t, err, jwt.TokenExpiredError(), `error should not be ErrTokenExpired`)
-				require.ErrorIs(t, err, jwt.ValidateError(), `error should be a validation error`)
+				require.ErrorIs(t, err, jwt.TokenNotYetValidError{}, `error should be ErrTokenNotYetValid`)
+				require.NotErrorIs(t, err, jwt.TokenExpiredError{}, `error should not be ErrTokenExpired`)
+				require.ErrorIs(t, err, jwt.ValidationError{}, `error should be a validation error`)
 			})
 		}
 	})
@@ -308,9 +308,9 @@ func TestTimeValidation(t *testing.T) {
 				}
 
 				require.Error(t, err, `jwt.Validate should fail`)
-				require.NotErrorIs(t, err, jwt.TokenNotYetValidError(), `error should not be ErrTokenNotYetValid`)
-				require.ErrorIs(t, err, jwt.TokenExpiredError(), `error should be ErrTokenExpired`)
-				require.ErrorIs(t, err, jwt.ValidateError(), `error should be a validation error`)
+				require.NotErrorIs(t, err, jwt.TokenNotYetValidError{}, `error should not be ErrTokenNotYetValid`)
+				require.ErrorIs(t, err, jwt.TokenExpiredError{}, `error should be ErrTokenExpired`)
+				require.ErrorIs(t, err, jwt.ValidationError{}, `error should be a validation error`)
 			})
 		}
 	})
@@ -470,8 +470,8 @@ func TestGH010(t *testing.T) {
 		err = jwt.Validate(t1, jwt.WithIssuer("poop"))
 
 		require.Error(t, err, "jwt.Validate should fail")
-		require.ErrorIs(t, err, jwt.InvalidIssuerError(), "error should be jwt.InvalidIssuerError")
-		require.ErrorIs(t, err, jwt.ValidateError(), "error should be a validation error")
+		require.ErrorIs(t, err, jwt.InvalidIssuerError{}, "error should be jwt.InvalidIssuerError")
+		require.ErrorIs(t, err, jwt.ValidationError{}, "error should be a validation error")
 	})
 	t.Run(jwt.IssuedAtKey, func(t *testing.T) {
 		t.Parallel()
@@ -518,9 +518,9 @@ func TestGH010(t *testing.T) {
 				}
 
 				require.Error(t, err, `jwt.Validate should fail`)
-				require.ErrorIs(t, err, jwt.InvalidIssuedAtError(), `error should be jwt.ErrInvalidIssuedAt`)
-				require.NotErrorIs(t, err, jwt.TokenNotYetValidError(), `error should be not ErrNotYetValid`)
-				require.ErrorIs(t, err, jwt.ValidateError(), `error should be a validation error`)
+				require.ErrorIs(t, err, jwt.InvalidIssuedAtError{}, `error should be jwt.ErrInvalidIssuedAt`)
+				require.NotErrorIs(t, err, jwt.TokenNotYetValidError{}, `error should be not ErrNotYetValid`)
+				require.ErrorIs(t, err, jwt.ValidationError{}, `error should be a validation error`)
 			})
 		}
 	})
@@ -549,8 +549,8 @@ func TestGH010(t *testing.T) {
 			t.Parallel()
 			err := jwt.Validate(t1, jwt.WithAudience("poop"))
 			require.Error(t, err, "token.Validate should fail")
-			require.ErrorIs(t, err, jwt.InvalidAudienceError(), `error should be ErrInvalidAudience`)
-			require.True(t, errors.Is(err, jwt.ValidateError()), `error should be a validation error`)
+			require.ErrorIs(t, err, jwt.InvalidAudienceError{}, `error should be ErrInvalidAudience`)
+			require.True(t, errors.Is(err, jwt.ValidationError{}), `error should be a validation error`)
 		})
 	})
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
@@ -641,9 +641,9 @@ func TestGH010(t *testing.T) {
 				}
 
 				require.Error(t, err, "token.Validate should fail")
-				require.ErrorIs(t, err, jwt.TokenNotYetValidError(), `error should be ErrTokenNotYetValid`)
-				require.NotErrorIs(t, err, jwt.TokenExpiredError(), `error should not be ErrTokenExpired`)
-				require.ErrorIs(t, err, jwt.ValidateError(), `error should be a validation error`)
+				require.ErrorIs(t, err, jwt.TokenNotYetValidError{}, `error should be ErrTokenNotYetValid`)
+				require.NotErrorIs(t, err, jwt.TokenExpiredError{}, `error should not be ErrTokenExpired`)
+				require.ErrorIs(t, err, jwt.ValidationError{}, `error should be a validation error`)
 			})
 		}
 	})
@@ -715,9 +715,9 @@ func TestGH010(t *testing.T) {
 				}
 
 				require.Error(t, err, `jwt.Validate should fail`)
-				require.NotErrorIs(t, err, jwt.TokenNotYetValidError(), `error should not be ErrTokenNotYetValid`)
-				require.ErrorIs(t, err, jwt.TokenExpiredError(), `error should be ErrTokenExpired`)
-				require.ErrorIs(t, err, jwt.ValidateError(), `error should be a validation error`)
+				require.NotErrorIs(t, err, jwt.TokenNotYetValidError{}, `error should not be ErrTokenNotYetValid`)
+				require.ErrorIs(t, err, jwt.TokenExpiredError{}, `error should be ErrTokenExpired`)
+				require.ErrorIs(t, err, jwt.ValidationError{}, `error should be a validation error`)
 			})
 		}
 	})

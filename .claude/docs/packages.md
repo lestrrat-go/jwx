@@ -90,7 +90,8 @@ JSON Web Tokens per RFC 7519. Parse, sign, validate.
 - Key types: `Token` (interface), `Validator`, `ValidatorFunc`, `Clock`, `ClockFunc`, `Serializer`, `TokenFilter`
 - Token options: `FlattenAudience` per-token option
 - Global/per-call settings: `WithMaxParseInputSize()` (usable in both `Settings()` and `ParseReader()`/`ReadFile()`)
-- Error sentinels: `TokenExpiredError()`, `TokenNotYetValidError()`, `InvalidIssuerError()`, `InvalidAudienceError()`, `ValidateError()`, `ParseError()`
+- Error types (use zero-value for `errors.Is`, `errors.AsType[T]` for structured fields): `TokenExpiredError`, `TokenNotYetValidError`, `InvalidIssuedAtError`, `InvalidIssuerError`, `InvalidAudienceError`, `ValidationError`, `ParseError`, `MissingRequiredClaimError`, `ClaimNotFoundError`, `ClaimAssignmentFailedError`, `ClaimValidationError`, `TimeDeltaError`
+- Options: `WithCollectErrors(bool)` — collect all validation errors instead of first-error-only
 - Files: `jwt.go`, `validate.go`, `serialize.go`, `http.go`, `filter.go`, `errors.go`, `options.go`, `fastpath.go`, `token_options.go`
 - Imports: jwa, jws, jwe, jwk, transform, internal/json
 

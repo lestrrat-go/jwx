@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"time"
 
-	jwterrs "github.com/lestrrat-go/jwx/v3/jwt/internal/errors"
 	"github.com/lestrrat-go/option/v3"
 )
 
@@ -64,6 +63,7 @@ func Validate(t Token, options ...ValidateOption) error {
 	}
 	var extraValidators []Validator
 	var resetValidators bool
+	var collectErrors bool
 	for _, o := range options {
 		switch o.Ident() {
 		case identClock{}:
@@ -79,6 +79,8 @@ func Validate(t Token, options ...ValidateOption) error {
 			ctx = option.MustGet[context.Context](o)
 		case identResetValidators{}:
 			resetValidators = option.MustGet[bool](o)
+		case identCollectErrors{}:
+			collectErrors = option.MustGet[bool](o)
 		case identValidator{}:
 			v := option.MustGet[Validator](o)
 			switch v := v.(type) {
@@ -109,14 +111,27 @@ func Validate(t Token, options ...ValidateOption) error {
 		validators = append(baseValidators, extraValidators...)
 	} else {
 		if len(extraValidators) == 0 {
-			return jwterrs.ValidateErrorf(`no validators specified: jwt.WithResetValidators(true) and no jwt.WithValidator() specified`)
+			return validateErrorf(`no validators specified: jwt.WithResetValidators(true) and no jwt.WithValidator() specified`)
 		}
 		validators = extraValidators
 	}
 
+	if collectErrors {
+		var errs []error
+		for _, v := range validators {
+			if err := v.Validate(ctx, t); err != nil {
+				errs = append(errs, err)
+			}
+		}
+		if len(errs) > 0 {
+			return validateErrorJoin(errs...)
+		}
+		return nil
+	}
+
 	for _, v := range validators {
 		if err := v.Validate(ctx, t); err != nil {
-			return jwterrs.ValidateErrorf(`validation failed: %w`, err)
+			return validateErrorf(`validation failed: %w`, err)
 		}
 	}
 
@@ -157,17 +172,24 @@ func (iitr *isInTimeRange) Validate(ctx context.Context, t Token) error {
 	// by piggybacking on `required` check.
 	t1 := timeClaim(t, clock, iitr.c1)
 	t2 := timeClaim(t, clock, iitr.c2)
-	if iitr.less { // t1 - t2 <= iitr.dur
-		// t1 - t2 < iitr.dur + skew
-		if t1.Sub(t2) > iitr.dur+skew {
-			return fmt.Errorf(`iitr between %s and %s exceeds %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew)
+	delta := t1.Sub(t2)
+
+	var msg string
+	if iitr.less {
+		// t1 - t2 <= iitr.dur + skew
+		if delta <= iitr.dur+skew {
+			return nil
 		}
+		msg = fmt.Sprintf(`delta between %s and %s exceeds %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew)
 	} else {
-		if t1.Sub(t2) < iitr.dur-skew {
-			return fmt.Errorf(`iitr between %s and %s is less than %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew)
+		// t1 - t2 >= iitr.dur - skew
+		if delta >= iitr.dur-skew {
+			return nil
 		}
+		msg = fmt.Sprintf(`delta between %s and %s is less than %s (skew %s)`, iitr.c1, iitr.c2, iitr.dur, skew)
 	}
-	return nil
+
+	return newTimeDeltaError(msg, iitr.c1, iitr.c2, t1, t2, delta, iitr.dur, skew)
 }
 
 // Validator describes interface to validate a Token.
@@ -244,7 +266,7 @@ func isExpirationValid(ctx context.Context, t Token) error {
 
 	// expiration date must be after NOW
 	if !now.Before(ttv.Add(skew)) {
-		return TokenExpiredError()
+		return newTokenExpiredError(ttv, now, skew)
 	}
 	return nil
 }
@@ -274,7 +296,7 @@ func isIssuedAtValid(ctx context.Context, t Token) error {
 	ttv := tv.Truncate(trunc)
 
 	if now.Before(ttv.Add(-1 * skew)) {
-		return InvalidIssuedAtError()
+		return newInvalidIssuedAtError(ttv, now, skew)
 	}
 	return nil
 }
@@ -306,9 +328,8 @@ func isNbfValid(ctx context.Context, t Token) error {
 	ttv := tv.Truncate(trunc)
 
 	// "now" cannot be before t - skew, so we check for now > t - skew
-	ttv = ttv.Add(-1 * skew)
-	if now.Before(ttv) {
-		return TokenNotYetValidError()
+	if now.Before(ttv.Add(-1 * skew)) {
+		return newTokenNotYetValidError(ttv, now, skew)
 	}
 	return nil
 }
@@ -324,24 +345,35 @@ type claimContainsString struct {
 // implementation, this will probably only work for `aud` fields.
 func ClaimContainsString(name, value string) Validator {
 	return claimContainsString{
-		name:    name,
-		value:   value,
-		makeErr: fmt.Errorf,
+		name:  name,
+		value: value,
 	}
 }
 
 func (ccs claimContainsString) Validate(_ context.Context, t Token) error {
 	v, ok := t.Field(ccs.name)
 	if !ok {
-		return ccs.makeErr(`claim %q does not exist`, ccs.name)
+		if ccs.makeErr != nil {
+			return ccs.makeErr(`claim %q does not exist`, ccs.name)
+		}
+		return newClaimValidationError(ccs.name, ccs.value, nil,
+			fmt.Sprintf(`claim %q does not exist`, ccs.name))
 	}
 	list, ok := v.([]string)
 	if !ok {
-		return ccs.makeErr(`claim %q is not a []string`, ccs.name)
+		if ccs.makeErr != nil {
+			return ccs.makeErr(`claim %q is not a []string`, ccs.name)
+		}
+		return newClaimValidationError(ccs.name, ccs.value, v,
+			fmt.Sprintf(`claim %q is not a []string`, ccs.name))
 	}
 
 	if !slices.Contains(list, ccs.value) {
-		return ccs.makeErr(`%q not satisfied`, ccs.name)
+		if ccs.makeErr != nil {
+			return ccs.makeErr(`%q not satisfied`, ccs.name)
+		}
+		return newClaimValidationError(ccs.name, ccs.value, list,
+			fmt.Sprintf(`%q not satisfied`, ccs.name))
 	}
 	return nil
 }
@@ -352,7 +384,7 @@ func audienceClaimContainsString(value string) Validator {
 	return claimContainsString{
 		name:    AudienceKey,
 		value:   value,
-		makeErr: jwterrs.AudienceErrorf,
+		makeErr: audienceErrorf,
 	}
 }
 
@@ -368,19 +400,26 @@ type claimValueIs struct {
 // need to do more, use a custom Validator.
 func ClaimValueIs(name string, value any) Validator {
 	return &claimValueIs{
-		name:    name,
-		value:   value,
-		makeErr: fmt.Errorf,
+		name:  name,
+		value: value,
 	}
 }
 
 func (cv *claimValueIs) Validate(_ context.Context, t Token) error {
 	v, ok := t.Field(cv.name)
 	if !ok {
-		return cv.makeErr(`claim %[1]q does not exist`, cv.name)
+		if cv.makeErr != nil {
+			return cv.makeErr(`claim %[1]q does not exist`, cv.name)
+		}
+		return newClaimValidationError(cv.name, cv.value, nil,
+			fmt.Sprintf(`claim %q does not exist`, cv.name))
 	}
 	if v != cv.value {
-		return cv.makeErr(`claim %[1]q does not have the expected value`, cv.name)
+		if cv.makeErr != nil {
+			return cv.makeErr(`claim %[1]q does not have the expected value`, cv.name)
+		}
+		return newClaimValidationError(cv.name, cv.value, v,
+			fmt.Sprintf(`claim %q does not have the expected value`, cv.name))
 	}
 	return nil
 }
@@ -391,7 +430,7 @@ func issuerClaimValueIs(value string) Validator {
 	return &claimValueIs{
 		name:    IssuerKey,
 		value:   value,
-		makeErr: jwterrs.IssuerErrorf,
+		makeErr: issuerErrorf,
 	}
 }
 
@@ -406,7 +445,7 @@ type isRequired string
 func (ir isRequired) Validate(_ context.Context, t Token) error {
 	name := string(ir)
 	if !t.Has(name) {
-		return jwterrs.MissingRequiredClaimErrorf(name)
+		return missingRequiredClaimErrorf(name)
 	}
 	return nil
 }

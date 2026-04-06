@@ -16,7 +16,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jws"
-	jwterrs "github.com/lestrrat-go/jwx/v3/jwt/internal/errors"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 	"github.com/lestrrat-go/option/v3"
 )
@@ -105,7 +104,7 @@ var registry = json.NewRegistry()
 func ParseString(s string, options ...ParseOption) (Token, error) {
 	tok, err := parseBytes([]byte(s), options...)
 	if err != nil {
-		return nil, jwterrs.ParseErrorf(`jwt.ParseString`, `failed to parse string: %w`, err)
+		return nil, parseErrorf(`jwt.ParseString`, `failed to parse string: %w`, err)
 	}
 	return tok, nil
 }
@@ -138,7 +137,7 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 func Parse(s []byte, options ...ParseOption) (Token, error) {
 	tok, err := parseBytes(s, options...)
 	if err != nil {
-		return nil, jwterrs.ParseErrorf(`jwt.Parse`, `failed to parse token: %w`, err)
+		return nil, parseErrorf(`jwt.Parse`, `failed to parse token: %w`, err)
 	}
 	return tok, nil
 }
@@ -153,14 +152,14 @@ func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identVerify{}, identValidate{}:
-			return nil, jwterrs.ParseErrorf(`jwt.ParseInsecure`, `jwt.WithVerify() and jwt.WithValidate() may not be specified`)
+			return nil, parseErrorf(`jwt.ParseInsecure`, `jwt.WithVerify() and jwt.WithValidate() may not be specified`)
 		}
 	}
 
 	options = append(options, WithVerify(false), WithValidate(false))
 	tok, err := Parse(s, options...)
 	if err != nil {
-		return nil, jwterrs.ParseErrorf(`jwt.ParseInsecure`, `failed to parse token: %w`, err)
+		return nil, parseErrorf(`jwt.ParseInsecure`, `failed to parse token: %w`, err)
 	}
 	return tok, nil
 }
@@ -172,21 +171,21 @@ func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 		if opt.Ident() == (identMaxParseInputSize{}) {
 			maxSize = option.MustGet[int64](opt)
 			if maxSize <= 0 {
-				return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `WithMaxParseInputSize must be greater than zero`)
+				return nil, parseErrorf(`jwt.ParseReader`, `WithMaxParseInputSize must be greater than zero`)
 			}
 		}
 	}
 
 	data, err := io.ReadAll(io.LimitReader(src, maxSize+1))
 	if err != nil {
-		return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `failed to read from token data source: %w`, err)
+		return nil, parseErrorf(`jwt.ParseReader`, `failed to read from token data source: %w`, err)
 	}
 	if int64(len(data)) > maxSize {
-		return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
+		return nil, parseErrorf(`jwt.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
 	}
 	tok, err := parseBytes(data, options...)
 	if err != nil {
-		return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `failed to parse token: %w`, err)
+		return nil, parseErrorf(`jwt.ParseReader`, `failed to parse token: %w`, err)
 	}
 	return tok, nil
 }

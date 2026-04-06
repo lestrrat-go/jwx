@@ -152,6 +152,7 @@ func (*validateOption) validateOption() {}
 type identAcceptableSkew struct{}
 type identBase64Encoder struct{}
 type identClock struct{}
+type identCollectErrors struct{}
 type identContext struct{}
 type identCookie struct{}
 type identCookieKey struct{}
@@ -184,6 +185,10 @@ func (identBase64Encoder) String() string {
 
 func (identClock) String() string {
 	return "WithClock"
+}
+
+func (identCollectErrors) String() string {
+	return "WithCollectErrors"
 }
 
 func (identContext) String() string {
@@ -286,6 +291,18 @@ func WithBase64Encoder(v jws.Base64Encoder) SignParseOption {
 // exp, iat and nbf claims.
 func WithClock(v Clock) ValidateOption {
 	return &validateOption{option.New(identClock{}, v)}
+}
+
+// WithCollectErrors specifies that all validators should be run and
+// all errors collected, instead of returning on the first failure.
+// The resulting error wraps all individual errors via errors.Join,
+// so each cause can be inspected using errors.Is or errors.AsType.
+//
+// By default, jwt.Validate returns on the first validation error,
+// matching v3 behavior. Use WithCollectErrors(true) to gather all
+// validation errors in a single call.
+func WithCollectErrors(v bool) ValidateOption {
+	return &validateOption{option.New(identCollectErrors{}, v)}
 }
 
 // WithContext allows you to specify a context.Context object to be used

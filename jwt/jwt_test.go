@@ -107,7 +107,7 @@ func TestToken_Parse(t *testing.T) {
 		t.Parallel()
 		_, err := jwt.Parse(signed, jwt.WithKey(jwa.RS512(), &key.PublicKey))
 		require.Error(t, err, `jwt.Parse should fail`)
-		require.True(t, errors.Is(err, jwt.ParseError()), `err should be a parse error`)
+		require.True(t, errors.Is(err, jwt.ParseError{}), `err should be a parse error`)
 		require.True(t, errors.Is(err, jws.VerifyError()), `err should be a verify error`)
 		require.True(t, errors.Is(err, jws.VerificationError()), `err should be a verification error`)
 	})
@@ -117,7 +117,7 @@ func TestToken_Parse(t *testing.T) {
 		pubkey.E = 0 // bogus value
 		_, err := jwt.Parse(signed, jwt.WithKey(alg, &pubkey))
 		require.Error(t, err, `jwt.Parse should fail`)
-		require.True(t, errors.Is(err, jwt.ParseError()), `err should be a parse error`)
+		require.True(t, errors.Is(err, jwt.ParseError{}), `err should be a parse error`)
 		require.True(t, errors.Is(err, jws.VerifyError()), `err should be a verify error`)
 		require.True(t, errors.Is(err, jws.VerificationError()), `err should be a verification error`)
 	})
@@ -1189,8 +1189,8 @@ func TestGH430(t *testing.T) {
 
 func TestGH706(t *testing.T) {
 	err := jwt.Validate(jwt.New(), jwt.WithRequiredClaim("foo"))
-	require.ErrorIs(t, err, jwt.ValidateError(), `error should be a validation error`)
-	require.ErrorIs(t, err, jwt.MissingRequiredClaimError(), `err should be jwt.ErrRequiredClaim`)
+	require.ErrorIs(t, err, jwt.ValidationError{}, `error should be a validation error`)
+	require.ErrorIs(t, err, &jwt.MissingRequiredClaimError{}, `err should be jwt.ErrRequiredClaim`)
 }
 
 func TestBenHigginsByPassRegression(t *testing.T) {
@@ -1596,7 +1596,7 @@ func TestGH1175(t *testing.T) {
 
 	_, err = jwt.ParseRequest(req, jwt.WithKey(jwa.HS256(), secret))
 	require.Error(t, err, `jwt.ParseRequest should fail`)
-	require.ErrorIs(t, err, jwt.TokenExpiredError(), `jwt.ParseRequest should fail with jwt.ErrTokenExpired`)
+	require.ErrorIs(t, err, jwt.TokenExpiredError{}, `jwt.ParseRequest should fail with jwt.ErrTokenExpired`)
 }
 
 func TestGH1482(t *testing.T) {
