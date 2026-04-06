@@ -123,14 +123,22 @@ func Example_jwe_filter_advanced() {
 // validateJWESecurityHeaders checks if security headers meet requirements
 func validateJWESecurityHeaders(headers jwe.Headers) bool {
 	// Check security level
-	var securityLevel string
-	if err := headers.Get("security_level", &securityLevel); err != nil || securityLevel != "high" {
+	securityLevelV, ok := headers.Field("security_level")
+	if !ok {
+		return false
+	}
+	securityLevel, ok := securityLevelV.(string)
+	if !ok || securityLevel != "high" {
 		return false
 	}
 
 	// Check access control
-	var accessControl string
-	if err := headers.Get("access_control", &accessControl); err != nil || accessControl != "restricted" {
+	accessControlV, ok := headers.Field("access_control")
+	if !ok {
+		return false
+	}
+	accessControl, ok := accessControlV.(string)
+	if !ok || accessControl != "restricted" {
 		return false
 	}
 
@@ -153,8 +161,12 @@ func validateJWEServiceHeaders(headers jwe.Headers) bool {
 	}
 
 	// Validate API version format
-	var apiVersion string
-	if err := headers.Get("api_version", &apiVersion); err != nil || len(apiVersion) < 5 {
+	apiVersionV, ok := headers.Field("api_version")
+	if !ok {
+		return false
+	}
+	apiVersion, ok := apiVersionV.(string)
+	if !ok || len(apiVersion) < 5 {
 		return false
 	}
 

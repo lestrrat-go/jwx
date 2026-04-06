@@ -32,23 +32,19 @@ func Example_jwt_get_claims() {
 	var _ string = iss
 	var _ string = sub
 
-	// But you can also get them via the generic `.Get()` method.
-	// However, you would need to decide for yourself what the
-	// return type is. If you don't need the exact type, you could
-	// use any, or you could use the specific time.Time
-	// type
+	// But you can also get them via the generic `.Field()` method.
+	// However, the return type is `any`, so you would need to
+	// do a type assertion if you need the specific type.
 	//
 	// For the key name you could also use jwt.IssuedAtKey constant
-	_ = tok.Get(`iat`, &iat)
-
-	// var iat any would also work, but you would need to
-	// convert the type if you need time.Time specific behavior
+	iatV, _ := tok.Field(`iat`)
+	_ = iatV
 
 	// Private claims
-	var dummy any
-	_ = tok.Get(`claim1`, &dummy)
-	_ = tok.Get(`claim2`, &dummy)
-	_ = tok.Get(`claim3`, &dummy)
+	dummy1, _ := tok.Field(`claim1`)
+	dummy2, _ := tok.Field(`claim2`)
+	dummy3, _ := tok.Field(`claim3`)
+	_, _, _ = dummy1, dummy2, dummy3
 
 	// However, it is possible to globally specify that a private
 	// claim should be parsed into a custom type.
@@ -62,11 +58,13 @@ func Example_jwt_get_claims() {
 	}
 
 	// now you can use the exact type
-	var claim2 time.Time
-	if err := tok.Get(`claim2`, &claim2); err != nil {
-		fmt.Printf("failed to get private claim \"claim2\": %s\n", err)
+	claim2V, ok := tok.Field(`claim2`)
+	if !ok {
+		fmt.Printf("failed to get private claim \"claim2\"\n")
 		return
 	}
+	claim2 := claim2V.(time.Time)
+	_ = claim2
 
 	// It's also possible to specify a custom decoder for a private claim.
 	// For example, in the case of `claim3`, it needs to call `jwk.ParseKey`
@@ -81,11 +79,13 @@ func Example_jwt_get_claims() {
 		fmt.Printf(`failed to parse token: %s`, err)
 		return
 	}
-	var claim3 jwk.Key
-	if err := tok.Get(`claim3`, &claim3); err != nil {
-		fmt.Printf("failed to get private claim \"claim3\": %s\n", err)
+	claim3V, ok := tok.Field(`claim3`)
+	if !ok {
+		fmt.Printf("failed to get private claim \"claim3\"\n")
 		return
 	}
+	claim3 := claim3V.(jwk.Key)
+	_ = claim3
 
 	// OUTPUT:
 }

@@ -9,7 +9,6 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/cert"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
@@ -193,104 +192,66 @@ func (h *okpPublicKey) Has(name string) bool {
 	}
 }
 
-func (h *okpPublicKey) Get(name string, dst any) error {
+func (h *okpPublicKey) Field(name string) (any, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
 	case KeyTypeKey:
-		if err := blackmagic.AssignIfCompatible(dst, h.KeyType()); err != nil {
-			return fmt.Errorf(`okpPublicKey.Get: failed to assign value for field %q to destination object: %w`, name, err)
-		}
+		return h.KeyType(), true
 	case AlgorithmKey:
 		if h.algorithm == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.algorithm)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.algorithm), true
 	case OKPCrvKey:
 		if h.crv == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.crv)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.crv), true
 	case KeyIDKey:
 		if h.keyID == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.keyID)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.keyID), true
 	case KeyOpsKey:
 		if h.keyOps == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.keyOps)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.keyOps), true
 	case KeyUsageKey:
 		if h.keyUsage == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.keyUsage)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.keyUsage), true
 	case OKPXKey:
 		if h.x == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, h.x); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return h.x, true
 	case X509CertChainKey:
 		if h.x509CertChain == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, h.x509CertChain); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return h.x509CertChain, true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.x509CertThumbprint)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.x509CertThumbprint), true
 	case X509CertThumbprintS256Key:
 		if h.x509CertThumbprintS256 == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.x509CertThumbprintS256)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.x509CertThumbprintS256), true
 	case X509URLKey:
 		if h.x509URL == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.x509URL)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.x509URL), true
 	default:
 		v, ok := h.privateParams[name]
-		if !ok {
-			return fmt.Errorf(`field %q not found`, name)
-		}
-		if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
+		return v, ok
 	}
-	return nil
 }
 
 func (h *okpPublicKey) Set(name string, value any) error {
@@ -864,112 +825,71 @@ func (h *okpPrivateKey) Has(name string) bool {
 	}
 }
 
-func (h *okpPrivateKey) Get(name string, dst any) error {
+func (h *okpPrivateKey) Field(name string) (any, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	switch name {
 	case KeyTypeKey:
-		if err := blackmagic.AssignIfCompatible(dst, h.KeyType()); err != nil {
-			return fmt.Errorf(`okpPrivateKey.Get: failed to assign value for field %q to destination object: %w`, name, err)
-		}
+		return h.KeyType(), true
 	case AlgorithmKey:
 		if h.algorithm == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.algorithm)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.algorithm), true
 	case OKPCrvKey:
 		if h.crv == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.crv)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.crv), true
 	case OKPDKey:
 		if h.d == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, h.d); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return h.d, true
 	case KeyIDKey:
 		if h.keyID == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.keyID)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.keyID), true
 	case KeyOpsKey:
 		if h.keyOps == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.keyOps)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.keyOps), true
 	case KeyUsageKey:
 		if h.keyUsage == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.keyUsage)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.keyUsage), true
 	case OKPXKey:
 		if h.x == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, h.x); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return h.x, true
 	case X509CertChainKey:
 		if h.x509CertChain == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, h.x509CertChain); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return h.x509CertChain, true
 	case X509CertThumbprintKey:
 		if h.x509CertThumbprint == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.x509CertThumbprint)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.x509CertThumbprint), true
 	case X509CertThumbprintS256Key:
 		if h.x509CertThumbprintS256 == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.x509CertThumbprintS256)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.x509CertThumbprintS256), true
 	case X509URLKey:
 		if h.x509URL == nil {
-			return fmt.Errorf(`field %q not found`, name)
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(h.x509URL)); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
-		return nil
+		return *(h.x509URL), true
 	default:
 		v, ok := h.privateParams[name]
-		if !ok {
-			return fmt.Errorf(`field %q not found`, name)
-		}
-		if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
-			return fmt.Errorf(`failed to assign value for field %q: %w`, name, err)
-		}
+		return v, ok
 	}
-	return nil
 }
 
 func (h *okpPrivateKey) Set(name string, value any) error {

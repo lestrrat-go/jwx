@@ -41,8 +41,9 @@ func getAccessCount(t *testing.T, src jwk.Set) int {
 	key, ok := src.Key(0)
 	require.True(t, ok, `src.Key(0) should succeed`)
 
-	var v float64
-	require.NoError(t, key.Get(`accessCount`, &v), `key.Get("accessCount") should succeed`)
+	fieldV, ok := key.Field(`accessCount`)
+	require.True(t, ok, `key.Field("accessCount") should succeed`)
+	v := fieldV.(float64)
 
 	return int(v)
 }

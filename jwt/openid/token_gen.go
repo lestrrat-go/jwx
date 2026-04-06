@@ -12,11 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/jwt"
-	jwterrs "github.com/lestrrat-go/jwx/v3/jwt/internal/errors"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 )
 
@@ -131,21 +129,11 @@ type Token interface {
 	// Zoneinfo returns the value for "zoneinfo" field of the token
 	Zoneinfo() (string, bool)
 
-	// Get is used to extract the value of any claim, including non-standard claims, out of the token.
-	//
-	// The first argument is the name of the claim. The second argument is a pointer
-	// to a variable that will receive the value of the claim. The method returns
-	// an error if the claim does not exist, or if the value cannot be assigned to
-	// the destination variable.  Note that a field is considered to "exist" even if
-	// the value is empty-ish (e.g. 0, false, ""), as long as it is explicitly set.
-	//
-	// For standard claims, you can use the corresponding getter method, such as
-	// `Issuer()`, `Subject()`, `Audience()`, `IssuedAt()`, `NotBefore()`, `ExpiresAt()`
-	//
-	// Note that fields of JWS/JWE are NOT accessible through this method. You need
-	// to use `jws.Parse` and `jwe.Parse` to obtain the JWS/JWE message (and NOT
-	// the payload, which presumably is the JWT), and then use their `Get` methods in their respective packages
-	Get(string, any) error
+	// Field returns the value of a claim by name, along with a boolean indicating
+	// whether the claim was found. For standard claims, you can also use the
+	// corresponding getter method, such as `Issuer()`, `Subject()`, etc.
+	// For type-safe access to claims, use the `jwt.Get[T]()` generic accessor.
+	Field(string) (any, bool)
 
 	// Set assigns a value to the corresponding field in the token. Some
 	// pre-defined fields such as `nbf`, `iat`, `iss` need their values to
@@ -280,227 +268,143 @@ func (t *stdToken) Has(name string) bool {
 	}
 }
 
-func (t *stdToken) Get(name string, dst any) error {
+func (t *stdToken) Field(name string) (any, bool) {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	switch name {
 	case AddressKey:
 		if t.address == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, t.address); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return t.address, true
 	case AudienceKey:
 		if t.audience == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, t.audience.Get()); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return t.audience.Get(), true
 	case BirthdateKey:
 		if t.birthdate == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, t.birthdate); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return t.birthdate, true
 	case EmailKey:
 		if t.email == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.email)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.email), true
 	case EmailVerifiedKey:
 		if t.emailVerified == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.emailVerified)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.emailVerified), true
 	case ExpirationKey:
 		if t.expiration == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, t.expiration.Get()); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return t.expiration.Get(), true
 	case FamilyNameKey:
 		if t.familyName == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.familyName)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.familyName), true
 	case GenderKey:
 		if t.gender == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.gender)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.gender), true
 	case GivenNameKey:
 		if t.givenName == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.givenName)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.givenName), true
 	case IssuedAtKey:
 		if t.issuedAt == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, t.issuedAt.Get()); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return t.issuedAt.Get(), true
 	case IssuerKey:
 		if t.issuer == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.issuer)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.issuer), true
 	case JwtIDKey:
 		if t.jwtID == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.jwtID)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.jwtID), true
 	case LocaleKey:
 		if t.locale == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.locale)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.locale), true
 	case MiddleNameKey:
 		if t.middleName == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.middleName)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.middleName), true
 	case NameKey:
 		if t.name == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.name)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.name), true
 	case NicknameKey:
 		if t.nickname == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.nickname)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.nickname), true
 	case NotBeforeKey:
 		if t.notBefore == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, t.notBefore.Get()); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return t.notBefore.Get(), true
 	case PhoneNumberKey:
 		if t.phoneNumber == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.phoneNumber)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.phoneNumber), true
 	case PhoneNumberVerifiedKey:
 		if t.phoneNumberVerified == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.phoneNumberVerified)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.phoneNumberVerified), true
 	case PictureKey:
 		if t.picture == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.picture)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.picture), true
 	case PreferredUsernameKey:
 		if t.preferredUsername == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.preferredUsername)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.preferredUsername), true
 	case ProfileKey:
 		if t.profile == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.profile)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.profile), true
 	case SubjectKey:
 		if t.subject == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.subject)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.subject), true
 	case UpdatedAtKey:
 		if t.updatedAt == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, t.updatedAt.Get()); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return t.updatedAt.Get(), true
 	case WebsiteKey:
 		if t.website == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.website)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.website), true
 	case ZoneinfoKey:
 		if t.zoneinfo == nil {
-			return jwterrs.ClaimNotFoundError{Name: name}
+			return nil, false
 		}
-		if err := blackmagic.AssignIfCompatible(dst, *(t.zoneinfo)); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return *(t.zoneinfo), true
 	default:
 		v, ok := t.privateClaims[name]
-		if !ok {
-			return jwterrs.ClaimNotFoundError{Name: name}
-		}
-		if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
-			return jwterrs.ClaimAssignmentFailedError{Err: err}
-		}
-		return nil
+		return v, ok
 	}
 }
 

@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
@@ -21,7 +20,7 @@ type verifyContext struct {
 	dst             *Message
 	detachedPayload []byte
 	keyProviders    []KeyProvider
-	keyUsed         any
+	keyUsed         *any
 	validateKey     bool
 	strictCritical  bool
 	encoder         Base64Encoder
@@ -219,9 +218,7 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 
 	// Verification succeeded
 	if vc.keyUsed != nil {
-		if err := blackmagic.AssignIfCompatible(vc.keyUsed, key); err != nil {
-			return fmt.Errorf(`failed to assign used key (%T) to %T: %w`, key, vc.keyUsed, err)
-		}
+		*vc.keyUsed = key
 	}
 
 	if vc.dst != nil {

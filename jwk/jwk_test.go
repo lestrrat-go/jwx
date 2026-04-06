@@ -25,8 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/blackmagic"
-
 	"github.com/lestrrat-go/jwx/v3/cert"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/jose"
@@ -199,8 +197,8 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 	t.Run("Fields", func(t *testing.T) {
 		for k, kdef := range def {
 			t.Run(k, func(t *testing.T) {
-				var getval any
-				require.NoError(t, key.Get(k, &getval), `key.Get(%s) should succeed`, k)
+				getval, ok := key.Field(k)
+				require.True(t, ok, `key.Field(%s) should succeed`, k)
 
 				expected := kdef.Expected
 				if expected == nil {
@@ -259,10 +257,10 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 						}
 					}
 
-					var v any
-					var v2 any
-					require.NoError(t, key.Get(k, &v), `key.Get(%s) should succeed`, k)
-					require.NoError(t, newkey.Get(k, &v2), `newkey.Get(%s) should succeed`, k)
+					v, ok := key.Field(k)
+					require.True(t, ok, `key.Field(%s) should succeed`, k)
+					v2, ok := newkey.Field(k)
+					require.True(t, ok, `newkey.Field(%s) should succeed`, k)
 					require.Equal(t, v, v2, `values should match`)
 				}
 			})
@@ -271,8 +269,8 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 	t.Run("Raw", func(t *testing.T) {
 		typ := expectedRawKeyType(key)
 
-		var rawkey any
-		require.NoError(t, jwk.Export(key, &rawkey), `Raw() should succeed`)
+		rawkey, err := jwk.Export(key)
+		require.NoError(t, err, `Raw() should succeed`)
 		require.IsType(t, rawkey, typ, `raw key should be of this type`)
 	})
 	t.Run("PublicKey", func(t *testing.T) {
@@ -299,8 +297,8 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 		}
 
 		for _, k := range key.Keys() {
-			var v any
-			require.NoError(t, key.Get(k, &v), `key.Get should succeed`)
+			v, ok := key.Field(k)
+			require.True(t, ok, `key.Field should succeed`)
 			require.NoError(t, newkey.Set(k, v), `newkey.Set should succeed`)
 		}
 	})
@@ -353,8 +351,8 @@ func TestParse(t *testing.T) {
 			t.Run("Raw", func(t *testing.T) {
 				t.Helper()
 
-				var irawkey any
-				require.NoError(t, jwk.Export(key, &irawkey), `key.Raw(&interface) should ucceed`)
+				irawkey, err := jwk.Export(key)
+				require.NoError(t, err, `jwk.Export should succeed`)
 
 				isPrivate, err := jwk.IsPrivateKey(key)
 				require.NoError(t, err, "jwk.IsPrivateKey(%T) should succeed", key)
@@ -363,32 +361,32 @@ func TestParse(t *testing.T) {
 				switch k := key.(type) {
 				case jwk.RSAPrivateKey:
 					require.True(t, isPrivate, `jwk.IsPrivateKey(&rsa.PrivateKey) should be true`)
-					var rawkey rsa.PrivateKey
-					require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&rsa.PrivateKey) should succeed`)
-					crawkey = &rawkey
+					rawkey, ok := irawkey.(*rsa.PrivateKey)
+					require.True(t, ok, `key.Raw should return *rsa.PrivateKey`)
+					crawkey = rawkey
 				case jwk.RSAPublicKey:
 					require.False(t, isPrivate, `jwk.IsPrivateKey(&rsa.PublicKey) should be false`)
-					var rawkey rsa.PublicKey
-					require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&rsa.PublicKey) should succeed`)
-					crawkey = &rawkey
+					rawkey, ok := irawkey.(*rsa.PublicKey)
+					require.True(t, ok, `key.Raw should return *rsa.PublicKey`)
+					crawkey = rawkey
 				case jwk.ECDSAPrivateKey:
 					require.True(t, isPrivate, `jwk.IsPrivateKey(&ecdsa.PrivateKey) should be true`)
-					var rawkey ecdsa.PrivateKey
-					require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdsa.PrivateKey) should succeed`)
-					crawkey = &rawkey
+					rawkey, ok := irawkey.(*ecdsa.PrivateKey)
+					require.True(t, ok, `key.Raw should return *ecdsa.PrivateKey`)
+					crawkey = rawkey
 				case jwk.OKPPrivateKey:
 					require.True(t, isPrivate, `jwk.IsPrivateKey(&ed25519.PrivateKey) should be true`)
 					crv, ok := k.Crv()
 					require.True(t, ok, `k.Crv() should succeed`)
 					switch crv {
 					case jwa.Ed25519():
-						var rawkey ed25519.PrivateKey
-						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ed25519.PrivateKey) should succeed`)
+						rawkey, ok := irawkey.(ed25519.PrivateKey)
+						require.True(t, ok, `key.Raw should return ed25519.PrivateKey`)
 						crawkey = rawkey
 					case jwa.X25519():
-						var rawkey ecdh.PrivateKey
-						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdh.PrivateKey) should succeed`)
-						crawkey = &rawkey
+						rawkey, ok := irawkey.(*ecdh.PrivateKey)
+						require.True(t, ok, `key.Raw should return *ecdh.PrivateKey`)
+						crawkey = rawkey
 					default:
 						t.Errorf(`invalid curve %s`, crv)
 					}
@@ -401,13 +399,13 @@ func TestParse(t *testing.T) {
 					require.True(t, ok, `k.Crv() should succeed`)
 					switch crv {
 					case jwa.Ed25519():
-						var rawkey ed25519.PublicKey
-						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ed25519.PublicKey) should succeed`)
+						rawkey, ok := irawkey.(ed25519.PublicKey)
+						require.True(t, ok, `key.Raw should return ed25519.PublicKey`)
 						crawkey = rawkey
 					case jwa.X25519():
-						var rawkey ecdh.PublicKey
-						require.NoError(t, jwk.Export(key, &rawkey), `key.Raw(&ecdh.PublicKey) should succeed`)
-						crawkey = &rawkey
+						rawkey, ok := irawkey.(*ecdh.PublicKey)
+						require.True(t, ok, `key.Raw should return *ecdh.PublicKey`)
+						crawkey = rawkey
 					default:
 						t.Errorf(`invalid curve %s`, crv)
 					}
@@ -839,8 +837,8 @@ func TestPublicKeyOf(t *testing.T) {
 			require.NoError(t, err, `jwk.PublicKeyOf(%T) should succeed`, jwkKey)
 
 			// Get the raw key to compare
-			var rawKey any
-			require.NoError(t, jwk.Export(pubJwkKey, &rawKey), `pubJwkKey.Raw should succeed`)
+			rawKey, err := jwk.Export(pubJwkKey)
+			require.NoError(t, err, `pubJwkKey.Raw should succeed`)
 			require.Equal(t, key.PublicKeyType, reflect.TypeOf(rawKey), `public key types should match (got %T)`, rawKey)
 		})
 	}
@@ -881,8 +879,8 @@ func TestPublicKeyOf(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("key%d", i), kid, `KeyID() should match for %T`, setKey)
 
 			// Get the raw key to compare
-			var rawKey any
-			require.NoError(t, jwk.Export(setKey, &rawKey), `pubJwkKey.Raw should succeed`)
+			rawKey, err := jwk.Export(setKey)
+			require.NoError(t, err, `pubJwkKey.Raw should succeed`)
 			require.Equal(t, key.PublicKeyType, reflect.TypeOf(rawKey), `public key types should match (got %T)`, rawKey)
 		}
 	})
@@ -1315,9 +1313,11 @@ func TestCustomField(t *testing.T) {
 		require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 		for _, name := range []string{rfc3339Key, rfc1123Key} {
-			var v time.Time
-			require.NoError(t, key.Get(name, &v), `key.Get(%q) should succeed`, name)
-			require.Equal(t, expected, v, `values should match`)
+			v, ok := key.Field(name)
+			require.True(t, ok, `key.Field(%q) should succeed`, name)
+			tv, ok := v.(time.Time)
+			require.True(t, ok, `value should be time.Time`)
+			require.Equal(t, expected, tv, `values should match`)
 		}
 	})
 }
@@ -1354,8 +1354,10 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 	require.Equal(t, jwa.RSA(), key.KeyType(), `key type should be RSA`)
 
-	var pubkey rsa.PublicKey
-	require.NoError(t, jwk.Export(key, &pubkey), `key.Raw should succeed`)
+	rawV, err := jwk.Export(key)
+	require.NoError(t, err, `key.Raw should succeed`)
+	pubkey, ok := rawV.(*rsa.PublicKey)
+	require.True(t, ok, `exported key should be *rsa.PublicKey`)
 
 	N := &big.Int{}
 	N, _ = N.SetString(`779390807991489150242580488277564408218067197694419403671246387831173881192316375931050469298375090533614189460270485948672580508192398132571230359681952349714254730569052029178325305344289615160181016909374016900403698428293142159695593998453788610098596363011884623801134548926432366560975619087466760747503535615491182090094278093592303467050094984372887804234341012289019841973178427045121609424191835554013017436743418746919496835541323790719629313070434897002108079086472354410640690933161025543816362962891190753195691593288890628966181309776957070655619665306995097798188588453327627252794498823229009195585001242181503742627414517186199717150645163224325403559815442522031412813762764879089624715721999552786759649849125487587658121901233329199571710176245013452847516179837767710027433169340850618643815395642568876192931279303797384539146396956216244189819533317558165234451499206045369678277987397913889177569796721689284116762473340601498426367267765652880247655009239893325078809797979771964770948333084772104541394544131668212262901583064272659565503500144472388676955404823979083054620299811247635425415371418720649368570747531327436083928369741631909855731133100553629456091216238379430154237251461586878393695925917`, 10)
@@ -1432,8 +1434,8 @@ func TestTypedFields(t *testing.T) {
 				t.Run(tc.Name, func(t *testing.T) {
 					got, err := jwk.ParseKey(serialized, tc.Options...)
 					require.NoError(t, err, `jwk.Parse should succeed`)
-					var v any
-					require.NoError(t, got.Get("typed-field", &v), `got.Get() should succeed`)
+					v, ok := got.Field("typed-field")
+					require.True(t, ok, `got.Field() should succeed`)
 
 					field, err := tc.PostProcess(t, v)
 					require.NoError(t, err, `tc.PostProcess should succeed`)
@@ -1460,8 +1462,8 @@ func TestTypedFields(t *testing.T) {
 				for i := range got.Len() {
 					key, ok := got.Key(i)
 					require.True(t, ok, `got.Key() should succeed`)
-					var v any
-					require.NoError(t, key.Get("typed-field", &v), `key.Get() should succeed`)
+					v, ok := key.Field("typed-field")
+					require.True(t, ok, `key.Field() should succeed`)
 					field, err := tc.PostProcess(t, v)
 					require.NoError(t, err, `tc.PostProcess should succeed`)
 
@@ -1558,18 +1560,22 @@ func TestSetWithPrivateParams(t *testing.T) {
 			require.NoError(t, err, `jwk.Parse should succeed`)
 			require.Equal(t, 1, set.Len(), `set.Len() should be 1`)
 
-			var kid string
-			require.NoError(t, set.Get(`renewal_kid`, &kid), `set.Get("renewal_kid") should succeed`)
+			kidV, ok := set.Field(`renewal_kid`)
+			require.True(t, ok, `set.Field("renewal_kid") should succeed`)
+			kid, ok := kidV.(string)
+			require.True(t, ok, `renewal_kid should be a string`)
 
-			require.Equal(t, `foo`, kid, `set.Get("renewal_kid") should return "foo"`)
+			require.Equal(t, `foo`, kid, `set.Field("renewal_kid") should return "foo"`)
 
 			key, ok := set.Key(0)
 			require.True(t, ok, `set.Key(0) should return ok = true`)
 
-			kid = ""
-			require.NoError(t, key.Get(`renewal_kid`, &kid), `key.Get("renewal_kid") should return ok = true`)
+			kidV2, ok := key.Field(`renewal_kid`)
+			require.True(t, ok, `key.Field("renewal_kid") should succeed`)
+			kid2, ok := kidV2.(string)
+			require.True(t, ok, `renewal_kid should be a string`)
 
-			require.Equal(t, `foo`, kid, `key.Get("renewal_kid") should return "foo"`)
+			require.Equal(t, `foo`, kid2, `key.Field("renewal_kid") should return "foo"`)
 		}
 
 		t.Run("Check original buffer", func(t *testing.T) {
@@ -1602,10 +1608,10 @@ func TestSetWithPrivateParams(t *testing.T) {
 			require.NoError(t, err, `jwk.Parse should succeed`)
 			require.Equal(t, 3, set.Len(), `set.Len() should be 3`)
 
-			var v any
-			require.NoError(t, set.Get(`renewal_kid`, &v), `set.Get("renewal_kid") should return ok = true`)
+			v, ok := set.Field(`renewal_kid`)
+			require.True(t, ok, `set.Field("renewal_kid") should succeed`)
 
-			require.Equal(t, `foo`, v, `set.Get("renewal_kid") should return "foo"`)
+			require.Equal(t, `foo`, v, `set.Field("renewal_kid") should return "foo"`)
 		}
 
 		t.Run("Check original buffer", func(t *testing.T) {
@@ -1624,10 +1630,10 @@ func TestSetWithPrivateParams(t *testing.T) {
 		set := jwk.NewSet()
 		require.NoError(t, set.Set(`renewal_kid`, `foo`), `set.Set should succeed`)
 
-		var v any
-		require.NoError(t, set.Get(`renewal_kid`, &v), `set.Get("renewal_kid") should succeed`)
+		v, ok := set.Field(`renewal_kid`)
+		require.True(t, ok, `set.Field("renewal_kid") should succeed`)
 
-		require.Equal(t, `foo`, v, `set.Get("renewal_kid") should return "foo"`)
+		require.Equal(t, `foo`, v, `set.Field("renewal_kid") should return "foo"`)
 		require.Error(t, set.Set(`keys`, []string{"foo"}), `set.Set should fail`)
 
 		k, err := jwk.Import([]byte("foobar"))
@@ -2143,8 +2149,8 @@ func TestGH947(t *testing.T) {
 	raw := []byte(`{"crv":"Ed25519","d":"","x":"","kty":"OKP"}`)
 	k, err := jwk.ParseKey(raw)
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
-	var exported []byte
-	require.Error(t, jwk.Export(k, &exported), `(okpkey).Raw with 0-length OKP key should fail`)
+	_, err = jwk.Export(k)
+	require.Error(t, err, `(okpkey).Raw with 0-length OKP key should fail`)
 }
 
 func TestValidation(t *testing.T) {
@@ -2238,8 +2244,10 @@ func TestGH1262(t *testing.T) {
 		require.NoError(t, err, `jwk.Import should succeed`)
 		_ = jwkCliPriv
 
-		var rawCliPriv ecdh.PrivateKey
-		require.NoError(t, jwk.Export(jwkCliPriv, &rawCliPriv), `jwk.Export should succeed`)
+		rawCliPrivV, err := jwk.Export(jwkCliPriv)
+		require.NoError(t, err, `jwk.Export should succeed`)
+		rawCliPriv := rawCliPrivV.(*ecdh.PrivateKey)
+		_ = rawCliPriv
 
 		pubCli := keyCli.PublicKey() // server is able to retrieve the pub key part of client
 
@@ -2258,11 +2266,12 @@ func TestGH1262(t *testing.T) {
 		_ = secretSrv // doing some non-standard encryption & response with encrypted data
 
 		// client
-		pubSrv := &ecdh.PublicKey{}
 		jwkCli, err := jwk.ParseKey(jwkBuf) // extract jwkBuf
 		require.NoError(t, err, `jwk.ParseKey should succeed`)
 
-		require.NoError(t, jwk.Export(jwkCli, pubSrv), `jwk.Export should succeed`)
+		pubSrvV, err := jwk.Export(jwkCli)
+		require.NoError(t, err, `jwk.Export should succeed`)
+		pubSrv := pubSrvV.(*ecdh.PublicKey)
 		secretCli, err := keyCli.ECDH(pubSrv)
 		require.NoError(t, err, `keyCli.ECDH should succeed`)
 
@@ -2295,9 +2304,10 @@ func TestExportEmbeddedKey(t *testing.T) {
 		directEmbed := &DirectEmbed{Key: rsaKey}
 
 		// Export the key from the direct embedding
-		var rawKey rsa.PrivateKey
-		err = jwk.Export(directEmbed, &rawKey)
+		rawKeyV, err := jwk.Export(directEmbed)
 		require.NoError(t, err, "jwk.Export should succeed with direct embed")
+		_, ok := rawKeyV.(*rsa.PrivateKey)
+		require.True(t, ok, "exported key should be *rsa.PrivateKey")
 	})
 
 	t.Run("Indirect Embed", func(t *testing.T) {
@@ -2310,12 +2320,13 @@ func TestExportEmbeddedKey(t *testing.T) {
 		indirectEmbed := &IndirectEmbed{DirectEmbed: directEmbed}
 
 		// Export the key from the indirect embedding
-		var rawKey rsa.PrivateKey
-		err = jwk.Export(indirectEmbed, &rawKey)
+		rawKeyV, err := jwk.Export(indirectEmbed)
 		if err != nil {
 			t.Logf("Error: %s", err)
 		}
 		require.NoError(t, err, "jwk.Export should succeed with indirect embed")
+		_, ok := rawKeyV.(*rsa.PrivateKey)
+		require.True(t, ok, "exported key should be *rsa.PrivateKey")
 	})
 
 	t.Run("Double Indirect Embed", func(t *testing.T) {
@@ -2329,9 +2340,10 @@ func TestExportEmbeddedKey(t *testing.T) {
 		doubleIndirectEmbed := &DoubleIndirectEmbed{IndirectEmbed: indirectEmbed}
 
 		// Export the key from the double indirect embedding
-		var rawKey rsa.PrivateKey
-		err = jwk.Export(doubleIndirectEmbed, &rawKey)
+		rawKeyV, err := jwk.Export(doubleIndirectEmbed)
 		require.NoError(t, err, "jwk.Export should succeed with double indirect embed")
+		_, ok := rawKeyV.(*rsa.PrivateKey)
+		require.True(t, ok, "exported key should be *rsa.PrivateKey")
 	})
 }
 
@@ -2360,12 +2372,11 @@ func TestRegisterX509Decoder(t *testing.T) {
 
 	// Create a custom decoder that handles a custom PEM type and returns the test key
 	customIdent := "test-custom-decoder"
-	customDecoder := jwk.X509DecodeFunc(func(dst any, block *pem.Block) error {
+	customDecoder := jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
 		if block.Type == "TEST CUSTOM KEY" {
-			// Use blackmagic to assign the key to the destination
-			return blackmagic.AssignIfCompatible(dst, testKey)
+			return testKey, nil
 		}
-		return fmt.Errorf("unsupported type or block")
+		return nil, fmt.Errorf("unsupported type or block")
 	})
 
 	// Register the custom decoder
@@ -2395,12 +2406,11 @@ func TestUnregisterX509Decoder(t *testing.T) {
 
 	// Create a custom decoder
 	customIdent := "test-unregister-decoder"
-	customDecoder := jwk.X509DecodeFunc(func(dst any, block *pem.Block) error {
+	customDecoder := jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
 		if block.Type == "TEST UNREGISTER" {
-			// Use blackmagic to assign the key to the destination
-			return blackmagic.AssignIfCompatible(dst, testKey)
+			return testKey, nil
 		}
-		return fmt.Errorf("unsupported type or block")
+		return nil, fmt.Errorf("unsupported type or block")
 	})
 
 	// Register the decoder
@@ -2440,12 +2450,12 @@ func TestRegisterX509Decoder_DuplicateRegistration(t *testing.T) {
 	// Create a custom decoder that handles a specific PEM type
 	customIdent := "test-duplicate-decoder"
 	callCount := 0
-	decoder := jwk.X509DecodeFunc(func(dst any, block *pem.Block) error {
+	decoder := jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
 		callCount++
 		if block.Type == "TEST DUPLICATE" {
-			return blackmagic.AssignIfCompatible(dst, testKey)
+			return testKey, nil
 		}
-		return fmt.Errorf("unsupported type")
+		return nil, fmt.Errorf("unsupported type")
 	})
 
 	// Register the decoder
@@ -2491,18 +2501,19 @@ func TestGH1529(t *testing.T) {
 		require.NoError(t, err, `set1.Clone should succeed`)
 
 		// Verify the custom field was copied during clone
-		var v2Initial any
-		require.NoError(t, set2.Get("foo", &v2Initial), `set2.Get should succeed after clone`)
+		v2Initial, ok := set2.Field("foo")
+		require.True(t, ok, `set2.Field should succeed after clone`)
 		require.Equal(t, "bar", v2Initial, `set2 should have copied "foo" from set1`)
 
 		// This should not error - cloned set should allow modifying the same field
 		require.NoError(t, set2.Set("foo", "baz"), `set2.Set should succeed`)
 
 		// Verify the sets are independent (modifying set2 doesn't affect set1)
-		var v1, v2 any
-		require.NoError(t, set1.Get("foo", &v1), `set1.Get should succeed`)
-		require.NoError(t, set2.Get("foo", &v2), `set2.Get should succeed`)
-		require.Equal(t, "bar", v1, `set1.Get("foo") should still return "bar"`)
-		require.Equal(t, "baz", v2, `set2.Get("foo") should return "baz"`)
+		v1, ok := set1.Field("foo")
+		require.True(t, ok, `set1.Field should succeed`)
+		v2, ok := set2.Field("foo")
+		require.True(t, ok, `set2.Field should succeed`)
+		require.Equal(t, "bar", v1, `set1.Field("foo") should still return "bar"`)
+		require.Equal(t, "baz", v2, `set2.Field("foo") should return "baz"`)
 	})
 }

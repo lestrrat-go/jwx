@@ -35,8 +35,9 @@ func TestX509CertChain(t *testing.T) {
 		t.Run("Set X509CertChainKey", func(t *testing.T) {
 			require.NoError(t, key.Set(X509CertChainKey, &c), "Set for x5c should succeed")
 
-			var gotcerts cert.Chain
-			require.NoError(t, key.Get(X509CertChainKey, &gotcerts), "Get for x5c should succeed")
+			gotcertsV, ok := key.Field(X509CertChainKey)
+			require.True(t, ok, "Field for x5c should succeed")
+			gotcerts := gotcertsV.(*cert.Chain)
 			require.Equal(t, gotcerts.Len(), 3, `should have 3 cert`)
 		})
 	}
@@ -59,9 +60,9 @@ func TestIterator(t *testing.T) {
 				pair := iter.Pair()
 				seen[pair.Key.(string)] = pair.Value
 
-				var getV any
-				require.NoError(t, v.Get(pair.Key.(string), &getV), `v.Get should succeed for key %#v`, pair.Key)
-				require.Equal(t, pair.Value, getV, `pair.Value should match value from v.Get()`)
+				getV, ok := v.Field(pair.Key.(string))
+				require.True(t, ok, `v.Field should succeed for key %#v`, pair.Key)
+				require.Equal(t, pair.Value, getV, `pair.Value should match value from v.Field()`)
 			}
 			require.Equal(t, expected, seen, `values should match`)
 		})

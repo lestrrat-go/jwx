@@ -152,8 +152,8 @@ func TestStandardHeadersFilter(t *testing.T) {
 			require.ElementsMatch(t, originalKeys, rejectedKeys, "rejected should have all original fields")
 
 			// Verify values are preserved
-			var customValue string
-			require.NoError(t, rejected.Get("custom1", &customValue), "rejected.Get should succeed")
+			customValue, ok := rejected.Field("custom1")
+			require.True(t, ok, "rejected.Field should succeed")
 			require.Equal(t, "value1", customValue, "value for custom1 field should be preserved")
 		})
 	})

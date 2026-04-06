@@ -3,7 +3,6 @@ package jwebb
 import (
 	"crypto"
 	"crypto/aes"
-	"crypto/ecdh"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
@@ -61,12 +60,12 @@ func DeriveECDHES(alg string, apu, apv []byte, privkeyif, pubkeyif any, keysize 
 	pubinfo := make([]byte, 4)
 	binary.BigEndian.PutUint32(pubinfo, keysize*tokens.BitsPerByte)
 
-	var privkey *ecdh.PrivateKey
-	var pubkey *ecdh.PublicKey
-	if err := keyconv.ECDHPrivateKey(&privkey, privkeyif); err != nil {
+	privkey, err := keyconv.ECDHPrivateKey(privkeyif)
+	if err != nil {
 		return nil, fmt.Errorf(`jwebb.DeriveECDHES: %w`, err)
 	}
-	if err := keyconv.ECDHPublicKey(&pubkey, pubkeyif); err != nil {
+	pubkey, err := keyconv.ECDHPublicKey(pubkeyif)
+	if err != nil {
 		return nil, fmt.Errorf(`jwebb.DeriveECDHES: %w`, err)
 	}
 
@@ -108,8 +107,8 @@ func KeyDecryptECDHES(_, _ []byte, alg string, apu, apv []byte, privkey, pubkey 
 // RSA key decryption functions
 
 func KeyDecryptRSA15(_, enckey []byte, privkeyif any, keysize int) ([]byte, error) {
-	var privkey *rsa.PrivateKey
-	if err := keyconv.RSAPrivateKey(&privkey, privkeyif); err != nil {
+	privkey, err := keyconv.RSAPrivateKey(privkeyif)
+	if err != nil {
 		return nil, fmt.Errorf(`jwebb.KeyDecryptRSA15: %w`, err)
 	}
 
@@ -154,8 +153,8 @@ func KeyDecryptRSA15(_, enckey []byte, privkeyif any, keysize int) ([]byte, erro
 }
 
 func KeyDecryptRSAOAEP(_, enckey []byte, alg string, privkeyif any) ([]byte, error) {
-	var privkey *rsa.PrivateKey
-	if err := keyconv.RSAPrivateKey(&privkey, privkeyif); err != nil {
+	privkey, err := keyconv.RSAPrivateKey(privkeyif)
+	if err != nil {
 		return nil, fmt.Errorf(`jwebb.KeyDecryptRSAOAEP: %w`, err)
 	}
 

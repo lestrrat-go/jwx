@@ -261,8 +261,8 @@ func DecryptJweFile(ctx context.Context, file string, alg jwa.KeyEncryptionAlgor
 		return nil, fmt.Errorf(`failed to read from encrypted file %s: %w`, file, err)
 	}
 
-	var rawkey any
-	if err := jwk.Export(key, &rawkey); err != nil {
+	rawkey, err := jwk.Export(key)
+	if err != nil {
 		return nil, fmt.Errorf(`failed to obtain raw key from JWK: %w`, err)
 	}
 
@@ -277,23 +277,28 @@ func EncryptJweFile(ctx context.Context, dir string, payload []byte, keyalg jwa.
 
 	var keyif any
 
+	rawV, err := jwk.Export(key)
+	if err != nil {
+		return "", nil, fmt.Errorf(`failed to obtain raw key: %w`, err)
+	}
+
 	switch keyalg {
 	case jwa.RSA1_5(), jwa.RSA_OAEP(), jwa.RSA_OAEP_256(), jwa.RSA_OAEP_384(), jwa.RSA_OAEP_512():
-		var rawkey rsa.PrivateKey
-		if err := jwk.Export(key, &rawkey); err != nil {
-			return "", nil, fmt.Errorf(`failed to obtain raw key: %w`, err)
+		rawkey, ok := rawV.(*rsa.PrivateKey)
+		if !ok {
+			return "", nil, fmt.Errorf(`expected *rsa.PrivateKey, got %T`, rawV)
 		}
 		keyif = rawkey.PublicKey
 	case jwa.ECDH_ES(), jwa.ECDH_ES_A128KW(), jwa.ECDH_ES_A192KW(), jwa.ECDH_ES_A256KW():
-		var rawkey ecdsa.PrivateKey
-		if err := jwk.Export(key, &rawkey); err != nil {
-			return "", nil, fmt.Errorf(`failed to obtain raw key: %w`, err)
+		rawkey, ok := rawV.(*ecdsa.PrivateKey)
+		if !ok {
+			return "", nil, fmt.Errorf(`expected *ecdsa.PrivateKey, got %T`, rawV)
 		}
 		keyif = rawkey.PublicKey
 	default:
-		var rawkey []byte
-		if err := jwk.Export(key, &rawkey); err != nil {
-			return "", nil, fmt.Errorf(`failed to obtain raw key: %w`, err)
+		rawkey, ok := rawV.([]byte)
+		if !ok {
+			return "", nil, fmt.Errorf(`expected []byte, got %T`, rawV)
 		}
 		keyif = rawkey
 	}
@@ -317,11 +322,11 @@ func VerifyJwsFile(ctx context.Context, file string, alg jwa.SignatureAlgorithm,
 		return nil, fmt.Errorf(`failed to read from encrypted file %s: %w`, file, err)
 	}
 
-	var rawkey, pubkey any
-	if err := jwk.Export(key, &rawkey); err != nil {
+	rawkey, err := jwk.Export(key)
+	if err != nil {
 		return nil, fmt.Errorf(`failed to obtain raw key from JWK: %w`, err)
 	}
-	pubkey = rawkey
+	pubkey := rawkey
 	switch tkey := rawkey.(type) {
 	case *ecdsa.PrivateKey:
 		pubkey = tkey.PublicKey

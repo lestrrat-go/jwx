@@ -7,8 +7,6 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-
-	"github.com/lestrrat-go/blackmagic"
 )
 
 const (
@@ -65,50 +63,28 @@ func EncodeX509(dst []byte, v any) ([]byte, error) {
 	return dst, nil
 }
 
-func DecodeX509(dst any, block *pem.Block) error {
+func DecodeX509(block *pem.Block) (any, error) {
 	switch block.Type {
-	// Handle the semi-obvious cases
 	case RSAPrivateKeyBlockType:
-		key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			return fmt.Errorf(`failed to parse PKCS1 private key: %w`, err)
-		}
-		return blackmagic.AssignIfCompatible(dst, key)
+		return x509.ParsePKCS1PrivateKey(block.Bytes)
 	case RSAPublicKeyBlockType:
-		key, err := x509.ParsePKCS1PublicKey(block.Bytes)
-		if err != nil {
-			return fmt.Errorf(`failed to parse PKCS1 public key: %w`, err)
-		}
-		return blackmagic.AssignIfCompatible(dst, key)
+		return x509.ParsePKCS1PublicKey(block.Bytes)
 	case ECPrivateKeyBlockType:
-		key, err := x509.ParseECPrivateKey(block.Bytes)
-		if err != nil {
-			return fmt.Errorf(`failed to parse EC private key: %w`, err)
-		}
-		return blackmagic.AssignIfCompatible(dst, key)
+		return x509.ParseECPrivateKey(block.Bytes)
 	case PublicKeyBlockType:
-		// XXX *could* return dsa.PublicKey
-		key, err := x509.ParsePKIXPublicKey(block.Bytes)
-		if err != nil {
-			return fmt.Errorf(`failed to parse PKIX public key: %w`, err)
-		}
-		return blackmagic.AssignIfCompatible(dst, key)
+		return x509.ParsePKIXPublicKey(block.Bytes)
 	case PrivateKeyBlockType:
-		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-		if err != nil {
-			return fmt.Errorf(`failed to parse PKCS8 private key: %w`, err)
-		}
-		return blackmagic.AssignIfCompatible(dst, key)
+		return x509.ParsePKCS8PrivateKey(block.Bytes)
 	case CertificateBlockType:
 		// Only the public key is extracted. Certificate validation (chain,
 		// expiration, CN/SAN, EKU, etc.) is intentionally not performed here;
 		// it is an application-level concern. See jwk.ParseKey documentation.
 		cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return fmt.Errorf(`failed to parse certificate: %w`, err)
+			return nil, fmt.Errorf(`failed to parse certificate: %w`, err)
 		}
-		return blackmagic.AssignIfCompatible(dst, cert.PublicKey)
+		return cert.PublicKey, nil
 	default:
-		return fmt.Errorf(`invalid PEM block type %s`, block.Type)
+		return nil, fmt.Errorf(`invalid PEM block type %s`, block.Type)
 	}
 }

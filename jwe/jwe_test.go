@@ -51,9 +51,11 @@ func init() {
 		panic(err)
 	}
 
-	if err := jwk.Export(privkey, &rsaPrivKey); err != nil {
+	rawV, err := jwk.Export(privkey)
+	if err != nil {
 		panic(err)
 	}
+	rsaPrivKey = *rawV.(*rsa.PrivateKey)
 }
 
 func TestSanityCheck_JWEExamplePayload(t *testing.T) {
@@ -146,8 +148,9 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	privkey, err := jwk.ParseKey(jwkstr)
 	require.NoError(t, err, `parsing jwk should succeed`)
 
-	var rawkey rsa.PrivateKey
-	require.NoError(t, jwk.Export(privkey, &rawkey), `obtaining raw key should succeed`)
+	rawkeyV, err := jwk.Export(privkey)
+	require.NoError(t, err, `obtaining raw key should succeed`)
+	rawkey := rawkeyV.(*rsa.PrivateKey)
 
 	msg := jwe.NewMessage()
 	plaintext, err := jwe.Decrypt([]byte(serialized), jwe.WithKey(jwa.RSA_OAEP(), rawkey), jwe.WithMessage(msg))
@@ -408,15 +411,16 @@ func Test_GHIssue207(t *testing.T) {
 			require.NoError(t, err, `jwk.Thumbprint should succeed`)
 			require.Equal(t, base64.RawURLEncoding.EncodeToString(thumbprint), tc.Thumbprint, `thumbprints should match`)
 
-			var key ecdsa.PrivateKey
-			require.NoError(t, jwk.Export(webKey, &key), `jwk.Export should succeed`)
+			keyV, err := jwk.Export(webKey)
+			require.NoError(t, err, `jwk.Export should succeed`)
+			key := keyV.(*ecdsa.PrivateKey)
 
 			decrypted, err := jwe.Decrypt([]byte(tc.Data), jwe.WithKeyProvider(jwe.KeyProviderFunc(func(_ context.Context, sink jwe.KeySink, r jwe.Recipient, _ *jwe.Message) error {
 				alg, ok := r.Headers().Algorithm()
 				if !ok {
 					return fmt.Errorf(`attempted to fetch algorithm, could not find it`)
 				}
-				sink.Key(alg, &key)
+				sink.Key(alg, key)
 				return nil
 			})))
 			require.NoError(t, err, `jwe.Decrypt should succeed`)
@@ -558,8 +562,9 @@ func TestDecodePredefined_Direct(t *testing.T) {
 			require.NoError(t, err, `jwk.Thumbprint should succeed`)
 			require.Equal(t, base64.RawURLEncoding.EncodeToString(thumbprint), tc.Thumbprint, `thumbprints should match`)
 
-			var key []byte
-			require.NoError(t, jwk.Export(webKey, &key), `jwk.Export should succeed`)
+			keyV, err := jwk.Export(webKey)
+			require.NoError(t, err, `jwk.Export should succeed`)
+			key := keyV.([]byte)
 
 			decrypted, err := jwe.Decrypt([]byte(tc.Data), jwe.WithKey(jwa.DIRECT(), key))
 			require.NoError(t, err, `jwe.Decrypt should succeed`)
@@ -634,8 +639,10 @@ func TestCustomField(t *testing.T) {
 		msg, err := jwe.Parse(encrypted)
 		require.NoError(t, err, `jwe.Parse should succeed`)
 		for _, key := range []string{rfc3339Key, rfc1123Key} {
-			var v time.Time
-			require.NoError(t, msg.ProtectedHeaders().Get(key, &v), `msg.Get(%q) should succeed`, key)
+			fieldV, ok := msg.ProtectedHeaders().Field(key)
+			require.True(t, ok, `msg.Field(%q) should succeed`, key)
+			v, ok := fieldV.(time.Time)
+			require.True(t, ok, `value should be time.Time`)
 			require.Equal(t, expected, v, `values should match`)
 		}
 	})
@@ -650,8 +657,10 @@ func TestCustomField(t *testing.T) {
 		require.NoError(t, json.Unmarshal(encrypted, msg), `json.Unmarshal should succeed`)
 
 		for _, key := range []string{rfc3339Key, rfc1123Key} {
-			var v time.Time
-			require.NoError(t, msg.ProtectedHeaders().Get(key, &v), `msg.Get(%q) should succeed`, key)
+			fieldV, ok := msg.ProtectedHeaders().Field(key)
+			require.True(t, ok, `msg.Field(%q) should succeed`, key)
+			v, ok := fieldV.(time.Time)
+			require.True(t, ok, `value should be time.Time`)
 			require.Equal(t, expected, v, `values should match`)
 		}
 	})

@@ -90,8 +90,9 @@ func TestDate(t *testing.T) {
 				t1 := jwt.New()
 				err := t1.Set(jwt.IssuedAtKey, tc.Input)
 				require.NoError(t, err)
-				var v time.Time
-				require.NoError(t, t1.Get(jwt.IssuedAtKey, &v), `t1.Get should succeed`)
+				fieldV, ok := t1.Field(jwt.IssuedAtKey)
+				require.True(t, ok, `t1.Field should succeed`)
+				v := fieldV.(time.Time)
 				require.Equal(t, tc.Expected, v)
 			})
 		}
