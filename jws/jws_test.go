@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -619,8 +620,8 @@ func TestReadFile(t *testing.T) {
 
 	fmt.Fprintf(f, "%s", exampleCompactSerialization)
 
-	_, err = jws.ReadFile(f.Name())
-	require.NoError(t, err, `jws.ReadFile should succeed`)
+	_, err = jws.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()))
+	require.NoError(t, err, `jws.ParseFS should succeed`)
 }
 
 func TestVerifyNonUniqueKid(t *testing.T) {

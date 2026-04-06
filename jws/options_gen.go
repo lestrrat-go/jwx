@@ -4,7 +4,6 @@ package jws
 
 import (
 	"context"
-	"io/fs"
 
 	"github.com/lestrrat-go/option/v2"
 )
@@ -35,13 +34,12 @@ type globalOption struct {
 
 func (*globalOption) globalOption() {}
 
-// GlobalParseOption describes an Option that can be passed to `jws.Settings()`,
-// `jws.Parse()`, and `jws.ReadFile()`.
+// GlobalParseOption describes an Option that can be passed to `jws.Settings()`
+// and `jws.Parse()`.
 type GlobalParseOption interface {
 	Option
 	globalOption()
 	parseOption()
-	readFileOption()
 }
 
 type globalParseOption struct {
@@ -52,31 +50,17 @@ func (*globalParseOption) globalOption() {}
 
 func (*globalParseOption) parseOption() {}
 
-func (*globalParseOption) readFileOption() {}
-
-// ReadFileOption is a type of `Option` that can be passed to `jwe.Parse`
+// ParseOption is a type of `Option` that can be passed to `jws.Parse`
 type ParseOption interface {
 	Option
-	readFileOption()
+	parseOption()
 }
 
 type parseOption struct {
 	Option
 }
 
-func (*parseOption) readFileOption() {}
-
-// ReadFileOption is a type of `Option` that can be passed to `jws.ReadFile`
-type ReadFileOption interface {
-	Option
-	readFileOption()
-}
-
-type readFileOption struct {
-	Option
-}
-
-func (*readFileOption) readFileOption() {}
+func (*parseOption) parseOption() {}
 
 // SignOption describes options that can be passed to `jws.Sign`
 type SignOption interface {
@@ -135,7 +119,6 @@ type SignVerifyParseOption interface {
 	signOption()
 	verifyOption()
 	parseOption()
-	readFileOption()
 }
 
 type signVerifyParseOption struct {
@@ -147,8 +130,6 @@ func (*signVerifyParseOption) signOption() {}
 func (*signVerifyParseOption) verifyOption() {}
 
 func (*signVerifyParseOption) parseOption() {}
-
-func (*signVerifyParseOption) readFileOption() {}
 
 // VerifyOption describes options that can be passed to `jws.Verify`
 type VerifyOption interface {
@@ -206,7 +187,6 @@ type identBase64Encoder struct{}
 type identContext struct{}
 type identDetached struct{}
 type identDetachedPayload struct{}
-type identFS struct{}
 type identInferAlgorithmFromKey struct{}
 type identKey struct{}
 type identKeyProvider struct{}
@@ -238,10 +218,6 @@ func (identDetached) String() string {
 
 func (identDetachedPayload) String() string {
 	return "WithDetachedPayload"
-}
-
-func (identFS) String() string {
-	return "WithFS"
 }
 
 func (identInferAlgorithmFromKey) String() string {
@@ -339,11 +315,6 @@ func WithDetachedPayload(v []byte) SignVerifyOption {
 	return &signVerifyOption{option.New(identDetachedPayload{}, v)}
 }
 
-// WithFS specifies the source `fs.FS` object to read the file from.
-func WithFS(v fs.FS) ReadFileOption {
-	return &readFileOption{option.New(identFS{}, v)}
-}
-
 // WithInferAlgorithmFromKey specifies whether the JWS signing algorithm name
 // should be inferred by looking at the provided key, in case the JWS
 // message or the key does not have a proper `alg` header.
@@ -390,7 +361,7 @@ func WithKeyUsed(v any) VerifyOption {
 // `jws.ParseReader` will return an error. The default value is 10MB.
 //
 // This option can be passed to `jws.Settings()` to change the default
-// globally, or to `jws.ParseReader()` / `jws.ReadFile()` for a per-call
+// globally, or to `jws.ParseReader()` / `jws.ParseFS()` for a per-call
 // override.
 func WithMaxParseInputSize(v int64) GlobalParseOption {
 	return &globalParseOption{option.New(identMaxParseInputSize{}, v)}
@@ -402,7 +373,7 @@ func WithMaxParseInputSize(v int64) GlobalParseOption {
 // The default value is 100.
 //
 // This option can be passed to `jws.Settings()` to change the default
-// globally, or to `jws.Parse()` / `jws.ReadFile()` for a per-call
+// globally, or to `jws.Parse()` / `jws.ParseFS()` for a per-call
 // override.
 func WithMaxSignatures(v int) GlobalParseOption {
 	return &globalParseOption{option.New(identMaxSignatures{}, v)}

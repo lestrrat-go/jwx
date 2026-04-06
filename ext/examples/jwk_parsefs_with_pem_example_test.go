@@ -3,12 +3,13 @@ package examples_test
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"encoding/json"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func Example_jwk_readfile_with_pem() {
+func Example_jwk_ParseFS_with_pem() {
 	const src = `-----BEGIN CERTIFICATE-----
 MIIEljCCAn4CCQCTQBoGDvUbQTANBgkqhkiG9w0BAQsFADANMQswCQYDVQQGEwJK
 UDAeFw0yMTA0MDEwMDE4MjhaFw0yMjA0MDEwMDE4MjhaMA0xCzAJBgNVBAYTAkpQ
@@ -37,7 +38,7 @@ z8CjezfckLs7UKJOlhu3OU9TFsiGDzSDBZdDWO1/uciJ/AAWeSmsBt8cKL0MirIr
 c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 -----END CERTIFICATE-----`
 
-	f, err := os.CreateTemp(``, `jwk_readfile_with_pem-*.jwk`)
+	f, err := os.CreateTemp(``, `jwk_parsefs_with_pem-*.jwk`)
 	if err != nil {
 		fmt.Printf("failed to create temporary file: %s\n", err)
 		return
@@ -47,7 +48,7 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 	fmt.Fprint(f, src)
 	f.Close()
 
-	key, err := jwk.ReadFile(f.Name(), jwk.WithPEM(true))
+	key, err := jwk.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()), jwk.WithPEM(true))
 	if err != nil {
 		fmt.Printf("failed to parse key in PEM format: %s\n", err)
 		return

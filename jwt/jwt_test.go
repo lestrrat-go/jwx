@@ -14,6 +14,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -646,10 +647,10 @@ func TestReadFile(t *testing.T) {
 	require.NoError(t, err, `json.Marshal should succeed`)
 	_, err = f.Write(b)
 	require.NoError(t, err, `f.Write should succeed`)
-	_, err = jwt.ReadFile(f.Name(), jwt.WithVerify(false), jwt.WithValidate(true), jwt.WithIssuer("lestrrat"))
-	require.NoError(t, err, `jwt.ReadFile should succeed`)
-	_, err = jwt.ReadFile(f.Name(), jwt.WithVerify(false), jwt.WithValidate(true), jwt.WithIssuer("lestrrrrrat"))
-	require.Error(t, err, `jwt.ReadFile should fail`)
+	_, err = jwt.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()), jwt.WithVerify(false), jwt.WithValidate(true), jwt.WithIssuer("lestrrat"))
+	require.NoError(t, err, `jwt.ParseFS should succeed`)
+	_, err = jwt.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()), jwt.WithVerify(false), jwt.WithValidate(true), jwt.WithIssuer("lestrrrrrat"))
+	require.Error(t, err, `jwt.ParseFS should fail`)
 }
 
 func TestCustomField(t *testing.T) {

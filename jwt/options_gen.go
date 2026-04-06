@@ -4,7 +4,6 @@ package jwt
 
 import (
 	"context"
-	"io/fs"
 	"net/http"
 	"time"
 
@@ -39,13 +38,12 @@ type globalOption struct {
 
 func (*globalOption) globalOption() {}
 
-// GlobalParseOption describes an Option that can be passed to `jwt.Settings()`,
-// `jwt.Parse()`, and `jwt.ReadFile()`.
+// GlobalParseOption describes an Option that can be passed to `jwt.Settings()`
+// and `jwt.Parse()`.
 type GlobalParseOption interface {
 	Option
 	globalOption()
 	parseOption()
-	readFileOption()
 }
 
 type globalParseOption struct {
@@ -56,14 +54,11 @@ func (*globalParseOption) globalOption() {}
 
 func (*globalParseOption) parseOption() {}
 
-func (*globalParseOption) readFileOption() {}
-
 // GlobalValidateOption describes an Option that can be passed to `jwt.Settings()` and `jwt.Validate()`
 type GlobalValidateOption interface {
 	Option
 	globalOption()
 	parseOption()
-	readFileOption()
 	validateOption()
 }
 
@@ -75,17 +70,12 @@ func (*globalValidateOption) globalOption() {}
 
 func (*globalValidateOption) parseOption() {}
 
-func (*globalValidateOption) readFileOption() {}
-
 func (*globalValidateOption) validateOption() {}
 
 // ParseOption describes an Option that can be passed to `jwt.Parse()`.
-// ParseOption also implements ReadFileOption, therefore it may be
-// safely pass them to `jwt.ReadFile()`
 type ParseOption interface {
 	Option
 	parseOption()
-	readFileOption()
 }
 
 type parseOption struct {
@@ -94,27 +84,12 @@ type parseOption struct {
 
 func (*parseOption) parseOption() {}
 
-func (*parseOption) readFileOption() {}
-
-// ReadFileOption is a type of `Option` that can be passed to `jws.ReadFile`
-type ReadFileOption interface {
-	Option
-	readFileOption()
-}
-
-type readFileOption struct {
-	Option
-}
-
-func (*readFileOption) readFileOption() {}
-
 // SignEncryptParseOption describes an Option that can be passed to both `jwt.Sign()` or
 // `jwt.Parse()`
 type SignEncryptParseOption interface {
 	Option
 	parseOption()
 	encryptOption()
-	readFileOption()
 	signOption()
 }
 
@@ -125,8 +100,6 @@ type signEncryptParseOption struct {
 func (*signEncryptParseOption) parseOption() {}
 
 func (*signEncryptParseOption) encryptOption() {}
-
-func (*signEncryptParseOption) readFileOption() {}
 
 func (*signEncryptParseOption) signOption() {}
 
@@ -149,7 +122,6 @@ type SignParseOption interface {
 	Option
 	signOption()
 	parseOption()
-	readFileOption()
 }
 
 type signParseOption struct {
@@ -160,15 +132,12 @@ func (*signParseOption) signOption() {}
 
 func (*signParseOption) parseOption() {}
 
-func (*signParseOption) readFileOption() {}
-
 // ValidateOption describes an Option that can be passed to Validate().
 // ValidateOption also implements ParseOption, therefore it may be
-// safely passed to `Parse()` (and thus `jwt.ReadFile()`)
+// safely passed to `Parse()`
 type ValidateOption interface {
 	Option
 	parseOption()
-	readFileOption()
 	validateOption()
 }
 
@@ -177,8 +146,6 @@ type validateOption struct {
 }
 
 func (*validateOption) parseOption() {}
-
-func (*validateOption) readFileOption() {}
 
 func (*validateOption) validateOption() {}
 
@@ -189,7 +156,6 @@ type identContext struct{}
 type identCookie struct{}
 type identCookieKey struct{}
 type identEncryptOption struct{}
-type identFS struct{}
 type identFlattenAudience struct{}
 type identFormKey struct{}
 type identHeaderKey struct{}
@@ -234,10 +200,6 @@ func (identCookieKey) String() string {
 
 func (identEncryptOption) String() string {
 	return "WithEncryptOption"
-}
-
-func (identFS) String() string {
-	return "WithFS"
 }
 
 func (identFlattenAudience) String() string {
@@ -361,11 +323,6 @@ func WithEncryptOption(v jwe.EncryptOption) EncryptOption {
 	return &encryptOption{option.New(identEncryptOption{}, v)}
 }
 
-// WithFS specifies the source `fs.FS` object to read the file from.
-func WithFS(v fs.FS) ReadFileOption {
-	return &readFileOption{option.New(identFS{}, v)}
-}
-
 // WithFlattenAudience specifies the the `jwt.FlattenAudience` option on
 // every token defaults to enabled. You can still disable this on a per-object
 // basis using the `jwt.Options().Disable(jwt.FlattenAudience)` method call.
@@ -404,7 +361,7 @@ func WithKeyProvider(v jws.KeyProvider) ParseOption {
 // `jwt.ParseReader` will return an error. The default value is 10MB.
 //
 // This option can be passed to `jwt.Settings()` to change the default
-// globally, or to `jwt.ParseReader()` / `jwt.ReadFile()` for a per-call
+// globally, or to `jwt.ParseReader()` / `jwt.ParseFS()` for a per-call
 // override.
 func WithMaxParseInputSize(v int64) GlobalParseOption {
 	return &globalParseOption{option.New(identMaxParseInputSize{}, v)}

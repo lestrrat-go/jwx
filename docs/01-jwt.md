@@ -102,23 +102,24 @@ source: [examples/jwt_parse_example_test.go](https://github.com/lestrrat-go/jwx/
 Note that the above form performs only signature verification and no validation of the JWT token itself.
 In order to perform validation, please use `Validate()`.
 
-## Parse a JWT from file
+## Parse a JWT from a filesystem
 
-To parsea JWT stored in a file, use [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#ReadFile). [`jwt.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#ReadFile) accepts the same options as [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Parse).
+To parse a JWT stored in a file, use [`jwt.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#ParseFS). [`jwt.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#ParseFS) accepts the same options as [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Parse).
 
-<!-- INCLUDE(examples/jwt_readfile_example_test.go) -->
+<!-- INCLUDE(examples/jwt_parsefs_example_test.go) -->
 ```go
 package examples_test
 
 import (
   "fmt"
   "os"
+  "path/filepath"
 
   "github.com/lestrrat-go/jwx/v3/jwt"
 )
 
-func Example_jwt_readfile() {
-  f, err := os.CreateTemp(``, `jwt_readfile-*.jws`)
+func Example_jwt_ParseFS() {
+  f, err := os.CreateTemp(``, `jwt_parsefs-*.jws`)
   if err != nil {
     fmt.Printf("failed to create temporary file: %s\n", err)
     return
@@ -131,7 +132,7 @@ func Example_jwt_readfile() {
   // Note: this JWT has NOT been verified because we have not passed jwt.WithKey() and used
   // jwt.WithVerify(false). You need to pass jwt.WithKey() if you want the token to be parsed and
   // verified in one go.
-  tok, err := jwt.ReadFile(f.Name(), jwt.WithVerify(false), jwt.WithValidate(false))
+  tok, err := jwt.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()), jwt.WithVerify(false), jwt.WithValidate(false))
   if err != nil {
     fmt.Printf("failed to read file %q: %s\n", f.Name(), err)
     return
@@ -140,7 +141,7 @@ func Example_jwt_readfile() {
   // OUTPUT:
 }
 ```
-source: [examples/jwt_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_readfile_example_test.go)
+source: [examples/jwt_parsefs_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_parsefs_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a JWT from a \*http.Request

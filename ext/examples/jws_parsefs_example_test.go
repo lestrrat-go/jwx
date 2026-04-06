@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/lestrrat-go/jwx/v3/jws"
 )
 
-func Example_jws_readfile() {
+func Example_jws_ParseFS() {
 	const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo`
-	f, err := os.CreateTemp(``, `jws_readfile-*.jws`)
+	f, err := os.CreateTemp(``, `jws_parsefs-*.jws`)
 	if err != nil {
 		fmt.Printf("failed to create temporary file: %s\n", err)
 		return
@@ -20,7 +21,7 @@ func Example_jws_readfile() {
 	fmt.Fprint(f, src)
 	f.Close()
 
-	msg, err := jws.ReadFile(f.Name())
+	msg, err := jws.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()))
 	if err != nil {
 		fmt.Printf("failed to parse JWS message: %s\n", err)
 		return

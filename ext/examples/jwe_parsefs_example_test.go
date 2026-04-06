@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/lestrrat-go/jwx/v3/jwe"
 )
 
-func Example_jwe_readfile() {
+func Example_jwe_ParseFS() {
 	const src = `eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA.bK7z7Z3gEzFDgDQvNen0Ww.2hngnAVrmucUpJKLgIzYcg.CHs3ZP7JtG430Dl9YAKLMAl`
 
-	f, err := os.CreateTemp(``, `jwe_readfile_example-*.jwe`)
+	f, err := os.CreateTemp(``, `jwe_parsefs_example-*.jwe`)
 	if err != nil {
 		fmt.Printf("failed to create temporary file: %s\n", err)
 		return
@@ -21,7 +22,7 @@ func Example_jwe_readfile() {
 	f.Write([]byte(src))
 	f.Close()
 
-	msg, err := jwe.ReadFile(f.Name())
+	msg, err := jwe.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()))
 	if err != nil {
 		fmt.Printf("failed to parse JWE message from file %q: %s\n", f.Name(), err)
 		return

@@ -16,7 +16,6 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithCookie", identCookie{}.String())
 	require.Equal(t, "WithCookieKey", identCookieKey{}.String())
 	require.Equal(t, "WithEncryptOption", identEncryptOption{}.String())
-	require.Equal(t, "WithFS", identFS{}.String())
 	require.Equal(t, "WithFlattenAudience", identFlattenAudience{}.String())
 	require.Equal(t, "WithFormKey", identFormKey{}.String())
 	require.Equal(t, "WithHeaderKey", identHeaderKey{}.String())
