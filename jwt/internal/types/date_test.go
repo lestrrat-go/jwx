@@ -58,25 +58,25 @@ func TestDate(t *testing.T) {
 				Expected: time.Unix(127, 0).UTC(),
 			},
 			{
-				Input:    json.Number("127"),
+				Input:    "127",
 				Expected: time.Unix(127, 0).UTC(),
 			},
 			{
-				Input:    json.Number("127.11"),
+				Input:    "127.11",
 				Expected: time.Unix(127, 0).UTC(),
 			},
 			{
-				Input:     json.Number("127.11"),
+				Input:     "127.11",
 				Expected:  time.Unix(127, 110000000).UTC(),
 				Precision: 4,
 			},
 			{
-				Input:     json.Number("127.110000011"),
+				Input:     "127.110000011",
 				Expected:  time.Unix(127, 110000011).UTC(),
 				Precision: 9,
 			},
 			{
-				Input:     json.Number("127.110000011111"),
+				Input:     "127.110000011111",
 				Expected:  time.Unix(127, 110000011).UTC(),
 				Precision: 9,
 			},

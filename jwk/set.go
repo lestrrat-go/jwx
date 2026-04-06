@@ -2,15 +2,15 @@ package jwk
 
 import (
 	"bytes"
+	"encoding/json/jsontext"
 	"fmt"
 	"maps"
 	"reflect"
-	"sort"
+	"slices"
 
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 )
 
 const keysKey = `keys` // appease linter
@@ -168,32 +168,26 @@ func (s *set) MarshalJSON() ([]byte, error) {
 	for k := range s.privateParams {
 		fields = append(fields, k)
 	}
-	sort.Strings(fields)
+	slices.Sort(fields)
 
-	buf.WriteByte(tokens.OpenCurlyBracket)
-	for i, field := range fields {
-		if i > 0 {
-			buf.WriteByte(tokens.Comma)
-		}
-		fmt.Fprintf(buf, `%q:`, field)
+	enc.WriteToken(jsontext.BeginObject)
+	for _, field := range fields {
+		enc.WriteToken(jsontext.String(field))
 		if field != keysKey {
-			if err := enc.Encode(s.privateParams[field]); err != nil {
+			if err := json.MarshalEncode(enc, s.privateParams[field]); err != nil {
 				return nil, fmt.Errorf(`failed to marshal field %q: %w`, field, err)
 			}
 		} else {
-			buf.WriteByte(tokens.OpenSquareBracket)
-			for j, k := range s.keys {
-				if j > 0 {
-					buf.WriteByte(tokens.Comma)
-				}
-				if err := enc.Encode(k); err != nil {
+			enc.WriteToken(jsontext.BeginArray)
+			for i, k := range s.keys {
+				if err := json.MarshalEncode(enc, k); err != nil {
 					return nil, fmt.Errorf(`failed to marshal key #%d: %w`, i, err)
 				}
 			}
-			buf.WriteByte(tokens.CloseSquareBracket)
+			enc.WriteToken(jsontext.EndArray)
 		}
 	}
-	buf.WriteByte(tokens.CloseCurlyBracket)
+	enc.WriteToken(jsontext.EndObject)
 
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
@@ -218,49 +212,52 @@ func (s *set) UnmarshalJSON(data []byte) error {
 
 	var sawKeysField bool
 	dec := json.NewDecoder(bytes.NewReader(data))
-LOOP:
-	for {
-		tok, err := dec.Token()
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return fmt.Errorf(`error reading token: %w`, err)
+	}
+	if tok.Kind() != '{' {
+		return fmt.Errorf(`expected '{' but got '%c'`, tok.Kind())
+	}
+	for dec.PeekKind() != '}' {
+		tok, err := dec.ReadToken()
 		if err != nil {
 			return fmt.Errorf(`error reading token: %w`, err)
 		}
-
-		switch tok := tok.(type) {
-		case json.Delim:
-			// Assuming we're doing everything correctly, we should ONLY
-			// get either tokens.OpenCurlyBracket or tokens.CloseCurlyBracket here.
-			if tok == tokens.CloseCurlyBracket { // End of object
-				break LOOP
-			} else if tok != tokens.OpenCurlyBracket {
-				return fmt.Errorf(`expected '%c' but got '%c'`, tokens.OpenCurlyBracket, tok)
+		fieldName := tok.String()
+		switch fieldName {
+		case "keys":
+			sawKeysField = true
+			var list []json.RawMessage
+			if err := json.UnmarshalDecode(dec, &list); err != nil {
+				return fmt.Errorf(`failed to decode "keys": %w`, err)
 			}
-		case string:
-			switch tok {
-			case "keys":
-				sawKeysField = true
-				var list []json.RawMessage
-				if err := dec.Decode(&list); err != nil {
-					return fmt.Errorf(`failed to decode "keys": %w`, err)
-				}
 
-				for i, keysrc := range list {
-					key, err := ParseKey(keysrc, options...)
-					if err != nil {
-						if !ignoreParseError {
-							return fmt.Errorf(`failed to decode key #%d in "keys": %w`, i, err)
-						}
-						continue
+			for i, keysrc := range list {
+				key, err := ParseKey(keysrc, options...)
+				if err != nil {
+					if !ignoreParseError {
+						return fmt.Errorf(`failed to decode key #%d in "keys": %w`, i, err)
 					}
-					s.keys = append(s.keys, key)
+					continue
 				}
-			default:
-				var v any
-				if err := dec.Decode(&v); err != nil {
-					return fmt.Errorf(`failed to decode value for key %q: %w`, tok, err)
-				}
-				s.privateParams[tok] = v
+				s.keys = append(s.keys, key)
 			}
+		default:
+			var v any
+			raw, err := dec.ReadValue()
+			if err != nil {
+				return fmt.Errorf(`failed to read value for key %q: %w`, fieldName, err)
+			}
+			if err := json.Unmarshal(raw, &v); err != nil {
+				return fmt.Errorf(`failed to decode value for key %q: %w`, fieldName, err)
+			}
+			s.privateParams[fieldName] = v
 		}
+	}
+	// consume closing '}'
+	if _, err := dec.ReadToken(); err != nil {
+		return fmt.Errorf(`error reading closing token: %w`, err)
 	}
 
 	// This is really silly, but we can only detect the
