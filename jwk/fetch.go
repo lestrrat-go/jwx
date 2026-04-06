@@ -155,21 +155,26 @@ func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 	var client = getFetchHTTPClient()
 	var maxBodySize = maxFetchBodySize.Load()
 	for _, opt := range options {
-		if parseOpt, ok := opt.(ParseOption); ok {
-			parseOptions = append(parseOptions, parseOpt)
-			continue
-		}
-
+		// Process fetch-specific options first, before falling through
+		// to collect parse options. Some options (e.g. GlobalFetchOption)
+		// satisfy both FetchOption and ParseOption.
 		switch opt.Ident() {
 		case identHTTPClient{}:
 			client = option.MustGet[HTTPClient](opt)
+			continue
 		case identFetchWhitelist{}:
 			wl = option.MustGet[Whitelist](opt)
+			continue
 		case identMaxFetchBodySize{}:
 			maxBodySize = option.MustGet[int64](opt)
 			if maxBodySize <= 0 {
 				return nil, fmt.Errorf(`jwk.Fetch: WithMaxFetchBodySize must be greater than zero`)
 			}
+			continue
+		}
+
+		if parseOpt, ok := opt.(ParseOption); ok {
+			parseOptions = append(parseOptions, parseOpt)
 		}
 	}
 
