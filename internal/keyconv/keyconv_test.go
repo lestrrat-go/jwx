@@ -32,16 +32,16 @@ func TestKeyconv(t *testing.T) {
 
 			for _, tc := range testcases {
 				t.Run("Convert to *rsa.PrivateKey", func(t *testing.T) {
-					dst, err := keyconv.RSAPrivateKey(tc.Src)
+					dst, err := keyconv.KeyAs[*rsa.PrivateKey](tc.Src)
 					if tc.Error {
-						require.Error(t, err, `keyconv.RSAPrivateKey should fail`)
+						require.Error(t, err, `keyconv.KeyAs[*rsa.PrivateKey] should fail`)
 					} else {
-						require.NoError(t, err, `keyconv.RSAPrivateKey should succeed`)
+						require.NoError(t, err, `keyconv.KeyAs[*rsa.PrivateKey] should succeed`)
 						// Reset precomputed values; they will be computed as necessary,
 						// and their values are not necessarily stable across runs
 						key.Precomputed = rsa.PrecomputedValues{}
 						dst.Precomputed = rsa.PrecomputedValues{}
-						require.Equal(t, key, dst, `keyconv.RSAPrivateKey should produce same value`)
+						require.Equal(t, key, dst, `keyconv.KeyAs[*rsa.PrivateKey] should produce same value`)
 					}
 				})
 			}
@@ -90,12 +90,12 @@ func TestKeyconv(t *testing.T) {
 
 			for _, tc := range testcases {
 				t.Run("Convert to *ecdsa.PrivateKey", func(t *testing.T) {
-					dst, err := keyconv.ECDSAPrivateKey(tc.Src)
+					dst, err := keyconv.KeyAs[*ecdsa.PrivateKey](tc.Src)
 					if tc.Error {
-						require.Error(t, err, `keyconv.ECDSAPrivateKey should fail`)
+						require.Error(t, err, `keyconv.KeyAs[*ecdsa.PrivateKey] should fail`)
 					} else {
-						require.NoError(t, err, `keyconv.ECDSAPrivateKey should succeed`)
-						require.Equal(t, key, dst, `keyconv.ECDSAPrivateKey should produce same value`)
+						require.NoError(t, err, `keyconv.KeyAs[*ecdsa.PrivateKey] should succeed`)
+						require.Equal(t, key, dst, `keyconv.KeyAs[*ecdsa.PrivateKey] should produce same value`)
 					}
 				})
 			}
