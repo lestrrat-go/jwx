@@ -207,10 +207,6 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 //
 // Look for options that return `jwe.EncryptOption` or `jws.EncryptDecryptOption`
 // for a complete list of options that can be passed to this function.
-//
-// As of v3.0.12, users can specify `jwe.WithLegacyHeaderMerging()` to
-// disable header merging behavior that was the default prior to v3.0.12.
-// Read the documentation for `jwe.WithLegacyHeaderMerging()` for more information.
 func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 	ec := encryptContextPool.Get()
 	defer encryptContextPool.Put(ec)
@@ -593,12 +589,11 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 
 // encryptContext holds the state during JWE encryption, similar to JWS signContext
 type encryptContext struct {
-	calg                jwa.ContentEncryptionAlgorithm
-	compression         jwa.CompressionAlgorithm
-	format              int
-	builders            []*recipientBuilder
-	protected           Headers
-	legacyHeaderMerging bool
+	calg        jwa.ContentEncryptionAlgorithm
+	compression jwa.CompressionAlgorithm
+	format      int
+	builders    []*recipientBuilder
+	protected   Headers
 }
 
 var encryptContextPool = pool.New(allocEncryptContext, freeEncryptContext)
@@ -621,7 +616,6 @@ func freeEncryptContext(ec *encryptContext) *encryptContext {
 }
 
 func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
-	ec.legacyHeaderMerging = true
 	var mergeProtected bool
 	var useRawCEK bool
 	for _, option := range options {
@@ -681,12 +675,6 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 				return err
 			}
 			ec.format = fmtOpt
-		case identLegacyHeaderMerging{}:
-			var v bool
-			if err := option.Value(&v); err != nil {
-				return err
-			}
-			ec.legacyHeaderMerging = v
 		}
 	}
 
@@ -864,28 +852,14 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 			// In this mode, we should merge per-recipient headers into the protected header,
 			// but we also need to make sure that the "header" field is reset so that
 			// it does not contain the same fields as the protected header.
-			//
-			// However, old behavior was to merge per-recipient headers into the
-			// protected header when there was only one recipient, AND leave the
-			// original "header" field as is, so we need to support that for backwards compatibility.
-			//
-			// The legacy merging only takes effect when there is exactly one recipient.
-			//
-			// This behavior can be disabled by passing jwe.WithLegacyHeaderMerging(false)
-			// If the user has explicitly asked for merging, do it
 			h, err := protected.Merge(recipients[0].Headers())
 			if err != nil {
 				return nil, fmt.Errorf(`failed to merge protected headers for flattenend JSON format: %w`, err)
 			}
 			protected = h
 
-			if !ec.legacyHeaderMerging {
-				// Clear per-recipient headers, since they have been merged.
-				// But we only do it when legacy merging is disabled.
-				// Note: we should probably introduce a Reset() method in v4
-				if err := recipients[0].SetHeaders(NewHeaders()); err != nil {
-					return nil, fmt.Errorf(`failed to clear per-recipient headers after merging: %w`, err)
-				}
+			if err := recipients[0].SetHeaders(NewHeaders()); err != nil {
+				return nil, fmt.Errorf(`failed to clear per-recipient headers after merging: %w`, err)
 			}
 		}
 	}
