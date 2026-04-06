@@ -32,12 +32,6 @@ func ErrHeaderNotFound() error {
 	return headerNotFoundError{}
 }
 
-// ErrFieldNotFound is an alias for ErrHeaderNotFound, and is deprecated. It was a misnomer.
-// It will be removed in a future release.
-func ErrFieldNotFound() error {
-	return ErrHeaderNotFound()
-}
-
 // Header is an object that allows you to access the JWS header in a quick and
 // dirty way. It does not verify anything, it does not know anything about what
 // each header field means, and it does not care about the JWS specification.
