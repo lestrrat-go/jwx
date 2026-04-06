@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -592,8 +593,8 @@ func TestReadFile(t *testing.T) {
 
 	fmt.Fprintf(f, "%s", s)
 
-	_, err = jwe.ReadFile(f.Name())
-	require.NoError(t, err, `jwe.ReadFile should succeed`)
+	_, err = jwe.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()))
+	require.NoError(t, err, `jwe.ParseFS should succeed`)
 }
 
 func TestCustomField(t *testing.T) {

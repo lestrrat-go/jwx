@@ -4,7 +4,6 @@ package jwk
 
 import (
 	"crypto"
-	"io/fs"
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/option/v2"
@@ -71,12 +70,9 @@ type globalOption struct {
 func (*globalOption) globalOption() {}
 
 // ParseOption is a type of Option that can be passed to `jwk.Parse()`
-// ParseOption also implements the `ReadFileOption`,
-// and thus safely be passed to `jwk.ReadFile`.
 type ParseOption interface {
 	Option
 	fetchOption()
-	readFileOption()
 }
 
 type parseOption struct {
@@ -85,21 +81,6 @@ type parseOption struct {
 
 func (*parseOption) fetchOption() {}
 
-func (*parseOption) readFileOption() {}
-
-// ReadFileOption is a type of `Option` that can be passed to `jwk.ReadFile`
-type ReadFileOption interface {
-	Option
-	readFileOption()
-}
-
-type readFileOption struct {
-	Option
-}
-
-func (*readFileOption) readFileOption() {}
-
-type identFS struct{}
 type identFetchWhitelist struct{}
 type identHTTPClient struct{}
 type identIgnoreParseError struct{}
@@ -110,10 +91,6 @@ type identPEMDecoder struct{}
 type identStrictKeyUsage struct{}
 type identThumbprintHash struct{}
 type identX509 struct{}
-
-func (identFS) String() string {
-	return "WithFS"
-}
 
 func (identFetchWhitelist) String() string {
 	return "WithFetchWhitelist"
@@ -153,11 +130,6 @@ func (identThumbprintHash) String() string {
 
 func (identX509) String() string {
 	return "WithX509"
-}
-
-// WithFS specifies the source `fs.FS` object to read the file from.
-func WithFS(v fs.FS) ReadFileOption {
-	return &readFileOption{option.New(identFS{}, v)}
 }
 
 // WithFetchWhitelist specifies the Whitelist object to use when

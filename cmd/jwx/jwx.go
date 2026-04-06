@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 
@@ -109,7 +110,7 @@ func getOutput(filename string) (io.WriteCloser, error) {
 }
 
 func getKeyFile(keyfile, format string) (jwk.Set, error) {
-	var keyoptions []jwk.ReadFileOption
+	var keyoptions []jwk.ParseOption
 	switch format {
 	case "json":
 	case "pem":
@@ -117,7 +118,7 @@ func getKeyFile(keyfile, format string) (jwk.Set, error) {
 	default:
 		return nil, fmt.Errorf(`invalid JWK format "%s"`, format)
 	}
-	keyset, err := jwk.ReadFile(keyfile, keyoptions...)
+	keyset, err := jwk.ParseFS(os.DirFS(filepath.Dir(keyfile)), filepath.Base(keyfile), keyoptions...)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to parse key: %w`, err)
 	}

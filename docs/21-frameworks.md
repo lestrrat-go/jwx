@@ -31,7 +31,7 @@ In this example we assume that your keys are stored in PEM-encoded files `privat
 s.alg = jwa.RS256
 
 {
-  v, err := jwk.ReadFile(`private-key.pem`, jwk.WithPEM(true))
+  v, err := jwk.ParseFS(os.DirFS("."), `private-key.pem`, jwk.WithPEM(true))
   if err != nil {
     // handle error
   }
@@ -39,7 +39,7 @@ s.alg = jwa.RS256
 }
 
 {
-  v, err := jwk.ReadFile(`public-key.pem`, jwk.WithPEM(true))
+  v, err := jwk.ParseFS(os.DirFS("."), `public-key.pem`, jwk.WithPEM(true))
   if err != nil {
     // handle error
   }

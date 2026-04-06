@@ -11,14 +11,8 @@ interfaces:
   - name: ParseOption
     methods:
       - fetchOption
-      - readFileOption
     comment: |
       ParseOption is a type of Option that can be passed to `jwk.Parse()`
-      ParseOption also implements the `ReadFileOption`,
-      and thus safely be passed to `jwk.ReadFile`.
-  - name: ReadFileOption
-    comment: |
-      ReadFileOption is a type of `Option` that can be passed to `jwk.ReadFile`
   - name: GlobalOption
     comment: |
       GlobalOption is a type of Option that can be passed to the `jwk.Configure()` to
@@ -126,11 +120,6 @@ options:
       Again, DO NOT USE unless you have exhausted all other routes.
       When you use this option, you will not be able to tell if you are
       using a faulty JWKS, except for when there are JSON syntax errors.
-  - ident: FS
-    interface: ReadFileOption
-    argument_type: fs.FS
-    comment: |
-      WithFS specifies the source `fs.FS` object to read the file from.
   - ident: StrictKeyUsage
     interface: GlobalOption
     argument_type: bool

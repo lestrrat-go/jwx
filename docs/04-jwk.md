@@ -38,7 +38,7 @@ A "jwk" resource on the web can either contain a single JWK or an array of multi
 The latter is called a JWK Set.
 
 It is impossible to know what the resource contains beforehand, so functions like [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Parse)
-and [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ReadFile) returns a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Set) by default.
+and [`jwk.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ParseFS) returns a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Set) by default.
 
 ## Raw Key
 
@@ -208,9 +208,9 @@ source: [examples/jwk_parse_with_pem_example_test.go](https://github.com/lestrra
 
 ## Parse a key from a file
 
-To parse keys stored in a file, [`jwk.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ReadFile) can be used. 
+To parse keys stored in a file, [`jwk.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ParseFS) can be used. 
 
-<!-- INCLUDE(examples/jwk_readfile_example_test.go) -->
+<!-- INCLUDE(examples/jwk_parsefs_example_test.go) -->
 ```go
 package examples_test
 
@@ -218,11 +218,12 @@ import (
   "encoding/json"
   "fmt"
   "os"
+  "path/filepath"
 
   "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func Example_jwk_readfile() {
+func Example_jwk_ParseFS() {
   const src = `{
     "keys": [
       {"kty":"EC",
@@ -239,7 +240,7 @@ func Example_jwk_readfile() {
     ]
   }`
 
-  f, err := os.CreateTemp(``, `jwk_readfile-*.jwk`)
+  f, err := os.CreateTemp(``, `jwk_parsefs-*.jwk`)
   if err != nil {
     fmt.Printf("failed to create temporary file: %s\n", err)
     return
@@ -249,7 +250,7 @@ func Example_jwk_readfile() {
   fmt.Fprint(f, src)
   f.Close()
 
-  key, err := jwk.ReadFile(f.Name())
+  key, err := jwk.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()))
   if err != nil {
     fmt.Printf("failed to parse key: %s\n", err)
     return
@@ -261,24 +262,25 @@ func Example_jwk_readfile() {
   // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
 }
 ```
-source: [examples/jwk_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_readfile_example_test.go)
+source: [examples/jwk_parsefs_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_parsefs_example_test.go)
 <!-- END INCLUDE -->
 
-`jwk.ReadFile()` accepts the same options as [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Parse), therefore you can read a PEM-encoded file via the following incantation:
+`jwk.ParseFS()` accepts the same options as [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Parse), therefore you can read a PEM-encoded file via the following incantation:
 
-<!-- INCLUDE(examples/jwk_readfile_with_pem_example_test.go) -->
+<!-- INCLUDE(examples/jwk_parsefs_with_pem_example_test.go) -->
 ```go
 package examples_test
 
 import (
   "fmt"
   "os"
+  "path/filepath"
 
-  "github.com/lestrrat-go/jwx/v3/internal/json"
+  "encoding/json"
   "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func Example_jwk_readfile_with_pem() {
+func Example_jwk_ParseFS_with_pem() {
   const src = `-----BEGIN CERTIFICATE-----
 MIIEljCCAn4CCQCTQBoGDvUbQTANBgkqhkiG9w0BAQsFADANMQswCQYDVQQGEwJK
 UDAeFw0yMTA0MDEwMDE4MjhaFw0yMjA0MDEwMDE4MjhaMA0xCzAJBgNVBAYTAkpQ
@@ -307,7 +309,7 @@ z8CjezfckLs7UKJOlhu3OU9TFsiGDzSDBZdDWO1/uciJ/AAWeSmsBt8cKL0MirIr
 c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 -----END CERTIFICATE-----`
 
-  f, err := os.CreateTemp(``, `jwk_readfile_with_pem-*.jwk`)
+  f, err := os.CreateTemp(``, `jwk_parsefs_with_pem-*.jwk`)
   if err != nil {
     fmt.Printf("failed to create temporary file: %s\n", err)
     return
@@ -317,7 +319,7 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
   fmt.Fprint(f, src)
   f.Close()
 
-  key, err := jwk.ReadFile(f.Name(), jwk.WithPEM(true))
+  key, err := jwk.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()), jwk.WithPEM(true))
   if err != nil {
     fmt.Printf("failed to parse key in PEM format: %s\n", err)
     return
@@ -328,7 +330,7 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
   // {"keys":[{"e":"AQAB","kty":"RSA","n":"vws4H_OxVS3CW1zvUgjsH443df9zCAblLVPPdeRD11Jl1OZmGS7rtQNjQyT5xGpeuk77ZJcfDNLx-mSEtiYQV37GD5MPz-RX3hP2azuLvxoBseaHE6kC8tkDed8buQLl1hgms15KmKnt7E8B-EK21YRj0w6ZzehIllTbbj6gDJ39kZ2VHdLf5-4W0Kyh9cM4aA0si2jQJQsohW2rpt89b-IagFau-sxP3GFUjSEvyXIamXhS0NLWuAW9UvY_RwhnIo5BzmWZd_y2R305T-QTrHtb_8aGav8mP3uDx6AMDp_0UMKFUO4mpoOusMnrplUPS4Lz6RNpffmrrglOEuRZ_eSFzGL35OeL12aYSyrbFIVsc_aLs6MkoplsuSG6Zhx345h_dA2a8Ub5khr6bksPzGLer-bpBrQQsy21unvCIUz5y7uaYhV3Ql-aIZ-dwpEgZ3xxAvdKKeoCGQlhH_4J0sSuutUtuTLfrBSgLHJEv2HIzeynChL2CYR8aku_nL68VTdmSt9UY2JGMOf9U8BIfGRpkWBvI8hddMxNm8wF-09WScaZ2JWu7qW_l2jOdgesPIWRg-Hm3NaRSHqAWCOqVUJk9WkCAye0FPALqSvH0ApDKxNtGZb5JZRCW19TqmhgXbAqIf5hsxDaGIXZcW9SCqapZPw7Ccs7BOKSFvmM9p0"}]}
 }
 ```
-source: [examples/jwk_readfile_with_pem_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_readfile_with_pem_example_test.go)
+source: [examples/jwk_parsefs_with_pem_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_parsefs_with_pem_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a key as a struct field
