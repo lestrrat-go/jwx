@@ -32,12 +32,8 @@ func TestLegacySignatureSign(t *testing.T) {
 				// Skip alg=none
 				continue
 			}
-			if sig == jwa.EdDSAEd448() {
-				// Ed448 uses circl via a separate module
-				// (github.com/lestrrat-go/jwx-circl-ed448),
-				// not the legacy signer path.
-				continue
-			}
+			// Extension-only algorithms (Ed448, ES256K) are not
+			// registered in the legacy signer path.
 			signer, err := NewSigner(sig)
 			require.NoError(t, err, "NewSigner should succeed")
 			require.NotNil(t, signer, "NewSigner should return a valid signer")

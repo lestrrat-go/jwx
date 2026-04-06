@@ -33,17 +33,10 @@ func TestRFC9864(t *testing.T) {
 		t.Parallel()
 		require.False(t, jwa.EdDSAEd25519().IsDeprecated(), `EdDSAEd25519 should not be deprecated`)
 	})
-	t.Run("EdDSAEd448 is not deprecated", func(t *testing.T) {
-		t.Parallel()
-		require.False(t, jwa.EdDSAEd448().IsDeprecated(), `EdDSAEd448 should not be deprecated`)
-	})
+	// EdDSAEd448 tests moved to ext/ed448
 	t.Run("EdDSAEd25519 string value", func(t *testing.T) {
 		t.Parallel()
 		require.Equal(t, "Ed25519", jwa.EdDSAEd25519().String(), `EdDSAEd25519 should have string value Ed25519`)
-	})
-	t.Run("EdDSAEd448 string value", func(t *testing.T) {
-		t.Parallel()
-		require.Equal(t, "Ed448", jwa.EdDSAEd448().String(), `EdDSAEd448 should have string value Ed448`)
 	})
 	t.Run("LookupSignatureAlgorithm for Ed25519", func(t *testing.T) {
 		t.Parallel()
