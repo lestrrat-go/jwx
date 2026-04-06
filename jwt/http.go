@@ -9,18 +9,17 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
+	"github.com/lestrrat-go/option/v3"
 )
 
 // ParseCookie parses a JWT stored in a http.Cookie with the given name.
 // If the specified cookie is not found, http.ErrNoCookie is returned.
 func ParseCookie(req *http.Request, name string, options ...ParseOption) (Token, error) {
 	var dst **http.Cookie
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identCookie{}:
-			if err := option.Value(&dst); err != nil {
-				return nil, fmt.Errorf(`jws.ParseCookie: value to option WithCookie must be **http.Cookie: %w`, err)
-			}
+			dst = option.MustGet[**http.Cookie](opt)
 		}
 	}
 
@@ -102,28 +101,16 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	var formkeys []string
 	var cookiekeys []string
 	var parseOptions []ParseOption
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identHeaderKey{}:
-			var v string
-			if err := option.Value(&v); err != nil {
-				return nil, fmt.Errorf(`jws.ParseRequest: value to option WithHeaderKey must be string: %w`, err)
-			}
-			hdrkeys = append(hdrkeys, v)
+			hdrkeys = append(hdrkeys, option.MustGet[string](opt))
 		case identFormKey{}:
-			var v string
-			if err := option.Value(&v); err != nil {
-				return nil, fmt.Errorf(`jws.ParseRequest: value to option WithFormKey must be string: %w`, err)
-			}
-			formkeys = append(formkeys, v)
+			formkeys = append(formkeys, option.MustGet[string](opt))
 		case identCookieKey{}:
-			var v string
-			if err := option.Value(&v); err != nil {
-				return nil, fmt.Errorf(`jws.ParseRequest: value to option WithCookieKey must be string: %w`, err)
-			}
-			cookiekeys = append(cookiekeys, v)
+			cookiekeys = append(cookiekeys, option.MustGet[string](opt))
 		default:
-			parseOptions = append(parseOptions, option)
+			parseOptions = append(parseOptions, opt)
 		}
 	}
 

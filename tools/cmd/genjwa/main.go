@@ -106,6 +106,7 @@ func Generate(t Algorithm) error {
 		"fmt",
 		"sort",
 		"sync",
+		"github.com/lestrrat-go/option/v3",
 	}
 	
 	// Check if we need to import tokens package
@@ -250,18 +251,14 @@ func Generate(t Algorithm) error {
 	if t.Symmetric {
 		o.L("var isSymmetric bool")
 	}
-	o.L("for _, option := range options {")
-	o.L("switch option.Ident() {")
+	o.L("for _, opt := range options {")
+	o.L("switch opt.Ident() {")
 	if t.Symmetric {
 		o.L("case identIsSymmetric{}:")
-		o.L("if err := option.Value(&isSymmetric); err != nil {")
-		o.L("panic(\"jwa.New%s: WithIsSymmetric option must be a boolean\")", t.Name)
-		o.L("}")
+		o.L("isSymmetric = option.MustGet[bool](opt)")
 	}
 	o.L("case identDeprecated{}:")
-	o.L("if err := option.Value(&deprecated); err != nil {")
-	o.L("panic(\"jwa.New%s: WithDeprecated option must be a boolean\")", t.Name)
-	o.L("}")
+	o.L("deprecated = option.MustGet[bool](opt)")
 	o.L("}")
 	o.L("}")
 	o.L("return %s{name: name, deprecated: deprecated", t.Name)

@@ -20,6 +20,7 @@ import (
 
 	"github.com/lestrrat-go/httprc/v3"
 	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/option/v3"
 )
 
 // HTTPClient is the httprc HTTP client interface.
@@ -89,32 +90,22 @@ func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOptio
 	var httpClient jwk.HTTPClient
 	var hasHTTPClient bool
 	waitReady := true
-	for _, option := range options {
-		switch option := option.(type) {
+	for _, opt := range options {
+		switch opt := opt.(type) {
 		case jwk.ParseOption:
-			parseOptions = append(parseOptions, option)
+			parseOptions = append(parseOptions, opt)
 		default:
-			switch option.Ident() {
+			switch opt.Ident() {
 			case identHTTPClient{}:
-				if err := option.Value(&httpClient); err != nil {
-					return fmt.Errorf(`failed to retrieve HTTPClient option value: %w`, err)
-				}
+				httpClient = option.MustGet[jwk.HTTPClient](opt)
 				resourceOptions = append(resourceOptions, httprc.WithHTTPClient(httpClient))
 				hasHTTPClient = true
 			case identWaitReady{}:
-				if err := option.Value(&waitReady); err != nil {
-					return fmt.Errorf(`failed to retrieve WaitReady option value: %w`, err)
-				}
+				waitReady = option.MustGet[bool](opt)
 			case identMaxFetchBodySize{}:
-				if err := option.Value(&fetchBodySize); err != nil {
-					return fmt.Errorf(`failed to retrieve MaxFetchBodySize option value: %w`, err)
-				}
+				fetchBodySize = option.MustGet[int64](opt)
 			case identResourceOption{}:
-				var v httprc.NewResourceOption
-				if err := option.Value(&v); err != nil {
-					return fmt.Errorf(`failed to retrieve NewResourceOption value: %w`, err)
-				}
-				resourceOptions = append(resourceOptions, v)
+				resourceOptions = append(resourceOptions, option.MustGet[httprc.NewResourceOption](opt))
 			}
 		}
 	}

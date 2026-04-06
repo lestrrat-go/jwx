@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"slices"
 	"sync"
+
+	"github.com/lestrrat-go/option/v3"
 )
 
 var muAllCompressionAlgorithm sync.RWMutex
@@ -68,12 +70,10 @@ func EmptyCompressionAlgorithm() CompressionAlgorithm {
 // NewCompressionAlgorithm creates a new CompressionAlgorithm object with the given name.
 func NewCompressionAlgorithm(name string, options ...NewAlgorithmOption) CompressionAlgorithm {
 	var deprecated bool
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identDeprecated{}:
-			if err := option.Value(&deprecated); err != nil {
-				panic("jwa.NewCompressionAlgorithm: WithDeprecated option must be a boolean")
-			}
+			deprecated = option.MustGet[bool](opt)
 		}
 	}
 	return CompressionAlgorithm{name: name, deprecated: deprecated}

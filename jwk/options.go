@@ -1,7 +1,7 @@
 package jwk
 
 import (
-	"github.com/lestrrat-go/option/v2"
+	"github.com/lestrrat-go/option/v3"
 )
 
 type identTypedField struct{}

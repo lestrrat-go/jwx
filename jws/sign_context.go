@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/lestrrat-go/option/v3"
+
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -45,17 +47,12 @@ func freeSignContext(ctx *signContext) *signContext {
 }
 
 func (sc *signContext) ProcessOptions(options []SignOption) error {
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identSerialization{}:
-			if err := option.Value(&sc.format); err != nil {
-				return makeSignError(`failed to retrieve serialization option value: %w`, err)
-			}
+			sc.format = option.MustGet[int](opt)
 		case identInsecureNoSignature{}:
-			var data withInsecureNoSignature
-			if err := option.Value(&data); err != nil {
-				return makeSignError(`failed to retrieve insecure-no-signature option value: %w`, err)
-			}
+			data := option.MustGet[*withInsecureNoSignature](opt)
 			sb := signatureBuilderPool.Get()
 			sb.alg = jwa.NoSignature()
 			sb.protected = data.protected
@@ -64,10 +61,7 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			sc.sigbuilders = append(sc.sigbuilders, sb)
 
 		case identKey{}:
-			var data *withKey
-			if err := option.Value(&data); err != nil {
-				return makeSignError(`jws.Sign: invalid value for WithKey option: %w`, err)
-			}
+			data := option.MustGet[*withKey](opt)
 
 			alg, ok := data.alg.(jwa.SignatureAlgorithm)
 			if !ok {
@@ -95,20 +89,14 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			if sc.payload != nil {
 				return makeSignError(`payload must be nil when jws.WithDetachedPayload() is specified`)
 			}
-			if err := option.Value(&sc.payload); err != nil {
-				return makeSignError(`failed to retrieve detached payload option value: %w`, err)
-			}
+			sc.payload = option.MustGet[[]byte](opt)
 			sc.detached = true
 		case identValidateKey{}:
-			if err := option.Value(&sc.validateKey); err != nil {
-				return makeSignError(`failed to retrieve validate-key option value: %w`, err)
-			}
+			sc.validateKey = option.MustGet[bool](opt)
 		case identBase64Encoder{}:
-			if err := option.Value(&sc.encoder); err != nil {
-				return makeSignError(`failed to retrieve base64-encoder option value: %w`, err)
-			}
+			sc.encoder = option.MustGet[Base64Encoder](opt)
 		default:
-			return makeSignError(`invalid jws.SignOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
+			return makeSignError(`invalid jws.SignOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, opt.Ident()), `jws.ident`))
 		}
 	}
 	return nil

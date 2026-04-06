@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"slices"
 	"sync"
+
+	"github.com/lestrrat-go/option/v3"
 )
 
 var muAllSignatureAlgorithm sync.RWMutex
@@ -153,16 +155,12 @@ func EmptySignatureAlgorithm() SignatureAlgorithm {
 func NewSignatureAlgorithm(name string, options ...NewSignatureAlgorithmOption) SignatureAlgorithm {
 	var deprecated bool
 	var isSymmetric bool
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identIsSymmetric{}:
-			if err := option.Value(&isSymmetric); err != nil {
-				panic("jwa.NewSignatureAlgorithm: WithIsSymmetric option must be a boolean")
-			}
+			isSymmetric = option.MustGet[bool](opt)
 		case identDeprecated{}:
-			if err := option.Value(&deprecated); err != nil {
-				panic("jwa.NewSignatureAlgorithm: WithDeprecated option must be a boolean")
-			}
+			deprecated = option.MustGet[bool](opt)
 		}
 	}
 	return SignatureAlgorithm{name: name, deprecated: deprecated, isSymmetric: isSymmetric}

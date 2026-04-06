@@ -40,6 +40,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/lestrrat-go/option/v3"
+
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxio"
@@ -249,13 +251,10 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 	maxSigs := int(maxSignatures.Load())
 
 	var formats int
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identSerialization{}:
-			var v int
-			if err := option.Value(&v); err != nil {
-				return nil, makeParseError(`jws.Parse`, `failed to retrieve serialization option value: %w`, err)
-			}
+			v := option.MustGet[int](opt)
 			switch v {
 			case fmtJSON:
 				formats |= fmtJSON
@@ -263,9 +262,7 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 				formats |= fmtCompact
 			}
 		case identMaxSignatures{}:
-			if err := option.Value(&maxSigs); err != nil {
-				return nil, makeParseError(`jws.Parse`, `failed to retrieve max signatures option value: %w`, err)
-			}
+			maxSigs = option.MustGet[int](opt)
 			if maxSigs <= 0 {
 				return nil, makeParseError(`jws.Parse`, `WithMaxSignatures must be greater than zero`)
 			}
@@ -331,11 +328,9 @@ func ParseString(src string, options ...ParseOption) (*Message, error) {
 // On error, returns a jws.ParseError.
 func ParseReader(src io.Reader, options ...ParseOption) (*Message, error) {
 	maxSize := maxParseInputSize.Load()
-	for _, option := range options {
-		if option.Ident() == (identMaxParseInputSize{}) {
-			if err := option.Value(&maxSize); err != nil {
-				return nil, makeParseError(`jws.ParseReader`, `invalid WithMaxParseInputSize: %w`, err)
-			}
+	for _, opt := range options {
+		if opt.Ident() == (identMaxParseInputSize{}) {
+			maxSize = option.MustGet[int64](opt)
 			if maxSize <= 0 {
 				return nil, makeParseError(`jws.ParseReader`, `WithMaxParseInputSize must be greater than zero`)
 			}
@@ -637,22 +632,16 @@ func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
 
 // Settings allows you to set global settings for JWS operations.
 func Settings(options ...GlobalOption) {
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identMaxParseInputSize{}:
-			var v int64
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf("jws.Settings: value for WithMaxParseInputSize must be int64: %s", err))
-			}
+			v := option.MustGet[int64](opt)
 			if v <= 0 {
 				panic("jws.Settings: WithMaxParseInputSize must be greater than zero")
 			}
 			maxParseInputSize.Store(v)
 		case identMaxSignatures{}:
-			var v int
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf("jws.Settings: value for WithMaxSignatures must be an int: %s", err))
-			}
+			v := option.MustGet[int](opt)
 			if v <= 0 {
 				panic("jws.Settings: WithMaxSignatures must be greater than zero")
 			}

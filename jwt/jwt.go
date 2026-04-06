@@ -18,6 +18,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws"
 	jwterrs "github.com/lestrrat-go/jwx/v3/jwt/internal/errors"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
+	"github.com/lestrrat-go/option/v3"
 )
 
 var muSettings sync.Mutex
@@ -38,43 +39,28 @@ func Settings(options ...GlobalOption) {
 	var parsePrecision = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
 	var formatPrecision = types.MaxPrecision + 1 // illegal value, so we can detect nothing was set
 	truncation := time.Duration(-1)
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identTruncation{}:
-			if err := option.Value(&truncation); err != nil {
-				panic(fmt.Sprintf("jwt.Settings: value for WithTruncation must be time.Duration: %s", err))
-			}
+			truncation = option.MustGet[time.Duration](opt)
 		case identFlattenAudience{}:
-			if err := option.Value(&flattenAudience); err != nil {
-				panic(fmt.Sprintf("jwt.Settings: value for WithFlattenAudience must be bool: %s", err))
-			}
+			flattenAudience = option.MustGet[bool](opt)
 		case identNumericDateParsePedantic{}:
-			if err := option.Value(&parsePedantic); err != nil {
-				panic(fmt.Sprintf("jwt.Settings: value for WithNumericDateParsePedantic must be bool: %s", err))
-			}
+			parsePedantic = option.MustGet[bool](opt)
 		case identNumericDateParsePrecision{}:
-			var v int
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf("jwt.Settings: value for WithNumericDateParsePrecision must be int: %s", err))
-			}
+			v := option.MustGet[int](opt)
 			// only accept this value if it's in our desired range
 			if v >= 0 && v <= int(types.MaxPrecision) {
 				parsePrecision = uint32(v)
 			}
 		case identNumericDateFormatPrecision{}:
-			var v int
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf("jwt.Settings: value for WithNumericDateFormatPrecision must be int: %s", err))
-			}
+			v := option.MustGet[int](opt)
 			// only accept this value if it's in our desired range
 			if v >= 0 && v <= int(types.MaxPrecision) {
 				formatPrecision = uint32(v)
 			}
 		case identMaxParseInputSize{}:
-			var v int64
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf("jwt.Settings: value for WithMaxParseInputSize must be int64: %s", err))
-			}
+			v := option.MustGet[int64](opt)
 			if v <= 0 {
 				panic("jwt.Settings: WithMaxParseInputSize must be greater than zero")
 			}
@@ -164,8 +150,8 @@ func Parse(s []byte, options ...ParseOption) (Token, error) {
 // using this function. Providing these options would result in
 // an error
 func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
-	for _, option := range options {
-		switch option.Ident() {
+	for _, opt := range options {
+		switch opt.Ident() {
 		case identVerify{}, identValidate{}:
 			return nil, jwterrs.ParseErrorf(`jwt.ParseInsecure`, `jwt.WithVerify() and jwt.WithValidate() may not be specified`)
 		}
@@ -182,11 +168,9 @@ func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
 // ParseReader calls Parse against an io.Reader
 func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
 	maxSize := maxParseInputSize.Load()
-	for _, option := range options {
-		if option.Ident() == (identMaxParseInputSize{}) {
-			if err := option.Value(&maxSize); err != nil {
-				return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `invalid WithMaxParseInputSize: %w`, err)
-			}
+	for _, opt := range options {
+		if opt.Ident() == (identMaxParseInputSize{}) {
+			maxSize = option.MustGet[int64](opt)
 			if maxSize <= 0 {
 				return nil, jwterrs.ParseErrorf(`jwt.ParseReader`, `WithMaxParseInputSize must be greater than zero`)
 			}
@@ -253,45 +237,27 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 			// So let's just count this here
 			ctx.withKeyCount++
 			if ctx.withKeyCount == 1 {
-				if err := o.Value(&ctx.withKey); err != nil {
-					return nil, fmt.Errorf("jws.parseBytes: value for WithKey option must be a *jwt.withKey: %w", err)
-				}
+				ctx.withKey = option.MustGet[*withKey](o)
 			}
 			verifyOpts = append(verifyOpts, o)
 		case identKeySet{}, identVerifyAuto{}, identKeyProvider{}, identBase64Encoder{}, identContext{}:
 			verifyOpts = append(verifyOpts, o)
 		case identToken{}:
-			var token Token
-			if err := o.Value(&token); err != nil {
-				return nil, fmt.Errorf("jws.parseBytes: value for WithToken option must be a jwt.Token: %w", err)
-			}
-			ctx.token = token
+			ctx.token = option.MustGet[Token](o)
 		case identPedantic{}:
-			if err := o.Value(&ctx.pedantic); err != nil {
-				return nil, fmt.Errorf("jws.parseBytes: value for WithPedantic option must be a bool: %w", err)
-			}
+			ctx.pedantic = option.MustGet[bool](o)
 		case identValidate{}:
-			if err := o.Value(&ctx.validate); err != nil {
-				return nil, fmt.Errorf("jws.parseBytes: value for WithValidate option must be a bool: %w", err)
-			}
+			ctx.validate = option.MustGet[bool](o)
 		case identVerify{}:
-			if err := o.Value(&verification); err != nil {
-				return nil, fmt.Errorf("jws.parseBytes: value for WithVerify option must be a bool: %w", err)
-			}
+			verification = option.MustGet[bool](o)
 		case identTypedClaim{}:
-			var pair claimPair
-			if err := o.Value(&pair); err != nil {
-				return nil, fmt.Errorf("jws.parseBytes: value for WithTypedClaim option must be claimPair: %w", err)
-			}
+			pair := option.MustGet[claimPair](o)
 			if ctx.localReg == nil {
 				ctx.localReg = json.NewRegistry()
 			}
 			ctx.localReg.Register(pair.Name, pair.Value)
 		case identStrictStringClaims{}:
-			var v bool
-			if err := o.Value(&v); err != nil {
-				return nil, fmt.Errorf("jwt.parseBytes: value for WithStrictStringClaims must be bool: %w", err)
-			}
+			v := option.MustGet[bool](o)
 			ctx.strictStringClaims = &v
 		}
 	}
@@ -503,19 +469,16 @@ func Sign(t Token, options ...SignOption) ([]byte, error) {
 	// fast path; can only happen if there is exactly one option
 	if len(options) == 1 && (options[0].Ident() == identKey{}) {
 		// The option must be a withKey option.
-		var wk *withKey
-		if err := options[0].Value(&wk); err == nil {
-			alg, ok := wk.alg.(jwa.SignatureAlgorithm)
-			if !ok {
-				return nil, fmt.Errorf(`jwt.Sign: invalid algorithm type %T. jwa.SignatureAlgorithm is required`, wk.alg)
-			}
+		wk := option.MustGet[*withKey](options[0])
+		alg, ok := wk.alg.(jwa.SignatureAlgorithm)
+		if !ok {
+			return nil, fmt.Errorf(`jwt.Sign: invalid algorithm type %T. jwa.SignatureAlgorithm is required`, wk.alg)
+		}
 
-			// Check if option contains anything other than alg/key
-			if len(wk.options) == 0 {
-				// yay, we have something we can put in the FAST PATH!
-				return signFast(t, alg, wk.key)
-			}
-			// fallthrough
+		// Check if option contains anything other than alg/key
+		if len(wk.options) == 0 {
+			// yay, we have something we can put in the FAST PATH!
+			return signFast(t, alg, wk.key)
 		}
 		// fallthrough
 	}
@@ -525,8 +488,8 @@ func Sign(t Token, options ...SignOption) ([]byte, error) {
 		// we need to from SignOption to Option because ... reasons
 		// (todo: when go1.18 prevails, use type parameters
 		rawoptions := make([]Option, l)
-		for i, option := range options {
-			rawoptions[i] = option
+		for i, opt := range options {
+			rawoptions[i] = opt
 		}
 
 		converted, err := toSignOptions(rawoptions...)
