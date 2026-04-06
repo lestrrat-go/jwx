@@ -9,26 +9,34 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"math/big"
+	"reflect"
 
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func RSAPrivateKey(src any) (*rsa.PrivateKey, error) {
+// KeyAs converts src to type T. src may be a jwk.Key or a raw crypto key.
+// If src is a jwk.Key, it is exported via jwk.Export[T]. Otherwise, a direct
+// type assertion is attempted, with a reflect fallback for value→pointer
+// conversion (e.g. rsa.PrivateKey when T = *rsa.PrivateKey).
+func KeyAs[T any](src any) (T, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		ptr, err := jwk.Export[*rsa.PrivateKey](jwkKey)
-		if err != nil {
-			return nil, fmt.Errorf(`keyconv: failed to produce rsa.PrivateKey from %T: %w`, src, err)
+		return jwk.Export[T](jwkKey)
+	}
+	if v, ok := src.(T); ok {
+		return v, nil
+	}
+	// value → pointer: e.g. rsa.PrivateKey when T = *rsa.PrivateKey
+	var zero T
+	target := reflect.TypeFor[T]()
+	if src != nil && target.Kind() == reflect.Ptr {
+		rv := reflect.ValueOf(src)
+		if rv.IsValid() && rv.Type() == target.Elem() {
+			ptr := reflect.New(rv.Type())
+			ptr.Elem().Set(rv)
+			return ptr.Interface().(T), nil
 		}
-		return ptr, nil
 	}
-	switch src := src.(type) {
-	case *rsa.PrivateKey:
-		return src, nil
-	case rsa.PrivateKey:
-		return &src, nil
-	default:
-		return nil, fmt.Errorf(`keyconv: expected rsa.PrivateKey or *rsa.PrivateKey, got %T`, src)
-	}
+	return zero, fmt.Errorf(`keyconv: expected %T, got %T`, zero, src)
 }
 
 // RSAPublicKey extracts an *rsa.PublicKey from src.
@@ -56,24 +64,6 @@ func RSAPublicKey(src any) (*rsa.PublicKey, error) {
 	}
 }
 
-func ECDSAPrivateKey(src any) (*ecdsa.PrivateKey, error) {
-	if jwkKey, ok := src.(jwk.Key); ok {
-		ptr, err := jwk.Export[*ecdsa.PrivateKey](jwkKey)
-		if err != nil {
-			return nil, fmt.Errorf(`keyconv: failed to produce ecdsa.PrivateKey from %T: %w`, src, err)
-		}
-		return ptr, nil
-	}
-	switch src := src.(type) {
-	case *ecdsa.PrivateKey:
-		return src, nil
-	case ecdsa.PrivateKey:
-		return &src, nil
-	default:
-		return nil, fmt.Errorf(`keyconv: expected ecdsa.PrivateKey or *ecdsa.PrivateKey, got %T`, src)
-	}
-}
-
 // ECDSAPublicKey extracts an *ecdsa.PublicKey from src.
 // src may be ecdsa.PublicKey, *ecdsa.PublicKey, ecdsa.PrivateKey, *ecdsa.PrivateKey, or jwk.Key.
 func ECDSAPublicKey(src any) (*ecdsa.PublicKey, error) {
@@ -97,22 +87,6 @@ func ECDSAPublicKey(src any) (*ecdsa.PublicKey, error) {
 	default:
 		return nil, fmt.Errorf(`keyconv: expected ecdsa.PublicKey/ecdsa.PrivateKey or *ecdsa.PublicKey/*ecdsa.PrivateKey, got %T`, src)
 	}
-}
-
-func ByteSliceKey(src any) ([]byte, error) {
-	if jwkKey, ok := src.(jwk.Key); ok {
-		raw, err := jwk.Export[[]byte](jwkKey)
-		if err != nil {
-			return nil, fmt.Errorf(`keyconv: failed to produce []byte from %T: %w`, src, err)
-		}
-		return raw, nil
-	}
-
-	b, ok := src.([]byte)
-	if !ok {
-		return nil, fmt.Errorf(`keyconv: expected []byte, got %T`, src)
-	}
-	return b, nil
 }
 
 func Ed25519PrivateKey(src any) (*ed25519.PrivateKey, error) {
@@ -183,28 +157,22 @@ type privECDHer interface {
 	ECDH() (*ecdh.PrivateKey, error)
 }
 
+// ECDHPrivateKey extracts an *ecdh.PrivateKey from src.
+// In addition to jwk.Key and direct type matches, it also handles
+// types that implement the ECDH() method (e.g. *ecdsa.PrivateKey).
 func ECDHPrivateKey(src any) (*ecdh.PrivateKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		raw, err := jwk.Export[*ecdh.PrivateKey](jwkKey)
-		if err != nil {
-			return nil, fmt.Errorf(`keyconv: failed to produce ecdh.PrivateKey from %T: %w`, src, err)
-		}
-		return raw, nil
+		return jwk.Export[*ecdh.PrivateKey](jwkKey)
 	}
-
 	switch src := src.(type) {
-	case ecdh.PrivateKey:
-		return &src, nil
 	case *ecdh.PrivateKey:
 		return src, nil
+	case ecdh.PrivateKey:
+		return &src, nil
 	case privECDHer:
-		priv, err := src.ECDH()
-		if err != nil {
-			return nil, fmt.Errorf(`keyconv: failed to convert ecdsa.PrivateKey to ecdh.PrivateKey: %w`, err)
-		}
-		return priv, nil
+		return src.ECDH()
 	default:
-		return nil, fmt.Errorf(`keyconv: expected ecdh.PrivateKey or privECDHer, got %T`, src)
+		return nil, fmt.Errorf(`keyconv: expected *ecdh.PrivateKey or ECDH()-capable key, got %T`, src)
 	}
 }
 
@@ -212,28 +180,22 @@ type pubECDHer interface {
 	ECDH() (*ecdh.PublicKey, error)
 }
 
+// ECDHPublicKey extracts an *ecdh.PublicKey from src.
+// In addition to jwk.Key and direct type matches, it also handles
+// types that implement the ECDH() method (e.g. *ecdsa.PublicKey).
 func ECDHPublicKey(src any) (*ecdh.PublicKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		raw, err := jwk.Export[*ecdh.PublicKey](jwkKey)
-		if err != nil {
-			return nil, fmt.Errorf(`keyconv: failed to produce ecdh.PublicKey from %T: %w`, src, err)
-		}
-		return raw, nil
+		return jwk.Export[*ecdh.PublicKey](jwkKey)
 	}
-
 	switch src := src.(type) {
-	case ecdh.PublicKey:
-		return &src, nil
 	case *ecdh.PublicKey:
 		return src, nil
+	case ecdh.PublicKey:
+		return &src, nil
 	case pubECDHer:
-		pub, err := src.ECDH()
-		if err != nil {
-			return nil, fmt.Errorf(`keyconv: failed to convert ecdsa.PublicKey to ecdh.PublicKey: %w`, err)
-		}
-		return pub, nil
+		return src.ECDH()
 	default:
-		return nil, fmt.Errorf(`keyconv: expected ecdh.PublicKey or pubECDHer, got %T`, src)
+		return nil, fmt.Errorf(`keyconv: expected *ecdh.PublicKey or ECDH()-capable key, got %T`, src)
 	}
 }
 

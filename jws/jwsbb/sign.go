@@ -50,7 +50,7 @@ func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
 }
 
 func dispatchHMACSign(key any, dsigAlg string, payload []byte) ([]byte, error) {
-	hmackey, err := keyconv.ByteSliceKey(key)
+	hmackey, err := keyconv.KeyAs[[]byte](key)
 	if err != nil {
 		return nil, fmt.Errorf(`jwsbb.Sign: invalid key type %T. []byte is required: %w`, key, err)
 	}
@@ -68,7 +68,7 @@ func dispatchRSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([]b
 	}
 
 	// Fall back to concrete key types
-	privkey, err := keyconv.RSAPrivateKey(key)
+	privkey, err := keyconv.KeyAs[*rsa.PrivateKey](key)
 	if err != nil {
 		return nil, fmt.Errorf(`jwsbb.Sign: invalid key type %T. *rsa.PrivateKey is required: %w`, key, err)
 	}
@@ -86,7 +86,7 @@ func dispatchECDSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([
 	}
 
 	// Fall back to concrete key types
-	privkey, err := keyconv.ECDSAPrivateKey(key)
+	privkey, err := keyconv.KeyAs[*ecdsa.PrivateKey](key)
 	if err != nil {
 		return nil, fmt.Errorf(`jwsbb.Sign: invalid key type %T. *ecdsa.PrivateKey is required: %w`, key, err)
 	}
