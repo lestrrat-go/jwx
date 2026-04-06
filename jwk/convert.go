@@ -301,44 +301,36 @@ func importSymmetricKey(raw []byte) (Key, error) {
 	return k, nil
 }
 
-// Export converts a `jwk.Key` to a Export key. The dst argument must be a pointer to the
-// object that the user wants the result to be assigned to.
+// Export converts a jwk.Key into a raw key of type T.
 //
-// Normally you would pass a pointer to the zero value of the raw key type
-// such as &(*rsa.PrivateKey) or &(*ecdsa.PublicKey), which gets assigned
-// the converted key.
+// The type parameter T specifies the desired output type. For most keys,
+// the type is unambiguous (e.g. RSA keys always export as *rsa.PrivateKey).
+// For EC keys, the type parameter selects between *ecdsa.PrivateKey and
+// *ecdh.PrivateKey.
 //
-// If you do not know the exact type of a jwk.Key before attempting
-// to obtain the raw key, you can simply pass a pointer to an
-// empty interface as the second argument
+// Use [any] as the type parameter to let the exporter choose the default type:
 //
-// If you already know the exact type, it is recommended that you
-// pass a pointer to the zero value of the actual key type for efficiency.
+//	raw, err := jwk.Export[any](key)
 //
-// Be careful when/if you are using a third party key type that implements
-// the `jwk.Key` interface, as the first argument. This function tries hard
-// to Do The Right Thing, but it is not guaranteed to work in all cases,
-// especially when the object implements the `jwk.Key` interface via
-// embedding.
-// Export converts a jwk.Key into a raw key type, returning the raw key.
-// The returned value is typically *rsa.PrivateKey, *ecdsa.PrivateKey,
-// ed25519.PrivateKey, []byte, etc.
+// Examples:
 //
-// If you know the expected type, use a type assertion on the result:
-//
-//	raw, err := jwk.Export(key)
-//	privkey := raw.(*rsa.PrivateKey)
-//
-// You may optionally pass a hint value to indicate the desired output
-// type. This is used by certain exporters (e.g. EC keys) to choose
-// between compatible output formats (e.g. *ecdsa.PrivateKey vs *ecdh.PrivateKey).
-// If no hint is given, the exporter returns the default type for the key.
-func Export(key Key, hints ...any) (any, error) {
-	var hint any
-	if len(hints) > 0 {
-		hint = hints[0]
+//	privkey, err := jwk.Export[*rsa.PrivateKey](key)
+//	ecdhkey, err := jwk.Export[*ecdh.PrivateKey](key)
+//	octets, err := jwk.Export[[]byte](key)
+func Export[T any](key Key) (T, error) {
+	var zero T
+	v, err := doExport(key, any(*new(T)))
+	if err != nil {
+		return zero, err
 	}
+	result, ok := v.(T)
+	if !ok {
+		return zero, fmt.Errorf(`jwk.Export: exported %T, requested %T`, v, zero)
+	}
+	return result, nil
+}
 
+func doExport(key Key, hint any) (any, error) {
 	muKeyExporters.RLock()
 	exporters := findExporters(key)
 	muKeyExporters.RUnlock()

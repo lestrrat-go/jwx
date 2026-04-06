@@ -70,13 +70,9 @@ func octetSeqToRaw(key Key, _ any) (any, error) {
 func (k *symmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
-	octetsV, err := Export(k)
+	octets, err := Export[[]byte](k)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to export symmetric key: %w`, err)
-	}
-	octets, ok := octetsV.([]byte)
-	if !ok {
-		return nil, fmt.Errorf(`expected []byte, got %T`, octetsV)
 	}
 
 	h := hash.New()

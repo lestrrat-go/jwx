@@ -261,7 +261,7 @@ func DecryptJweFile(ctx context.Context, file string, alg jwa.KeyEncryptionAlgor
 		return nil, fmt.Errorf(`failed to read from encrypted file %s: %w`, file, err)
 	}
 
-	rawkey, err := jwk.Export(key)
+	rawkey, err := jwk.Export[any](key)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to obtain raw key from JWK: %w`, err)
 	}
@@ -277,7 +277,7 @@ func EncryptJweFile(ctx context.Context, dir string, payload []byte, keyalg jwa.
 
 	var keyif any
 
-	rawV, err := jwk.Export(key)
+	rawV, err := jwk.Export[any](key)
 	if err != nil {
 		return "", nil, fmt.Errorf(`failed to obtain raw key: %w`, err)
 	}
@@ -322,7 +322,7 @@ func VerifyJwsFile(ctx context.Context, file string, alg jwa.SignatureAlgorithm,
 		return nil, fmt.Errorf(`failed to read from encrypted file %s: %w`, file, err)
 	}
 
-	rawkey, err := jwk.Export(key)
+	rawkey, err := jwk.Export[any](key)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to obtain raw key from JWK: %w`, err)
 	}

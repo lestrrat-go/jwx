@@ -295,13 +295,9 @@ func (k *rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	keyV, err := Export(k)
+	key, err := Export[*rsa.PrivateKey](k)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to export RSA private key: %w`, err)
-	}
-	key, ok := keyV.(*rsa.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf(`expected *rsa.PrivateKey, got %T`, keyV)
 	}
 	return rsaThumbprint(hash, &key.PublicKey)
 }
@@ -310,13 +306,9 @@ func (k *rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	keyV, err := Export(k)
+	key, err := Export[*rsa.PublicKey](k)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to export RSA public key: %w`, err)
-	}
-	key, ok := keyV.(*rsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf(`expected *rsa.PublicKey, got %T`, keyV)
 	}
 	return rsaThumbprint(hash, key)
 }
