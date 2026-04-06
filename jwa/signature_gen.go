@@ -3,9 +3,10 @@
 package jwa
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
-	"sort"
+	"slices"
 	"sync"
 )
 
@@ -213,8 +214,8 @@ func rebuildSignatureAlgorithm() {
 		list = append(list, v)
 	}
 	muAllSignatureAlgorithm.RUnlock()
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].String() < list[j].String()
+	slices.SortFunc(list, func(a, b SignatureAlgorithm) int {
+		return cmp.Compare(a.String(), b.String())
 	})
 	muListSignatureAlgorithm.Lock()
 	listSignatureAlgorithm = list

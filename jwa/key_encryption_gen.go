@@ -3,9 +3,10 @@
 package jwa
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
-	"sort"
+	"slices"
 	"sync"
 
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
@@ -233,8 +234,8 @@ func rebuildKeyEncryptionAlgorithm() {
 		list = append(list, v)
 	}
 	muAllKeyEncryptionAlgorithm.RUnlock()
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].String() < list[j].String()
+	slices.SortFunc(list, func(a, b KeyEncryptionAlgorithm) int {
+		return cmp.Compare(a.String(), b.String())
 	})
 	muListKeyEncryptionAlgorithm.Lock()
 	listKeyEncryptionAlgorithm = list

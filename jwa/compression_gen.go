@@ -3,9 +3,10 @@
 package jwa
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
-	"sort"
+	"slices"
 	"sync"
 )
 
@@ -118,8 +119,8 @@ func rebuildCompressionAlgorithm() {
 		list = append(list, v)
 	}
 	muAllCompressionAlgorithm.RUnlock()
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].String() < list[j].String()
+	slices.SortFunc(list, func(a, b CompressionAlgorithm) int {
+		return cmp.Compare(a.String(), b.String())
 	})
 	muListCompressionAlgorithm.Lock()
 	listCompressionAlgorithm = list

@@ -3,9 +3,10 @@
 package jwa
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
-	"sort"
+	"slices"
 	"sync"
 )
 
@@ -155,8 +156,8 @@ func rebuildEllipticCurveAlgorithm() {
 		list = append(list, v)
 	}
 	muAllEllipticCurveAlgorithm.RUnlock()
-	sort.Slice(list, func(i, j int) bool {
-		return list[i].String() < list[j].String()
+	slices.SortFunc(list, func(a, b EllipticCurveAlgorithm) int {
+		return cmp.Compare(a.String(), b.String())
 	})
 	muListEllipticCurveAlgorithm.Lock()
 	listEllipticCurveAlgorithm = list
