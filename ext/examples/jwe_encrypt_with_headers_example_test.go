@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"encoding/json"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe"
 )
