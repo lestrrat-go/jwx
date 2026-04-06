@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/httprc/v3"
+
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
@@ -1241,8 +1241,6 @@ func TestBenHigginsByPassRegression(t *testing.T) {
 }
 
 func TestVerifyAuto(t *testing.T) {
-	ctx := t.Context()
-
 	key, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 
@@ -1294,27 +1292,7 @@ func TestVerifyAuto(t *testing.T) {
 	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(nil, jwk.WithFetchWhitelist(wl)))
 	require.Error(t, err, `jwt.Parse should fail`)
 
-	// now with Cache
-	c, err := jwk.NewCache(ctx, httprc.NewClient())
-	require.NoError(t, err, `jwk.NewCache should succeed`)
-	parsed, err = jwt.Parse(signed,
-		jwt.WithVerifyAuto(
-			jwk.FetchFunc(func(ctx context.Context, u string, options ...jwk.FetchOption) (jwk.Set, error) {
-				var registeropts []jwk.RegisterOption
-				// jwk.FetchOption is also an CacheOption, but the container
-				// doesn't match the signature... so... we need to convert them...
-				for _, option := range options {
-					registeropts = append(registeropts, option)
-				}
-				c.Register(ctx, u, registeropts...)
-				return c.Lookup(ctx, u)
-			}),
-			jwk.WithHTTPClient(srv.Client()),
-			jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
-		),
-	)
-	require.NoError(t, err, `jwt.Parse should succeed`)
-	require.True(t, jwt.Equal(tok, parsed), `tokens should be equal`)
+	// Cache test case moved to ext/jwkcache
 }
 
 func TestSerializer(t *testing.T) {

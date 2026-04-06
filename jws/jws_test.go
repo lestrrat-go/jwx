@@ -24,7 +24,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/httprc/v3"
+
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
@@ -40,7 +40,7 @@ const examplePayload = `{"iss":"joe",` + "\r\n" + ` "exp":1300819380,` + "\r\n" 
 const exampleCompactSerialization = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
 const badValue = "%badvalue%"
 
-var hasES256K bool
+// ES256K support has been moved to the github.com/jwx-go/es256k extension module.
 
 func TestSanity(t *testing.T) {
 	t.Run("sanity: Verify with single key", func(t *testing.T) {
@@ -682,7 +682,7 @@ func TestVerifyNonUniqueKid(t *testing.T) {
 				wrongKey, err := jwk.PublicKeyOf(privateKey)
 				require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
 				_ = wrongKey.Set(jwk.KeyIDKey, kid)
-				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.ES256K())
+				_ = wrongKey.Set(jwk.AlgorithmKey, jwa.ES384())
 				return wrongKey
 			},
 		},
@@ -1059,8 +1059,6 @@ func TestGH485(t *testing.T) {
 }
 
 func TestJKU(t *testing.T) {
-	ctx := t.Context()
-
 	key, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 
@@ -1113,15 +1111,7 @@ func TestJKU(t *testing.T) {
 					}
 				},
 			},
-			{
-				Name: "Cache",
-				Fetcher: func() jwk.Fetcher {
-					c, err := jwk.NewCache(ctx, httprc.NewClient())
-					require.NoError(t, err, `jwk.NewCache should succeed`)
-					require.NoError(t, c.Register(ctx, srv.URL, jwk.WithHTTPClient(srv.Client())), `c.Register should succeed`)
-					return jwk.NewCachedFetcher(c)
-				},
-			},
+			// Cache test case moved to ext/jwkcache
 		}
 
 		for _, tc := range testcases {
@@ -1386,12 +1376,6 @@ func TestAlgorithmsForKey(t *testing.T) {
 	}
 
 	for _, tc := range testcases {
-		if hasES256K {
-			if strings.Contains(strings.ToLower(tc.Name), `ecdsa`) {
-				tc.Expected = append(tc.Expected, jwa.ES256K())
-			}
-		}
-
 		slices.SortFunc(tc.Expected, func(a, b jwa.SignatureAlgorithm) int {
 			return cmp.Compare(a.String(), b.String())
 		})

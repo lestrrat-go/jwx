@@ -24,6 +24,12 @@ const defaultFetchTimeout = 30 * time.Second
 // of 10 to limit redirect chain abuse.
 const defaultMaxRedirects = 5
 
+// HTTPClient is an interface for HTTP clients used by jwk.Fetch and
+// related functions.
+type HTTPClient interface {
+	Do(*http.Request) (*http.Response, error)
+}
+
 var maxFetchBodySize atomic.Int64
 
 var (
@@ -126,34 +132,6 @@ type FetchFunc func(context.Context, string, ...FetchOption) (Set, error)
 
 func (ff FetchFunc) Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 	return ff(ctx, u, options...)
-}
-
-// CachedFetcher wraps `jwk.Cache` so that it can be used as a `jwk.Fetcher`.
-//
-// One notable diffence from a general use fetcher is that `jwk.CachedFetcher`
-// can only be used with JWKS URLs that have been registered with the cache.
-// Please read the documentation fo `(jwk.CachedFetcher).Fetch` for more details.
-//
-// This object is intended to be used with `jws.WithVerifyAuto` option, specifically
-// for a scenario where there is a very small number of JWKS URLs that are trusted
-// and used to verify JWS messages. It is NOT meant to be used as a general purpose
-// caching fetcher object.
-type CachedFetcher struct {
-	cache *Cache
-}
-
-// NewCachedFetcher creates a new `jwk.CachedFetcher` object.
-func NewCachedFetcher(cache *Cache) *CachedFetcher {
-	return &CachedFetcher{cache}
-}
-
-// Fetch fetches a JWKS from the cache. If the JWKS URL has not been registered with
-// the cache, an error is returned.
-func (f *CachedFetcher) Fetch(ctx context.Context, u string, _ ...FetchOption) (Set, error) {
-	if !f.cache.IsRegistered(ctx, u) {
-		return nil, fmt.Errorf(`jwk.CachedFetcher: url %q has not been registered`, u)
-	}
-	return f.cache.Lookup(ctx, u)
 }
 
 // Fetch fetches a JWK resource specified by a URL. The url must be

@@ -1,46 +1,24 @@
 package_name: jwk
 output: jwk/options_gen.go
 interfaces:
-  - name: CacheOption
-    comment: |
-      CacheOption is a type of Option that can be passed to the
-      the `jwk.NewCache()` function.
-  - name: ResourceOption
-    comment: |
-      ResourceOption is a type of Option that can be passed to the `httprc.NewResource` function
-      by way of RegisterOption.
   - name: AssignKeyIDOption
   - name: FetchOption
     methods:
       - fetchOption
       - parseOption
-      - registerOption
     comment: |
       FetchOption is a type of Option that can be passed to `jwk.Fetch()`
-      FetchOption also implements the `RegisterOption`, and thus can
-      safely be passed to `(*jwk.Cache).Register()`
   - name: ParseOption
     methods:
       - fetchOption
-      - registerOption
       - readFileOption
     comment: |
       ParseOption is a type of Option that can be passed to `jwk.Parse()`
-      ParseOption also implements the `ReadFileOption` and `NewCacheOption`,
-      and thus safely be passed to `jwk.ReadFile` and `(*jwk.Cache).Configure()`
+      ParseOption also implements the `ReadFileOption`,
+      and thus safely be passed to `jwk.ReadFile`.
   - name: ReadFileOption
     comment: |
       ReadFileOption is a type of `Option` that can be passed to `jwk.ReadFile`
-  - name: RegisterOption
-    comment: |
-      RegisterOption describes options that can be passed to `(jwk.Cache).Register()`
-  - name: RegisterFetchOption
-    methods:
-      - fetchOption
-      - registerOption
-      - parseOption
-    comment: |
-      RegisterFetchOption describes options that can be passed to `(jwk.Cache).Register()` and `jwk.Fetch()`
   - name: GlobalOption
     comment: |
       GlobalOption is a type of Option that can be passed to the `jwk.Configure()` to
@@ -49,11 +27,10 @@ interfaces:
     methods:
       - globalOption
       - fetchOption
-      - registerOption
       - parseOption
     comment: |
-      GlobalFetchOption describes an Option that can be passed to `jwk.Configure()`,
-      `jwk.Fetch()`, and `(*jwk.Cache).Register()`.
+      GlobalFetchOption describes an Option that can be passed to `jwk.Configure()`
+      and `jwk.Fetch()`.
 options:
   - ident: HTTPClient
     interface: GlobalFetchOption
@@ -78,8 +55,7 @@ options:
       rebinding prevention), provide a custom http.Client with an appropriate
       Transport.DialContext that validates resolved IP addresses.
 
-      Users can override the client per-call via `jwk.Fetch()` or per-resource
-      via `(*jwk.Cache).Register()`.
+      Users can override the client per-call via `jwk.Fetch()`.
   - ident: MaxFetchBodySize
     interface: GlobalFetchOption
     argument_type: int64
@@ -89,8 +65,7 @@ options:
       this size, the fetch returns an error. The default value is 10MB (10485760).
 
       This option can be passed to `jwk.Configure()` to change the default
-      globally, or to `jwk.Fetch()` / `(*jwk.Cache).Register()` for a per-call
-      override.
+      globally, or to `jwk.Fetch()` for a per-call override.
   - ident: ThumbprintHash
     interface: AssignKeyIDOption
     argument_type: crypto.Hash
@@ -156,17 +131,6 @@ options:
     argument_type: fs.FS
     comment: |
       WithFS specifies the source `fs.FS` object to read the file from.
-  - ident: WaitReady
-    interface: RegisterOption
-    argument_type: bool
-    comment: |
-      WithWaitReady specifies that the `jwk.Cache` should wait until the
-      first fetch is done before returning from the `Register()` call.
-      
-      This option is by default true. Specify a false value if you would
-      like to return immediately from the `Register()` call.
-
-      This options is exactly the same as `httprc.WithWaitReady()`
   - ident: StrictKeyUsage
     interface: GlobalOption
     argument_type: bool

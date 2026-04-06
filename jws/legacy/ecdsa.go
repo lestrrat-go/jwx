@@ -23,7 +23,6 @@ func init() {
 		jwa.ES256():  crypto.SHA256,
 		jwa.ES384():  crypto.SHA384,
 		jwa.ES512():  crypto.SHA512,
-		jwa.ES256K(): crypto.SHA256,
 	}
 	for alg, hash := range algs {
 		ecdsaSigners[alg] = &ecdsaSigner{

@@ -18,14 +18,13 @@ var builtinEllipticCurveAlgorithm = map[string]struct{}{}
 
 func init() {
 	// builtin values for EllipticCurveAlgorithm
-	algorithms := make([]EllipticCurveAlgorithm, 7)
+	algorithms := make([]EllipticCurveAlgorithm, 6)
 	algorithms[0] = NewEllipticCurveAlgorithm("Ed25519")
-	algorithms[1] = NewEllipticCurveAlgorithm("Ed448")
-	algorithms[2] = NewEllipticCurveAlgorithm("P-256")
-	algorithms[3] = NewEllipticCurveAlgorithm("P-384")
-	algorithms[4] = NewEllipticCurveAlgorithm("P-521")
-	algorithms[5] = NewEllipticCurveAlgorithm("X25519")
-	algorithms[6] = NewEllipticCurveAlgorithm("X448")
+	algorithms[1] = NewEllipticCurveAlgorithm("P-256")
+	algorithms[2] = NewEllipticCurveAlgorithm("P-384")
+	algorithms[3] = NewEllipticCurveAlgorithm("P-521")
+	algorithms[4] = NewEllipticCurveAlgorithm("X25519")
+	algorithms[5] = NewEllipticCurveAlgorithm("X448")
 
 	RegisterEllipticCurveAlgorithm(algorithms...)
 }
@@ -33,11 +32,6 @@ func init() {
 // Ed25519 returns an object representing Ed25519 algorithm for EdDSA operations.
 func Ed25519() EllipticCurveAlgorithm {
 	return lookupBuiltinEllipticCurveAlgorithm("Ed25519")
-}
-
-// Ed448 returns an object representing Ed448 algorithm for EdDSA operations.
-func Ed448() EllipticCurveAlgorithm {
-	return lookupBuiltinEllipticCurveAlgorithm("Ed448")
 }
 
 var invalidEllipticCurve = NewEllipticCurveAlgorithm("P-invalid")

@@ -31,22 +31,6 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 	})
 	t.Run(`Lookup the object`, func(t *testing.T) {
 		t.Parallel()
-		v, ok := jwa.LookupEllipticCurveAlgorithm("Ed448")
-		require.True(t, ok, `Lookup should succeed`)
-		require.Equal(t, jwa.Ed448(), v, `Lookup value should be equal to constant`)
-	})
-	t.Run(`Unmarshal the string Ed448`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.EllipticCurveAlgorithm
-		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("Ed448")), &dst), `UnmarshalJSON is successful`)
-		require.Equal(t, jwa.Ed448(), dst, `unmarshaled value should be equal to constant`)
-	})
-	t.Run(`stringification for Ed448`, func(t *testing.T) {
-		t.Parallel()
-		require.Equal(t, "Ed448", jwa.Ed448().String(), `stringified value matches`)
-	})
-	t.Run(`Lookup the object`, func(t *testing.T) {
-		t.Parallel()
 		v, ok := jwa.LookupEllipticCurveAlgorithm("P-256")
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.P256(), v, `Lookup value should be equal to constant`)
@@ -134,7 +118,6 @@ func TestEllipticCurveAlgorithm(t *testing.T) {
 		t.Parallel()
 		var expected = map[jwa.EllipticCurveAlgorithm]struct{}{
 			jwa.Ed25519(): {},
-			jwa.Ed448():   {},
 			jwa.P256():    {},
 			jwa.P384():    {},
 			jwa.P521():    {},

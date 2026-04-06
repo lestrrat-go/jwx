@@ -31,22 +31,6 @@ func TestSignatureAlgorithm(t *testing.T) {
 	})
 	t.Run(`Lookup the object`, func(t *testing.T) {
 		t.Parallel()
-		v, ok := jwa.LookupSignatureAlgorithm("ES256K")
-		require.True(t, ok, `Lookup should succeed`)
-		require.Equal(t, jwa.ES256K(), v, `Lookup value should be equal to constant`)
-	})
-	t.Run(`Unmarshal the string ES256K`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("ES256K")), &dst), `UnmarshalJSON is successful`)
-		require.Equal(t, jwa.ES256K(), dst, `unmarshaled value should be equal to constant`)
-	})
-	t.Run(`stringification for ES256K`, func(t *testing.T) {
-		t.Parallel()
-		require.Equal(t, "ES256K", jwa.ES256K().String(), `stringified value matches`)
-	})
-	t.Run(`Lookup the object`, func(t *testing.T) {
-		t.Parallel()
 		v, ok := jwa.LookupSignatureAlgorithm("ES384")
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.ES384(), v, `Lookup value should be equal to constant`)
@@ -279,9 +263,6 @@ func TestSignatureAlgorithm(t *testing.T) {
 		t.Run(`ES256`, func(t *testing.T) {
 			require.False(t, jwa.ES256().IsSymmetric(), `jwa.ES256 returns expected value`)
 		})
-		t.Run(`ES256K`, func(t *testing.T) {
-			require.False(t, jwa.ES256K().IsSymmetric(), `jwa.ES256K returns expected value`)
-		})
 		t.Run(`ES384`, func(t *testing.T) {
 			require.False(t, jwa.ES384().IsSymmetric(), `jwa.ES384 returns expected value`)
 		})
@@ -329,7 +310,6 @@ func TestSignatureAlgorithm(t *testing.T) {
 		t.Parallel()
 		var expected = map[jwa.SignatureAlgorithm]struct{}{
 			jwa.ES256():        {},
-			jwa.ES256K():       {},
 			jwa.ES384():        {},
 			jwa.ES512():        {},
 			jwa.EdDSA():        {},
