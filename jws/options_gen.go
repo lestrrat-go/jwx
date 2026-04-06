@@ -211,7 +211,6 @@ type identInferAlgorithmFromKey struct{}
 type identKey struct{}
 type identKeyProvider struct{}
 type identKeyUsed struct{}
-type identLegacySigners struct{}
 type identMaxParseInputSize struct{}
 type identMaxSignatures struct{}
 type identMessage struct{}
@@ -259,10 +258,6 @@ func (identKeyProvider) String() string {
 
 func (identKeyUsed) String() string {
 	return "WithKeyUsed"
-}
-
-func (identLegacySigners) String() string {
-	return "WithLegacySigners"
 }
 
 func (identMaxParseInputSize) String() string {
@@ -388,11 +383,6 @@ func WithKeyProvider(v KeyProvider) VerifyOption {
 // jwx API allows users to specify a raw key such as *rsa.PublicKey)
 func WithKeyUsed(v any) VerifyOption {
 	return &verifyOption{option.New(identKeyUsed{}, v)}
-}
-
-// WithLegacySigners is a no-op option that exists only for backwards compatibility.
-func WithLegacySigners() GlobalOption {
-	return &globalOption{option.New(identLegacySigners{}, true)}
 }
 
 // WithMaxParseInputSize specifies the maximum number of bytes read from an

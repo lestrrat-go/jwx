@@ -231,11 +231,6 @@ options:
     argument_type: fs.FS
     comment: |
       WithFS specifies the source `fs.FS` object to read the file from.
-  - ident: LegacySigners
-    interface: GlobalOption
-    constant_value: true
-    comment: |
-      WithLegacySigners is a no-op option that exists only for backwards compatibility.
   - ident: MaxParseInputSize
     interface: GlobalParseOption
     argument_type: int64

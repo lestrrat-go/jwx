@@ -632,7 +632,6 @@ import (
 )
 
 func Example_jws_custom_signer_verifier() {
-  // Newer way of registering a custom signer/verifier
   if err := jws.RegisterSigner(jwa.EdDSA(), CirclEdDSASigner{}); err != nil {
     fmt.Printf(`failed to register signer: %s`, err)
     return
@@ -673,20 +672,16 @@ func Example_jws_custom_signer_verifier() {
 
 type CirclEdDSASigner struct{}
 
-func (CirclEdDSASigner) Algorithm() jwa.SignatureAlgorithm {
-  return jwa.EdDSA()
-}
-
-// Sign implements the jws.Signer2 interface for Circl's EdDSA signer.
+// Sign implements the jws.Signer interface for Circl's EdDSA signer.
 //
-// Signer2 is a relatively low-level API. It receives multiple parameters because of this.
+// Signer is a relatively low-level API. It receives multiple parameters because of this.
 //
 // One thing you should do in your signer is to check the type of the key passed in.
 // We have no way of constricting the type of key that is passed in without knowing
 // the implementation details of your custom signer, and thus we cannot guarantee that
 // users will pass in the correct type of key.
 //
-// Those implementing the jws.Signer2 interface could construct the buffer to be signed
+// Those implementing the jws.Signer interface could construct the buffer to be signed
 // themselves and generate the signature, but it is often easier to use the jwsbb.Sign
 // function, which takes care of the constructiion. In this example, we would like to
 // tell jwsbb.Sign to construct the buffer and generate the signature using ed25519.Sign,
@@ -706,13 +701,9 @@ func (CirclEdDSASigner) Sign(key any, payload []byte) ([]byte, error) {
 
 type CirclEdDSAVerifier struct{}
 
-func (CirclEdDSAVerifier) Algorithm() jwa.SignatureAlgorithm {
-  return jwa.EdDSA()
-}
-
-// Do implements the jws.Verifier interface for Circl's EdDSA verifier.
+// Verify implements the jws.Verifier interface for Circl's EdDSA verifier.
 //
-// See the comments for CirclECDSASigner.Do for more information on what this function does.
+// See the comments for CirclEdDSASigner.Sign for more information on what this function does.
 func (CirclEdDSAVerifier) Verify(key any, payload, signature []byte) error {
   fmt.Println("Custom verifier called")
   pubkey, ok := key.(ed25519.PublicKey)
@@ -724,43 +715,6 @@ func (CirclEdDSAVerifier) Verify(key any, payload, signature []byte) error {
     return nil
   }
   return fmt.Errorf(`failed to verify EdDSA signature`)
-}
-
-type LegacyCirclEdDSASignerVerifier struct{}
-
-func LegacyNewCirclEdDSASigner() (jws.Signer, error) {
-  return &LegacyCirclEdDSASignerVerifier{}, nil
-}
-
-func LegacyNewCirclEdDSAVerifier() (jws.Verifier, error) {
-  return &LegacyCirclEdDSASignerVerifier{}, nil
-}
-
-func (s LegacyCirclEdDSASignerVerifier) Algorithm() jwa.SignatureAlgorithm {
-  return jwa.EdDSA()
-}
-
-func (s LegacyCirclEdDSASignerVerifier) Sign(payload []byte, keyif any) ([]byte, error) {
-  fmt.Println("Custom signer called (legacy)")
-  switch key := keyif.(type) {
-  case ed25519.PrivateKey:
-    return ed25519.Sign(key, payload), nil
-  default:
-    return nil, fmt.Errorf(`invalid key type %T`, keyif)
-  }
-}
-
-func (s LegacyCirclEdDSASignerVerifier) Verify(payload []byte, signature []byte, keyif any) error {
-  fmt.Println("Custom verifier called (legacy)")
-  switch key := keyif.(type) {
-  case ed25519.PublicKey:
-    if ed25519.Verify(key, payload, signature) {
-      return nil
-    }
-    return fmt.Errorf(`failed to verify EdDSA signature`)
-  default:
-    return fmt.Errorf(`invalid key type %T`, keyif)
-  }
 }
 ```
 source: [examples/jws_custom_signer_verifier_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_custom_signer_verifier_example_test.go)

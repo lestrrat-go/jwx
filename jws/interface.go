@@ -2,20 +2,7 @@ package jws
 
 import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/jws/legacy"
 )
-
-// Deprecated: Use the legacy package directly. These type aliases will be removed in v4.
-type Signer = legacy.Signer
-
-// Deprecated: Use the legacy package directly. These type aliases will be removed in v4.
-type Verifier = legacy.Verifier
-
-// Deprecated: Use the legacy package directly. These type aliases will be removed in v4.
-type HMACSigner = legacy.HMACSigner
-
-// Deprecated: Use the legacy package directly. These type aliases will be removed in v4.
-type HMACVerifier = legacy.HMACVerifier
 
 // Base64Encoder is an interface that can be used when encoding JWS message
 // components to base64. This is useful when you want to use a non-standard

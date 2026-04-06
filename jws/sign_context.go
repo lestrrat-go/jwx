@@ -62,6 +62,7 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			sb.signer = noneSigner{}
 			sc.none = sb
 			sc.sigbuilders = append(sc.sigbuilders, sb)
+
 		case identKey{}:
 			var data *withKey
 			if err := option.Value(&data); err != nil {
@@ -87,18 +88,7 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			sb.protected = data.protected
 			sb.key = data.key
 			sb.public = data.public
-
-			s2, err := SignerFor(alg)
-			if err == nil {
-				sb.signer2 = s2
-			} else {
-				s1, err := legacySignerFor(alg)
-				if err != nil {
-					sb.signer2 = defaultSigner{alg: alg}
-				} else {
-					sb.signer = s1
-				}
-			}
+			sb.signer, _ = SignerFor(alg)
 
 			sc.sigbuilders = append(sc.sigbuilders, sb)
 		case identDetachedPayload{}:

@@ -60,37 +60,12 @@ func init() {
 	maxParseInputSize.Store(10 * 1024 * 1024) // 10MB
 }
 
-var signers = make(map[jwa.SignatureAlgorithm]Signer)
-var muSigner = &sync.Mutex{}
-
-func removeSigner(alg jwa.SignatureAlgorithm) {
-	muSigner.Lock()
-	defer muSigner.Unlock()
-	delete(signers, alg)
-}
-
 type defaultSigner struct {
 	alg jwa.SignatureAlgorithm
 }
 
-func (s defaultSigner) Algorithm() jwa.SignatureAlgorithm {
-	return s.alg
-}
-
 func (s defaultSigner) Sign(key any, payload []byte) ([]byte, error) {
 	return jwsbb.Sign(key, s.alg.String(), payload, nil)
-}
-
-type signerAdapter struct {
-	signer Signer
-}
-
-func (s signerAdapter) Algorithm() jwa.SignatureAlgorithm {
-	return s.signer.Algorithm()
-}
-
-func (s signerAdapter) Sign(key any, payload []byte) ([]byte, error) {
-	return s.signer.Sign(payload, key)
 }
 
 const (
@@ -699,14 +674,10 @@ func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
 	return nil
 }
 
-// Settings allows you to set global settings for this JWS operations.
-//
-// Currently, the only setting available is `jws.WithLegacySigners()`,
-// which for various reason is now a no-op.
+// Settings allows you to set global settings for JWS operations.
 func Settings(options ...GlobalOption) {
 	for _, option := range options {
 		switch option.Ident() {
-		case identLegacySigners{}:
 		case identMaxParseInputSize{}:
 			var v int64
 			if err := option.Value(&v); err != nil {
@@ -784,18 +755,12 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	defer pool.ByteSlice().Put(verifyBuf)
 
 	// Verify the signature
-	if verifier2, err := VerifierFor(alg); err == nil {
-		if err := verifier2.Verify(key, verifyBuf, signature); err != nil {
-			return nil, verifyError{verificationError{fmt.Errorf("signature verification failed for %s: %w", algstr, err)}}
-		}
-	} else {
-		legacyVerifier, err := NewVerifier(alg)
-		if err != nil {
-			return nil, makeVerifyError("failed to create verifier for %s: %w", algstr, err)
-		}
-		if err := legacyVerifier.Verify(verifyBuf, signature, key); err != nil {
-			return nil, verifyError{verificationError{fmt.Errorf("signature verification failed for %s: %w", algstr, err)}}
-		}
+	verifier, err := VerifierFor(alg)
+	if err != nil {
+		return nil, makeVerifyError("failed to create verifier for %s: %w", algstr, err)
+	}
+	if err := verifier.Verify(key, verifyBuf, signature); err != nil {
+		return nil, verifyError{verificationError{fmt.Errorf("signature verification failed for %s: %w", algstr, err)}}
 	}
 
 	decoded, err := base64.Decode(payload)
