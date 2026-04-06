@@ -35,6 +35,13 @@ import (
 // jws.Verify with jws.WithDetachedPayload, which supports the full
 // range of algorithms and key resolution strategies.
 //
+// In general, rather than signing a single large payload, consider
+// splitting it into smaller chunks and signing each chunk individually.
+// This approach is especially important for newer digital signature
+// algorithms, including Post-Quantum algorithms, which tend to require
+// the entire payload to be available at signing and verification time
+// and therefore do not support streaming.
+//
 // The compact parameter must be a JWS compact serialization with an
 // empty payload segment (detached).
 //
