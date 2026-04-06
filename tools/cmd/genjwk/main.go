@@ -376,14 +376,12 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("}")
 	o.L("}")
 
-	o.LL("func (h *%s) Get(name string, dst any) error {", structName)
+	o.LL("func (h *%s) Field(name string) (any, bool) {", structName)
 	o.L("h.mu.RLock()")
 	o.L("defer h.mu.RUnlock()")
 	o.L("switch name {")
 	o.L("case KeyTypeKey:")
-	o.L("if err := blackmagic.AssignIfCompatible(dst, h.KeyType()); err != nil {")
-	o.L("return fmt.Errorf(`%s.Get: failed to assign value for field %%q to destination object: %%w`, name, err)", structName)
-	o.L("}")
+	o.L("return h.KeyType(), true")
 	for _, f := range obj.Fields() {
 		if f.Bool(`is_std`) {
 			o.L("case %sKey:", f.Name(true))
@@ -392,32 +390,21 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 		}
 
 		o.L("if h.%s == nil {", f.Name(false))
-		o.L("return fmt.Errorf(`field %%q not found`, name)")
+		o.L("return nil, false")
 		o.L("}")
-		o.L("if err := blackmagic.AssignIfCompatible(dst, ")
 		if f.Bool(`hasGet`) {
-			o.R("h.%s.Get()", f.Name(false))
+			o.L("return h.%s.Get(), true", f.Name(false))
 		} else if fieldStorageTypeIsIndirect(f.Type()) {
-			o.R("*(h.%s)", f.Name(false))
+			o.L("return *(h.%s), true", f.Name(false))
 		} else {
-			o.R("h.%s", f.Name(false))
+			o.L("return h.%s, true", f.Name(false))
 		}
-		o.R("); err != nil {")
-		o.L("return fmt.Errorf(`failed to assign value for field %%q: %%w`, name, err)")
-		o.L("}")
-		o.L("return nil")
 	}
 	o.L("default:")
 	o.L("v, ok := h.privateParams[name]")
-	o.L("if !ok {")
-	o.L("return fmt.Errorf(`field %%q not found`, name)")
-	o.L("}")
-	o.L("if err := blackmagic.AssignIfCompatible(dst, v); err != nil {")
-	o.L("return fmt.Errorf(`failed to assign value for field %%q: %%w`, name, err)")
-	o.L("}")
+	o.L("return v, ok")
 	o.L("}") // end switch name
-	o.L("return nil")
-	o.L("}") // func (h *%s) Get(name string) (any, bool)
+	o.L("}") // func (h *%s) Field(name string) (any, bool)
 
 	o.LL("func (h *%s) Set(name string, value any) error {", structName)
 	o.L("h.mu.Lock()")
@@ -789,14 +776,9 @@ func generateGenericHeaders(fields codegen.FieldList, keyTypes []*KeyType) error
 	o.L("// the value is empty-ish (e.g. 0, false, \"\")  as long as it has been")
 	o.L("// explicitly set.")
 	o.L("Has(string) bool")
-	o.LL("// Get is used to extract the value of any field, including non-standard fields, out of the key.")
-	o.L("//")
-	o.L("// The first argument is the name of the field. The second argument is a pointer")
-	o.L("// to a variable that will receive the value of the field. The method returns")
-	o.L("// an error if the field does not exist, or if the value cannot be assigned to")
-	o.L("// the destination variable. Note that a field is considered to \"exist\" even if")
-	o.L("// the value is empty-ish (e.g. 0, false, \"\"), as long as it is explicitly set.")
-	o.L("Get(string, any) error")
+	o.LL("// Field returns the value of a key field by name, along with a boolean indicating")
+	o.L("// whether the field was found. For type-safe access, use the `jwk.Get[T]()` generic accessor.")
+	o.L("Field(string) (any, bool)")
 	o.LL("// Set sets the value of a single field. Note that certain fields,")
 	o.L("// notably \"kty\", cannot be altered, but will not return an error")
 	o.L("//\n// This method, which takes an `any`, exists because")

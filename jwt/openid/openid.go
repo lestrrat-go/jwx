@@ -20,9 +20,9 @@ func (t *stdToken) Clone() (jwt.Token, error) {
 	var dst jwt.Token = New()
 
 	for _, k := range t.Keys() {
-		var v any
-		if err := t.Get(k, &v); err != nil {
-			return nil, fmt.Errorf(`openid.Clone: failed to get %s: %w`, k, err)
+		v, ok := t.Field(k)
+		if !ok {
+			return nil, fmt.Errorf(`openid.Clone: failed to get %s`, k)
 		}
 		if err := dst.Set(k, v); err != nil {
 			return nil, fmt.Errorf(`openid.Clone: failed to set %s: %w`, k, err)

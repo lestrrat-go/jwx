@@ -9,7 +9,6 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 )
@@ -44,18 +43,12 @@ func (s *set) Set(n string, v any) error {
 	return nil
 }
 
-func (s *set) Get(name string, dst any) error {
+func (s *set) Field(name string) (any, bool) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
 	v, ok := s.privateParams[name]
-	if !ok {
-		return fmt.Errorf(`field %q not found`, name)
-	}
-	if err := blackmagic.AssignIfCompatible(dst, v); err != nil {
-		return fmt.Errorf(`failed to assign value to dst: %w`, err)
-	}
-	return nil
+	return v, ok
 }
 
 func (s *set) Key(idx int) (Key, bool) {

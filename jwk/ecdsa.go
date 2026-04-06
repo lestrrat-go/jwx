@@ -310,11 +310,10 @@ func makeECDSAPublicKey(src Key) (Key, error) {
 		case ECDSADKey:
 			continue
 		default:
-			var v any
-			if err := src.Get(k, &v); err != nil {
-				return nil, fmt.Errorf(`ecdsa: makeECDSAPublicKey: failed to get field %q: %w`, k, err)
+			v, ok := src.Field(k)
+			if !ok {
+				return nil, fmt.Errorf(`ecdsa: makeECDSAPublicKey: failed to get field %q`, k)
 			}
-
 			if err := newKey.Set(k, v); err != nil {
 				return nil, fmt.Errorf(`ecdsa: makeECDSAPublicKey: failed to set field %q: %w`, k, err)
 			}
@@ -350,9 +349,13 @@ func (k *ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	var key ecdsa.PublicKey
-	if err := Export(k, &key); err != nil {
+	keyV, err := Export(k)
+	if err != nil {
 		return nil, fmt.Errorf(`failed to export ecdsa.PublicKey for thumbprint generation: %w`, err)
+	}
+	key, ok := keyV.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf(`expected *ecdsa.PublicKey, got %T`, keyV)
 	}
 
 	xbuf := ecutil.AllocECPointBuffer(key.X, key.Curve)
@@ -374,9 +377,13 @@ func (k *ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	var key ecdsa.PrivateKey
-	if err := Export(k, &key); err != nil {
+	keyV, err := Export(k)
+	if err != nil {
 		return nil, fmt.Errorf(`failed to export ecdsa.PrivateKey for thumbprint generation: %w`, err)
+	}
+	key, ok := keyV.(*ecdsa.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf(`expected *ecdsa.PrivateKey, got %T`, keyV)
 	}
 
 	xbuf := ecutil.AllocECPointBuffer(key.X, key.Curve)

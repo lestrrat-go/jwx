@@ -67,12 +67,13 @@ type Set interface {
 	// then the second return value is false.
 	Key(int) (Key, bool)
 
-	// Get returns the value of a private field in the key set.
+	// Field returns the value of a private field in the key set, along
+	// with a boolean indicating whether the field was found.
 	//
 	// For the purposes of a key set, any field other than the "keys" field is
 	// considered to be a private field. In other words, you cannot use this
 	// method to directly access the list of keys in the set
-	Get(string, any) error
+	Field(string) (any, bool)
 
 	// Set sets the value of a single field.
 	//

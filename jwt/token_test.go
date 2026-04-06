@@ -35,8 +35,8 @@ func TestHeader(t *testing.T) {
 		h := jwt.New()
 		for k, v := range values {
 			require.NoError(t, h.Set(k, v), `h.Set should succeed for key %#v`, k)
-			var got any
-			require.NoError(t, h.Get(k, &got), `h.Get should succeed for key %#v`, k)
+			got, ok := h.Field(k)
+			require.True(t, ok, `h.Field should succeed for key %#v`, k)
 			if !reflect.DeepEqual(v, got) {
 				t.Fatalf("Values do not match: (%v, %v)", v, got)
 			}
@@ -72,11 +72,13 @@ func TestHeader(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Setting %s value failed", "default")
 		}
-		var tmp any
 		for k := range values {
-			require.Error(t, h.Get(k, &tmp), `Getting %s value should have failed`)
+			_, ok := h.Field(k)
+			require.False(t, ok, `Getting %s value should have failed`, k)
 		}
-		require.NoError(t, h.Get("default", &tmp), `Getting %s value should have succeeded`)
+		tmp, ok := h.Field("default")
+		require.True(t, ok, `Getting %s value should have succeeded`, "default")
+		_ = tmp
 	})
 
 	t.Run("GetError", func(t *testing.T) {
@@ -184,11 +186,11 @@ func TestToken(t *testing.T) {
 			require.NoError(t, tok.Set(k, kdef.Value), `tok.Set(%s) should succeed`, k)
 		}
 	})
-	t.Run("Get", func(t *testing.T) {
+	t.Run("Field", func(t *testing.T) {
 		rv := reflect.ValueOf(tok)
 		for k, kdef := range def {
-			var getval any
-			require.NoError(t, tok.Get(k, &getval), `tok.Get(%s) should succeed`, k)
+			getval, ok := tok.Field(k)
+			require.True(t, ok, `tok.Field(%s) should succeed`, k)
 
 			if mname := kdef.Method; mname != "" {
 				method := rv.MethodByName(mname)
@@ -215,8 +217,8 @@ func TestToken(t *testing.T) {
 
 		require.Len(t, newtok.Keys(), 0, `toks should have 0 tok`)
 		for _, k := range tok.Keys() {
-			var v any
-			require.NoError(t, tok.Get(k, &v), `tok.Get(%s) should succeed`, k)
+			v, ok := tok.Field(k)
+			require.True(t, ok, `tok.Field(%s) should succeed`, k)
 			require.NoError(t, newtok.Set(k, v), `newtok.Set should succeed`)
 		}
 	})

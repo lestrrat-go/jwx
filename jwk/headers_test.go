@@ -30,16 +30,16 @@ func TestHeader(t *testing.T) {
 		for k, v := range values {
 			require.NoError(t, h.Set(k, v), "Set works for '%s'", k)
 
-			var got any
-			require.NoError(t, h.Get(k, &got), "Get works for '%s'", k)
+			got, ok := h.Field(k)
+			require.True(t, ok, "Field works for '%s'", k)
 			require.Equal(t, v, got, "values match '%s'", k)
 			require.NoError(t, h.Set(k, v), "Set works for '%s'", k)
 		}
 
 		t.Run("Private params", func(t *testing.T) {
 			t.Parallel()
-			var v string
-			require.NoError(t, h.Get(`private`, &v), `h.Get should succeed`)
+			v, ok := h.Field(`private`)
+			require.True(t, ok, `h.Field should succeed`)
 			require.Equal(t, v, "boofoo", "value for 'private' should match")
 		})
 	})
@@ -95,8 +95,10 @@ func TestHeader(t *testing.T) {
 		for _, value := range []any{jwa.RS256(), jwa.RSA1_5()} {
 			require.NoError(t, h.Set(jwk.AlgorithmKey, value), "Set for alg should succeed")
 
-			var got jwa.KeyAlgorithm
-			require.NoError(t, h.Get("alg", &got), "Get for alg should succeed")
+			gotV, ok := h.Field("alg")
+			require.True(t, ok, "Field for alg should succeed")
+			got, ok := gotV.(jwa.KeyAlgorithm)
+			require.True(t, ok, "value should be jwa.KeyAlgorithm")
 			require.Equal(t, value, got, "values match")
 		}
 	})

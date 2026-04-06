@@ -81,8 +81,9 @@ func Example_jwe_complex_decrypt() {
 	// I would personally recommend creating a real type for your specific needs
 	// instead of passing adhoc closures. YMMV.
 	kp := func(ctx context.Context, sink jwe.KeySink, _ jwe.Recipient, msg *jwe.Message) error {
-		var hint string
-		if err := msg.ProtectedHeaders().Get(`jwx-hints`, &hint); err == nil {
+		hintV, ok := msg.ProtectedHeaders().Field(`jwx-hints`)
+		if ok {
+			hint := hintV.(string)
 			if hint == `foobar` {
 				// This is where we are setting the key to be used.
 				//

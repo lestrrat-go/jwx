@@ -82,8 +82,10 @@ func TestGH402(t *testing.T) {
 		if customField {
 			require.NotNil(t, m.ProtectedHeaders(), `m.ProtectedHeaders should be non-nil`)
 
-			var v Pin
-			require.NoError(t, m.ProtectedHeaders().Get("clevis", &v), `m.Get("clevis") should be succeed`)
+			fieldV, ok := m.ProtectedHeaders().Field("clevis")
+			require.True(t, ok, `m.Field("clevis") should succeed`)
+			_, ok = fieldV.(Pin)
+			require.True(t, ok, `value should be Pin type`)
 		}
 	}
 	decrypt(false)

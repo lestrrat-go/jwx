@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 )
@@ -54,13 +53,17 @@ func RegisterKeyParser(kp KeyParser) {
 
 func defaultParseKey(probe *KeyProbe, unmarshaler KeyUnmarshaler, data []byte) (Key, error) {
 	var key Key
-	var kty string
-	var d json.RawMessage
-	if err := probe.Get("Kty", &kty); err != nil {
-		return nil, fmt.Errorf(`jwk.Parse: failed to get "kty" hint: %w`, err)
+	ktyV, ok := probe.Field("Kty")
+	if !ok {
+		return nil, fmt.Errorf(`jwk.Parse: failed to get "kty" hint`)
+	}
+	kty, ok := ktyV.(string)
+	if !ok {
+		return nil, fmt.Errorf(`jwk.Parse: "kty" hint is not a string`)
 	}
 	// We ignore errors from this field, as it's optional
-	_ = probe.Get("D", &d)
+	dV, _ := probe.Field("D")
+	d, _ := dV.(json.RawMessage)
 	switch v, _ := jwa.LookupKeyType(kty); v {
 	case jwa.RSA():
 		if d != nil {
@@ -190,20 +193,17 @@ type KeyProbe struct {
 	data reflect.Value
 }
 
-// Get returns the value of the field with the given `name“.
-// `dst` must be a pointer to a value that can hold the type of
-// the value of the field, which is determined by the
-// field type registered through `jwk.RegisterProbeField()`
-func (kp *KeyProbe) Get(name string, dst any) error {
+// Field returns the value of the field with the given `name`,
+// along with a boolean indicating whether the field was found.
+// The field type is determined by the type registered through
+// `jwk.RegisterProbeField()`.
+func (kp *KeyProbe) Field(name string) (any, bool) {
 	f := kp.data.Elem().FieldByName(name)
 	if !f.IsValid() {
-		return fmt.Errorf(`field %s not found`, name)
+		return nil, false
 	}
 
-	if err := blackmagic.AssignIfCompatible(dst, f.Addr().Interface()); err != nil {
-		return fmt.Errorf(`failed to assign value of field %q to %T: %w`, name, dst, err)
-	}
-	return nil
+	return f.Interface(), true
 }
 
 // We don't really need the object, we need to know its type

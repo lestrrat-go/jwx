@@ -125,11 +125,12 @@ func Example_jwt_sign_with_import_jwk() {
 
 	fmt.Printf("%s\n", buf)
 
-	var pc string
-	if err := t.Get(`privateClaimKey`, &pc); err != nil {
+	pcV, ok := t.Field(`privateClaimKey`)
+	if !ok {
 		fmt.Printf("failed to fetch private claim\n")
 		return
 	}
+	pc := pcV.(string)
 	fmt.Printf("privateClaimKey -> '%s'\n", pc)
 
 	//convert jwk in bytes and return a new key
@@ -219,12 +220,13 @@ func Example_jwt_token() {
 	}
 	fmt.Printf("iat -> '%s'\n", iat.Format(time.RFC3339))
 
-	var pc string
-	if err := t.Get(`privateClaimKey`, &pc); err != nil {
+	pcV2, ok := t.Field(`privateClaimKey`)
+	if !ok {
 		fmt.Printf("failed to fetch private claim\n")
 		return
 	}
-	fmt.Printf("privateClaimKey -> '%s'\n", pc)
+	pc2 := pcV2.(string)
+	fmt.Printf("privateClaimKey -> '%s'\n", pc2)
 
 	sub, ok := t.Subject()
 	if !ok {

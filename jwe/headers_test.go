@@ -114,17 +114,17 @@ func TestHeaders(t *testing.T) {
 		}
 	})
 
-	t.Run("Set/Get", func(t *testing.T) {
+	t.Run("Set/Field", func(t *testing.T) {
 		h := jwe.NewHeaders()
 		for _, k := range base.Keys() {
-			var v any
-			require.NoError(t, base.Get(k, &v), `base.Get should succeed for key %#v`, k)
+			v, ok := base.Field(k)
+			require.True(t, ok, `base.Field should succeed for key %#v`, k)
 			require.NoError(t, h.Set(k, v), `h.Set should succeed for key %#v`, k)
 		}
 		for _, tc := range data {
 			var values []any
-			var viaGet any
-			require.NoError(t, h.Get(tc.Key, &viaGet), `h.Get should be successful`)
+			viaGet, ok := h.Field(tc.Key)
+			require.True(t, ok, `h.Field should succeed`)
 			values = append(values, viaGet)
 
 			if method := tc.Method; method != "" {
@@ -148,8 +148,8 @@ func TestHeaders(t *testing.T) {
 	t.Run("PrivateParams", func(t *testing.T) {
 		h := base
 
-		var v any
-		require.NoError(t, h.Get(`private`, &v), `h.Get should succeed`)
+		v, ok := h.Field(`private`)
+		require.True(t, ok, `h.Field should succeed`)
 		require.Equal(t, v, "boofoo", `value for 'private' should match`)
 	})
 	t.Run("Encode", func(t *testing.T) {

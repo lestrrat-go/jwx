@@ -97,11 +97,12 @@ func Example_shang_mi_sm2() {
 
 	{
 		// Create a ShangMi SM2 private key back from the jwk.Key
-		var clone sm2.PrivateKey
-		if err := jwk.Export(shangmi2JWK, &clone); err != nil {
+		cloneV, err := jwk.Export(shangmi2JWK)
+		if err != nil {
 			fmt.Printf("failed to create ShangMi private key from jwk.Key: %s\n", err)
 			return
 		}
+		clone := cloneV.(*sm2.PrivateKey)
 
 		// Clone should have same Crv, D, X, and Y values
 		if clone.Curve != shangmi2pk.Curve {
@@ -126,11 +127,12 @@ func Example_shang_mi_sm2() {
 	}
 
 	{ // Can do the same thing for any
-		var clone any
-		if err := jwk.Export(shangmi2JWK, &clone); err != nil {
+		clone, err := jwk.Export(shangmi2JWK)
+		if err != nil {
 			fmt.Printf("failed to create ShangMi private key from jwk.Key (via any): %s\n", err)
 			return
 		}
+		_ = clone
 	}
 
 	{
@@ -145,11 +147,12 @@ func Example_shang_mi_sm2() {
 			fmt.Printf("failed to create jwk.Key from raw ShangMi public key: %s\n", err)
 			return
 		}
-		var clone ecdsa.PrivateKey
-		if err := jwk.Export(eckjwk, &clone); err != nil {
+		cloneV2, err := jwk.Export(eckjwk)
+		if err != nil {
 			fmt.Printf("failed to create ShangMi public key from jwk.Key: %s\n", err)
 			return
 		}
+		_ = cloneV2
 	}
 
 	payload := []byte("Lorem ipsum")

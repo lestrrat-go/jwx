@@ -75,8 +75,10 @@ func TestJoseCompatibility(t *testing.T) {
 				Raw:      rsa.PrivateKey{},
 				Template: `{"alg": "RS256", "x-jwx": 1234}`,
 				VerifyKey: func(_ context.Context, t *testing.T, key jwk.Key) {
-					var v float64
-					require.NoError(t, key.Get(`x-jwx`, &v), `key.Get should succeed`)
+					fieldV, ok := key.Field(`x-jwx`)
+					require.True(t, ok, `key.Field should succeed`)
+					v, ok := fieldV.(float64)
+					require.True(t, ok, `value should be float64`)
 					require.Equal(t, float64(1234), v, `private parameters should match`)
 				},
 			},
@@ -97,7 +99,9 @@ func TestJoseCompatibility(t *testing.T) {
 					vk(ctx, t, webkey)
 				}
 
-				require.NoError(t, jwk.Export(webkey, &tc.Raw), `jwk.Export should succeed`)
+				rawV, err := jwk.Export(webkey)
+				require.NoError(t, err, `jwk.Export should succeed`)
+				_ = rawV
 			})
 		}
 	})
@@ -210,16 +214,18 @@ func joseInteropTest(ctx context.Context, spec interopTest, t *testing.T) {
 	require.NoError(t, err, `jwxtest.ParseJwkFile should succeed`)
 
 	t.Run("Parse JWK via jwx", func(t *testing.T) {
+		rawkey, err := jwk.Export(jwxJwk)
+		require.NoError(t, err, `jwk.Export should succeed`)
 		switch spec.alg {
 		case jwa.RSA1_5(), jwa.RSA_OAEP(), jwa.RSA_OAEP_256(), jwa.RSA_OAEP_384(), jwa.RSA_OAEP_512():
-			var rawkey rsa.PrivateKey
-			require.NoError(t, jwk.Export(jwxJwk, &rawkey), `jwk.Export should succeed`)
+			_, ok := rawkey.(*rsa.PrivateKey)
+			require.True(t, ok, `exported key should be *rsa.PrivateKey`)
 		case jwa.ECDH_ES(), jwa.ECDH_ES_A128KW(), jwa.ECDH_ES_A192KW(), jwa.ECDH_ES_A256KW():
-			var rawkey ecdsa.PrivateKey
-			require.NoError(t, jwk.Export(jwxJwk, &rawkey), `jwk.Export should succeed`)
+			_, ok := rawkey.(*ecdsa.PrivateKey)
+			require.True(t, ok, `exported key should be *ecdsa.PrivateKey`)
 		default:
-			var rawkey []byte
-			require.NoError(t, jwk.Export(jwxJwk, &rawkey), `jwk.Export should succeed`)
+			_, ok := rawkey.([]byte)
+			require.True(t, ok, `exported key should be []byte`)
 		}
 	})
 	t.Run("Encrypt with jose, Decrypt with jwx", func(t *testing.T) {
@@ -569,13 +575,11 @@ func TestGH1434(t *testing.T) {
 			defer joseJwkCleanup()
 
 			t.Run("Parse ECDH JWK via jwx", func(t *testing.T) {
-				// Test exporting as ECDH key (should work directly)
-				var ecdhKey ecdh.PrivateKey
-				require.NoError(t, jwk.Export(jwxJwk, &ecdhKey), `jwk.Export to ECDH should succeed`)
-
-				// Test exporting as ECDSA key (should use ECDHToECDSA conversion)
-				var ecdsaKey ecdsa.PrivateKey
-				require.NoError(t, jwk.Export(jwxJwk, &ecdsaKey), `jwk.Export to ECDSA should succeed via ECDHToECDSA conversion`)
+				// Test exporting the key
+				rawKeyV, err := jwk.Export(jwxJwk)
+				require.NoError(t, err, `jwk.Export should succeed`)
+				_, ok := rawKeyV.(*ecdh.PrivateKey)
+				require.True(t, ok, `exported key should be *ecdh.PrivateKey`)
 			})
 
 			t.Run("Encrypt with jose using ECDH key, Decrypt with jwx", func(t *testing.T) {

@@ -1,10 +1,7 @@
 package transform
 
 import (
-	"errors"
 	"fmt"
-
-	"github.com/lestrrat-go/blackmagic"
 )
 
 // Mappable is an interface that defines methods required when converting
@@ -14,7 +11,7 @@ import (
 // subject to change in future releases. This API is not subject to semver
 // compatibility guarantees.
 type Mappable interface {
-	Get(key string, dst any) error
+	Field(key string) (any, bool)
 	Keys() []string
 }
 
@@ -32,14 +29,9 @@ func AsMap(m Mappable, dst map[string]any) error {
 	}
 
 	for _, k := range m.Keys() {
-		var val any
-		if err := m.Get(k, &val); err != nil {
-			// Allow invalid value errors. Assume they are just nil values.
-			if !errors.Is(err, blackmagic.InvalidValueError()) {
-				return fmt.Errorf(`transform.AsMap: failed to get key %q: %w`, k, err)
-			}
+		if v, ok := m.Field(k); ok {
+			dst[k] = v
 		}
-		dst[k] = val
 	}
 
 	return nil

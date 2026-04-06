@@ -11,9 +11,14 @@ import "fmt"
 //	issuer, err := jwt.Get[string](token, jwt.IssuerKey)
 //	custom, err := jwt.Get[MyType](token, "my-custom-claim")
 func Get[T any](token Token, key string) (T, error) {
-	var dst T
-	if err := token.Get(key, &dst); err != nil {
-		return dst, fmt.Errorf(`jwt.Get: %w`, err)
+	var zero T
+	v, ok := token.Field(key)
+	if !ok {
+		return zero, fmt.Errorf(`jwt.Get: field %q not found`, key)
 	}
-	return dst, nil
+	result, ok := v.(T)
+	if !ok {
+		return zero, fmt.Errorf(`jwt.Get: field %q is %T, not %T`, key, v, zero)
+	}
+	return result, nil
 }

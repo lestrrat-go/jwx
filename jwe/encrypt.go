@@ -129,11 +129,11 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 				return jwebb.KeyEncryptECDHESKeyWrapX25519(cek, keyalgStr, e.apu, e.apv, key, keysize, ctalgStr)
 			}
 
-			var ecdsaKey *ecdsa.PublicKey
-			if err := keyconv.ECDHToECDSA(&ecdsaKey, key); err != nil {
+			ecdsaKeyV, err := keyconv.ECDHToECDSA(key)
+			if err != nil {
 				return nil, fmt.Errorf(`encrypt: failed to convert ECDH public key to ECDSA: %w`, err)
 			}
-			keyToUse = ecdsaKey
+			keyToUse = ecdsaKeyV
 		}
 
 		switch key := keyToUse.(type) {
@@ -158,8 +158,8 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 			keyToUse = &pk
 		}
 
-		var pubkey *rsa.PublicKey
-		if err := keyconv.RSAPublicKey(&pubkey, keyToUse); err != nil {
+		pubkey, err := keyconv.RSAPublicKey(keyToUse)
+		if err != nil {
 			return nil, fmt.Errorf(`encrypt: failed to convert to RSA public key: %w`, err)
 		}
 
@@ -177,8 +177,8 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 			keyToUse = &pk
 		}
 
-		var pubkey *rsa.PublicKey
-		if err := keyconv.RSAPublicKey(&pubkey, keyToUse); err != nil {
+		pubkey, err := keyconv.RSAPublicKey(keyToUse)
+		if err != nil {
 			return nil, fmt.Errorf(`encrypt: failed to convert to RSA public key: %w`, err)
 		}
 

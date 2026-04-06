@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/jwk/jwkbb"
 )
 
@@ -44,8 +43,8 @@ func (f PEMEncodeFunc) Encode(v any) (string, []byte, error) {
 func encodeX509(v any) (string, []byte, error) {
 	// we can't import jwk, so just use the interface
 	if key, ok := v.(Key); ok {
-		var raw any
-		if err := Export(key, &raw); err != nil {
+		raw, err := Export(key)
+		if err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key out of %T: %w`, key, err)
 		}
 
@@ -125,33 +124,31 @@ func (pemDecoder) Decode(src []byte) (any, []byte, error) {
 	if block == nil {
 		return nil, rest, fmt.Errorf(`failed to decode PEM data`)
 	}
-	var ret any
-	if err := jwkbb.DecodeX509(&ret, block); err != nil {
+	ret, err := jwkbb.DecodeX509(block)
+	if err != nil {
 		return nil, rest, err
 	}
 	return ret, rest, nil
 }
 
 // X509Decoder is an interface that describes an object that can decode
-// a PEM encoded ASN.1 DER format into a specific type of key.
+// a PEM encoded ASN.1 DER format into a raw key.
 //
 // This interface is experimental, and may change in the future.
 type X509Decoder interface {
-	// DecodeX509 decodes the given PEM block into the destination object.
-	// The destination object must be a pointer to a type that can hold the
-	// decoded key, such as *rsa.PrivateKey, *ecdsa.PrivateKey, etc.
-	DecodeX509(dst any, block *pem.Block) error
+	// DecodeX509 decodes the given PEM block and returns the decoded key.
+	DecodeX509(block *pem.Block) (any, error)
 }
 
 // X509DecodeFunc is a function type that implements the X509Decoder interface.
 // It allows you to create a custom X509Decoder by providing a function
-// that takes a destination and a PEM block, and returns an error if the decoding fails.
+// that takes a PEM block and returns a decoded key.
 //
 // This interface is experimental, and may change in the future.
-type X509DecodeFunc func(dst any, block *pem.Block) error
+type X509DecodeFunc func(block *pem.Block) (any, error)
 
-func (f X509DecodeFunc) DecodeX509(dst any, block *pem.Block) error {
-	return f(dst, block)
+func (f X509DecodeFunc) DecodeX509(block *pem.Block) (any, error) {
+	return f(block)
 }
 
 var muX509Decoders sync.RWMutex
@@ -161,7 +158,9 @@ var x509DecoderList = []X509Decoder{}
 type identDefaultX509Decoder struct{}
 
 func init() {
-	RegisterX509Decoder(identDefaultX509Decoder{}, X509DecodeFunc(jwkbb.DecodeX509))
+	RegisterX509Decoder(identDefaultX509Decoder{}, X509DecodeFunc(func(block *pem.Block) (any, error) {
+		return jwkbb.DecodeX509(block)
+	}))
 }
 
 // RegisterX509Decoder registers a new X509Decoder that can decode PEM encoded ASN.1 DER format.
@@ -213,13 +212,13 @@ func UnregisterX509Decoder(ident any) {
 	}
 }
 
-// decodeX509 decodes a PEM encoded ASN.1 DER format into the given destination.
+// decodeX509 decodes a PEM encoded ASN.1 DER format and returns the raw key.
 // It tries all registered X509 decoders until one of them succeeds.
 // If no decoder can handle the PEM block, it returns an error.
-func decodeX509(dst any, src []byte) error {
+func decodeX509(src []byte) (any, error) {
 	block, _ := pem.Decode(src)
 	if block == nil {
-		return fmt.Errorf(`failed to decode PEM data`)
+		return nil, fmt.Errorf(`failed to decode PEM data`)
 	}
 
 	muX509Decoders.RLock()
@@ -228,26 +227,22 @@ func decodeX509(dst any, src []byte) error {
 
 	var errs []error
 	for _, d := range decoders {
-		if err := d.DecodeX509(dst, block); err != nil {
+		ret, err := d.DecodeX509(block)
+		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		// successfully decoded
-		return nil
+		return ret, nil
 	}
 
-	return fmt.Errorf(`failed to decode X509 data using any of the decoders: %w`, errors.Join(errs...))
+	return nil, fmt.Errorf(`failed to decode X509 data using any of the decoders: %w`, errors.Join(errs...))
 }
 
-func decodeX509WithPEMDEcoder(dst any, src []byte, decoder PEMDecoder) error {
+func decodeX509WithPEMDEcoder(src []byte, decoder PEMDecoder) (any, error) {
 	ret, _, err := decoder.Decode(src)
 	if err != nil {
-		return fmt.Errorf(`failed to decode PEM data: %w`, err)
+		return nil, fmt.Errorf(`failed to decode PEM data: %w`, err)
 	}
 
-	if err := blackmagic.AssignIfCompatible(dst, ret); err != nil {
-		return fmt.Errorf(`failed to assign decoded key to destination: %w`, err)
-	}
-
-	return nil
+	return ret, nil
 }

@@ -13,7 +13,6 @@ import (
 	"io"
 	"sync/atomic"
 
-	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
@@ -121,8 +120,8 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 			keyID = v
 		}
 
-		var raw any
-		if err := jwk.Export(jwkKey, &raw); err != nil {
+		raw, err := jwk.Export(jwkKey)
+		if err != nil {
 			return nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to retrieve raw key out of %T: %w`, b.key, err)
 		}
 
@@ -252,7 +251,7 @@ func EncryptStatic(payload, cek []byte, options ...EncryptOption) ([]byte, error
 // decryptContext holds the state during JWE decryption, similar to JWS verifyContext
 type decryptContext struct {
 	keyProviders            []KeyProvider
-	keyUsed                 any
+	keyUsed                 *any
 	cek                     *[]byte
 	dst                     *Message
 	maxRecipients           int
@@ -436,9 +435,7 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 			}
 
 			if dc.keyUsed != nil {
-				if err := blackmagic.AssignIfCompatible(dc.keyUsed, key); err != nil {
-					return nil, fmt.Errorf(`failed to assign used key (%T) to %T: %w`, key, dc.keyUsed, err)
-				}
+				*dc.keyUsed = key
 			}
 			return decrypted, nil
 		}
@@ -448,8 +445,8 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 
 func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
 	if jwkKey, ok := key.(jwk.Key); ok {
-		var raw any
-		if err := jwk.Export(jwkKey, &raw); err != nil {
+		raw, err := jwk.Export(jwkKey)
+		if err != nil {
 			return nil, fmt.Errorf(`failed to retrieve raw key from %T: %w`, key, err)
 		}
 		key = raw
@@ -499,20 +496,24 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 
 	switch alg {
 	case jwa.ECDH_ES(), jwa.ECDH_ES_A128KW(), jwa.ECDH_ES_A192KW(), jwa.ECDH_ES_A256KW():
-		var epk any
-		if err := h2.Get(EphemeralPublicKeyKey, &epk); err != nil {
-			return nil, fmt.Errorf(`failed to get 'epk' field: %w`, err)
+		epk, ok := h2.Field(EphemeralPublicKeyKey)
+		if !ok {
+			return nil, fmt.Errorf(`failed to get 'epk' field`)
 		}
 		switch epk := epk.(type) {
 		case jwk.ECDSAPublicKey:
-			var pubkey ecdsa.PublicKey
-			if err := jwk.Export(epk, &pubkey); err != nil {
+			pubkeyV, err := jwk.Export(epk)
+			if err != nil {
 				return nil, fmt.Errorf(`failed to get public key: %w`, err)
 			}
-			dec.PublicKey(&pubkey)
+			pubkey, ok := pubkeyV.(*ecdsa.PublicKey)
+			if !ok {
+				return nil, fmt.Errorf(`expected *ecdsa.PublicKey, got %T`, pubkeyV)
+			}
+			dec.PublicKey(pubkey)
 		case jwk.OKPPublicKey:
-			var pubkey any
-			if err := jwk.Export(epk, &pubkey); err != nil {
+			pubkey, err := jwk.Export(epk)
+			if err != nil {
 				return nil, fmt.Errorf(`failed to get public key: %w`, err)
 			}
 			dec.PublicKey(pubkey)
@@ -527,31 +528,41 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 			dec.AgreementPartyVInfo(apv)
 		}
 	case jwa.A128GCMKW(), jwa.A192GCMKW(), jwa.A256GCMKW():
-		var ivB64 string
-		if err := h2.Get(InitializationVectorKey, &ivB64); err == nil {
-			iv, err := base64.DecodeString(ivB64)
-			if err != nil {
-				return nil, fmt.Errorf(`failed to b64-decode 'iv': %w`, err)
+		if ivV, ok := h2.Field(InitializationVectorKey); ok {
+			if ivB64, ok := ivV.(string); ok {
+				iv, err := base64.DecodeString(ivB64)
+				if err != nil {
+					return nil, fmt.Errorf(`failed to b64-decode 'iv': %w`, err)
+				}
+				dec.KeyInitializationVector(iv)
 			}
-			dec.KeyInitializationVector(iv)
 		}
-		var tagB64 string
-		if err := h2.Get(TagKey, &tagB64); err == nil {
-			tag, err := base64.DecodeString(tagB64)
-			if err != nil {
-				return nil, fmt.Errorf(`failed to b64-decode 'tag': %w`, err)
+		if tagV, ok := h2.Field(TagKey); ok {
+			if tagB64, ok := tagV.(string); ok {
+				tag, err := base64.DecodeString(tagB64)
+				if err != nil {
+					return nil, fmt.Errorf(`failed to b64-decode 'tag': %w`, err)
+				}
+				dec.KeyTag(tag)
 			}
-			dec.KeyTag(tag)
 		}
 	case jwa.PBES2_HS256_A128KW(), jwa.PBES2_HS384_A192KW(), jwa.PBES2_HS512_A256KW():
-		var saltB64 string
-		if err := h2.Get(SaltKey, &saltB64); err != nil {
+		saltV, ok := h2.Field(SaltKey)
+		if !ok {
 			return nil, fmt.Errorf(`failed to get %q field`, SaltKey)
 		}
+		saltB64, ok := saltV.(string)
+		if !ok {
+			return nil, fmt.Errorf(`field %q is not a string`, SaltKey)
+		}
 
-		var countFlt float64
-		if err := h2.Get(CountKey, &countFlt); err != nil {
+		countV, ok := h2.Field(CountKey)
+		if !ok {
 			return nil, fmt.Errorf(`failed to get %q field`, CountKey)
+		}
+		countFlt, ok := countV.(float64)
+		if !ok {
+			return nil, fmt.Errorf(`field %q is not a number`, CountKey)
 		}
 
 		maxCount := dc.maxPBES2Count

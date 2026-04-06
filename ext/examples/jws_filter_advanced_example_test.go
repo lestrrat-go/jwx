@@ -104,20 +104,17 @@ func Example_jws_header_filter_advanced() {
 // Helper function to demonstrate validation using filtered JWS headers
 func validateJWSSecurityHeaders(headers jws.Headers) {
 	// Check security level
-	var secLevel string
-	if err := headers.Get("security-level", &secLevel); err != nil {
+	if _, ok := headers.Field("security-level"); !ok {
 		fmt.Println("✗ Security level not found")
 	}
 
 	// Check internal use flag
-	var internalUse string
-	if err := headers.Get("internal-use", &internalUse); err != nil {
+	if _, ok := headers.Field("internal-use"); !ok {
 		fmt.Println("✗ Internal use flag missing")
 	}
 
 	// Check service identification
-	var service string
-	if err := headers.Get("service", &service); err != nil {
+	if _, ok := headers.Field("service"); !ok {
 		fmt.Println("✗ Service identification missing")
 	}
 }
