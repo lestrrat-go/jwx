@@ -158,7 +158,7 @@ func PublicRawKeyOf(v any) (any, error) {
 		return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to obtain public key from %T: %w`, v, err)
 	}
 
-	raw, err := Export(pubk)
+	raw, err := Export[any](pubk)
 	if err != nil {
 		return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to obtain raw key from %T: %w`, pubk, err)
 	}
@@ -175,7 +175,7 @@ func ParseRawKey(data []byte, rawkey any) error {
 		return fmt.Errorf(`failed to parse key: %w`, err)
 	}
 
-	raw, err := Export(key)
+	raw, err := Export[any](key)
 	if err != nil {
 		return fmt.Errorf(`failed to export raw key: %w`, err)
 	}
@@ -500,13 +500,9 @@ func Pem(v any) ([]byte, error) {
 func asnEncode(key Key) (string, []byte, error) {
 	switch key := key.(type) {
 	case ECDSAPrivateKey:
-		rawV, err := Export(key)
+		rawkey, err := Export[*ecdsa.PrivateKey](key)
 		if err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
-		}
-		rawkey, ok := rawV.(*ecdsa.PrivateKey)
-		if !ok {
-			return "", nil, fmt.Errorf(`expected *ecdsa.PrivateKey, got %T`, rawV)
 		}
 		buf, err := x509.MarshalECPrivateKey(rawkey)
 		if err != nil {
@@ -514,7 +510,7 @@ func asnEncode(key Key) (string, []byte, error) {
 		}
 		return pmECPrivateKey, buf, nil
 	case RSAPrivateKey, OKPPrivateKey:
-		rawkey, err := Export(key)
+		rawkey, err := Export[any](key)
 		if err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
 		}
@@ -524,7 +520,7 @@ func asnEncode(key Key) (string, []byte, error) {
 		}
 		return pmPrivateKey, buf, nil
 	case RSAPublicKey, ECDSAPublicKey, OKPPublicKey:
-		rawkey, err := Export(key)
+		rawkey, err := Export[any](key)
 		if err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
 		}

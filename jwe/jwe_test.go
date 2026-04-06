@@ -51,11 +51,11 @@ func init() {
 		panic(err)
 	}
 
-	rawV, err := jwk.Export(privkey)
+	rawV, err := jwk.Export[*rsa.PrivateKey](privkey)
 	if err != nil {
 		panic(err)
 	}
-	rsaPrivKey = *rawV.(*rsa.PrivateKey)
+	rsaPrivKey = *rawV
 }
 
 func TestSanityCheck_JWEExamplePayload(t *testing.T) {
@@ -148,9 +148,8 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	privkey, err := jwk.ParseKey(jwkstr)
 	require.NoError(t, err, `parsing jwk should succeed`)
 
-	rawkeyV, err := jwk.Export(privkey)
+	rawkey, err := jwk.Export[*rsa.PrivateKey](privkey)
 	require.NoError(t, err, `obtaining raw key should succeed`)
-	rawkey := rawkeyV.(*rsa.PrivateKey)
 
 	msg := jwe.NewMessage()
 	plaintext, err := jwe.Decrypt([]byte(serialized), jwe.WithKey(jwa.RSA_OAEP(), rawkey), jwe.WithMessage(msg))
@@ -411,9 +410,8 @@ func Test_GHIssue207(t *testing.T) {
 			require.NoError(t, err, `jwk.Thumbprint should succeed`)
 			require.Equal(t, base64.RawURLEncoding.EncodeToString(thumbprint), tc.Thumbprint, `thumbprints should match`)
 
-			keyV, err := jwk.Export(webKey)
+			key, err := jwk.Export[*ecdsa.PrivateKey](webKey)
 			require.NoError(t, err, `jwk.Export should succeed`)
-			key := keyV.(*ecdsa.PrivateKey)
 
 			decrypted, err := jwe.Decrypt([]byte(tc.Data), jwe.WithKeyProvider(jwe.KeyProviderFunc(func(_ context.Context, sink jwe.KeySink, r jwe.Recipient, _ *jwe.Message) error {
 				alg, ok := r.Headers().Algorithm()
@@ -562,9 +560,8 @@ func TestDecodePredefined_Direct(t *testing.T) {
 			require.NoError(t, err, `jwk.Thumbprint should succeed`)
 			require.Equal(t, base64.RawURLEncoding.EncodeToString(thumbprint), tc.Thumbprint, `thumbprints should match`)
 
-			keyV, err := jwk.Export(webKey)
+			key, err := jwk.Export[[]byte](webKey)
 			require.NoError(t, err, `jwk.Export should succeed`)
-			key := keyV.([]byte)
 
 			decrypted, err := jwe.Decrypt([]byte(tc.Data), jwe.WithKey(jwa.DIRECT(), key))
 			require.NoError(t, err, `jwe.Decrypt should succeed`)

@@ -43,7 +43,7 @@ func (f PEMEncodeFunc) Encode(v any) (string, []byte, error) {
 func encodeX509(v any) (string, []byte, error) {
 	// we can't import jwk, so just use the interface
 	if key, ok := v.(Key); ok {
-		raw, err := Export(key)
+		raw, err := Export[any](key)
 		if err != nil {
 			return "", nil, fmt.Errorf(`failed to get raw key out of %T: %w`, key, err)
 		}

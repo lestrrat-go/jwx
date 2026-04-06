@@ -37,7 +37,7 @@ func Example_jwk_usage() {
 
 		// jws and jwe operations can be performed using jwk.Key, but you could also
 		// covert it to their "raw" forms, such as *rsa.PrivateKey or *ecdsa.PrivateKey
-		rawkeyV, err := jwk.Export(key)
+		rawkeyV, err := jwk.Export[any](key)
 		if err != nil {
 			log.Printf("failed to create public key: %s", err)
 			return

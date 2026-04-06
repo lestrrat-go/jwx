@@ -269,7 +269,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 	t.Run("Raw", func(t *testing.T) {
 		typ := expectedRawKeyType(key)
 
-		rawkey, err := jwk.Export(key)
+		rawkey, err := jwk.Export[any](key)
 		require.NoError(t, err, `Raw() should succeed`)
 		require.IsType(t, rawkey, typ, `raw key should be of this type`)
 	})
@@ -351,7 +351,7 @@ func TestParse(t *testing.T) {
 			t.Run("Raw", func(t *testing.T) {
 				t.Helper()
 
-				irawkey, err := jwk.Export(key)
+				irawkey, err := jwk.Export[any](key)
 				require.NoError(t, err, `jwk.Export should succeed`)
 
 				isPrivate, err := jwk.IsPrivateKey(key)
@@ -837,7 +837,7 @@ func TestPublicKeyOf(t *testing.T) {
 			require.NoError(t, err, `jwk.PublicKeyOf(%T) should succeed`, jwkKey)
 
 			// Get the raw key to compare
-			rawKey, err := jwk.Export(pubJwkKey)
+			rawKey, err := jwk.Export[any](pubJwkKey)
 			require.NoError(t, err, `pubJwkKey.Raw should succeed`)
 			require.Equal(t, key.PublicKeyType, reflect.TypeOf(rawKey), `public key types should match (got %T)`, rawKey)
 		})
@@ -879,7 +879,7 @@ func TestPublicKeyOf(t *testing.T) {
 			require.Equal(t, fmt.Sprintf("key%d", i), kid, `KeyID() should match for %T`, setKey)
 
 			// Get the raw key to compare
-			rawKey, err := jwk.Export(setKey)
+			rawKey, err := jwk.Export[any](setKey)
 			require.NoError(t, err, `pubJwkKey.Raw should succeed`)
 			require.Equal(t, key.PublicKeyType, reflect.TypeOf(rawKey), `public key types should match (got %T)`, rawKey)
 		}
@@ -1354,10 +1354,8 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 	require.Equal(t, jwa.RSA(), key.KeyType(), `key type should be RSA`)
 
-	rawV, err := jwk.Export(key)
+	pubkey, err := jwk.Export[*rsa.PublicKey](key)
 	require.NoError(t, err, `key.Raw should succeed`)
-	pubkey, ok := rawV.(*rsa.PublicKey)
-	require.True(t, ok, `exported key should be *rsa.PublicKey`)
 
 	N := &big.Int{}
 	N, _ = N.SetString(`779390807991489150242580488277564408218067197694419403671246387831173881192316375931050469298375090533614189460270485948672580508192398132571230359681952349714254730569052029178325305344289615160181016909374016900403698428293142159695593998453788610098596363011884623801134548926432366560975619087466760747503535615491182090094278093592303467050094984372887804234341012289019841973178427045121609424191835554013017436743418746919496835541323790719629313070434897002108079086472354410640690933161025543816362962891190753195691593288890628966181309776957070655619665306995097798188588453327627252794498823229009195585001242181503742627414517186199717150645163224325403559815442522031412813762764879089624715721999552786759649849125487587658121901233329199571710176245013452847516179837767710027433169340850618643815395642568876192931279303797384539146396956216244189819533317558165234451499206045369678277987397913889177569796721689284116762473340601498426367267765652880247655009239893325078809797979771964770948333084772104541394544131668212262901583064272659565503500144472388676955404823979083054620299811247635425415371418720649368570747531327436083928369741631909855731133100553629456091216238379430154237251461586878393695925917`, 10)
@@ -2149,7 +2147,7 @@ func TestGH947(t *testing.T) {
 	raw := []byte(`{"crv":"Ed25519","d":"","x":"","kty":"OKP"}`)
 	k, err := jwk.ParseKey(raw)
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
-	_, err = jwk.Export(k)
+	_, err = jwk.Export[any](k)
 	require.Error(t, err, `(okpkey).Raw with 0-length OKP key should fail`)
 }
 
@@ -2244,9 +2242,8 @@ func TestGH1262(t *testing.T) {
 		require.NoError(t, err, `jwk.Import should succeed`)
 		_ = jwkCliPriv
 
-		rawCliPrivV, err := jwk.Export(jwkCliPriv, (*ecdh.PrivateKey)(nil))
+		rawCliPriv, err := jwk.Export[*ecdh.PrivateKey](jwkCliPriv)
 		require.NoError(t, err, `jwk.Export should succeed`)
-		rawCliPriv := rawCliPrivV.(*ecdh.PrivateKey)
 		_ = rawCliPriv
 
 		pubCli := keyCli.PublicKey() // server is able to retrieve the pub key part of client
@@ -2269,9 +2266,8 @@ func TestGH1262(t *testing.T) {
 		jwkCli, err := jwk.ParseKey(jwkBuf) // extract jwkBuf
 		require.NoError(t, err, `jwk.ParseKey should succeed`)
 
-		pubSrvV, err := jwk.Export(jwkCli, (*ecdh.PublicKey)(nil))
+		pubSrv, err := jwk.Export[*ecdh.PublicKey](jwkCli)
 		require.NoError(t, err, `jwk.Export should succeed`)
-		pubSrv := pubSrvV.(*ecdh.PublicKey)
 		secretCli, err := keyCli.ECDH(pubSrv)
 		require.NoError(t, err, `keyCli.ECDH should succeed`)
 
@@ -2304,10 +2300,9 @@ func TestExportEmbeddedKey(t *testing.T) {
 		directEmbed := &DirectEmbed{Key: rsaKey}
 
 		// Export the key from the direct embedding
-		rawKeyV, err := jwk.Export(directEmbed)
+		rawKeyV, err := jwk.Export[*rsa.PrivateKey](directEmbed)
 		require.NoError(t, err, "jwk.Export should succeed with direct embed")
-		_, ok := rawKeyV.(*rsa.PrivateKey)
-		require.True(t, ok, "exported key should be *rsa.PrivateKey")
+		_ = rawKeyV
 	})
 
 	t.Run("Indirect Embed", func(t *testing.T) {
@@ -2320,13 +2315,12 @@ func TestExportEmbeddedKey(t *testing.T) {
 		indirectEmbed := &IndirectEmbed{DirectEmbed: directEmbed}
 
 		// Export the key from the indirect embedding
-		rawKeyV, err := jwk.Export(indirectEmbed)
+		rawKeyV, err := jwk.Export[*rsa.PrivateKey](indirectEmbed)
 		if err != nil {
 			t.Logf("Error: %s", err)
 		}
 		require.NoError(t, err, "jwk.Export should succeed with indirect embed")
-		_, ok := rawKeyV.(*rsa.PrivateKey)
-		require.True(t, ok, "exported key should be *rsa.PrivateKey")
+		_ = rawKeyV
 	})
 
 	t.Run("Double Indirect Embed", func(t *testing.T) {
@@ -2340,10 +2334,9 @@ func TestExportEmbeddedKey(t *testing.T) {
 		doubleIndirectEmbed := &DoubleIndirectEmbed{IndirectEmbed: indirectEmbed}
 
 		// Export the key from the double indirect embedding
-		rawKeyV, err := jwk.Export(doubleIndirectEmbed)
+		rawKeyV, err := jwk.Export[*rsa.PrivateKey](doubleIndirectEmbed)
 		require.NoError(t, err, "jwk.Export should succeed with double indirect embed")
-		_, ok := rawKeyV.(*rsa.PrivateKey)
-		require.True(t, ok, "exported key should be *rsa.PrivateKey")
+		_ = rawKeyV
 	})
 }
 
