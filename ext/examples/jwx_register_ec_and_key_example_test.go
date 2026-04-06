@@ -46,19 +46,13 @@ func convertShangMiSm2(key *sm2.PrivateKey) (jwk.Key, error) {
 	return jwk.Import(key.PrivateKey)
 }
 
-func convertJWKToShangMiSm2(key jwk.Key, hint any) (any, error) {
+func convertJWKToShangMiSm2(key jwk.Key, _ any) (any, error) {
 	ecdsaKey, ok := key.(jwk.ECDSAPrivateKey)
 	if !ok {
 		return nil, fmt.Errorf(`invalid key type %T: %w`, key, jwk.ContinueError())
 	}
 	if v, ok := ecdsaKey.Crv(); !ok || v != SM2 {
 		return nil, fmt.Errorf(`cannote convert curve of type %s to ShangMi key: %w`, v, jwk.ContinueError())
-	}
-
-	switch hint.(type) {
-	case *sm2.PrivateKey, *any:
-	default:
-		return nil, fmt.Errorf(`can only convert SM2 key to *sm2.PrivateKey (got %T): %w`, hint, jwk.ContinueError())
 	}
 
 	var ret sm2.PrivateKey

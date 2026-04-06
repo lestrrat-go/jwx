@@ -147,6 +147,12 @@ var ecdsaConvertibleTypes = []reflect.Type{
 
 func ecdsaJWKToRaw(keyif Key, hint any) (any, error) {
 	var isECDH bool
+	switch hint.(type) {
+	case nil, ecdsa.PrivateKey, *ecdsa.PrivateKey, ecdsa.PublicKey, *ecdsa.PublicKey:
+		// default: return ECDSA format
+	case ecdh.PrivateKey, *ecdh.PrivateKey, ecdh.PublicKey, *ecdh.PublicKey:
+		isECDH = true
+	}
 
 	extracted, err := extractEmbeddedKey(keyif, ecdsaConvertibleTypes)
 	if err != nil {
@@ -155,31 +161,11 @@ func ecdsaJWKToRaw(keyif Key, hint any) (any, error) {
 
 	switch k := extracted.(type) {
 	case ECDSAPrivateKey:
-		switch hint.(type) {
-		case ecdsa.PrivateKey, *ecdsa.PrivateKey:
-		case ecdh.PrivateKey, *ecdh.PrivateKey:
-			isECDH = true
-		default:
-			rv := reflect.ValueOf(hint)
-			//nolint:revive
-			if rv.Kind() == reflect.Ptr && rv.Elem().Kind() == reflect.Interface {
-				// pointer to an interface value, presumably they want us to dynamically
-				// create an object of the right type
-			} else {
-				return nil, fmt.Errorf(`invalid destination object type %T: %w`, hint, ContinueError())
-			}
-		}
-
-		// rlocker is unexported with unexported methods, so only our
-		// concrete types implement it. A successful assertion lets us
-		// type-assert to the concrete struct and read fields directly
-		// under a single batch lock. This avoids nested RLock (which
-		// deadlocks when a writer is pending) while preserving an
-		// atomic snapshot of all fields.
 		var crv jwa.EllipticCurveAlgorithm
 		var hasCrv bool
 		var od, ox, oy []byte
-		if locker, ok := k.(rlocker); ok {
+		locker, ok := k.(rlocker)
+		if ok {
 			locker.rlock()
 			concrete := k.(*ecdsaPrivateKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
 			if concrete.crv != nil {
@@ -241,26 +227,11 @@ func ecdsaJWKToRaw(keyif Key, hint any) (any, error) {
 
 		return &key, nil
 	case ECDSAPublicKey:
-		switch hint.(type) {
-		case ecdsa.PublicKey, *ecdsa.PublicKey:
-		case ecdh.PublicKey, *ecdh.PublicKey:
-			isECDH = true
-		default:
-			rv := reflect.ValueOf(hint)
-			//nolint:revive
-			if rv.Kind() == reflect.Ptr && rv.Elem().Kind() == reflect.Interface {
-				// pointer to an interface value, presumably they want us to dynamically
-				// create an object of the right type
-			} else {
-				return nil, fmt.Errorf(`invalid destination object type %T: %w`, hint, ContinueError())
-			}
-		}
-
-		// See ECDSAPrivateKey case above for explanation of the rlocker pattern.
 		var crv jwa.EllipticCurveAlgorithm
 		var hasCrv bool
 		var x, y []byte
-		if locker, ok := k.(rlocker); ok {
+		locker, ok := k.(rlocker)
+		if ok {
 			locker.rlock()
 			concrete := k.(*ecdsaPublicKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
 			if concrete.crv != nil {

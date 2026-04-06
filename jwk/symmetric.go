@@ -30,7 +30,7 @@ var symmetricConvertibleKeys = []reflect.Type{
 	reflect.TypeFor[SymmetricKey](),
 }
 
-func octetSeqToRaw(key Key, hint any) (any, error) {
+func octetSeqToRaw(key Key, _ any) (any, error) {
 	extracted, err := extractEmbeddedKey(key, symmetricConvertibleKeys)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to extract embedded key: %w`, err)
@@ -38,20 +38,9 @@ func octetSeqToRaw(key Key, hint any) (any, error) {
 
 	switch key := extracted.(type) {
 	case SymmetricKey:
-		switch hint.(type) {
-		case *[]byte, *any:
-		default:
-			return nil, fmt.Errorf(`invalid destination object type %T for symmetric key: %w`, hint, ContinueError())
-		}
-
-		// rlocker is unexported with unexported methods, so only our
-		// concrete types implement it. A successful assertion lets us
-		// type-assert to the concrete struct and read fields directly
-		// under a single batch lock. This avoids nested RLock (which
-		// deadlocks when a writer is pending) while preserving an
-		// atomic snapshot of all fields.
 		var ooctets []byte
-		if locker, ok := key.(rlocker); ok {
+		locker, ok := key.(rlocker)
+		if ok {
 			locker.rlock()
 			concrete := key.(*symmetricKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
 			ooctets = concrete.octets
