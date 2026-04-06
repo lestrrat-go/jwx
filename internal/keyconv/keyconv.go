@@ -15,13 +15,9 @@ import (
 
 func RSAPrivateKey(src any) (*rsa.PrivateKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		rawV, err := jwk.Export(jwkKey)
+		ptr, err := jwk.Export[*rsa.PrivateKey](jwkKey)
 		if err != nil {
 			return nil, fmt.Errorf(`keyconv: failed to produce rsa.PrivateKey from %T: %w`, src, err)
-		}
-		ptr, ok := rawV.(*rsa.PrivateKey)
-		if !ok {
-			return nil, fmt.Errorf(`keyconv: expected *rsa.PrivateKey from export, got %T`, rawV)
 		}
 		return ptr, nil
 	}
@@ -62,13 +58,9 @@ func RSAPublicKey(src any) (*rsa.PublicKey, error) {
 
 func ECDSAPrivateKey(src any) (*ecdsa.PrivateKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		rawV, err := jwk.Export(jwkKey)
+		ptr, err := jwk.Export[*ecdsa.PrivateKey](jwkKey)
 		if err != nil {
 			return nil, fmt.Errorf(`keyconv: failed to produce ecdsa.PrivateKey from %T: %w`, src, err)
-		}
-		ptr, ok := rawV.(*ecdsa.PrivateKey)
-		if !ok {
-			return nil, fmt.Errorf(`keyconv: expected *ecdsa.PrivateKey from export, got %T`, rawV)
 		}
 		return ptr, nil
 	}
@@ -109,13 +101,9 @@ func ECDSAPublicKey(src any) (*ecdsa.PublicKey, error) {
 
 func ByteSliceKey(src any) ([]byte, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		rawV, err := jwk.Export(jwkKey)
+		raw, err := jwk.Export[[]byte](jwkKey)
 		if err != nil {
 			return nil, fmt.Errorf(`keyconv: failed to produce []byte from %T: %w`, src, err)
-		}
-		raw, ok := rawV.([]byte)
-		if !ok {
-			return nil, fmt.Errorf(`keyconv: expected []byte from export, got %T`, rawV)
 		}
 		return raw, nil
 	}
@@ -129,7 +117,7 @@ func ByteSliceKey(src any) ([]byte, error) {
 
 func Ed25519PrivateKey(src any) (*ed25519.PrivateKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		rawV, err := jwk.Export(jwkKey)
+		rawV, err := jwk.Export[any](jwkKey)
 		if err != nil {
 			return nil, fmt.Errorf(`keyconv: failed to produce ed25519.PrivateKey from %T: %w`, src, err)
 		}
@@ -197,14 +185,11 @@ type privECDHer interface {
 
 func ECDHPrivateKey(src any) (*ecdh.PrivateKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		rawV, err := jwk.Export(jwkKey, (*ecdh.PrivateKey)(nil))
+		raw, err := jwk.Export[*ecdh.PrivateKey](jwkKey)
 		if err != nil {
 			return nil, fmt.Errorf(`keyconv: failed to produce ecdh.PrivateKey from %T: %w`, src, err)
 		}
-		if raw, ok := rawV.(*ecdh.PrivateKey); ok {
-			return raw, nil
-		}
-		return nil, fmt.Errorf(`keyconv: expected *ecdh.PrivateKey from export, got %T`, rawV)
+		return raw, nil
 	}
 
 	switch src := src.(type) {
@@ -229,14 +214,11 @@ type pubECDHer interface {
 
 func ECDHPublicKey(src any) (*ecdh.PublicKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		rawV, err := jwk.Export(jwkKey, (*ecdh.PublicKey)(nil))
+		raw, err := jwk.Export[*ecdh.PublicKey](jwkKey)
 		if err != nil {
 			return nil, fmt.Errorf(`keyconv: failed to produce ecdh.PublicKey from %T: %w`, src, err)
 		}
-		if raw, ok := rawV.(*ecdh.PublicKey); ok {
-			return raw, nil
-		}
-		return nil, fmt.Errorf(`keyconv: expected *ecdh.PublicKey from export, got %T`, rawV)
+		return raw, nil
 	}
 
 	switch src := src.(type) {

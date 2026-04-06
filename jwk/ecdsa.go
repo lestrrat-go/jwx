@@ -320,13 +320,9 @@ func (k *ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	keyV, err := Export(k)
+	key, err := Export[*ecdsa.PublicKey](k)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to export ecdsa.PublicKey for thumbprint generation: %w`, err)
-	}
-	key, ok := keyV.(*ecdsa.PublicKey)
-	if !ok {
-		return nil, fmt.Errorf(`expected *ecdsa.PublicKey, got %T`, keyV)
 	}
 
 	xbuf := ecutil.AllocECPointBuffer(key.X, key.Curve)
@@ -348,13 +344,9 @@ func (k *ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	keyV, err := Export(k)
+	key, err := Export[*ecdsa.PrivateKey](k)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to export ecdsa.PrivateKey for thumbprint generation: %w`, err)
-	}
-	key, ok := keyV.(*ecdsa.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf(`expected *ecdsa.PrivateKey, got %T`, keyV)
 	}
 
 	xbuf := ecutil.AllocECPointBuffer(key.X, key.Curve)

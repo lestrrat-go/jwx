@@ -98,7 +98,7 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 			keyID = v
 		}
 
-		raw, err := jwk.Export(jwkKey)
+		raw, err := jwk.Export[any](jwkKey)
 		if err != nil {
 			return nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to retrieve raw key out of %T: %w`, b.key, err)
 		}
@@ -400,7 +400,7 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 
 func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
 	if jwkKey, ok := key.(jwk.Key); ok {
-		raw, err := jwk.Export(jwkKey)
+		raw, err := jwk.Export[any](jwkKey)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to retrieve raw key from %T: %w`, key, err)
 		}
@@ -457,17 +457,13 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 		}
 		switch epk := epk.(type) {
 		case jwk.ECDSAPublicKey:
-			pubkeyV, err := jwk.Export(epk)
+			pubkey, err := jwk.Export[*ecdsa.PublicKey](epk)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to get public key: %w`, err)
 			}
-			pubkey, ok := pubkeyV.(*ecdsa.PublicKey)
-			if !ok {
-				return nil, fmt.Errorf(`expected *ecdsa.PublicKey, got %T`, pubkeyV)
-			}
 			dec.PublicKey(pubkey)
 		case jwk.OKPPublicKey:
-			pubkey, err := jwk.Export(epk)
+			pubkey, err := jwk.Export[any](epk)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to get public key: %w`, err)
 			}
