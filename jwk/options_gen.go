@@ -23,27 +23,11 @@ type assignKeyIDOption struct {
 
 func (*assignKeyIDOption) assignKeyIDOption() {}
 
-// CacheOption is a type of Option that can be passed to the
-// the `jwk.NewCache()` function.
-type CacheOption interface {
-	Option
-	cacheOption()
-}
-
-type cacheOption struct {
-	Option
-}
-
-func (*cacheOption) cacheOption() {}
-
 // FetchOption is a type of Option that can be passed to `jwk.Fetch()`
-// FetchOption also implements the `RegisterOption`, and thus can
-// safely be passed to `(*jwk.Cache).Register()`
 type FetchOption interface {
 	Option
 	fetchOption()
 	parseOption()
-	registerOption()
 }
 
 type fetchOption struct {
@@ -54,15 +38,12 @@ func (*fetchOption) fetchOption() {}
 
 func (*fetchOption) parseOption() {}
 
-func (*fetchOption) registerOption() {}
-
-// GlobalFetchOption describes an Option that can be passed to `jwk.Configure()`,
-// `jwk.Fetch()`, and `(*jwk.Cache).Register()`.
+// GlobalFetchOption describes an Option that can be passed to `jwk.Configure()`
+// and `jwk.Fetch()`.
 type GlobalFetchOption interface {
 	Option
 	globalOption()
 	fetchOption()
-	registerOption()
 	parseOption()
 }
 
@@ -73,8 +54,6 @@ type globalFetchOption struct {
 func (*globalFetchOption) globalOption() {}
 
 func (*globalFetchOption) fetchOption() {}
-
-func (*globalFetchOption) registerOption() {}
 
 func (*globalFetchOption) parseOption() {}
 
@@ -92,12 +71,11 @@ type globalOption struct {
 func (*globalOption) globalOption() {}
 
 // ParseOption is a type of Option that can be passed to `jwk.Parse()`
-// ParseOption also implements the `ReadFileOption` and `NewCacheOption`,
-// and thus safely be passed to `jwk.ReadFile` and `(*jwk.Cache).Configure()`
+// ParseOption also implements the `ReadFileOption`,
+// and thus safely be passed to `jwk.ReadFile`.
 type ParseOption interface {
 	Option
 	fetchOption()
-	registerOption()
 	readFileOption()
 }
 
@@ -106,8 +84,6 @@ type parseOption struct {
 }
 
 func (*parseOption) fetchOption() {}
-
-func (*parseOption) registerOption() {}
 
 func (*parseOption) readFileOption() {}
 
@@ -123,49 +99,6 @@ type readFileOption struct {
 
 func (*readFileOption) readFileOption() {}
 
-// RegisterFetchOption describes options that can be passed to `(jwk.Cache).Register()` and `jwk.Fetch()`
-type RegisterFetchOption interface {
-	Option
-	fetchOption()
-	registerOption()
-	parseOption()
-}
-
-type registerFetchOption struct {
-	Option
-}
-
-func (*registerFetchOption) fetchOption() {}
-
-func (*registerFetchOption) registerOption() {}
-
-func (*registerFetchOption) parseOption() {}
-
-// RegisterOption describes options that can be passed to `(jwk.Cache).Register()`
-type RegisterOption interface {
-	Option
-	registerOption()
-}
-
-type registerOption struct {
-	Option
-}
-
-func (*registerOption) registerOption() {}
-
-// ResourceOption is a type of Option that can be passed to the `httprc.NewResource` function
-// by way of RegisterOption.
-type ResourceOption interface {
-	Option
-	resourceOption()
-}
-
-type resourceOption struct {
-	Option
-}
-
-func (*resourceOption) resourceOption() {}
-
 type identFS struct{}
 type identFetchWhitelist struct{}
 type identHTTPClient struct{}
@@ -176,7 +109,6 @@ type identPEM struct{}
 type identPEMDecoder struct{}
 type identStrictKeyUsage struct{}
 type identThumbprintHash struct{}
-type identWaitReady struct{}
 type identX509 struct{}
 
 func (identFS) String() string {
@@ -219,10 +151,6 @@ func (identThumbprintHash) String() string {
 	return "WithThumbprintHash"
 }
 
-func (identWaitReady) String() string {
-	return "WithWaitReady"
-}
-
 func (identX509) String() string {
 	return "WithX509"
 }
@@ -258,8 +186,7 @@ func WithFetchWhitelist(v Whitelist) FetchOption {
 // rebinding prevention), provide a custom http.Client with an appropriate
 // Transport.DialContext that validates resolved IP addresses.
 //
-// Users can override the client per-call via `jwk.Fetch()` or per-resource
-// via `(*jwk.Cache).Register()`.
+// Users can override the client per-call via `jwk.Fetch()`.
 func WithHTTPClient(v HTTPClient) GlobalFetchOption {
 	return &globalFetchOption{option.New(identHTTPClient{}, v)}
 }
@@ -297,8 +224,7 @@ func withLocalRegistry(v *json.Registry) ParseOption {
 // this size, the fetch returns an error. The default value is 10MB (10485760).
 //
 // This option can be passed to `jwk.Configure()` to change the default
-// globally, or to `jwk.Fetch()` / `(*jwk.Cache).Register()` for a per-call
-// override.
+// globally, or to `jwk.Fetch()` for a per-call override.
 func WithMaxFetchBodySize(v int64) GlobalFetchOption {
 	return &globalFetchOption{option.New(identMaxFetchBodySize{}, v)}
 }
@@ -335,17 +261,6 @@ func WithStrictKeyUsage(v bool) GlobalOption {
 
 func WithThumbprintHash(v crypto.Hash) AssignKeyIDOption {
 	return &assignKeyIDOption{option.New(identThumbprintHash{}, v)}
-}
-
-// WithWaitReady specifies that the `jwk.Cache` should wait until the
-// first fetch is done before returning from the `Register()` call.
-//
-// This option is by default true. Specify a false value if you would
-// like to return immediately from the `Register()` call.
-//
-// This options is exactly the same as `httprc.WithWaitReady()`
-func WithWaitReady(v bool) RegisterOption {
-	return &registerOption{option.New(identWaitReady{}, v)}
 }
 
 // WithX509 specifies that the input to `Parse()` is an X.509 encoded key

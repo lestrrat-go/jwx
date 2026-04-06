@@ -18,23 +18,22 @@ var builtinSignatureAlgorithm = map[string]struct{}{}
 
 func init() {
 	// builtin values for SignatureAlgorithm
-	algorithms := make([]SignatureAlgorithm, 16)
+	algorithms := make([]SignatureAlgorithm, 15)
 	algorithms[0] = NewSignatureAlgorithm("ES256")
-	algorithms[1] = NewSignatureAlgorithm("ES256K")
-	algorithms[2] = NewSignatureAlgorithm("ES384")
-	algorithms[3] = NewSignatureAlgorithm("ES512")
-	algorithms[4] = NewSignatureAlgorithm("EdDSA", WithDeprecated(true))
-	algorithms[5] = NewSignatureAlgorithm("Ed25519")
-	algorithms[6] = NewSignatureAlgorithm("HS256", WithIsSymmetric(true))
-	algorithms[7] = NewSignatureAlgorithm("HS384", WithIsSymmetric(true))
-	algorithms[8] = NewSignatureAlgorithm("HS512", WithIsSymmetric(true))
-	algorithms[9] = NewSignatureAlgorithm("none")
-	algorithms[10] = NewSignatureAlgorithm("PS256")
-	algorithms[11] = NewSignatureAlgorithm("PS384")
-	algorithms[12] = NewSignatureAlgorithm("PS512")
-	algorithms[13] = NewSignatureAlgorithm("RS256")
-	algorithms[14] = NewSignatureAlgorithm("RS384")
-	algorithms[15] = NewSignatureAlgorithm("RS512")
+	algorithms[1] = NewSignatureAlgorithm("ES384")
+	algorithms[2] = NewSignatureAlgorithm("ES512")
+	algorithms[3] = NewSignatureAlgorithm("EdDSA", WithDeprecated(true))
+	algorithms[4] = NewSignatureAlgorithm("Ed25519")
+	algorithms[5] = NewSignatureAlgorithm("HS256", WithIsSymmetric(true))
+	algorithms[6] = NewSignatureAlgorithm("HS384", WithIsSymmetric(true))
+	algorithms[7] = NewSignatureAlgorithm("HS512", WithIsSymmetric(true))
+	algorithms[8] = NewSignatureAlgorithm("none")
+	algorithms[9] = NewSignatureAlgorithm("PS256")
+	algorithms[10] = NewSignatureAlgorithm("PS384")
+	algorithms[11] = NewSignatureAlgorithm("PS512")
+	algorithms[12] = NewSignatureAlgorithm("RS256")
+	algorithms[13] = NewSignatureAlgorithm("RS384")
+	algorithms[14] = NewSignatureAlgorithm("RS512")
 
 	RegisterSignatureAlgorithm(algorithms...)
 }
@@ -42,11 +41,6 @@ func init() {
 // ES256 returns an object representing ECDSA signature algorithm using P-256 curve and SHA-256.
 func ES256() SignatureAlgorithm {
 	return lookupBuiltinSignatureAlgorithm("ES256")
-}
-
-// ES256K returns an object representing ECDSA signature algorithm using secp256k1 curve and SHA-256.
-func ES256K() SignatureAlgorithm {
-	return lookupBuiltinSignatureAlgorithm("ES256K")
 }
 
 // ES384 returns an object representing ECDSA signature algorithm using P-384 curve and SHA-384.

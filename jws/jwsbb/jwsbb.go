@@ -20,6 +20,7 @@ import (
 	"crypto"
 	"crypto/ed25519"
 	"fmt"
+	"sync"
 
 	"github.com/lestrrat-go/dsig"
 )
@@ -83,8 +84,21 @@ var jwsToDsigAlgorithm = map[string]string{
 	edDSAEd25519: dsig.EdDSA,
 }
 
+// RegisterDsigAlgorithm registers a mapping from a JWS algorithm name
+// to a dsig algorithm name. This allows extension modules to add support
+// for new algorithms that use the default signer/verifier dispatch.
+func RegisterDsigAlgorithm(jwsAlg, dsigAlg string) {
+	muDsigAlgorithm.Lock()
+	defer muDsigAlgorithm.Unlock()
+	jwsToDsigAlgorithm[jwsAlg] = dsigAlg
+}
+
+var muDsigAlgorithm sync.RWMutex
+
 // getDsigAlgorithm returns the dsig algorithm name for a JWS algorithm
 func getDsigAlgorithm(jwsAlg string) (string, bool) {
+	muDsigAlgorithm.RLock()
+	defer muDsigAlgorithm.RUnlock()
 	dsigAlg, ok := jwsToDsigAlgorithm[jwsAlg]
 	return dsigAlg, ok
 }

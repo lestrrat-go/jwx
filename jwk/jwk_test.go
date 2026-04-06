@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/blackmagic"
-	"github.com/lestrrat-go/httprc/v3"
+
 	"github.com/lestrrat-go/jwx/v3/cert"
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/jose"
@@ -2041,32 +2041,7 @@ func TestGH567(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	for _, ignoreParseError := range []bool{true, false} {
-		t.Run(fmt.Sprintf(`Parse with ignoreParseError=%t`, ignoreParseError), func(t *testing.T) {
-			ctx := t.Context()
-
-			c, err := jwk.NewCache(ctx, httprc.NewClient())
-			require.NoError(t, err, `jwk.NewCache should succeed`)
-
-			ctx2, cancel2 := context.WithTimeout(ctx, 1*time.Second)
-			defer cancel2()
-			err = c.Register(ctx2, srv.URL, jwk.WithIgnoreParseError(ignoreParseError))
-
-			if ignoreParseError {
-				require.NoError(t, err, `c.Register should succeed`)
-			} else {
-				require.Error(t, err, `c.Register should fail`)
-			}
-			set, err := c.Lookup(ctx, srv.URL)
-			if ignoreParseError {
-				require.NoError(t, err, `c.Fetch should succeed`)
-				require.NotNil(t, set, `c.Fetch should return a set`)
-				require.Equal(t, set.Len(), 2, `JWKS should contain two keys`)
-			} else {
-				require.Error(t, err, `c.Fetch should fail`)
-			}
-		})
-	}
+	// Cache-based ignoreParseError tests moved to ext/jwkcache
 
 	// Test the case when WithIgnoreParseError is passed to ParseKey
 	t.Run(`ParseKey + WithIgnoreParseError should be an error`, func(t *testing.T) {

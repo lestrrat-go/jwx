@@ -87,9 +87,6 @@ algorithms:
       - name: Ed25519
         value: Ed25519
         returnval_comment: Ed25519 algorithm for EdDSA operations
-      - name: Ed448
-        value: Ed448
-        returnval_comment: Ed448 algorithm for EdDSA operations
       - name: X25519
         value: X25519
         returnval_comment: X25519 algorithm for ECDH operations
@@ -136,9 +133,6 @@ algorithms:
       - name: ES512
         value: ES512
         returnval_comment: ECDSA signature algorithm using P-521 curve and SHA-512
-      - name: ES256K
-        value: ES256K
-        returnval_comment: ECDSA signature algorithm using secp256k1 curve and SHA-256
       - name: EdDSA
         value: EdDSA
         deprecated: true

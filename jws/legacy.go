@@ -44,7 +44,7 @@ func enableLegacySigners() {
 			panic(fmt.Sprintf("RegisterVerifier failed: %v", err))
 		}
 	}
-	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512(), jwa.ES256K()} {
+	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()} {
 		if err := RegisterSigner(alg, func(alg jwa.SignatureAlgorithm) SignerFactory {
 			return SignerFactoryFn(func() (Signer, error) {
 				return legacy.NewECDSASigner(alg), nil
