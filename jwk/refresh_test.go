@@ -96,7 +96,7 @@ func TestCachedSet(t *testing.T) {
 		hdrs.Set(`Content-Type`, `application/json`)
 		hdrs.Set(`Cache-Control`, `max-age=5`)
 
-		json.NewEncoder(w).Encode(set)
+		json.MarshalEncode(json.NewEncoder(w),set)
 	}))
 	defer srv.Close()
 
@@ -139,7 +139,7 @@ func TestCache_explicit_refresh_interval(t *testing.T) {
 		hdrs.Set(`Content-Type`, `application/json`)
 		hdrs.Set(`Cache-Control`, `max-age=7200`) // Make sure this is ignored
 
-		json.NewEncoder(w).Encode(key)
+		json.MarshalEncode(json.NewEncoder(w),key)
 	}))
 	defer srv.Close()
 
@@ -193,7 +193,7 @@ func TestCache_calculate_interval_from_cache_control(t *testing.T) {
 		hdrs.Set(`Content-Type`, `application/json`)
 		hdrs.Set(`Cache-Control`, `max-age=3`)
 
-		json.NewEncoder(w).Encode(key)
+		json.MarshalEncode(json.NewEncoder(w),key)
 	}))
 	defer srv.Close()
 
@@ -256,7 +256,7 @@ func TestCache_backoff(t *testing.T) {
 		}
 		hdrs.Set(`Content-Type`, `application/json`)
 
-		json.NewEncoder(w).Encode(key)
+		json.MarshalEncode(json.NewEncoder(w),key)
 	}))
 	defer srv.Close()
 
@@ -386,7 +386,7 @@ func TestErrorSink(t *testing.T) {
 			},
 			Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				json.NewEncoder(w).Encode(k)
+				json.MarshalEncode(json.NewEncoder(w),k)
 			}),
 		},
 	}

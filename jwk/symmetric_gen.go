@@ -4,8 +4,9 @@ package jwk
 
 import (
 	"bytes"
+	"encoding/json/jsontext"
 	"fmt"
-	"sort"
+	"slices"
 	"sync"
 
 	"github.com/lestrrat-go/blackmagic"
@@ -13,7 +14,6 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk/internal/registry"
 )
@@ -427,97 +427,99 @@ func (h *symmetricKey) UnmarshalJSON(buf []byte) (retErr error) {
 		}
 	}()
 	dec := json.NewDecoder(bytes.NewReader(buf))
-LOOP:
-	for {
-		tok, err := dec.Token()
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return fmt.Errorf(`error reading token: %w`, err)
+	}
+	if tok.Kind() != '{' {
+		return fmt.Errorf(`expected '{' but got '%c'`, tok.Kind())
+	}
+	for dec.PeekKind() != '}' {
+		tok, err := dec.ReadToken()
 		if err != nil {
 			return fmt.Errorf(`error reading token: %w`, err)
 		}
-		switch tok := tok.(type) {
-		case json.Delim:
-			// Assuming we're doing everything correctly, we should ONLY
-			// get either tokens.OpenCurlyBracket or tokens.CloseCurlyBracket here.
-			if tok == tokens.CloseCurlyBracket { // End of object
-				break LOOP
-			} else if tok != tokens.OpenCurlyBracket {
-				return fmt.Errorf(`expected '%c' but got '%c'`, tokens.OpenCurlyBracket, tok)
+		switch tok.String() {
+		case KeyTypeKey:
+			val, err := json.ReadNextStringToken(dec, h.dc)
+			if err != nil {
+				return fmt.Errorf(`error reading token: %w`, err)
 			}
-		case string: // Objects can only have string keys
-			switch tok {
-			case KeyTypeKey:
-				val, err := json.ReadNextStringToken(dec, h.dc)
-				if err != nil {
-					return fmt.Errorf(`error reading token: %w`, err)
-				}
-				if val != jwa.OctetSeq().String() {
-					return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
-				}
-			case AlgorithmKey:
-				var s string
-				if err := dec.Decode(&s); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
-				}
-				alg, err := jwa.KeyAlgorithmFrom(s)
-				if err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
-				}
-				h.algorithm = &alg
-			case KeyIDKey:
-				if err := json.AssignNextStringToken(&h.keyID, dec, h.dc); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyIDKey, err)
-				}
-			case KeyOpsKey:
-				var decoded KeyOperationList
-				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyOpsKey, err)
-				}
-				h.keyOps = &decoded
-			case KeyUsageKey:
-				if err := json.AssignNextStringToken(&h.keyUsage, dec, h.dc); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, KeyUsageKey, err)
-				}
-			case SymmetricOctetsKey:
-				if err := json.AssignNextBytesToken(&h.octets, dec); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, SymmetricOctetsKey, err)
-				}
-			case X509CertChainKey:
-				var decoded cert.Chain
-				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertChainKey, err)
-				}
-				h.x509CertChain = &decoded
-			case X509CertThumbprintKey:
-				if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec, h.dc); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintKey, err)
-				}
-			case X509CertThumbprintS256Key:
-				if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec, h.dc); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintS256Key, err)
-				}
-			case X509URLKey:
-				if err := json.AssignNextStringToken(&h.x509URL, dec, h.dc); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, X509URLKey, err)
-				}
-			default:
-				if dc := h.dc; dc != nil {
-					if localReg := dc.Registry(); localReg != nil {
-						decoded, err := localReg.Decode(dec, tok)
-						if err == nil {
-							h.setNoLock(tok, decoded)
-							continue
-						}
-					}
-				}
-				decoded, err := fieldRegistry.Decode(dec, tok)
-				if err == nil {
-					h.setNoLock(tok, decoded)
-					continue
-				}
-				return fmt.Errorf(`could not decode field %s: %w`, tok, err)
+			if val != jwa.OctetSeq().String() {
+				return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
+			}
+		case AlgorithmKey:
+			var s string
+			if err := json.UnmarshalDecode(dec, &s); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
+			}
+			alg, err := jwa.KeyAlgorithmFrom(s)
+			if err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
+			}
+			h.algorithm = &alg
+		case KeyIDKey:
+			if err := json.AssignNextStringToken(&h.keyID, dec, h.dc); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, KeyIDKey, err)
+			}
+		case KeyOpsKey:
+			var decoded KeyOperationList
+			if err := json.UnmarshalDecode(dec, &decoded); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, KeyOpsKey, err)
+			}
+			h.keyOps = &decoded
+		case KeyUsageKey:
+			if err := json.AssignNextStringToken(&h.keyUsage, dec, h.dc); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, KeyUsageKey, err)
+			}
+		case SymmetricOctetsKey:
+			if err := json.AssignNextBytesToken(&h.octets, dec); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, SymmetricOctetsKey, err)
+			}
+		case X509CertChainKey:
+			var decoded cert.Chain
+			if err := json.UnmarshalDecode(dec, &decoded); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertChainKey, err)
+			}
+			h.x509CertChain = &decoded
+		case X509CertThumbprintKey:
+			if err := json.AssignNextStringToken(&h.x509CertThumbprint, dec, h.dc); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintKey, err)
+			}
+		case X509CertThumbprintS256Key:
+			if err := json.AssignNextStringToken(&h.x509CertThumbprintS256, dec, h.dc); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, X509CertThumbprintS256Key, err)
+			}
+		case X509URLKey:
+			if err := json.AssignNextStringToken(&h.x509URL, dec, h.dc); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, X509URLKey, err)
 			}
 		default:
-			return fmt.Errorf(`invalid token %T`, tok)
+			fieldName := tok.String()
+			raw, err := dec.ReadValue()
+			if err != nil {
+				return fmt.Errorf(`could not read value for field %s: %w`, fieldName, err)
+			}
+			if dc := h.dc; dc != nil {
+				if localReg := dc.Registry(); localReg != nil {
+					decoded, err := localReg.Decode(fieldName, raw)
+					if err == nil {
+						h.setNoLock(fieldName, decoded)
+						continue
+					}
+				}
+			}
+			decoded, err := fieldRegistry.Decode(fieldName, raw)
+			if err == nil {
+				h.setNoLock(fieldName, decoded)
+				continue
+			}
+			return fmt.Errorf(`could not decode field %s: %w`, fieldName, err)
 		}
+	}
+	// consume closing '}'
+	if _, err := dec.ReadToken(); err != nil {
+		return fmt.Errorf(`error reading closing token: %w`, err)
 	}
 	if h.octets == nil {
 		return fmt.Errorf(`required field k is missing`)
@@ -525,128 +527,74 @@ LOOP:
 	return nil
 }
 
-func (h *symmetricKey) makePairs() ([]fieldPair, error) {
-	pairs := getFieldPairList()
+func (h *symmetricKey) MarshalJSON() ([]byte, error) {
+	data := make(map[string]any)
+	fields := make([]string, 0, 9)
+	data[KeyTypeKey] = jwa.OctetSeq()
+	fields = append(fields, KeyTypeKey)
 	h.mu.RLock()
-	defer h.mu.RUnlock()
-	{
-		v, err := json.Marshal(jwa.OctetSeq())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyTypeKey, err)
-		}
-		pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: v})
-	}
 	if h.algorithm != nil {
-		v, err := json.Marshal(*(h.algorithm))
-		if err != nil {
-			return nil, fmt.Errorf(`failed to marshal field %q: %w`, AlgorithmKey, err)
-		}
-		pairs = append(pairs, fieldPair{Name: AlgorithmKey, Value: v})
+		data[AlgorithmKey] = *(h.algorithm)
+		fields = append(fields, AlgorithmKey)
 	}
 	if h.keyID != nil {
-		v, err := json.Marshal(*(h.keyID))
-		if err != nil {
-			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyIDKey, err)
-		}
-		pairs = append(pairs, fieldPair{Name: KeyIDKey, Value: v})
+		data[KeyIDKey] = *(h.keyID)
+		fields = append(fields, KeyIDKey)
 	}
 	if h.keyOps != nil {
-		v, err := json.Marshal(*(h.keyOps))
-		if err != nil {
-			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyOpsKey, err)
-		}
-		pairs = append(pairs, fieldPair{Name: KeyOpsKey, Value: v})
+		data[KeyOpsKey] = *(h.keyOps)
+		fields = append(fields, KeyOpsKey)
 	}
 	if h.keyUsage != nil {
-		v, err := json.Marshal(*(h.keyUsage))
-		if err != nil {
-			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyUsageKey, err)
-		}
-		pairs = append(pairs, fieldPair{Name: KeyUsageKey, Value: v})
+		data[KeyUsageKey] = *(h.keyUsage)
+		fields = append(fields, KeyUsageKey)
 	}
 	if h.octets != nil {
-		v, err := json.Marshal(base64.EncodeToString(h.octets))
-		if err != nil {
-			return nil, fmt.Errorf(`failed to marshal field %q: %w`, SymmetricOctetsKey, err)
-		}
-		pairs = append(pairs, fieldPair{Name: SymmetricOctetsKey, Value: v})
+		data[SymmetricOctetsKey] = h.octets
+		fields = append(fields, SymmetricOctetsKey)
 	}
 	if h.x509CertChain != nil {
-		v, err := json.Marshal(h.x509CertChain)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertChainKey, err)
-		}
-		pairs = append(pairs, fieldPair{Name: X509CertChainKey, Value: v})
+		data[X509CertChainKey] = h.x509CertChain
+		fields = append(fields, X509CertChainKey)
 	}
 	if h.x509CertThumbprint != nil {
-		v, err := json.Marshal(*(h.x509CertThumbprint))
-		if err != nil {
-			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertThumbprintKey, err)
-		}
-		pairs = append(pairs, fieldPair{Name: X509CertThumbprintKey, Value: v})
+		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
+		fields = append(fields, X509CertThumbprintKey)
 	}
 	if h.x509CertThumbprintS256 != nil {
-		v, err := json.Marshal(*(h.x509CertThumbprintS256))
-		if err != nil {
-			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertThumbprintS256Key, err)
-		}
-		pairs = append(pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: v})
+		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
+		fields = append(fields, X509CertThumbprintS256Key)
 	}
 	if h.x509URL != nil {
-		v, err := json.Marshal(*(h.x509URL))
-		if err != nil {
-			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509URLKey, err)
-		}
-		pairs = append(pairs, fieldPair{Name: X509URLKey, Value: v})
+		data[X509URLKey] = *(h.x509URL)
+		fields = append(fields, X509URLKey)
 	}
 	for k, v := range h.privateParams {
-		var encoded []byte
-		switch v := v.(type) {
-		case []byte:
-			var err error
-			encoded, err = json.Marshal(base64.EncodeToString(v))
-			if err != nil {
-				return nil, fmt.Errorf(`failed to marshal field %q: %w`, k, err)
-			}
-		default:
-			var err error
-			encoded, err = json.Marshal(v)
-			if err != nil {
-				return nil, fmt.Errorf(`failed to marshal field %q: %w`, k, err)
-			}
-		}
-		pairs = append(pairs, fieldPair{Name: k, Value: encoded})
+		data[k] = v
+		fields = append(fields, k)
 	}
+	h.mu.RUnlock()
 
-	sort.Slice(pairs, func(i, j int) bool {
-		return pairs[i].Name < pairs[j].Name
-	})
-
-	return pairs, nil
-}
-
-func (h *symmetricKey) MarshalJSON() ([]byte, error) {
+	slices.Sort(fields)
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
-	pairs, err := h.makePairs()
-	if err != nil {
-		return nil, fmt.Errorf(`failed to make pairs: %w`, err)
-	}
-	buf.WriteByte(tokens.OpenCurlyBracket)
-
-	for i, pair := range pairs {
-		if i > 0 {
-			buf.WriteByte(tokens.Comma)
+	enc := json.NewEncoder(buf)
+	enc.WriteToken(jsontext.BeginObject)
+	for _, f := range fields {
+		enc.WriteToken(jsontext.String(f))
+		v := data[f]
+		switch v := v.(type) {
+		case []byte:
+			enc.WriteToken(jsontext.String(base64.EncodeToString(v)))
+		default:
+			if err := json.MarshalEncode(enc, v); err != nil {
+				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
+			}
 		}
-		buf.WriteByte('"')
-		buf.WriteString(pair.Name)
-		buf.WriteString(`": `)
-		buf.Write(pair.Value.([]byte))
 	}
-	buf.WriteByte(tokens.CloseCurlyBracket)
+	enc.WriteToken(jsontext.EndObject)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
-	putFieldPairList(pairs)
 	return ret, nil
 }
 

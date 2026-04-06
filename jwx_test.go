@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3"
@@ -31,53 +30,8 @@ func TestShowBuildInfo(t *testing.T) {
 	}
 }
 
-type jsonUnmarshalWrapper struct {
-	buf []byte
-}
-
-func (w jsonUnmarshalWrapper) Decode(v any) error {
-	return json.Unmarshal(w.buf, v)
-}
-
-func TestDecoderSetting(t *testing.T) {
-	// DO NOT MAKE THIS TEST PARALLEL. This test uses features with global side effects
-	const src = `{"foo": 1}`
-	for _, useNumber := range []bool{true, false} {
-		t.Run(fmt.Sprintf("jwx.WithUseNumber(%t)", useNumber), func(t *testing.T) {
-			if useNumber {
-				jwx.DecoderSettings(jwx.WithUseNumber(useNumber))
-				t.Cleanup(func() {
-					jwx.DecoderSettings(jwx.WithUseNumber(false))
-				})
-			}
-
-			// json.NewDecoder must be called AFTER the above jwx.DecoderSettings call
-			decoders := []struct {
-				Name    string
-				Decoder interface{ Decode(any) error }
-			}{
-				{Name: "Decoder", Decoder: json.NewDecoder(strings.NewReader(src))},
-				{Name: "Unmarshal", Decoder: jsonUnmarshalWrapper{buf: []byte(src)}},
-			}
-
-			for _, tc := range decoders {
-				t.Run(tc.Name, func(t *testing.T) {
-					var m map[string]any
-					require.NoError(t, tc.Decoder.Decode(&m), `Decode should succeed`)
-
-					v, ok := m["foo"]
-					require.True(t, ok, `m["foo"] should exist`)
-
-					if useNumber {
-						require.Equal(t, json.Number("1"), v, `v should be a json.Number object`)
-					} else {
-						require.Equal(t, float64(1), v, `v should be a float64`)
-					}
-				})
-			}
-		})
-	}
-}
+// TestDecoderSetting was removed in v4: DecoderSettings/WithUseNumber no longer exist.
+// json/v2 preserves numeric precision natively.
 
 // Test compatibility against `jose` tool
 func TestJoseCompatibility(t *testing.T) {
@@ -539,12 +493,8 @@ func TestGH996(t *testing.T) {
 }
 
 func TestGH1140(t *testing.T) {
-	// Using WithUseNumber changes the type of value obtained from the
-	// source JSON, which may cause issues
-	jwx.DecoderSettings(jwx.WithUseNumber(true))
-	t.Cleanup(func() {
-		jwx.DecoderSettings(jwx.WithUseNumber(false))
-	})
+	// Original test verified that PBES2 works regardless of UseNumber setting.
+	// In v4, UseNumber is removed, but the test still validates PBES2 roundtrip.
 	key, err := jwk.Import([]byte("secure-key"))
 	require.NoError(t, err, `jwk.Import should succeed`)
 

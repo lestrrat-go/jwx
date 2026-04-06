@@ -1,45 +1,73 @@
 package json
 
 import (
-	"bytes"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"fmt"
+	"io"
 	"os"
-	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 )
 
-var useNumber atomic.Uint32
+type (
+	Decoder    = jsontext.Decoder
+	Encoder    = jsontext.Encoder
+	RawMessage = jsontext.Value
+)
 
-func UseNumber() bool {
-	return useNumber.Load() == 1
+func Engine() string {
+	return "encoding/json/v2"
 }
 
-// Sets the global configuration for json decoding
-func DecoderSettings(inUseNumber bool) {
-	var val uint32
-	if inUseNumber {
-		val = 1
+func NewDecoder(r io.Reader) *jsontext.Decoder {
+	return jsontext.NewDecoder(r)
+}
+
+func NewEncoder(w io.Writer) *jsontext.Encoder {
+	return jsontext.NewEncoder(w)
+}
+
+func Marshal(v any) ([]byte, error) {
+	return jsonv2.Marshal(v)
+}
+
+func MarshalIndent(v any, prefix, indent string) ([]byte, error) {
+	b, err := jsonv2.Marshal(v)
+	if err != nil {
+		return nil, err
 	}
-	useNumber.Store(val)
+	var val jsontext.Value = b
+	if err := val.Indent(jsontext.WithIndentPrefix(prefix), jsontext.WithIndent(indent)); err != nil {
+		return nil, err
+	}
+	return []byte(val), nil
 }
 
-// Unmarshal respects the values specified in DecoderSettings,
-// and uses a Decoder that has certain features turned on/off
 func Unmarshal(b []byte, v any) error {
-	dec := NewDecoder(bytes.NewReader(b))
-	return dec.Decode(v)
+	return jsonv2.Unmarshal(b, v)
+}
+
+func MarshalEncode(enc *jsontext.Encoder, v any) error {
+	return jsonv2.MarshalEncode(enc, v)
+}
+
+func UnmarshalDecode(dec *jsontext.Decoder, v any) error {
+	return jsonv2.UnmarshalDecode(dec, v)
 }
 
 func AssignNextBytesToken(dst *[]byte, dec *Decoder) error {
-	var val string
-	if err := dec.Decode(&val); err != nil {
+	tok, err := dec.ReadToken()
+	if err != nil {
 		return fmt.Errorf(`error reading next value: %w`, err)
 	}
+	if tok.Kind() != jsontext.KindString {
+		return fmt.Errorf(`expected string token for base64 value, got %s`, tok.Kind())
+	}
 
-	buf, err := base64.DecodeString(val)
+	buf, err := base64.DecodeString(tok.String())
 	if err != nil {
-		return fmt.Errorf(`expected base64 encoded []byte (%T)`, val)
+		return fmt.Errorf(`expected base64 encoded []byte`)
 	}
 	*dst = buf
 	return nil
@@ -59,26 +87,22 @@ func shouldRejectNullStrings(dc DecodeCtx) bool {
 // When the given DecodeCtx implements StrictStringDecodeCtx and StrictStrings()
 // returns true, null values are rejected.
 func ReadNextStringToken(dec *Decoder, dc DecodeCtx) (string, error) {
-	if shouldRejectNullStrings(dc) {
-		var val any
-		if err := dec.Decode(&val); err != nil {
-			return "", fmt.Errorf(`error reading next value: %w`, err)
-		}
-		if val == nil {
-			return "", fmt.Errorf(`error reading next value: expected string, got null`)
-		}
-		s, ok := val.(string)
-		if !ok {
-			return "", fmt.Errorf(`error reading next value: expected string, got %T`, val)
-		}
-		return s, nil
-	}
-
-	var val string
-	if err := dec.Decode(&val); err != nil {
+	tok, err := dec.ReadToken()
+	if err != nil {
 		return "", fmt.Errorf(`error reading next value: %w`, err)
 	}
-	return val, nil
+
+	switch tok.Kind() {
+	case jsontext.KindNull:
+		if shouldRejectNullStrings(dc) {
+			return "", fmt.Errorf(`error reading next value: expected string, got null`)
+		}
+		return "", nil
+	case jsontext.KindString:
+		return tok.String(), nil
+	default:
+		return "", fmt.Errorf(`error reading next value: expected string, got %s`, tok.Kind())
+	}
 }
 
 func AssignNextStringToken(dst **string, dec *Decoder, dc DecodeCtx) error {
@@ -118,7 +142,7 @@ func EncodeAudience(enc *Encoder, aud []string, flatten bool) error {
 	} else {
 		val = aud
 	}
-	return enc.Encode(val)
+	return MarshalEncode(enc, val)
 }
 
 // DecodeCtx is an interface for objects that needs that extra something
@@ -166,8 +190,7 @@ func (dc *decodeCtx) StrictStrings() bool {
 }
 
 func Dump(v any) {
-	enc := NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
+	enc := jsontext.NewEncoder(os.Stdout, jsontext.WithIndent("\t"))
 	//nolint:errchkjson
-	_ = enc.Encode(v)
+	_ = jsonv2.MarshalEncode(enc, v)
 }

@@ -4,15 +4,16 @@ package jwt
 
 import (
 	"bytes"
+	"cmp"
+	"encoding/json/jsontext"
 	"fmt"
-	"sort"
+	"slices"
 	"sync"
 	"time"
 
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	jwterrs "github.com/lestrrat-go/jwx/v3/jwt/internal/errors"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
 )
@@ -405,79 +406,81 @@ func (t *stdToken) UnmarshalJSON(buf []byte) error {
 	t.notBefore = nil
 	t.subject = nil
 	dec := json.NewDecoder(bytes.NewReader(buf))
-LOOP:
-	for {
-		tok, err := dec.Token()
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return fmt.Errorf(`error reading token: %w`, err)
+	}
+	if tok.Kind() != '{' {
+		return fmt.Errorf(`expected '{' but got '%c'`, tok.Kind())
+	}
+	for dec.PeekKind() != '}' {
+		tok, err := dec.ReadToken()
 		if err != nil {
 			return fmt.Errorf(`error reading token: %w`, err)
 		}
-		switch tok := tok.(type) {
-		case json.Delim:
-			// Assuming we're doing everything correctly, we should ONLY
-			// get either tokens.OpenCurlyBracket or tokens.CloseCurlyBracket here.
-			if tok == tokens.CloseCurlyBracket { // End of object
-				break LOOP
-			} else if tok != tokens.OpenCurlyBracket {
-				return fmt.Errorf(`expected '%c', but got '%c'`, tokens.OpenCurlyBracket, tok)
+		switch tok.String() {
+		case AudienceKey:
+			var decoded types.StringList
+			if err := json.UnmarshalDecode(dec, &decoded); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, AudienceKey, err)
 			}
-		case string: // Objects can only have string keys
-			switch tok {
-			case AudienceKey:
-				var decoded types.StringList
-				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, AudienceKey, err)
-				}
-				t.audience = decoded
-			case ExpirationKey:
-				var decoded types.NumericDate
-				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, ExpirationKey, err)
-				}
-				t.expiration = &decoded
-			case IssuedAtKey:
-				var decoded types.NumericDate
-				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, IssuedAtKey, err)
-				}
-				t.issuedAt = &decoded
-			case IssuerKey:
-				if err := json.AssignNextStringToken(&t.issuer, dec, t.dc); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, IssuerKey, err)
-				}
-			case JwtIDKey:
-				if err := json.AssignNextStringToken(&t.jwtID, dec, t.dc); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, JwtIDKey, err)
-				}
-			case NotBeforeKey:
-				var decoded types.NumericDate
-				if err := dec.Decode(&decoded); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, NotBeforeKey, err)
-				}
-				t.notBefore = &decoded
-			case SubjectKey:
-				if err := json.AssignNextStringToken(&t.subject, dec, t.dc); err != nil {
-					return fmt.Errorf(`failed to decode value for key %s: %w`, SubjectKey, err)
-				}
-			default:
-				if dc := t.dc; dc != nil {
-					if localReg := dc.Registry(); localReg != nil {
-						decoded, err := localReg.Decode(dec, tok)
-						if err == nil {
-							t.setNoLock(tok, decoded)
-							continue
-						}
-					}
-				}
-				decoded, err := registry.Decode(dec, tok)
-				if err == nil {
-					t.setNoLock(tok, decoded)
-					continue
-				}
-				return fmt.Errorf(`could not decode field %s: %w`, tok, err)
+			t.audience = decoded
+		case ExpirationKey:
+			var decoded types.NumericDate
+			if err := json.UnmarshalDecode(dec, &decoded); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, ExpirationKey, err)
+			}
+			t.expiration = &decoded
+		case IssuedAtKey:
+			var decoded types.NumericDate
+			if err := json.UnmarshalDecode(dec, &decoded); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, IssuedAtKey, err)
+			}
+			t.issuedAt = &decoded
+		case IssuerKey:
+			if err := json.AssignNextStringToken(&t.issuer, dec, t.dc); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, IssuerKey, err)
+			}
+		case JwtIDKey:
+			if err := json.AssignNextStringToken(&t.jwtID, dec, t.dc); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, JwtIDKey, err)
+			}
+		case NotBeforeKey:
+			var decoded types.NumericDate
+			if err := json.UnmarshalDecode(dec, &decoded); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, NotBeforeKey, err)
+			}
+			t.notBefore = &decoded
+		case SubjectKey:
+			if err := json.AssignNextStringToken(&t.subject, dec, t.dc); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, SubjectKey, err)
 			}
 		default:
-			return fmt.Errorf(`invalid token %T`, tok)
+			fieldName := tok.String()
+			raw, err := dec.ReadValue()
+			if err != nil {
+				return fmt.Errorf(`could not read value for field %s: %w`, fieldName, err)
+			}
+			if dc := t.dc; dc != nil {
+				if localReg := dc.Registry(); localReg != nil {
+					decoded, err := localReg.Decode(fieldName, raw)
+					if err == nil {
+						t.setNoLock(fieldName, decoded)
+						continue
+					}
+				}
+			}
+			decoded, err := registry.Decode(fieldName, raw)
+			if err == nil {
+				t.setNoLock(fieldName, decoded)
+				continue
+			}
+			return fmt.Errorf(`could not decode field %s: %w`, fieldName, err)
 		}
+	}
+	// consume closing '}'
+	if _, err := dec.ReadToken(); err != nil {
+		return fmt.Errorf(`error reading closing token: %w`, err)
 	}
 	return nil
 }
@@ -533,109 +536,65 @@ func putClaimPairList(list []claimPair) {
 	claimPairPool.Put(list)
 }
 
-// makePairs creates a list of claimPair objects that are sorted by
-// their key names. The key names are always their JSON names, and
-// the values are already JSON encoded.
-// Because makePairs needs to allocate a slice, it _slows_ down
-// marshaling of the token to JSON. The upside is that it allows us to
-// marshal the token keys in a deterministic order.
-// Do we really need it...? Well, technically we don't, but it's so
-// much nicer to have this to make the example tests actually work
-// deterministically. Also if for whatever reason this becomes a
-// performance issue, we can always/ add a flag to use a more _optimized_ code path.
-//
-// The caller is responsible to call putClaimPairList() to return the
-// allocated slice back to the pool.
-
-func (t *stdToken) makePairs() ([]claimPair, error) {
+func (t *stdToken) makePairs() []claimPair {
 	pairs := getClaimPairList()
 	t.mu.RLock()
 	defer t.mu.RUnlock()
 	if t.audience != nil {
-		buf, err := json.MarshalAudience(t.audience, t.options.IsEnabled(FlattenAudience))
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
-		}
-		pairs = append(pairs, claimPair{Name: AudienceKey, Value: buf})
+		pairs = append(pairs, claimPair{Name: AudienceKey, Value: t.audience})
 	}
 	if t.expiration != nil {
-		buf, err := json.Marshal(t.expiration.Unix())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "exp": %w`, err)
-		}
-		pairs = append(pairs, claimPair{Name: ExpirationKey, Value: buf})
+		pairs = append(pairs, claimPair{Name: ExpirationKey, Value: t.expiration.Unix()})
 	}
 	if t.issuedAt != nil {
-		buf, err := json.Marshal(t.issuedAt.Unix())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "iat": %w`, err)
-		}
-		pairs = append(pairs, claimPair{Name: IssuedAtKey, Value: buf})
+		pairs = append(pairs, claimPair{Name: IssuedAtKey, Value: t.issuedAt.Unix()})
 	}
 	if t.issuer != nil {
-		buf, err := json.Marshal(*(t.issuer))
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "iss": %w`, err)
-		}
-		pairs = append(pairs, claimPair{Name: IssuerKey, Value: buf})
+		pairs = append(pairs, claimPair{Name: IssuerKey, Value: *(t.issuer)})
 	}
 	if t.jwtID != nil {
-		buf, err := json.Marshal(*(t.jwtID))
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "jti": %w`, err)
-		}
-		pairs = append(pairs, claimPair{Name: JwtIDKey, Value: buf})
+		pairs = append(pairs, claimPair{Name: JwtIDKey, Value: *(t.jwtID)})
 	}
 	if t.notBefore != nil {
-		buf, err := json.Marshal(t.notBefore.Unix())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "nbf": %w`, err)
-		}
-		pairs = append(pairs, claimPair{Name: NotBeforeKey, Value: buf})
+		pairs = append(pairs, claimPair{Name: NotBeforeKey, Value: t.notBefore.Unix()})
 	}
 	if t.subject != nil {
-		buf, err := json.Marshal(*(t.subject))
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field "sub": %w`, err)
-		}
-		pairs = append(pairs, claimPair{Name: SubjectKey, Value: buf})
+		pairs = append(pairs, claimPair{Name: SubjectKey, Value: *(t.subject)})
 	}
 	for k, v := range t.privateClaims {
-		buf, err := json.Marshal(v)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode field %q: %w`, k, err)
-		}
-		pairs = append(pairs, claimPair{Name: k, Value: buf})
+		pairs = append(pairs, claimPair{Name: k, Value: v})
 	}
 
-	sort.Slice(pairs, func(i, j int) bool {
-		return pairs[i].Name < pairs[j].Name
+	slices.SortFunc(pairs, func(a, b claimPair) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 
-	return pairs, nil
+	return pairs
 }
 
 func (t *stdToken) MarshalJSON() ([]byte, error) {
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
-	pairs, err := t.makePairs()
-	if err != nil {
-		return nil, fmt.Errorf(`failed to make pairs: %w`, err)
-	}
-	buf.WriteByte(tokens.OpenCurlyBracket)
-
-	for i, pair := range pairs {
-		if i > 0 {
-			buf.WriteByte(tokens.Comma)
+	enc := json.NewEncoder(buf)
+	enc.WriteToken(jsontext.BeginObject)
+	pairs := t.makePairs()
+	defer putClaimPairList(pairs)
+	for _, pair := range pairs {
+		enc.WriteToken(jsontext.String(pair.Name))
+		if pair.Name == AudienceKey {
+			if aud, ok := pair.Value.(types.StringList); ok {
+				if err := json.EncodeAudience(enc, aud, t.options.IsEnabled(FlattenAudience)); err != nil {
+					return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
+				}
+				continue
+			}
 		}
-		buf.WriteByte('"')
-		buf.WriteString(pair.Name)
-		buf.WriteString(`": `)
-		buf.Write(pair.Value.([]byte))
+		if err := json.MarshalEncode(enc, pair.Value); err != nil {
+			return nil, fmt.Errorf(`failed to encode value for field %q: %w`, pair.Name, err)
+		}
 	}
-	buf.WriteByte(tokens.CloseCurlyBracket)
+	enc.WriteToken(jsontext.EndObject)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
-	putClaimPairList(pairs)
 	return ret, nil
 }

@@ -1549,7 +1549,7 @@ func TestSetWithPrivateParams(t *testing.T) {
 	t.Run("JWK instead of JWKS", func(t *testing.T) {
 		var buf bytes.Buffer
 		_ = k1.Set(`renewal_kid`, "foo")
-		_ = json.NewEncoder(&buf).Encode(k1)
+		_ = json.MarshalEncode(json.NewEncoder(&buf), k1)
 
 		var check = func(t *testing.T, buf []byte) {
 			set, err := jwk.Parse(buf)
@@ -1585,12 +1585,14 @@ func TestSetWithPrivateParams(t *testing.T) {
 	t.Run("JWKS with multiple keys", func(t *testing.T) {
 		var buf bytes.Buffer
 		buf.WriteString(`{"renewal_kid":"foo","keys":[`)
-		enc := json.NewEncoder(&buf)
-		_ = enc.Encode(k1)
+		b1, _ := json.Marshal(k1)
+		buf.Write(b1)
 		buf.WriteByte(tokens.Comma)
-		_ = enc.Encode(k2)
+		b2, _ := json.Marshal(k2)
+		buf.Write(b2)
 		buf.WriteByte(tokens.Comma)
-		_ = enc.Encode(k3)
+		b3, _ := json.Marshal(k3)
+		buf.Write(b3)
 		buf.WriteString(`]}`)
 
 		var check = func(t *testing.T, buf []byte) {
