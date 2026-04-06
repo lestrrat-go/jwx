@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-func Example_jwk_readfile() {
+func Example_jwk_ParseFS() {
 	const src = `{
 		"keys": [
       {"kty":"EC",
@@ -25,7 +26,7 @@ func Example_jwk_readfile() {
     ]
   }`
 
-	f, err := os.CreateTemp(``, `jwk_readfile-*.jwk`)
+	f, err := os.CreateTemp(``, `jwk_parsefs-*.jwk`)
 	if err != nil {
 		fmt.Printf("failed to create temporary file: %s\n", err)
 		return
@@ -35,7 +36,7 @@ func Example_jwk_readfile() {
 	fmt.Fprint(f, src)
 	f.Close()
 
-	key, err := jwk.ReadFile(f.Name())
+	key, err := jwk.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()))
 	if err != nil {
 		fmt.Printf("failed to parse key: %s\n", err)
 		return

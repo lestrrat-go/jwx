@@ -4,7 +4,6 @@ package jwe
 
 import (
 	"context"
-	"io/fs"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/option/v2"
@@ -91,11 +90,11 @@ type globalOption struct {
 func (*globalOption) globalOption() {}
 
 // GlobalParseOption describes an Option that can be passed to `jwe.Settings()`
-// and `jwe.ReadFile()`.
+// and `jwe.Parse()`.
 type GlobalParseOption interface {
 	Option
 	globalOption()
-	readFileOption()
+	parseOption()
 }
 
 type globalParseOption struct {
@@ -104,31 +103,19 @@ type globalParseOption struct {
 
 func (*globalParseOption) globalOption() {}
 
-func (*globalParseOption) readFileOption() {}
+func (*globalParseOption) parseOption() {}
 
-// ReadFileOption is a type of `Option` that can be passed to `jwe.Parse`
+// ParseOption is a type of `Option` that can be passed to `jwe.Parse`
 type ParseOption interface {
 	Option
-	readFileOption()
+	parseOption()
 }
 
 type parseOption struct {
 	Option
 }
 
-func (*parseOption) readFileOption() {}
-
-// ReadFileOption is a type of `Option` that can be passed to `jwe.ReadFile`
-type ReadFileOption interface {
-	Option
-	readFileOption()
-}
-
-type readFileOption struct {
-	Option
-}
-
-func (*readFileOption) readFileOption() {}
+func (*parseOption) parseOption() {}
 
 // JSONSuboption describes suboptions that can be passed to `jwe.WithJSON()` option
 type WithJSONSuboption interface {
@@ -159,7 +146,6 @@ type identCEK struct{}
 type identCompress struct{}
 type identContentEncryptionAlgorithm struct{}
 type identContext struct{}
-type identFS struct{}
 type identKey struct{}
 type identKeyProvider struct{}
 type identKeyUsed struct{}
@@ -194,10 +180,6 @@ func (identContentEncryptionAlgorithm) String() string {
 
 func (identContext) String() string {
 	return "WithContext"
-}
-
-func (identFS) String() string {
-	return "WithFS"
 }
 
 func (identKey) String() string {
@@ -300,11 +282,6 @@ func WithContext(v context.Context) DecryptOption {
 	return &decryptOption{option.New(identContext{}, v)}
 }
 
-// WithFS specifies the source `fs.FS` object to read the file from.
-func WithFS(v fs.FS) ReadFileOption {
-	return &readFileOption{option.New(identFS{}, v)}
-}
-
 func WithKeyProvider(v KeyProvider) DecryptOption {
 	return &decryptOption{option.New(identKeyProvider{}, v)}
 }
@@ -351,7 +328,7 @@ func WithMaxPBES2Count(v int) GlobalDecryptOption {
 // `jwe.ParseReader` will return an error. The default value is 10MB.
 //
 // This option can be passed to `jwe.Settings()` to change the default
-// globally, or to `jwe.ReadFile()` for a per-call override.
+// globally, or to `jwe.ParseFS()` for a per-call override.
 func WithMaxParseInputSize(v int64) GlobalParseOption {
 	return &globalParseOption{option.New(identMaxParseInputSize{}, v)}
 }

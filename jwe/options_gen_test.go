@@ -14,7 +14,6 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithCompress", identCompress{}.String())
 	require.Equal(t, "WithContentEncryption", identContentEncryptionAlgorithm{}.String())
 	require.Equal(t, "WithContext", identContext{}.String())
-	require.Equal(t, "WithFS", identFS{}.String())
 	require.Equal(t, "WithKey", identKey{}.String())
 	require.Equal(t, "WithKeyProvider", identKeyProvider{}.String())
 	require.Equal(t, "WithKeyUsed", identKeyUsed{}.String())

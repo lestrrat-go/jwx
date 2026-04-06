@@ -3,40 +3,15 @@
 package jwe
 
 import (
-	"fmt"
 	"io/fs"
-	"os"
 )
 
-type sysFS struct{}
-
-func (sysFS) Open(path string) (fs.File, error) {
-	return os.Open(path)
-}
-
-func ReadFile(path string, options ...ReadFileOption) (*Message, error) {
-	var parseOptions []ParseOption
-	for _, option := range options {
-		if po, ok := option.(ParseOption); ok {
-			parseOptions = append(parseOptions, po)
-		}
-	}
-
-	var srcFS fs.FS = sysFS{}
-	for _, option := range options {
-		switch option.Ident() {
-		case identFS{}:
-			if err := option.Value(&srcFS); err != nil {
-				return nil, fmt.Errorf("failed to set fs.FS: %w", err)
-			}
-		}
-	}
-
-	f, err := srcFS.Open(path)
+func ParseFS(fsys fs.FS, path string, options ...ParseOption) (*Message, error) {
+	f, err := fsys.Open(path)
 	if err != nil {
 		return nil, err
 	}
-
 	defer f.Close()
-	return ParseReader(f, parseOptions...)
+
+	return ParseReader(f, options...)
 }

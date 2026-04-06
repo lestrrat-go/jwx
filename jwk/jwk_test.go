@@ -16,6 +16,8 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -926,8 +928,8 @@ func TestReadFile(t *testing.T) {
 	require.NoError(t, err, `jose.GenerateJwk`)
 
 	defer clean()
-	_, err = jwk.ReadFile(fn)
-	require.NoError(t, err, `jwk.ReadFile should succeed`)
+	_, err = jwk.ParseFS(os.DirFS(filepath.Dir(fn)), filepath.Base(fn))
+	require.NoError(t, err, `jwk.ParseFS should succeed`)
 }
 
 func TestRSA(t *testing.T) {

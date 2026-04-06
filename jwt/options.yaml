@@ -10,11 +10,8 @@ interfaces:
   - name: ParseOption
     methods:
       - parseOption
-      - readFileOption
     comment: |
       ParseOption describes an Option that can be passed to `jwt.Parse()`.
-      ParseOption also implements ReadFileOption, therefore it may be
-      safely pass them to `jwt.ReadFile()`
   - name: SignOption
     comment: |
       SignOption describes an Option that can be passed to `jwt.Sign()` or
@@ -23,7 +20,6 @@ interfaces:
     methods:
       - signOption
       - parseOption
-      - readFileOption
     comment: |
       SignParseOption describes an Option that can be passed to both `jwt.Sign()` or
       `jwt.Parse()`
@@ -31,7 +27,6 @@ interfaces:
     methods:
       - parseOption
       - encryptOption
-      - readFileOption
       - signOption
     comment: |
       SignEncryptParseOption describes an Option that can be passed to both `jwt.Sign()` or
@@ -39,28 +34,22 @@ interfaces:
   - name: ValidateOption
     methods:
       - parseOption
-      - readFileOption
       - validateOption
     comment: |
       ValidateOption describes an Option that can be passed to Validate().
       ValidateOption also implements ParseOption, therefore it may be
-      safely passed to `Parse()` (and thus `jwt.ReadFile()`)
-  - name: ReadFileOption
-    comment: |
-      ReadFileOption is a type of `Option` that can be passed to `jws.ReadFile`
+      safely passed to `Parse()`
   - name: GlobalParseOption
     methods:
       - globalOption
       - parseOption
-      - readFileOption
     comment: |
-      GlobalParseOption describes an Option that can be passed to `jwt.Settings()`,
-      `jwt.Parse()`, and `jwt.ReadFile()`.
+      GlobalParseOption describes an Option that can be passed to `jwt.Settings()`
+      and `jwt.Parse()`.
   - name: GlobalValidateOption
     methods:
       - globalOption
       - parseOption
-      - readFileOption
       - validateOption
     comment: |
       GlobalValidateOption describes an Option that can be passed to `jwt.Settings()` and `jwt.Validate()`
@@ -254,11 +243,6 @@ options:
        return nil
       })
       err := jwt.Validate(token, jwt.WithValidator(validator))
-  - ident: FS
-    interface: ReadFileOption
-    argument_type: fs.FS
-    comment: |
-      WithFS specifies the source `fs.FS` object to read the file from.
   - ident: NumericDateParsePrecision
     interface: GlobalOption
     argument_type: int
@@ -301,5 +285,5 @@ options:
       `jwt.ParseReader` will return an error. The default value is 10MB.
 
       This option can be passed to `jwt.Settings()` to change the default
-      globally, or to `jwt.ParseReader()` / `jwt.ReadFile()` for a per-call
+      globally, or to `jwt.ParseReader()` / `jwt.ParseFS()` for a per-call
       override.

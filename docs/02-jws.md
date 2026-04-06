@@ -68,9 +68,9 @@ source: [examples/jws_parse_example_test.go](https://github.com/lestrrat-go/jwx/
 
 ## Parse a JWS message stored in a file
 
-To parse a JWS stored in a file, use [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#ReadFile). [`jws.ReadFile()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#ReadFile) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#Parse).
+To parse a JWS stored in a file, use [`jws.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#ParseFS). [`jws.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#ParseFS) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#Parse).
 
-<!-- INCLUDE(examples/jws_readfile_example_test.go) -->
+<!-- INCLUDE(examples/jws_parsefs_example_test.go) -->
 ```go
 package examples_test
 
@@ -78,13 +78,14 @@ import (
   "encoding/json"
   "fmt"
   "os"
+  "path/filepath"
 
   "github.com/lestrrat-go/jwx/v3/jws"
 )
 
-func Example_jws_readfile() {
+func Example_jws_ParseFS() {
   const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo`
-  f, err := os.CreateTemp(``, `jws_readfile-*.jws`)
+  f, err := os.CreateTemp(``, `jws_parsefs-*.jws`)
   if err != nil {
     fmt.Printf("failed to create temporary file: %s\n", err)
     return
@@ -94,7 +95,7 @@ func Example_jws_readfile() {
   fmt.Fprint(f, src)
   f.Close()
 
-  msg, err := jws.ReadFile(f.Name())
+  msg, err := jws.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()))
   if err != nil {
     fmt.Printf("failed to parse JWS message: %s\n", err)
     return
@@ -106,7 +107,7 @@ func Example_jws_readfile() {
   // {"payload":"TG9yZW0gaXBzdW0","protected":"eyJhbGciOiJIUzI1NiJ9","signature":"idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo"}
 }
 ```
-source: [examples/jws_readfile_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_readfile_example_test.go)
+source: [examples/jws_parsefs_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_parsefs_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a JWS message and access JWS headers
