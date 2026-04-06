@@ -197,6 +197,8 @@ func generateToken(obj *codegen.Object) error {
 	o.L("Options() *%sTokenOptionSet", pkgPrefix)
 	o.L("Clone() (%sToken, error)", pkgPrefix)
 	o.L("Keys() []string")
+	o.L("// Claims returns an iterator over all claims (standard and private) in the token.")
+	o.L("Claims() iter.Seq2[string, any]")
 	o.L("}")
 
 	o.L("type %s struct {", obj.Name(false))
@@ -522,6 +524,28 @@ func generateToken(obj *codegen.Object) error {
 	o.L("}")
 	o.L("return keys")
 	o.L("}")
+
+	// Generate Claims() iter.Seq2[string, any] method
+	o.LL("func (t *%s) Claims() iter.Seq2[string, any] {", obj.Name(false))
+	o.L("return func(yield func(string, any) bool) {")
+	o.L("t.mu.RLock()")
+	o.L("defer t.mu.RUnlock()")
+	for _, f := range obj.Fields() {
+		keyName := f.Name(true) + "Key"
+		o.L("if t.%s != nil {", f.Name(false))
+		if fieldStorageTypeIsIndirect(f.Type()) {
+			o.L("if !yield(%s, *(t.%s)) { return }", keyName, f.Name(false))
+		} else {
+			o.L("if !yield(%s, t.%s) { return }", keyName, f.Name(false))
+		}
+		o.L("}")
+	}
+	o.L("for k, v := range t.privateClaims {")
+	o.L("if !yield(k, v) { return }")
+	o.L("}")
+	o.L("}")
+	o.L("}")
+
 	var numericDateFields []codegen.Field
 	for _, field := range fields {
 		if field.Type() == "types.NumericDate" {

@@ -393,3 +393,11 @@ func (cs *cachedSet) All() iter.Seq2[int, Key] {
 	}
 	return set.All()
 }
+
+func (cs *cachedSet) Fields() iter.Seq2[string, any] {
+	set, err := cs.cached()
+	if err != nil {
+		return func(func(string, any) bool) {}
+	}
+	return set.Fields()
+}

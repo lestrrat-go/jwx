@@ -14,34 +14,35 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-// RSAPrivateKey assigns src to dst.
-// `dst` should be a pointer to a rsa.PrivateKey.
-// `src` may be rsa.PrivateKey, *rsa.PrivateKey, or a jwk.Key
-func RSAPrivateKey(dst, src any) error {
+// convertPrivateKey is a generic helper for the common pattern:
+// 1. If src is jwk.Key, export to T
+// 2. Accept T or *T as src
+// 3. Assign *T to dst
+func convertPrivateKey[T any](dst, src any) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		var raw rsa.PrivateKey
+		var raw T
 		if err := jwk.Export(jwkKey, &raw); err != nil {
-			return fmt.Errorf(`failed to produce rsa.PrivateKey from %T: %w`, src, err)
+			return fmt.Errorf(`keyconv: failed to produce %T from %T: %w`, raw, src, err)
 		}
-		src = &raw
+		return blackmagic.AssignIfCompatible(dst, &raw)
 	}
 
-	var ptr *rsa.PrivateKey
 	switch src := src.(type) {
-	case rsa.PrivateKey:
-		ptr = &src
-	case *rsa.PrivateKey:
-		ptr = src
+	case *T:
+		return blackmagic.AssignIfCompatible(dst, src)
+	case T:
+		return blackmagic.AssignIfCompatible(dst, &src)
 	default:
-		return fmt.Errorf(`keyconv: expected rsa.PrivateKey or *rsa.PrivateKey, got %T`, src)
+		return fmt.Errorf(`keyconv: expected %T or *%T, got %T`, *new(T), *new(T), src)
 	}
-
-	return blackmagic.AssignIfCompatible(dst, ptr)
 }
 
-// RSAPublicKey assigns src to dst
-// `dst` should be a pointer to a non-zero rsa.PublicKey.
-// `src` may be rsa.PublicKey, *rsa.PublicKey, or a jwk.Key
+func RSAPrivateKey(dst, src any) error {
+	return convertPrivateKey[rsa.PrivateKey](dst, src)
+}
+
+// RSAPublicKey assigns src to dst.
+// src may be rsa.PublicKey, *rsa.PublicKey, rsa.PrivateKey, *rsa.PrivateKey, or jwk.Key.
 func RSAPublicKey(dst, src any) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		pk, err := jwk.PublicRawKeyOf(jwkKey)
@@ -68,31 +69,12 @@ func RSAPublicKey(dst, src any) error {
 	return blackmagic.AssignIfCompatible(dst, ptr)
 }
 
-// ECDSAPrivateKey assigns src to dst, converting its type from a
-// non-pointer to a pointer
 func ECDSAPrivateKey(dst, src any) error {
-	if jwkKey, ok := src.(jwk.Key); ok {
-		var raw ecdsa.PrivateKey
-		if err := jwk.Export(jwkKey, &raw); err != nil {
-			return fmt.Errorf(`keyconv: failed to produce ecdsa.PrivateKey from %T: %w`, src, err)
-		}
-		src = &raw
-	}
-
-	var ptr *ecdsa.PrivateKey
-	switch src := src.(type) {
-	case ecdsa.PrivateKey:
-		ptr = &src
-	case *ecdsa.PrivateKey:
-		ptr = src
-	default:
-		return fmt.Errorf(`keyconv: expected ecdsa.PrivateKey or *ecdsa.PrivateKey, got %T`, src)
-	}
-	return blackmagic.AssignIfCompatible(dst, ptr)
+	return convertPrivateKey[ecdsa.PrivateKey](dst, src)
 }
 
-// ECDSAPublicKey assigns src to dst, converting its type from a
-// non-pointer to a pointer
+// ECDSAPublicKey assigns src to dst.
+// src may be ecdsa.PublicKey, *ecdsa.PublicKey, ecdsa.PrivateKey, *ecdsa.PrivateKey, or jwk.Key.
 func ECDSAPublicKey(dst, src any) error {
 	if jwkKey, ok := src.(jwk.Key); ok {
 		pk, err := jwk.PublicRawKeyOf(jwkKey)
@@ -134,24 +116,7 @@ func ByteSliceKey(dst, src any) error {
 }
 
 func Ed25519PrivateKey(dst, src any) error {
-	if jwkKey, ok := src.(jwk.Key); ok {
-		var raw ed25519.PrivateKey
-		if err := jwk.Export(jwkKey, &raw); err != nil {
-			return fmt.Errorf(`failed to produce ed25519.PrivateKey from %T: %w`, src, err)
-		}
-		src = &raw
-	}
-
-	var ptr *ed25519.PrivateKey
-	switch src := src.(type) {
-	case ed25519.PrivateKey:
-		ptr = &src
-	case *ed25519.PrivateKey:
-		ptr = src
-	default:
-		return fmt.Errorf(`expected ed25519.PrivateKey or *ed25519.PrivateKey, got %T`, src)
-	}
-	return blackmagic.AssignIfCompatible(dst, ptr)
+	return convertPrivateKey[ed25519.PrivateKey](dst, src)
 }
 
 func Ed25519PublicKey(dst, src any) error {

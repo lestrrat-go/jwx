@@ -301,6 +301,18 @@ func (s *set) All() iter.Seq2[int, Key] {
 	}
 }
 
+func (s *set) Fields() iter.Seq2[string, any] {
+	return func(yield func(string, any) bool) {
+		s.mu.RLock()
+		defer s.mu.RUnlock()
+		for k, v := range s.privateParams {
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
+}
+
 func (s *set) DecodeCtx() DecodeCtx {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

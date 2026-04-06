@@ -7,6 +7,7 @@ import (
 	"cmp"
 	"encoding/json/jsontext"
 	"fmt"
+	"iter"
 	"slices"
 	"sync"
 	"time"
@@ -165,6 +166,8 @@ type Token interface {
 	Options() *jwt.TokenOptionSet
 	Clone() (jwt.Token, error)
 	Keys() []string
+	// Claims returns an iterator over all claims (standard and private) in the token.
+	Claims() iter.Seq2[string, any]
 }
 type stdToken struct {
 	mu                  sync.RWMutex
@@ -1276,6 +1279,148 @@ func (t *stdToken) Keys() []string {
 		keys = append(keys, k)
 	}
 	return keys
+}
+
+func (t *stdToken) Claims() iter.Seq2[string, any] {
+	return func(yield func(string, any) bool) {
+		t.mu.RLock()
+		defer t.mu.RUnlock()
+		if t.address != nil {
+			if !yield(AddressKey, t.address) {
+				return
+			}
+		}
+		if t.audience != nil {
+			if !yield(AudienceKey, t.audience) {
+				return
+			}
+		}
+		if t.birthdate != nil {
+			if !yield(BirthdateKey, t.birthdate) {
+				return
+			}
+		}
+		if t.email != nil {
+			if !yield(EmailKey, *(t.email)) {
+				return
+			}
+		}
+		if t.emailVerified != nil {
+			if !yield(EmailVerifiedKey, *(t.emailVerified)) {
+				return
+			}
+		}
+		if t.expiration != nil {
+			if !yield(ExpirationKey, *(t.expiration)) {
+				return
+			}
+		}
+		if t.familyName != nil {
+			if !yield(FamilyNameKey, *(t.familyName)) {
+				return
+			}
+		}
+		if t.gender != nil {
+			if !yield(GenderKey, *(t.gender)) {
+				return
+			}
+		}
+		if t.givenName != nil {
+			if !yield(GivenNameKey, *(t.givenName)) {
+				return
+			}
+		}
+		if t.issuedAt != nil {
+			if !yield(IssuedAtKey, *(t.issuedAt)) {
+				return
+			}
+		}
+		if t.issuer != nil {
+			if !yield(IssuerKey, *(t.issuer)) {
+				return
+			}
+		}
+		if t.jwtID != nil {
+			if !yield(JwtIDKey, *(t.jwtID)) {
+				return
+			}
+		}
+		if t.locale != nil {
+			if !yield(LocaleKey, *(t.locale)) {
+				return
+			}
+		}
+		if t.middleName != nil {
+			if !yield(MiddleNameKey, *(t.middleName)) {
+				return
+			}
+		}
+		if t.name != nil {
+			if !yield(NameKey, *(t.name)) {
+				return
+			}
+		}
+		if t.nickname != nil {
+			if !yield(NicknameKey, *(t.nickname)) {
+				return
+			}
+		}
+		if t.notBefore != nil {
+			if !yield(NotBeforeKey, *(t.notBefore)) {
+				return
+			}
+		}
+		if t.phoneNumber != nil {
+			if !yield(PhoneNumberKey, *(t.phoneNumber)) {
+				return
+			}
+		}
+		if t.phoneNumberVerified != nil {
+			if !yield(PhoneNumberVerifiedKey, *(t.phoneNumberVerified)) {
+				return
+			}
+		}
+		if t.picture != nil {
+			if !yield(PictureKey, *(t.picture)) {
+				return
+			}
+		}
+		if t.preferredUsername != nil {
+			if !yield(PreferredUsernameKey, *(t.preferredUsername)) {
+				return
+			}
+		}
+		if t.profile != nil {
+			if !yield(ProfileKey, *(t.profile)) {
+				return
+			}
+		}
+		if t.subject != nil {
+			if !yield(SubjectKey, *(t.subject)) {
+				return
+			}
+		}
+		if t.updatedAt != nil {
+			if !yield(UpdatedAtKey, *(t.updatedAt)) {
+				return
+			}
+		}
+		if t.website != nil {
+			if !yield(WebsiteKey, *(t.website)) {
+				return
+			}
+		}
+		if t.zoneinfo != nil {
+			if !yield(ZoneinfoKey, *(t.zoneinfo)) {
+				return
+			}
+		}
+		for k, v := range t.privateClaims {
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
 }
 
 type claimPair struct {
