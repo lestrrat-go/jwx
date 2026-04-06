@@ -172,7 +172,7 @@ var okpConvertibleKeys = []reflect.Type{
 }
 
 // This is half baked. I think it will blow up if we used ecdh.* keys and/or x25519 keys
-func okpJWKToRaw(key Key, _ any /* this is unused because this is half baked */) (any, error) {
+func okpJWKToRaw(key Key, _ any) (any, error) {
 	extracted, err := extractEmbeddedKey(key, okpConvertibleKeys)
 	if err != nil {
 		return nil, fmt.Errorf(`jwk.OKP: failed to extract embedded key: %w`, err)

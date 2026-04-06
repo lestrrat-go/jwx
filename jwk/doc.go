@@ -231,54 +231,25 @@
 //
 // ## Registering a KeyExporter
 //
-// KeyExporters are the opposite of KeyImporters: they convert a JWK to a raw key when `key.Raw(...)` is
-// called. If you intend to use `key.Raw(...)` for a JWK created using one of your KeyImporters,
-// you will also
+// KeyExporters are the opposite of KeyImporters: they convert a JWK to a raw key when `jwk.Export()`
+// is called. If you intend to use `jwk.Export()` for a JWK created using one of your KeyImporters,
+// you will need to register a corresponding KeyExporter.
 //
 // KeyExporters are registered by key type. For example, if you want to register a KeyExporter for
 // RSA keys, you would do:
 //
 //	jwk.RegisterKeyExporter(jwa.RSA, jwk.KeyExportFunc(exportRSAKey))
 //
-// For a given JWK, it will be passed a "destination" object to store the exported raw key. For example,
-// an RSA-based private JWK can be exported to a `*rsa.PrivateKey` or to a `*any`, but not
-// to a `*ecdsa.PrivateKey`:
+// `jwk.Export()` returns the raw key directly:
 //
-//	var dst *rsa.PrivateKey
-//	key.Raw(&dst) // OK
+//	raw, err := jwk.Export(key)
+//	privkey := raw.(*rsa.PrivateKey)
 //
-//	var dst any
-//	key.Raw(&dst) // OK
-//
-//	var dst *ecdsa.PrivateKey
-//	key.Raw(&dst) // Error, if key is an RSA key
-//
-// You will need to handle this distinction yourself in your KeyImporter. For example, certain
-// elliptic curve keys can be expressed in JWK in the same format, minus the "kty". In that case
-// you will need to check for the type of the destination object and return an error if it is
-// not compatible with your key.
-//
-//	var raw mypkg.PrivateKey // assume a hypothetical private key type using a different curve than standard ones lie P-256
-//	key, _ := jwk.Import(raw)
-//	// key could be jwk.ECDSAPrivateKey, with different curve than P-256
-//
-//	var dst *ecdsa.PrivateKey
-//	key.Raw(&dst) // your KeyImporter will be called with *ecdsa.PrivateKey, which is not compatible with your key
-//
-// To implement this your code should look like the following:
+// To implement a custom exporter your code should look like the following:
 //
 //	jwk.RegisterKeyExporter(jwk.EC, jwk.KeyExportFunc(exportMyKey))
 //
 //	func exportMyKey(key jwk.Key, hint any) (any, error) {
-//	   // check if the type of object in hint is compatible with your key
-//	   switch hint.(type) {
-//	   case *mypkg.PrivateKey, *any:
-//	     // OK, we can proceed
-//	   default:
-//	     // Not compatible, return jwk.ContinueError
-//	     return nil, jwk.ContinueError()
-//	   }
-//
 //	   // key is a jwk.ECDSAPrivateKey or jwk.ECDSAPublicKey
 //	   switch key := key.(type) {
 //	   case jwk.ECDSAPrivateKey:

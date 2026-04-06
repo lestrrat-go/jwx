@@ -197,18 +197,14 @@ type privECDHer interface {
 
 func ECDHPrivateKey(src any) (*ecdh.PrivateKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		rawV, err := jwk.Export(jwkKey)
+		rawV, err := jwk.Export(jwkKey, (*ecdh.PrivateKey)(nil))
 		if err != nil {
-			return nil, fmt.Errorf(`keyconv: failed to produce ecdh.PrivateKey or ecdsa.PrivateKey from %T: %w`, src, err)
+			return nil, fmt.Errorf(`keyconv: failed to produce ecdh.PrivateKey from %T: %w`, src, err)
 		}
-		switch raw := rawV.(type) {
-		case *ecdh.PrivateKey:
+		if raw, ok := rawV.(*ecdh.PrivateKey); ok {
 			return raw, nil
-		case *ecdsa.PrivateKey:
-			src = raw
-		default:
-			return nil, fmt.Errorf(`keyconv: expected *ecdh.PrivateKey or *ecdsa.PrivateKey from export, got %T`, rawV)
 		}
+		return nil, fmt.Errorf(`keyconv: expected *ecdh.PrivateKey from export, got %T`, rawV)
 	}
 
 	switch src := src.(type) {
@@ -233,18 +229,14 @@ type pubECDHer interface {
 
 func ECDHPublicKey(src any) (*ecdh.PublicKey, error) {
 	if jwkKey, ok := src.(jwk.Key); ok {
-		rawV, err := jwk.Export(jwkKey)
+		rawV, err := jwk.Export(jwkKey, (*ecdh.PublicKey)(nil))
 		if err != nil {
-			return nil, fmt.Errorf(`keyconv: failed to produce ecdh.PublicKey or ecdsa.PublicKey from %T: %w`, src, err)
+			return nil, fmt.Errorf(`keyconv: failed to produce ecdh.PublicKey from %T: %w`, src, err)
 		}
-		switch raw := rawV.(type) {
-		case *ecdh.PublicKey:
+		if raw, ok := rawV.(*ecdh.PublicKey); ok {
 			return raw, nil
-		case *ecdsa.PublicKey:
-			src = raw
-		default:
-			return nil, fmt.Errorf(`keyconv: expected *ecdh.PublicKey or *ecdsa.PublicKey from export, got %T`, rawV)
 		}
+		return nil, fmt.Errorf(`keyconv: expected *ecdh.PublicKey from export, got %T`, rawV)
 	}
 
 	switch src := src.(type) {
