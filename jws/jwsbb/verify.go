@@ -45,7 +45,7 @@ func Verify(key any, alg string, payload, signature []byte) error {
 }
 
 func dispatchHMACVerify(key any, dsigAlg string, payload, signature []byte) error {
-	hmackey, err := keyconv.ByteSliceKey(key)
+	hmackey, err := keyconv.KeyAs[[]byte](key)
 	if err != nil {
 		return fmt.Errorf(`jwsbb.Verify: invalid key type %T. []byte is required: %w`, key, err)
 	}

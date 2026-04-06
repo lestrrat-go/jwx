@@ -107,7 +107,7 @@ func KeyDecryptECDHES(_, _ []byte, alg string, apu, apv []byte, privkey, pubkey 
 // RSA key decryption functions
 
 func KeyDecryptRSA15(_, enckey []byte, privkeyif any, keysize int) ([]byte, error) {
-	privkey, err := keyconv.RSAPrivateKey(privkeyif)
+	privkey, err := keyconv.KeyAs[*rsa.PrivateKey](privkeyif)
 	if err != nil {
 		return nil, fmt.Errorf(`jwebb.KeyDecryptRSA15: %w`, err)
 	}
@@ -153,7 +153,7 @@ func KeyDecryptRSA15(_, enckey []byte, privkeyif any, keysize int) ([]byte, erro
 }
 
 func KeyDecryptRSAOAEP(_, enckey []byte, alg string, privkeyif any) ([]byte, error) {
-	privkey, err := keyconv.RSAPrivateKey(privkeyif)
+	privkey, err := keyconv.KeyAs[*rsa.PrivateKey](privkeyif)
 	if err != nil {
 		return nil, fmt.Errorf(`jwebb.KeyDecryptRSAOAEP: %w`, err)
 	}
