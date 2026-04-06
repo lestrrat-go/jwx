@@ -145,7 +145,7 @@ func genOptions(objects *Objects) error {
 		`github.com/lestrrat-go/jwx/v3/jwk`,
 		`github.com/lestrrat-go/jwx/v3/jws`,
 		`github.com/lestrrat-go/jwx/v3/jwt`,
-		`github.com/lestrrat-go/option/v2`,
+		`github.com/lestrrat-go/option/v3`,
 	}...)
 	// Write all imports -- they will be pruned by golang.org/x/tools/imports eventually,
 	// so it's okay to be redundant

@@ -5,7 +5,7 @@ package jws
 import (
 	"context"
 
-	"github.com/lestrrat-go/option/v2"
+	"github.com/lestrrat-go/option/v3"
 )
 
 type Option = option.Interface

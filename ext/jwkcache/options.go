@@ -5,7 +5,7 @@ import (
 
 	"github.com/lestrrat-go/httprc/v3"
 	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/lestrrat-go/option/v2"
+	"github.com/lestrrat-go/option/v3"
 )
 
 // RegisterOption is an option for Cache.Register.
