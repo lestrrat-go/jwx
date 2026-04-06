@@ -3,8 +3,8 @@ package examples_test
 import (
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"encoding/base64"
+	"encoding/json"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jws"
 )
@@ -14,19 +14,19 @@ func Example_jws_message() {
 	const encodedSig1 = `cC4hiUPoj9Eetdgtv3hF80EGrhuB__dzERat0XF9g2VtQgr9PJbu3XOiZj5RZmh7AAuHIm4Bh-0Qc_lF5YKt_O8W2Fp5jujGbds9uJdbF9CUAr7t1dnZcAcQjbKBYNX4BAynRFdiuB--f_nZLgrnbyTyWzO75vRK5h6xBArLIARNPvkSjtQBMHlb1L07Qe7K0GarZRmB_eSN9383LcOLn6_dO--xi12jzDwusC-eOkHWEsqtFZESc6BfI7noOPqvhJ1phCnvWh6IeYI2w9QOYEUipUTI8np6LbgGY9Fs98rqVt5AXLIhWkWywlVmtVrBp0igcN_IoypGlUPQGe77Rw`
 	const encodedSig2 = "DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q"
 
-	decodedPayload, err := base64.DecodeString(payload)
+	decodedPayload, err := base64.RawURLEncoding.DecodeString(payload)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return
 	}
 
-	decodedSig1, err := base64.DecodeString(encodedSig1)
+	decodedSig1, err := base64.RawURLEncoding.DecodeString(encodedSig1)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return
 	}
 
-	decodedSig2, err := base64.DecodeString(encodedSig2)
+	decodedSig2, err := base64.RawURLEncoding.DecodeString(encodedSig2)
 	if err != nil {
 		fmt.Printf("%s\n", err)
 		return

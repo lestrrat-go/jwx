@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe"
 )
@@ -57,7 +56,7 @@ func Example_jwe_complex_decrypt() {
 
 	const payload = "Hello, World!"
 
-	privkey, err := jwxtest.GenerateRsaKey()
+	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Printf("failed to generate key: %s\n", err)
 		return

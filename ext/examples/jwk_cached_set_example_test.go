@@ -11,6 +11,8 @@ import (
 	"github.com/lestrrat-go/httprc/v3/tracesink"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jws"
+
+	"github.com/jwx-go/jwkcache"
 )
 
 func Example_jwk_cached_set() {
@@ -20,7 +22,7 @@ func Example_jwk_cached_set() {
 	const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
 
 	// The first steps are the same as examples/jwk_cache_example_test.go
-	c, err := jwk.NewCache(
+	c, err := jwkcache.NewCache(
 		ctx,
 		httprc.NewClient(
 			httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stderr, nil)))),
@@ -38,8 +40,8 @@ func Example_jwk_cached_set() {
 	if err := c.Register(
 		ctx,
 		googleCerts,
-		jwk.WithMaxInterval(24*time.Hour*7),
-		jwk.WithMinInterval(15*time.Minute),
+		jwkcache.WithMaxInterval(24*time.Hour*7),
+		jwkcache.WithMinInterval(15*time.Minute),
 	); err != nil {
 		fmt.Printf("failed to register google JWKS: %s\n", err)
 		return
