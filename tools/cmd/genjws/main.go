@@ -146,15 +146,13 @@ func generateHeaders(obj *codegen.Object) error {
 	}
 
 	o.L("privateParams map[string]any")
-	o.L("mu *sync.RWMutex")
+	o.L("mu sync.RWMutex")
 	o.L("dc DecodeCtx")
 	o.L("raw []byte // stores the raw version of the header so it can be used later")
 	o.L("}") // end type StandardHeaders
 
 	o.LL("func NewHeaders() Headers {")
-	o.L("return &stdHeaders{")
-	o.L("mu: &sync.RWMutex{},")
-	o.L("}")
+	o.L("return &stdHeaders{}")
 	o.L("}")
 
 	for _, f := range obj.Fields() {
@@ -191,8 +189,9 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("h.dc = dc")
 	o.L("}")
 
-	// This has no lock because nothing can assign to it
 	o.LL("func (h *stdHeaders) rawBuffer() []byte {")
+	o.L("h.mu.RLock()")
+	o.L("defer h.mu.RUnlock()")
 	o.L("return h.raw")
 	o.L("}")
 
@@ -416,7 +415,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("return keys")
 	o.L("}")
 
-	o.LL("func (h stdHeaders) MarshalJSON() ([]byte, error) {")
+	o.LL("func (h *stdHeaders) MarshalJSON() ([]byte, error) {")
 	o.L("h.mu.RLock()")
 	o.L("data := make(map[string]any)")
 	o.L("keys := make([]string, 0, %d+len(h.privateParams))", len(obj.Fields()))

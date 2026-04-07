@@ -108,12 +108,11 @@ type stdHeaders struct {
 	x509CertThumbprintS256 *string
 	x509URL                *string
 	privateParams          map[string]any
-	mu                     *sync.RWMutex
+	mu                     sync.RWMutex
 }
 
 func NewHeaders() Headers {
 	return &stdHeaders{
-		mu:            &sync.RWMutex{},
 		privateParams: map[string]any{},
 	}
 }
@@ -594,6 +593,8 @@ func (h *stdHeaders) Remove(key string) error {
 }
 
 func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	h.agreementPartyUInfo = nil
 	h.agreementPartyVInfo = nil
 	h.algorithm = nil
@@ -786,7 +787,7 @@ func (h *stdHeaders) Keys() []string {
 	return keys
 }
 
-func (h stdHeaders) MarshalJSON() ([]byte, error) {
+func (h *stdHeaders) MarshalJSON() ([]byte, error) {
 	data := make(map[string]any)
 	keys := make([]string, 0, 16+len(h.privateParams))
 	h.mu.RLock()

@@ -200,7 +200,7 @@ func generateToken(obj *codegen.Object) error {
 	o.L("}")
 
 	o.L("type %s struct {", obj.Name(false))
-	o.L("mu *sync.RWMutex")
+	o.L("mu sync.RWMutex")
 	o.L("dc DecodeCtx // per-object context for decoding")
 	o.L("options %sTokenOptionSet // per-object option", pkgPrefix)
 	for _, f := range fields {
@@ -228,13 +228,14 @@ func generateToken(obj *codegen.Object) error {
 	o.R(".\n// Convenience accessors are provided for these standard claims")
 	o.L("func New() %s {", obj.String(`interface`))
 	o.L("return &%s{", obj.Name(false))
-	o.L("mu: &sync.RWMutex{},")
 	o.L("privateClaims: make(map[string]any),")
 	o.L("options: %sDefaultOptionSet(),", pkgPrefix)
 	o.L("}")
 	o.L("}")
 
 	o.LL("func (t *%s) Options() *%sTokenOptionSet {", obj.Name(false), pkgPrefix)
+	o.L("t.mu.RLock()")
+	o.L("defer t.mu.RUnlock()")
 	o.L("return &t.options")
 	o.L("}")
 
@@ -555,6 +556,8 @@ func generateToken(obj *codegen.Object) error {
 	o.L("// allocated slice back to the pool.")
 	o.LL("func (t *%s) makePairs() ([]claimPair, error) {", obj.Name(false))
 	o.L("pairs := getClaimPairList()")
+	o.L("t.mu.RLock()")
+	o.L("defer t.mu.RUnlock()")
 	for _, f := range fields {
 		o.L("if t.%s != nil {", f.Name(false))
 		if f.Name(false) == `audience` {
@@ -595,7 +598,7 @@ func generateToken(obj *codegen.Object) error {
 	o.LL("return pairs, nil")
 	o.L("}")
 
-	o.LL("func (t %s) MarshalJSON() ([]byte, error) {", obj.Name(false))
+	o.LL("func (t *%s) MarshalJSON() ([]byte, error) {", obj.Name(false))
 	o.L("buf := pool.BytesBuffer().Get()")
 	o.L("defer pool.BytesBuffer().Put(buf)")
 	o.L("pairs, err := t.makePairs()")

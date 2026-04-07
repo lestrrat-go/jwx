@@ -47,7 +47,7 @@ type rsaPublicKey struct {
 	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]any
-	mu                     *sync.RWMutex
+	mu                     sync.RWMutex
 	dc                     json.DecodeCtx
 }
 
@@ -56,28 +56,29 @@ var _ Key = &rsaPublicKey{}
 
 func newRSAPublicKey() *rsaPublicKey {
 	return &rsaPublicKey{
-		mu:            &sync.RWMutex{},
 		privateParams: make(map[string]any),
 	}
 }
 
-func (h rsaPublicKey) KeyType() jwa.KeyType {
+func (h *rsaPublicKey) KeyType() jwa.KeyType {
 	return jwa.RSA()
 }
 
-func (h rsaPublicKey) rlock() {
+func (h *rsaPublicKey) rlock() {
 	h.mu.RLock()
 }
 
-func (h rsaPublicKey) runlock() {
+func (h *rsaPublicKey) runlock() {
 	h.mu.RUnlock()
 }
 
-func (h rsaPublicKey) IsPrivate() bool {
+func (h *rsaPublicKey) IsPrivate() bool {
 	return false
 }
 
 func (h *rsaPublicKey) Algorithm() (jwa.KeyAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm != nil {
 		return *(h.algorithm), true
 	}
@@ -85,6 +86,8 @@ func (h *rsaPublicKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 }
 
 func (h *rsaPublicKey) E() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.e != nil {
 		return h.e, true
 	}
@@ -92,6 +95,8 @@ func (h *rsaPublicKey) E() ([]byte, bool) {
 }
 
 func (h *rsaPublicKey) KeyID() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyID != nil {
 		return *(h.keyID), true
 	}
@@ -99,6 +104,8 @@ func (h *rsaPublicKey) KeyID() (string, bool) {
 }
 
 func (h *rsaPublicKey) KeyOps() (KeyOperationList, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyOps != nil {
 		return *(h.keyOps), true
 	}
@@ -106,6 +113,8 @@ func (h *rsaPublicKey) KeyOps() (KeyOperationList, bool) {
 }
 
 func (h *rsaPublicKey) KeyUsage() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyUsage != nil {
 		return *(h.keyUsage), true
 	}
@@ -113,6 +122,8 @@ func (h *rsaPublicKey) KeyUsage() (string, bool) {
 }
 
 func (h *rsaPublicKey) N() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.n != nil {
 		return h.n, true
 	}
@@ -120,6 +131,8 @@ func (h *rsaPublicKey) N() ([]byte, bool) {
 }
 
 func (h *rsaPublicKey) X509CertChain() (*cert.Chain, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertChain != nil {
 		return h.x509CertChain, true
 	}
@@ -127,6 +140,8 @@ func (h *rsaPublicKey) X509CertChain() (*cert.Chain, bool) {
 }
 
 func (h *rsaPublicKey) X509CertThumbprint() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprint != nil {
 		return *(h.x509CertThumbprint), true
 	}
@@ -134,6 +149,8 @@ func (h *rsaPublicKey) X509CertThumbprint() (string, bool) {
 }
 
 func (h *rsaPublicKey) X509CertThumbprintS256() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprintS256 != nil {
 		return *(h.x509CertThumbprintS256), true
 	}
@@ -141,6 +158,8 @@ func (h *rsaPublicKey) X509CertThumbprintS256() (string, bool) {
 }
 
 func (h *rsaPublicKey) X509URL() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509URL != nil {
 		return *(h.x509URL), true
 	}
@@ -553,11 +572,12 @@ LOOP:
 	return nil
 }
 
-func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
+func (h *rsaPublicKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]any)
 	fields := make([]string, 0, 10)
 	data[KeyTypeKey] = jwa.RSA()
 	fields = append(fields, KeyTypeKey)
+	h.mu.RLock()
 	if h.algorithm != nil {
 		data[AlgorithmKey] = *(h.algorithm)
 		fields = append(fields, AlgorithmKey)
@@ -602,6 +622,7 @@ func (h rsaPublicKey) MarshalJSON() ([]byte, error) {
 		data[k] = v
 		fields = append(fields, k)
 	}
+	h.mu.RUnlock()
 
 	sort.Strings(fields)
 	buf := pool.BytesBuffer().Get()
@@ -705,7 +726,7 @@ type rsaPrivateKey struct {
 	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]any
-	mu                     *sync.RWMutex
+	mu                     sync.RWMutex
 	dc                     json.DecodeCtx
 }
 
@@ -714,28 +735,29 @@ var _ Key = &rsaPrivateKey{}
 
 func newRSAPrivateKey() *rsaPrivateKey {
 	return &rsaPrivateKey{
-		mu:            &sync.RWMutex{},
 		privateParams: make(map[string]any),
 	}
 }
 
-func (h rsaPrivateKey) KeyType() jwa.KeyType {
+func (h *rsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.RSA()
 }
 
-func (h rsaPrivateKey) rlock() {
+func (h *rsaPrivateKey) rlock() {
 	h.mu.RLock()
 }
 
-func (h rsaPrivateKey) runlock() {
+func (h *rsaPrivateKey) runlock() {
 	h.mu.RUnlock()
 }
 
-func (h rsaPrivateKey) IsPrivate() bool {
+func (h *rsaPrivateKey) IsPrivate() bool {
 	return true
 }
 
 func (h *rsaPrivateKey) Algorithm() (jwa.KeyAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm != nil {
 		return *(h.algorithm), true
 	}
@@ -743,6 +765,8 @@ func (h *rsaPrivateKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 }
 
 func (h *rsaPrivateKey) D() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.d != nil {
 		return h.d, true
 	}
@@ -750,6 +774,8 @@ func (h *rsaPrivateKey) D() ([]byte, bool) {
 }
 
 func (h *rsaPrivateKey) DP() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.dp != nil {
 		return h.dp, true
 	}
@@ -757,6 +783,8 @@ func (h *rsaPrivateKey) DP() ([]byte, bool) {
 }
 
 func (h *rsaPrivateKey) DQ() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.dq != nil {
 		return h.dq, true
 	}
@@ -764,6 +792,8 @@ func (h *rsaPrivateKey) DQ() ([]byte, bool) {
 }
 
 func (h *rsaPrivateKey) E() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.e != nil {
 		return h.e, true
 	}
@@ -771,6 +801,8 @@ func (h *rsaPrivateKey) E() ([]byte, bool) {
 }
 
 func (h *rsaPrivateKey) KeyID() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyID != nil {
 		return *(h.keyID), true
 	}
@@ -778,6 +810,8 @@ func (h *rsaPrivateKey) KeyID() (string, bool) {
 }
 
 func (h *rsaPrivateKey) KeyOps() (KeyOperationList, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyOps != nil {
 		return *(h.keyOps), true
 	}
@@ -785,6 +819,8 @@ func (h *rsaPrivateKey) KeyOps() (KeyOperationList, bool) {
 }
 
 func (h *rsaPrivateKey) KeyUsage() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyUsage != nil {
 		return *(h.keyUsage), true
 	}
@@ -792,6 +828,8 @@ func (h *rsaPrivateKey) KeyUsage() (string, bool) {
 }
 
 func (h *rsaPrivateKey) N() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.n != nil {
 		return h.n, true
 	}
@@ -799,6 +837,8 @@ func (h *rsaPrivateKey) N() ([]byte, bool) {
 }
 
 func (h *rsaPrivateKey) P() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.p != nil {
 		return h.p, true
 	}
@@ -806,6 +846,8 @@ func (h *rsaPrivateKey) P() ([]byte, bool) {
 }
 
 func (h *rsaPrivateKey) Q() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.q != nil {
 		return h.q, true
 	}
@@ -813,6 +855,8 @@ func (h *rsaPrivateKey) Q() ([]byte, bool) {
 }
 
 func (h *rsaPrivateKey) QI() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.qi != nil {
 		return h.qi, true
 	}
@@ -820,6 +864,8 @@ func (h *rsaPrivateKey) QI() ([]byte, bool) {
 }
 
 func (h *rsaPrivateKey) X509CertChain() (*cert.Chain, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertChain != nil {
 		return h.x509CertChain, true
 	}
@@ -827,6 +873,8 @@ func (h *rsaPrivateKey) X509CertChain() (*cert.Chain, bool) {
 }
 
 func (h *rsaPrivateKey) X509CertThumbprint() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprint != nil {
 		return *(h.x509CertThumbprint), true
 	}
@@ -834,6 +882,8 @@ func (h *rsaPrivateKey) X509CertThumbprint() (string, bool) {
 }
 
 func (h *rsaPrivateKey) X509CertThumbprintS256() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprintS256 != nil {
 		return *(h.x509CertThumbprintS256), true
 	}
@@ -841,6 +891,8 @@ func (h *rsaPrivateKey) X509CertThumbprintS256() (string, bool) {
 }
 
 func (h *rsaPrivateKey) X509URL() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509URL != nil {
 		return *(h.x509URL), true
 	}
@@ -1444,11 +1496,12 @@ LOOP:
 	return nil
 }
 
-func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
+func (h *rsaPrivateKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]any)
 	fields := make([]string, 0, 16)
 	data[KeyTypeKey] = jwa.RSA()
 	fields = append(fields, KeyTypeKey)
+	h.mu.RLock()
 	if h.algorithm != nil {
 		data[AlgorithmKey] = *(h.algorithm)
 		fields = append(fields, AlgorithmKey)
@@ -1517,6 +1570,7 @@ func (h rsaPrivateKey) MarshalJSON() ([]byte, error) {
 		data[k] = v
 		fields = append(fields, k)
 	}
+	h.mu.RUnlock()
 
 	sort.Strings(fields)
 	buf := pool.BytesBuffer().Get()

@@ -101,7 +101,7 @@ type Token interface {
 	Keys() []string
 }
 type stdToken struct {
-	mu            *sync.RWMutex
+	mu            sync.RWMutex
 	dc            DecodeCtx          // per-object context for decoding
 	options       TokenOptionSet     // per-object option
 	audience      types.StringList   // https://tools.ietf.org/html/rfc7519#section-4.1.3
@@ -119,13 +119,14 @@ type stdToken struct {
 // Convenience accessors are provided for these standard claims
 func New() Token {
 	return &stdToken{
-		mu:            &sync.RWMutex{},
 		privateClaims: make(map[string]any),
 		options:       DefaultOptionSet(),
 	}
 }
 
 func (t *stdToken) Options() *TokenOptionSet {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	return &t.options
 }
 
@@ -548,6 +549,8 @@ func putClaimPairList(list []claimPair) {
 
 func (t *stdToken) makePairs() ([]claimPair, error) {
 	pairs := getClaimPairList()
+	t.mu.RLock()
+	defer t.mu.RUnlock()
 	if t.audience != nil {
 		buf, err := json.MarshalAudience(t.audience, t.options.IsEnabled(FlattenAudience))
 		if err != nil {
@@ -612,7 +615,7 @@ func (t *stdToken) makePairs() ([]claimPair, error) {
 	return pairs, nil
 }
 
-func (t stdToken) MarshalJSON() ([]byte, error) {
+func (t *stdToken) MarshalJSON() ([]byte, error) {
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
 	pairs, err := t.makePairs()

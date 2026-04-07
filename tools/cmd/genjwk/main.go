@@ -281,7 +281,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 		}
 	}
 	o.L("privateParams map[string]any")
-	o.L("mu *sync.RWMutex")
+	o.L("mu sync.RWMutex")
 	o.L("dc json.DecodeCtx")
 	o.L("}")
 
@@ -290,25 +290,24 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 
 	o.LL("func new%s() *%s {", ifName, structName)
 	o.L("return &%s{", structName)
-	o.L("mu: &sync.RWMutex{},")
 	o.L("privateParams: make(map[string]any),")
 	o.L("}")
 	o.L("}")
 
-	o.LL("func (h %s) KeyType() jwa.KeyType {", structName)
+	o.LL("func (h *%s) KeyType() jwa.KeyType {", structName)
 	o.L("return %s", kt.KeyType)
 	o.L("}")
 
-	o.LL("func (h %s) rlock() {", structName)
+	o.LL("func (h *%s) rlock() {", structName)
 	o.L("h.mu.RLock()")
 	o.L("}")
 
-	o.LL("func (h %s) runlock() {", structName)
+	o.LL("func (h *%s) runlock() {", structName)
 	o.L("h.mu.RUnlock()")
 	o.L("}")
 
 	if objName == "PublicKey" || objName == "PrivateKey" {
-		o.LL("func (h %s) IsPrivate() bool {", structName)
+		o.LL("func (h *%s) IsPrivate() bool {", structName)
 		o.L("return %s", fmt.Sprint(objName == "PrivateKey"))
 		o.L("}")
 	}
@@ -323,6 +322,8 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 			o.R("%s", PointerElem(f))
 		}
 		o.R(", bool) {")
+		o.L("h.mu.RLock()")
+		o.L("defer h.mu.RUnlock()")
 
 		if f.Bool(`hasGet`) {
 			o.L("if h.%s != nil {", f.Name(false))
@@ -675,11 +676,12 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("return nil")
 	o.L("}")
 
-	o.LL("func (h %s) MarshalJSON() ([]byte, error) {", structName)
+	o.LL("func (h *%s) MarshalJSON() ([]byte, error) {", structName)
 	o.L("data := make(map[string]any)")
 	o.L("fields := make([]string, 0, %d)", len(obj.Fields()))
 	o.L("data[KeyTypeKey] = %s", kt.KeyType)
 	o.L("fields = append(fields, KeyTypeKey)")
+	o.L("h.mu.RLock()")
 	for _, f := range obj.Fields() {
 		var keyName string
 		if f.Bool(`is_std`) {
@@ -700,6 +702,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("data[k] = v")
 	o.L("fields = append(fields, k)")
 	o.L("}")
+	o.L("h.mu.RUnlock()")
 
 	o.LL("sort.Strings(fields)")
 	o.L("buf := pool.BytesBuffer().Get()")

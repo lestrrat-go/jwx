@@ -132,25 +132,66 @@ func rsaJWKToRaw(key Key, hint any) (any, error) {
 			return nil, fmt.Errorf(`invalid destination object type %T for private RSA JWK: %w`, hint, ContinueError())
 		}
 
-		locker, ok := key.(rlocker)
-		if ok {
+		// rlocker is unexported with unexported methods, so only our
+		// concrete types implement it. A successful assertion lets us
+		// type-assert to the concrete struct and read fields directly
+		// under a single batch lock. This avoids nested RLock (which
+		// deadlocks when a writer is pending) while preserving an
+		// atomic snapshot of all fields.
+		var od, oq, op, on, oe []byte
+		var odp, odq, oqi []byte
+		var hasDp, hasDq, hasQi bool
+		if locker, ok := key.(rlocker); ok {
 			locker.rlock()
-			defer locker.runlock()
+			concrete := key.(*rsaPrivateKey)
+			od, oq, op, on, oe = concrete.d, concrete.q, concrete.p, concrete.n, concrete.e
+			if concrete.dp != nil {
+				odp, hasDp = concrete.dp, true
+			}
+			if concrete.dq != nil {
+				odq, hasDq = concrete.dq, true
+			}
+			if concrete.qi != nil {
+				oqi, hasQi = concrete.qi, true
+			}
+			locker.runlock()
+		} else {
+			// External implementation — use self-locking interface getters.
+			var ok bool
+			if od, ok = key.D(); !ok {
+				return nil, fmt.Errorf(`missing "d" value`)
+			}
+			if oq, ok = key.Q(); !ok {
+				return nil, fmt.Errorf(`missing "q" value`)
+			}
+			if op, ok = key.P(); !ok {
+				return nil, fmt.Errorf(`missing "p" value`)
+			}
+			if on, ok = key.N(); !ok {
+				return nil, fmt.Errorf(`missing "n" value`)
+			}
+			if oe, ok = key.E(); !ok {
+				return nil, fmt.Errorf(`missing "e" value`)
+			}
+			odp, hasDp = key.DP()
+			odq, hasDq = key.DQ()
+			oqi, hasQi = key.QI()
 		}
 
-		od, ok := key.D()
-		if !ok {
+		if od == nil {
 			return nil, fmt.Errorf(`missing "d" value`)
 		}
-
-		oq, ok := key.Q()
-		if !ok {
+		if oq == nil {
 			return nil, fmt.Errorf(`missing "q" value`)
 		}
-
-		op, ok := key.P()
-		if !ok {
+		if op == nil {
 			return nil, fmt.Errorf(`missing "p" value`)
+		}
+		if on == nil {
+			return nil, fmt.Errorf(`missing "n" value`)
+		}
+		if oe == nil {
+			return nil, fmt.Errorf(`missing "e" value`)
 		}
 
 		var d, q, p big.Int // note: do not use from sync.Pool
@@ -159,36 +200,25 @@ func rsaJWKToRaw(key Key, hint any) (any, error) {
 		q.SetBytes(oq)
 		p.SetBytes(op)
 
-		// optional fields
 		var dp, dq, qi *big.Int
 
-		if odp, ok := key.DP(); ok {
+		if hasDp {
 			dp = &big.Int{} // note: do not use from sync.Pool
 			dp.SetBytes(odp)
 		}
 
-		if odq, ok := key.DQ(); ok {
+		if hasDq {
 			dq = &big.Int{} // note: do not use from sync.Pool
 			dq.SetBytes(odq)
 		}
 
-		if oqi, ok := key.QI(); ok {
+		if hasQi {
 			qi = &big.Int{} // note: do not use from sync.Pool
 			qi.SetBytes(oqi)
 		}
 
-		n, ok := key.N()
-		if !ok {
-			return nil, fmt.Errorf(`missing "n" value`)
-		}
-
-		e, ok := key.E()
-		if !ok {
-			return nil, fmt.Errorf(`missing "e" value`)
-		}
-
 		var privkey rsa.PrivateKey
-		buildRSAPublicKey(&privkey.PublicKey, n, e)
+		buildRSAPublicKey(&privkey.PublicKey, on, oe)
 		privkey.D = &d
 		privkey.Primes = []*big.Int{&p, &q}
 
@@ -212,19 +242,27 @@ func rsaJWKToRaw(key Key, hint any) (any, error) {
 			return nil, fmt.Errorf(`invalid destination object type %T for public RSA JWK: %w`, hint, ContinueError())
 		}
 
-		locker, ok := key.(rlocker)
-		if ok {
+		var n, e []byte
+		// See RSAPrivateKey case above for explanation of the rlocker pattern.
+		if locker, ok := key.(rlocker); ok {
 			locker.rlock()
-			defer locker.runlock()
+			concrete := key.(*rsaPublicKey)
+			n, e = concrete.n, concrete.e
+			locker.runlock()
+		} else {
+			var ok bool
+			if n, ok = key.N(); !ok {
+				return nil, fmt.Errorf(`missing "n" value`)
+			}
+			if e, ok = key.E(); !ok {
+				return nil, fmt.Errorf(`missing "e" value`)
+			}
 		}
 
-		n, ok := key.N()
-		if !ok {
+		if n == nil {
 			return nil, fmt.Errorf(`missing "n" value`)
 		}
-
-		e, ok := key.E()
-		if !ok {
+		if e == nil {
 			return nil, fmt.Errorf(`missing "e" value`)
 		}
 
