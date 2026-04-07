@@ -4,6 +4,7 @@ on:
     branches:
       - develop/v2
       - develop/v3
+      - develop/v4
     types:
       - closed
 
