@@ -25,13 +25,13 @@ func TestJWKRoundTrip(t *testing.T) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err, `ecdsa.GenerateKey should succeed`)
 
-	jwkKey, err := jwk.Import(key)
+	jwkKey, err := jwk.Import[jwk.Key](key)
 	require.NoError(t, err, `jwk.Import should succeed`)
 
 	buf, err := json.Marshal(jwkKey)
 	require.NoError(t, err, `json.Marshal should succeed`)
 
-	parsed, err := jwk.ParseKey(buf)
+	parsed, err := jwk.ParseKey[jwk.Key](buf)
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 	// Verify the key fields survived the round-trip through asm base64

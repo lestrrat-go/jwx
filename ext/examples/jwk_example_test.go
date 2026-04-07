@@ -28,8 +28,7 @@ func Example_jwk_usage() {
 	}
 
 	for i := 0; i < set.Len(); i++ {
-		var rawkey any // This is where we would like to store the raw key, like *rsa.PrivateKey or *ecdsa.PrivateKey
-		key, ok := set.Key(i)  // This retrieves the corresponding jwk.Key
+		key, ok := set.Key(i) // This retrieves the corresponding jwk.Key
 		if !ok {
 			log.Printf("failed to get key at index %d", i)
 			return
@@ -44,7 +43,7 @@ func Example_jwk_usage() {
 		}
 
 		// You can create jwk.Key from a raw key, too
-		fromRawKey, err := jwk.Import(rawkeyV)
+		fromRawKey, err := jwk.Import[jwk.Key](rawkeyV)
 		if err != nil {
 			log.Printf("failed to acquire raw key from jwk.Key: %s", err)
 			return
@@ -80,13 +79,9 @@ func Example_jwk_marshal_json() {
 	raw := []byte("01234567890123456789012345678901234567890123456789ABCDEF")
 
 	// This would create a symmetric key
-	key, err := jwk.Import(raw)
+	key, err := jwk.Import[jwk.SymmetricKey](raw)
 	if err != nil {
 		fmt.Printf("failed to create symmetric key: %s\n", err)
-		return
-	}
-	if _, ok := key.(jwk.SymmetricKey); !ok {
-		fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
 		return
 	}
 

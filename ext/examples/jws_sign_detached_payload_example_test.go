@@ -11,7 +11,7 @@ import (
 func Example_jws_sign_detached_payload() {
 	payload := `$.02`
 
-	key, err := jwk.Import([]byte(`abracadabra`))
+	key, err := jwk.Import[jwk.Key]([]byte(`abracadabra`))
 	if err != nil {
 		fmt.Printf("failed to create symmetric key: %s\n", err)
 		return

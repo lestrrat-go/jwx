@@ -56,7 +56,7 @@ func TestES256KSign(t *testing.T) {
 	require.Equal(t, payload, verified, "verified payload should match")
 
 	// Verify with jwk.Key
-	jwkKey, err := jwk.Import(&key.PublicKey)
+	jwkKey, err := jwk.Import[jwk.Key](&key.PublicKey)
 	require.NoError(t, err, "jwk.Import should succeed")
 
 	verified, err = jws.Verify(signed, jws.WithKey(es256k.ES256K(), jwkKey))
@@ -124,7 +124,7 @@ func BenchmarkKeyInstantiation(b *testing.B) {
 			raw.X.SetBytes(x)
 			raw.Y.SetBytes(y)
 
-			key, err := jwk.Import(&raw)
+			key, err := jwk.Import[jwk.Key](&raw)
 			if err != nil {
 				panic(err)
 			}

@@ -10,13 +10,13 @@ import (
 
 func Example_jws_header_filter_advanced() {
 	// Create keys for multi-signature JWS
-	key1, err := jwk.Import([]byte(`secret-key-1`))
+	key1, err := jwk.Import[jwk.Key]([]byte(`secret-key-1`))
 	if err != nil {
 		fmt.Printf("failed to create key1: %s\n", err)
 		return
 	}
 
-	key2, err := jwk.Import([]byte(`secret-key-2`))
+	key2, err := jwk.Import[jwk.Key]([]byte(`secret-key-2`))
 	if err != nil {
 		fmt.Printf("failed to create key2: %s\n", err)
 		return

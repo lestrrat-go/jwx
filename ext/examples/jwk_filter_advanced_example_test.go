@@ -18,7 +18,7 @@ func Example_jwk_filter_advanced_use_cases() {
 		fmt.Printf("failed to generate production key: %s\n", err)
 		return
 	}
-	prodJWK, err := jwk.Import(prodKey)
+	prodJWK, err := jwk.Import[jwk.Key](prodKey)
 	if err != nil {
 		fmt.Printf("failed to import production key: %s\n", err)
 		return
@@ -50,7 +50,7 @@ func Example_jwk_filter_advanced_use_cases() {
 		fmt.Printf("failed to generate dev key: %s\n", err)
 		return
 	}
-	devJWK, err := jwk.Import(devKey)
+	devJWK, err := jwk.Import[jwk.Key](devKey)
 	if err != nil {
 		fmt.Printf("failed to import dev key: %s\n", err)
 		return
@@ -82,7 +82,7 @@ func Example_jwk_filter_advanced_use_cases() {
 		fmt.Printf("failed to generate staging key: %s\n", err)
 		return
 	}
-	stagingJWK, err := jwk.Import(stagingKey)
+	stagingJWK, err := jwk.Import[jwk.Key](stagingKey)
 	if err != nil {
 		fmt.Printf("failed to import staging key: %s\n", err)
 		return

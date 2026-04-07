@@ -501,7 +501,7 @@ func TestGH996(t *testing.T) {
 func TestGH1140(t *testing.T) {
 	// Original test verified that PBES2 works regardless of UseNumber setting.
 	// In v4, UseNumber is removed, but the test still validates PBES2 roundtrip.
-	key, err := jwk.Import([]byte("secure-key"))
+	key, err := jwk.Import[jwk.Key]([]byte("secure-key"))
 	require.NoError(t, err, `jwk.Import should succeed`)
 
 	var encrypted []byte
@@ -563,7 +563,7 @@ func TestGH1434(t *testing.T) {
 			require.NoError(t, err, `ECDH key generation should succeed`)
 
 			// Create a JWK from the ECDH private key
-			jwxJwk, err := jwk.Import(ecdhPrivKey)
+			jwxJwk, err := jwk.Import[jwk.Key](ecdhPrivKey)
 			require.NoError(t, err, `jwk.Import should succeed`)
 
 			// Write the JWK to a temporary file for jose to use

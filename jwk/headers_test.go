@@ -24,7 +24,7 @@ func TestHeader(t *testing.T) {
 			"private":                     "boofoo",
 		}
 
-		h, err := jwk.Import([]byte("dummy"))
+		h, err := jwk.Import[jwk.Key]([]byte("dummy"))
 		require.NoError(t, err, `jwk.New should succeed`)
 
 		for k, v := range values {
@@ -61,7 +61,7 @@ func TestHeader(t *testing.T) {
 			jwk.X509URLKey:                dummy,
 		}
 
-		h, err := jwk.Import([]byte("dummy"))
+		h, err := jwk.Import[jwk.Key]([]byte("dummy"))
 		require.NoError(t, err, `jwk.New should succeed`)
 		for k, v := range values {
 			err := h.Set(k, v)
@@ -90,7 +90,7 @@ func TestHeader(t *testing.T) {
 
 	t.Run("Algorithm", func(t *testing.T) {
 		t.Parallel()
-		h, err := jwk.Import([]byte("dummy"))
+		h, err := jwk.Import[jwk.Key]([]byte("dummy"))
 		require.NoError(t, err, `jwk.New should succeed`)
 		for _, value := range []any{jwa.RS256(), jwa.RSA1_5()} {
 			require.NoError(t, h.Set(jwk.AlgorithmKey, value), "Set for alg should succeed")

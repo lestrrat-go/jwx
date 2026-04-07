@@ -16,33 +16,32 @@ func Example_jwk_import() {
 	// Assume that the file contains a JWK in JSON format
 	//
 	//  buf, _ := os.ReadFile(file)
-	//  key, _ := jwk.Import(buf)
+	//  key, _ := jwk.Import[jwk.Key](buf)
 	//
-	// This is not right, because the jwk.Import() function determines
-	// the type of `jwk.Key` to create based on the TYPE of the argument.
+	// This is not right, because jwk.Import() determines the type of
+	// `jwk.Key` to create based on the TYPE of the argument.
 	// In this case the type of `buf` is always []byte, and therefore
 	// it will always create a symmetric key.
 	//
 	// What you want to do is to _parse_ `buf`.
 	//
 	//  keyset, _ := jwk.Parse(buf)
-	//  key, _    := jwk.ParseKey(buf)
+	//  key, _    := jwk.ParseKey[jwk.Key](buf)
 	//
 	// See other examples in examples/jwk_parse_key_example_test.go and
 	// examples/jwk_parse_jwks_example_test.go
 
 	// []byte -> jwk.SymmetricKey
+	//
+	// Use the concrete type parameter to get the typed key directly.
 	{
 		raw := []byte("Lorem Ipsum")
-		key, err := jwk.Import(raw)
+		key, err := jwk.Import[jwk.SymmetricKey](raw)
 		if err != nil {
 			fmt.Printf("failed to create symmetric key: %s\n", err)
 			return
 		}
-		if _, ok := key.(jwk.SymmetricKey); !ok {
-			fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
-			return
-		}
+		_ = key
 	}
 
 	// *rsa.PrivateKey -> jwk.RSAPrivateKey
@@ -54,15 +53,12 @@ func Example_jwk_import() {
 			return
 		}
 
-		key, err := jwk.Import(raw)
+		key, err := jwk.Import[jwk.RSAPrivateKey](raw)
 		if err != nil {
-			fmt.Printf("failed to create symmetric key: %s\n", err)
+			fmt.Printf("failed to create RSA private key: %s\n", err)
 			return
 		}
-		if _, ok := key.(jwk.RSAPrivateKey); !ok {
-			fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
-			return
-		}
+		_ = key
 		// PublicKey is omitted for brevity
 	}
 
@@ -75,15 +71,12 @@ func Example_jwk_import() {
 			return
 		}
 
-		key, err := jwk.Import(raw)
+		key, err := jwk.Import[jwk.ECDSAPrivateKey](raw)
 		if err != nil {
-			fmt.Printf("failed to create symmetric key: %s\n", err)
+			fmt.Printf("failed to create ECDSA private key: %s\n", err)
 			return
 		}
-		if _, ok := key.(jwk.ECDSAPrivateKey); !ok {
-			fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
-			return
-		}
+		_ = key
 		// PublicKey is omitted for brevity
 	}
 

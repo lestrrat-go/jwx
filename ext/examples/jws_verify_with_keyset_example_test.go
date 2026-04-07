@@ -18,7 +18,7 @@ func Example_jws_verify_with_jwk_set() {
 		fmt.Printf("failed to generate RSA key: %s\n", err)
 		return
 	}
-	privkey, err := jwk.Import(rawkey)
+	privkey, err := jwk.Import[jwk.Key](rawkey)
 	if err != nil {
 		fmt.Printf("failed to create private key: %s\n", err)
 		return
@@ -29,11 +29,11 @@ func Example_jws_verify_with_jwk_set() {
 	// Create a JWK Set
 	set := jwk.NewSet()
 	// Add some bogus keys
-	k1, _ := jwk.Import([]byte("abracadabra"))
+	k1, _ := jwk.Import[jwk.Key]([]byte("abracadabra"))
 	_ = set.AddKey(k1)
 	_ = k1.Set(jwk.KeyIDKey, "key-01")
 
-	k2, _ := jwk.Import([]byte("opensesame"))
+	k2, _ := jwk.Import[jwk.Key]([]byte("opensesame"))
 	_ = set.AddKey(k2)
 	_ = k1.Set(jwk.KeyIDKey, "key-02")
 

@@ -17,7 +17,7 @@ func Example_jws_verify_with_crit_opt_out() {
 	// present. Per RFC 7515 Section 4.1.11, this should be rejected.
 	const invalidCrit = `eyJhbGciOiJIUzI1NiIsImNyaXQiOlsieC1jdXN0b20iXX0.TG9yZW0gaXBzdW0.nqgPb01MwodtcEhQ-Hm0zWTrpa5whLjI9D-xZj-PrDo`
 
-	key, err := jwk.Import([]byte(`abracadabra`))
+	key, err := jwk.Import[jwk.Key]([]byte(`abracadabra`))
 	if err != nil {
 		fmt.Printf("failed to create key: %s\n", err)
 		return

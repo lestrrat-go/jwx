@@ -349,9 +349,9 @@ func TestJWTParseVerify(t *testing.T) {
 		})
 		t.Run("UseDefault with multiple keys should fail", func(t *testing.T) {
 			t.Parallel()
-			pubkey1, err := jwk.Import(&key.PublicKey)
+			pubkey1, err := jwk.Import[jwk.Key](&key.PublicKey)
 			require.NoError(t, err)
-			pubkey2, err := jwk.Import(&key.PublicKey)
+			pubkey2, err := jwk.Import[jwk.Key](&key.PublicKey)
 			require.NoError(t, err)
 
 			pubkey1.Set(jwk.KeyIDKey, kid)
@@ -391,7 +391,7 @@ func TestJWTParseVerify(t *testing.T) {
 
 			signedButNot := bytes.Join([][]byte{dummyEncoded, payload, signature}, []byte{tokens.Period})
 
-			pubkey, err := jwk.Import(&key.PublicKey)
+			pubkey, err := jwk.Import[jwk.Key](&key.PublicKey)
 			require.NoError(t, err)
 
 			pubkey.Set(jwk.KeyIDKey, kid)
@@ -572,7 +572,7 @@ func TestSignJWK(t *testing.T) {
 	priv, err := jwxtest.GenerateRsaKey()
 	require.Nil(t, err)
 
-	key, err := jwk.Import(priv)
+	key, err := jwk.Import[jwk.Key](priv)
 	require.Nil(t, err)
 
 	require.NoError(t, key.Set(jwk.KeyIDKey, "test"), `key.Set should succeed`)
@@ -1607,7 +1607,7 @@ func TestGH1482(t *testing.T) {
 	var markerValue any
 	kp := jws.KeyProviderFunc(func(ctx context.Context, sink jws.KeySink, _ *jws.Signature, _ *jws.Message) error {
 		markerValue = ctx.Value("marker")
-		key, err := jwk.Import([]byte("secret"))
+		key, err := jwk.Import[jwk.Key]([]byte("secret"))
 		if err != nil {
 			return err
 		}
@@ -1638,7 +1638,7 @@ func TestGH1484(t *testing.T) {
 		{Name: "null_jti", Payload: `{"jti":null}`},
 	}
 
-	key, err := jwk.Import([]byte("abracadabra"))
+	key, err := jwk.Import[jwk.Key]([]byte("abracadabra"))
 	require.NoError(t, err, `jwk.Import should succeed`)
 
 	t.Run("default accepts null", func(t *testing.T) {

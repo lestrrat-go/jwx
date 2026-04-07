@@ -34,7 +34,7 @@ func GenerateRsaJwk() (jwk.Key, error) {
 		return nil, fmt.Errorf(`failed to generate RSA private key: %w`, err)
 	}
 
-	k, err := jwk.Import(key)
+	k, err := jwk.Import[jwk.RSAPrivateKey](key)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to generate jwk.RSAPrivateKey: %w`, err)
 	}
@@ -66,7 +66,7 @@ func GenerateEcdsaJwk() (jwk.Key, error) {
 		return nil, fmt.Errorf(`failed to generate ECDSA private key: %w`, err)
 	}
 
-	k, err := jwk.Import(key)
+	k, err := jwk.Import[jwk.ECDSAPrivateKey](key)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to generate jwk.ECDSAPrivateKey: %w`, err)
 	}
@@ -90,7 +90,7 @@ func GenerateSymmetricKey() []byte {
 }
 
 func GenerateSymmetricJwk() (jwk.Key, error) {
-	key, err := jwk.Import(GenerateSymmetricKey())
+	key, err := jwk.Import[jwk.SymmetricKey](GenerateSymmetricKey())
 	if err != nil {
 		return nil, fmt.Errorf(`failed to generate jwk.SymmetricKey: %w`, err)
 	}
@@ -109,7 +109,7 @@ func GenerateEd25519Jwk() (jwk.Key, error) {
 		return nil, fmt.Errorf(`failed to generate Ed25519 private key: %w`, err)
 	}
 
-	k, err := jwk.Import(key)
+	k, err := jwk.Import[jwk.OKPPrivateKey](key)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to generate jwk.OKPPrivateKey: %w`, err)
 	}
@@ -128,7 +128,7 @@ func GenerateX25519Jwk() (jwk.Key, error) {
 		return nil, fmt.Errorf(`failed to generate X25519 private key: %w`, err)
 	}
 
-	k, err := jwk.Import(key)
+	k, err := jwk.Import[jwk.OKPPrivateKey](key)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to generate jwk.OKPPrivateKey: %w`, err)
 	}
@@ -242,7 +242,7 @@ func ParseJwkFile(_ context.Context, file string) (jwk.Key, error) {
 		return nil, fmt.Errorf(`failed to read from key file %s: %w`, file, err)
 	}
 
-	key, err := jwk.ParseKey(buf)
+	key, err := jwk.ParseKey[jwk.Key](buf)
 	if err != nil {
 		return nil, fmt.Errorf(`filed to parse JWK in key file %s: %w`, file, err)
 	}
