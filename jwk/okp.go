@@ -180,24 +180,46 @@ func okpJWKToRaw(key Key, _ any /* this is unused because this is half baked */)
 
 	switch key := extracted.(type) {
 	case OKPPrivateKey:
-		locker, ok := key.(rlocker)
-		if ok {
+		// rlocker is unexported with unexported methods, so only our
+		// concrete types implement it. A successful assertion lets us
+		// type-assert to the concrete struct and read fields directly
+		// under a single batch lock. This avoids nested RLock (which
+		// deadlocks when a writer is pending) while preserving an
+		// atomic snapshot of all fields.
+		var crv jwa.EllipticCurveAlgorithm
+		var hasCrv bool
+		var x, d []byte
+		if locker, ok := key.(rlocker); ok {
 			locker.rlock()
-			defer locker.runlock()
+			concrete := key.(*okpPrivateKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
+			if concrete.crv != nil {
+				crv = *(concrete.crv)
+				hasCrv = true
+			}
+			x, d = concrete.x, concrete.d
+			locker.runlock()
+		} else {
+			// External implementation — use self-locking interface getters.
+			var ok bool
+			if crv, ok = key.Crv(); !ok {
+				return nil, fmt.Errorf(`missing "crv" field`)
+			}
+			hasCrv = true
+			if x, ok = key.X(); !ok {
+				return nil, fmt.Errorf(`missing "x" field`)
+			}
+			if d, ok = key.D(); !ok {
+				return nil, fmt.Errorf(`missing "d" field`)
+			}
 		}
 
-		crv, ok := key.Crv()
-		if !ok {
+		if !hasCrv {
 			return nil, fmt.Errorf(`missing "crv" field`)
 		}
-
-		x, ok := key.X()
-		if !ok {
+		if x == nil {
 			return nil, fmt.Errorf(`missing "x" field`)
 		}
-
-		d, ok := key.D()
-		if !ok {
+		if d == nil {
 			return nil, fmt.Errorf(`missing "d" field`)
 		}
 
@@ -207,21 +229,37 @@ func okpJWKToRaw(key Key, _ any /* this is unused because this is half baked */)
 		}
 		return privk, nil
 	case OKPPublicKey:
-		locker, ok := key.(rlocker)
-		if ok {
+		// See OKPPrivateKey case above for explanation of the rlocker pattern.
+		var crv jwa.EllipticCurveAlgorithm
+		var hasCrv bool
+		var x []byte
+		if locker, ok := key.(rlocker); ok {
 			locker.rlock()
-			defer locker.runlock()
+			concrete := key.(*okpPublicKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
+			if concrete.crv != nil {
+				crv = *(concrete.crv)
+				hasCrv = true
+			}
+			x = concrete.x
+			locker.runlock()
+		} else {
+			var ok bool
+			if crv, ok = key.Crv(); !ok {
+				return nil, fmt.Errorf(`missing "crv" field`)
+			}
+			hasCrv = true
+			if x, ok = key.X(); !ok {
+				return nil, fmt.Errorf(`missing "x" field`)
+			}
 		}
 
-		crv, ok := key.Crv()
-		if !ok {
+		if !hasCrv {
 			return nil, fmt.Errorf(`missing "crv" field`)
 		}
-
-		x, ok := key.X()
-		if !ok {
+		if x == nil {
 			return nil, fmt.Errorf(`missing "x" field`)
 		}
+
 		pubk, err := buildOKPPublicKey(crv, x)
 		if err != nil {
 			return nil, fmt.Errorf(`jwk.OKPPublicKey: failed to build public key: %w`, err)
@@ -275,7 +313,7 @@ func okpThumbprint(hash crypto.Hash, crv, x string) []byte {
 
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638 / 8037
-func (k okpPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+func (k *okpPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
@@ -292,7 +330,7 @@ func (k okpPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638 / 8037
-func (k okpPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+func (k *okpPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 

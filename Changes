@@ -5,6 +5,14 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.0.14 UNRELEASED
+  * [jwt][jwe][jws][jwk] Fix inconsistent mutex locking across main data
+    structures. Named getters on JWK key types, MarshalJSON on JWK keys,
+    UnmarshalJSON on JWE headers, makePairs/MarshalJSON on JWT tokens,
+    rawBuffer on JWS headers, and Set/Keys on jwk.Set were missing proper
+    lock protection. Switch all mutex fields from *sync.RWMutex (pointer)
+    to sync.RWMutex (value) so go vet -copylocks catches accidental copies,
+    and convert affected value-receiver methods to pointer receivers.
+
   * [jwt][jwe][jws] Add `WithMaxParseInputSize(int64)` to limit bytes read from
     an `io.Reader` in `ParseReader` and `ReadFile`. Default is 10 MB. Can be set
     globally via `Settings()` or per-call. (#1630, #1632)

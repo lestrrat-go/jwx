@@ -160,12 +160,11 @@ func generateHeaders(obj *codegen.Object) error {
 		}
 	}
 	o.L("privateParams map[string]any")
-	o.L("mu *sync.RWMutex")
+	o.L("mu sync.RWMutex")
 	o.L("}") // end type StandardHeaders
 
 	o.LL("func NewHeaders() Headers {")
 	o.L("return &stdHeaders{")
-	o.L("mu: &sync.RWMutex{},")
 	o.L("privateParams: map[string]any{},")
 	o.L("}")
 	o.L("}")
@@ -304,6 +303,8 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("}")
 
 	o.LL("func (h *stdHeaders) UnmarshalJSON(buf []byte) error {")
+	o.L("h.mu.Lock()")
+	o.L("defer h.mu.Unlock()")
 	for _, f := range obj.Fields() {
 		o.L("h.%s = nil", f.Name(false))
 	}
@@ -400,7 +401,7 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("return keys")
 	o.L("}")
 
-	o.LL("func (h stdHeaders) MarshalJSON() ([]byte, error) {")
+	o.LL("func (h *stdHeaders) MarshalJSON() ([]byte, error) {")
 	o.L("data := make(map[string]any)")
 	o.L("keys := make([]string, 0, %d+len(h.privateParams))", len(obj.Fields()))
 	o.L("h.mu.RLock()")

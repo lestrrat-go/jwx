@@ -42,7 +42,7 @@ type okpPublicKey struct {
 	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]any
-	mu                     *sync.RWMutex
+	mu                     sync.RWMutex
 	dc                     json.DecodeCtx
 }
 
@@ -51,28 +51,29 @@ var _ Key = &okpPublicKey{}
 
 func newOKPPublicKey() *okpPublicKey {
 	return &okpPublicKey{
-		mu:            &sync.RWMutex{},
 		privateParams: make(map[string]any),
 	}
 }
 
-func (h okpPublicKey) KeyType() jwa.KeyType {
+func (h *okpPublicKey) KeyType() jwa.KeyType {
 	return jwa.OKP()
 }
 
-func (h okpPublicKey) rlock() {
+func (h *okpPublicKey) rlock() {
 	h.mu.RLock()
 }
 
-func (h okpPublicKey) runlock() {
+func (h *okpPublicKey) runlock() {
 	h.mu.RUnlock()
 }
 
-func (h okpPublicKey) IsPrivate() bool {
+func (h *okpPublicKey) IsPrivate() bool {
 	return false
 }
 
 func (h *okpPublicKey) Algorithm() (jwa.KeyAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm != nil {
 		return *(h.algorithm), true
 	}
@@ -80,6 +81,8 @@ func (h *okpPublicKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 }
 
 func (h *okpPublicKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.crv != nil {
 		return *(h.crv), true
 	}
@@ -87,6 +90,8 @@ func (h *okpPublicKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
 }
 
 func (h *okpPublicKey) KeyID() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyID != nil {
 		return *(h.keyID), true
 	}
@@ -94,6 +99,8 @@ func (h *okpPublicKey) KeyID() (string, bool) {
 }
 
 func (h *okpPublicKey) KeyOps() (KeyOperationList, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyOps != nil {
 		return *(h.keyOps), true
 	}
@@ -101,6 +108,8 @@ func (h *okpPublicKey) KeyOps() (KeyOperationList, bool) {
 }
 
 func (h *okpPublicKey) KeyUsage() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyUsage != nil {
 		return *(h.keyUsage), true
 	}
@@ -108,6 +117,8 @@ func (h *okpPublicKey) KeyUsage() (string, bool) {
 }
 
 func (h *okpPublicKey) X() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x != nil {
 		return h.x, true
 	}
@@ -115,6 +126,8 @@ func (h *okpPublicKey) X() ([]byte, bool) {
 }
 
 func (h *okpPublicKey) X509CertChain() (*cert.Chain, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertChain != nil {
 		return h.x509CertChain, true
 	}
@@ -122,6 +135,8 @@ func (h *okpPublicKey) X509CertChain() (*cert.Chain, bool) {
 }
 
 func (h *okpPublicKey) X509CertThumbprint() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprint != nil {
 		return *(h.x509CertThumbprint), true
 	}
@@ -129,6 +144,8 @@ func (h *okpPublicKey) X509CertThumbprint() (string, bool) {
 }
 
 func (h *okpPublicKey) X509CertThumbprintS256() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprintS256 != nil {
 		return *(h.x509CertThumbprintS256), true
 	}
@@ -136,6 +153,8 @@ func (h *okpPublicKey) X509CertThumbprintS256() (string, bool) {
 }
 
 func (h *okpPublicKey) X509URL() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509URL != nil {
 		return *(h.x509URL), true
 	}
@@ -545,11 +564,12 @@ LOOP:
 	return nil
 }
 
-func (h okpPublicKey) MarshalJSON() ([]byte, error) {
+func (h *okpPublicKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]any)
 	fields := make([]string, 0, 10)
 	data[KeyTypeKey] = jwa.OKP()
 	fields = append(fields, KeyTypeKey)
+	h.mu.RLock()
 	if h.algorithm != nil {
 		data[AlgorithmKey] = *(h.algorithm)
 		fields = append(fields, AlgorithmKey)
@@ -594,6 +614,7 @@ func (h okpPublicKey) MarshalJSON() ([]byte, error) {
 		data[k] = v
 		fields = append(fields, k)
 	}
+	h.mu.RUnlock()
 
 	sort.Strings(fields)
 	buf := pool.BytesBuffer().Get()
@@ -687,7 +708,7 @@ type okpPrivateKey struct {
 	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]any
-	mu                     *sync.RWMutex
+	mu                     sync.RWMutex
 	dc                     json.DecodeCtx
 }
 
@@ -696,28 +717,29 @@ var _ Key = &okpPrivateKey{}
 
 func newOKPPrivateKey() *okpPrivateKey {
 	return &okpPrivateKey{
-		mu:            &sync.RWMutex{},
 		privateParams: make(map[string]any),
 	}
 }
 
-func (h okpPrivateKey) KeyType() jwa.KeyType {
+func (h *okpPrivateKey) KeyType() jwa.KeyType {
 	return jwa.OKP()
 }
 
-func (h okpPrivateKey) rlock() {
+func (h *okpPrivateKey) rlock() {
 	h.mu.RLock()
 }
 
-func (h okpPrivateKey) runlock() {
+func (h *okpPrivateKey) runlock() {
 	h.mu.RUnlock()
 }
 
-func (h okpPrivateKey) IsPrivate() bool {
+func (h *okpPrivateKey) IsPrivate() bool {
 	return true
 }
 
 func (h *okpPrivateKey) Algorithm() (jwa.KeyAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm != nil {
 		return *(h.algorithm), true
 	}
@@ -725,6 +747,8 @@ func (h *okpPrivateKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 }
 
 func (h *okpPrivateKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.crv != nil {
 		return *(h.crv), true
 	}
@@ -732,6 +756,8 @@ func (h *okpPrivateKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
 }
 
 func (h *okpPrivateKey) D() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.d != nil {
 		return h.d, true
 	}
@@ -739,6 +765,8 @@ func (h *okpPrivateKey) D() ([]byte, bool) {
 }
 
 func (h *okpPrivateKey) KeyID() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyID != nil {
 		return *(h.keyID), true
 	}
@@ -746,6 +774,8 @@ func (h *okpPrivateKey) KeyID() (string, bool) {
 }
 
 func (h *okpPrivateKey) KeyOps() (KeyOperationList, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyOps != nil {
 		return *(h.keyOps), true
 	}
@@ -753,6 +783,8 @@ func (h *okpPrivateKey) KeyOps() (KeyOperationList, bool) {
 }
 
 func (h *okpPrivateKey) KeyUsage() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyUsage != nil {
 		return *(h.keyUsage), true
 	}
@@ -760,6 +792,8 @@ func (h *okpPrivateKey) KeyUsage() (string, bool) {
 }
 
 func (h *okpPrivateKey) X() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x != nil {
 		return h.x, true
 	}
@@ -767,6 +801,8 @@ func (h *okpPrivateKey) X() ([]byte, bool) {
 }
 
 func (h *okpPrivateKey) X509CertChain() (*cert.Chain, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertChain != nil {
 		return h.x509CertChain, true
 	}
@@ -774,6 +810,8 @@ func (h *okpPrivateKey) X509CertChain() (*cert.Chain, bool) {
 }
 
 func (h *okpPrivateKey) X509CertThumbprint() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprint != nil {
 		return *(h.x509CertThumbprint), true
 	}
@@ -781,6 +819,8 @@ func (h *okpPrivateKey) X509CertThumbprint() (string, bool) {
 }
 
 func (h *okpPrivateKey) X509CertThumbprintS256() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprintS256 != nil {
 		return *(h.x509CertThumbprintS256), true
 	}
@@ -788,6 +828,8 @@ func (h *okpPrivateKey) X509CertThumbprintS256() (string, bool) {
 }
 
 func (h *okpPrivateKey) X509URL() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509URL != nil {
 		return *(h.x509URL), true
 	}
@@ -1236,11 +1278,12 @@ LOOP:
 	return nil
 }
 
-func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
+func (h *okpPrivateKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]any)
 	fields := make([]string, 0, 11)
 	data[KeyTypeKey] = jwa.OKP()
 	fields = append(fields, KeyTypeKey)
+	h.mu.RLock()
 	if h.algorithm != nil {
 		data[AlgorithmKey] = *(h.algorithm)
 		fields = append(fields, AlgorithmKey)
@@ -1289,6 +1332,7 @@ func (h okpPrivateKey) MarshalJSON() ([]byte, error) {
 		data[k] = v
 		fields = append(fields, k)
 	}
+	h.mu.RUnlock()
 
 	sort.Strings(fields)
 	buf := pool.BytesBuffer().Get()

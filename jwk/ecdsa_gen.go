@@ -45,7 +45,7 @@ type ecdsaPublicKey struct {
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	y                      []byte
 	privateParams          map[string]any
-	mu                     *sync.RWMutex
+	mu                     sync.RWMutex
 	dc                     json.DecodeCtx
 }
 
@@ -54,28 +54,29 @@ var _ Key = &ecdsaPublicKey{}
 
 func newECDSAPublicKey() *ecdsaPublicKey {
 	return &ecdsaPublicKey{
-		mu:            &sync.RWMutex{},
 		privateParams: make(map[string]any),
 	}
 }
 
-func (h ecdsaPublicKey) KeyType() jwa.KeyType {
+func (h *ecdsaPublicKey) KeyType() jwa.KeyType {
 	return jwa.EC()
 }
 
-func (h ecdsaPublicKey) rlock() {
+func (h *ecdsaPublicKey) rlock() {
 	h.mu.RLock()
 }
 
-func (h ecdsaPublicKey) runlock() {
+func (h *ecdsaPublicKey) runlock() {
 	h.mu.RUnlock()
 }
 
-func (h ecdsaPublicKey) IsPrivate() bool {
+func (h *ecdsaPublicKey) IsPrivate() bool {
 	return false
 }
 
 func (h *ecdsaPublicKey) Algorithm() (jwa.KeyAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm != nil {
 		return *(h.algorithm), true
 	}
@@ -83,6 +84,8 @@ func (h *ecdsaPublicKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 }
 
 func (h *ecdsaPublicKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.crv != nil {
 		return *(h.crv), true
 	}
@@ -90,6 +93,8 @@ func (h *ecdsaPublicKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
 }
 
 func (h *ecdsaPublicKey) KeyID() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyID != nil {
 		return *(h.keyID), true
 	}
@@ -97,6 +102,8 @@ func (h *ecdsaPublicKey) KeyID() (string, bool) {
 }
 
 func (h *ecdsaPublicKey) KeyOps() (KeyOperationList, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyOps != nil {
 		return *(h.keyOps), true
 	}
@@ -104,6 +111,8 @@ func (h *ecdsaPublicKey) KeyOps() (KeyOperationList, bool) {
 }
 
 func (h *ecdsaPublicKey) KeyUsage() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyUsage != nil {
 		return *(h.keyUsage), true
 	}
@@ -111,6 +120,8 @@ func (h *ecdsaPublicKey) KeyUsage() (string, bool) {
 }
 
 func (h *ecdsaPublicKey) X() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x != nil {
 		return h.x, true
 	}
@@ -118,6 +129,8 @@ func (h *ecdsaPublicKey) X() ([]byte, bool) {
 }
 
 func (h *ecdsaPublicKey) X509CertChain() (*cert.Chain, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertChain != nil {
 		return h.x509CertChain, true
 	}
@@ -125,6 +138,8 @@ func (h *ecdsaPublicKey) X509CertChain() (*cert.Chain, bool) {
 }
 
 func (h *ecdsaPublicKey) X509CertThumbprint() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprint != nil {
 		return *(h.x509CertThumbprint), true
 	}
@@ -132,6 +147,8 @@ func (h *ecdsaPublicKey) X509CertThumbprint() (string, bool) {
 }
 
 func (h *ecdsaPublicKey) X509CertThumbprintS256() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprintS256 != nil {
 		return *(h.x509CertThumbprintS256), true
 	}
@@ -139,6 +156,8 @@ func (h *ecdsaPublicKey) X509CertThumbprintS256() (string, bool) {
 }
 
 func (h *ecdsaPublicKey) X509URL() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509URL != nil {
 		return *(h.x509URL), true
 	}
@@ -146,6 +165,8 @@ func (h *ecdsaPublicKey) X509URL() (string, bool) {
 }
 
 func (h *ecdsaPublicKey) Y() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.y != nil {
 		return h.y, true
 	}
@@ -586,11 +607,12 @@ LOOP:
 	return nil
 }
 
-func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
+func (h *ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]any)
 	fields := make([]string, 0, 11)
 	data[KeyTypeKey] = jwa.EC()
 	fields = append(fields, KeyTypeKey)
+	h.mu.RLock()
 	if h.algorithm != nil {
 		data[AlgorithmKey] = *(h.algorithm)
 		fields = append(fields, AlgorithmKey)
@@ -639,6 +661,7 @@ func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 		data[k] = v
 		fields = append(fields, k)
 	}
+	h.mu.RUnlock()
 
 	sort.Strings(fields)
 	buf := pool.BytesBuffer().Get()
@@ -737,7 +760,7 @@ type ecdsaPrivateKey struct {
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	y                      []byte
 	privateParams          map[string]any
-	mu                     *sync.RWMutex
+	mu                     sync.RWMutex
 	dc                     json.DecodeCtx
 }
 
@@ -746,28 +769,29 @@ var _ Key = &ecdsaPrivateKey{}
 
 func newECDSAPrivateKey() *ecdsaPrivateKey {
 	return &ecdsaPrivateKey{
-		mu:            &sync.RWMutex{},
 		privateParams: make(map[string]any),
 	}
 }
 
-func (h ecdsaPrivateKey) KeyType() jwa.KeyType {
+func (h *ecdsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.EC()
 }
 
-func (h ecdsaPrivateKey) rlock() {
+func (h *ecdsaPrivateKey) rlock() {
 	h.mu.RLock()
 }
 
-func (h ecdsaPrivateKey) runlock() {
+func (h *ecdsaPrivateKey) runlock() {
 	h.mu.RUnlock()
 }
 
-func (h ecdsaPrivateKey) IsPrivate() bool {
+func (h *ecdsaPrivateKey) IsPrivate() bool {
 	return true
 }
 
 func (h *ecdsaPrivateKey) Algorithm() (jwa.KeyAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm != nil {
 		return *(h.algorithm), true
 	}
@@ -775,6 +799,8 @@ func (h *ecdsaPrivateKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 }
 
 func (h *ecdsaPrivateKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.crv != nil {
 		return *(h.crv), true
 	}
@@ -782,6 +808,8 @@ func (h *ecdsaPrivateKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
 }
 
 func (h *ecdsaPrivateKey) D() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.d != nil {
 		return h.d, true
 	}
@@ -789,6 +817,8 @@ func (h *ecdsaPrivateKey) D() ([]byte, bool) {
 }
 
 func (h *ecdsaPrivateKey) KeyID() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyID != nil {
 		return *(h.keyID), true
 	}
@@ -796,6 +826,8 @@ func (h *ecdsaPrivateKey) KeyID() (string, bool) {
 }
 
 func (h *ecdsaPrivateKey) KeyOps() (KeyOperationList, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyOps != nil {
 		return *(h.keyOps), true
 	}
@@ -803,6 +835,8 @@ func (h *ecdsaPrivateKey) KeyOps() (KeyOperationList, bool) {
 }
 
 func (h *ecdsaPrivateKey) KeyUsage() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyUsage != nil {
 		return *(h.keyUsage), true
 	}
@@ -810,6 +844,8 @@ func (h *ecdsaPrivateKey) KeyUsage() (string, bool) {
 }
 
 func (h *ecdsaPrivateKey) X() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x != nil {
 		return h.x, true
 	}
@@ -817,6 +853,8 @@ func (h *ecdsaPrivateKey) X() ([]byte, bool) {
 }
 
 func (h *ecdsaPrivateKey) X509CertChain() (*cert.Chain, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertChain != nil {
 		return h.x509CertChain, true
 	}
@@ -824,6 +862,8 @@ func (h *ecdsaPrivateKey) X509CertChain() (*cert.Chain, bool) {
 }
 
 func (h *ecdsaPrivateKey) X509CertThumbprint() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprint != nil {
 		return *(h.x509CertThumbprint), true
 	}
@@ -831,6 +871,8 @@ func (h *ecdsaPrivateKey) X509CertThumbprint() (string, bool) {
 }
 
 func (h *ecdsaPrivateKey) X509CertThumbprintS256() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprintS256 != nil {
 		return *(h.x509CertThumbprintS256), true
 	}
@@ -838,6 +880,8 @@ func (h *ecdsaPrivateKey) X509CertThumbprintS256() (string, bool) {
 }
 
 func (h *ecdsaPrivateKey) X509URL() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509URL != nil {
 		return *(h.x509URL), true
 	}
@@ -845,6 +889,8 @@ func (h *ecdsaPrivateKey) X509URL() (string, bool) {
 }
 
 func (h *ecdsaPrivateKey) Y() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.y != nil {
 		return h.y, true
 	}
@@ -1326,11 +1372,12 @@ LOOP:
 	return nil
 }
 
-func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
+func (h *ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]any)
 	fields := make([]string, 0, 12)
 	data[KeyTypeKey] = jwa.EC()
 	fields = append(fields, KeyTypeKey)
+	h.mu.RLock()
 	if h.algorithm != nil {
 		data[AlgorithmKey] = *(h.algorithm)
 		fields = append(fields, AlgorithmKey)
@@ -1383,6 +1430,7 @@ func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 		data[k] = v
 		fields = append(fields, k)
 	}
+	h.mu.RUnlock()
 
 	sort.Strings(fields)
 	buf := pool.BytesBuffer().Get()

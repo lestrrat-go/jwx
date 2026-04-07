@@ -170,34 +170,64 @@ func ecdsaJWKToRaw(keyif Key, hint any) (any, error) {
 			}
 		}
 
-		locker, ok := k.(rlocker)
-		if ok {
+		// rlocker is unexported with unexported methods, so only our
+		// concrete types implement it. A successful assertion lets us
+		// type-assert to the concrete struct and read fields directly
+		// under a single batch lock. This avoids nested RLock (which
+		// deadlocks when a writer is pending) while preserving an
+		// atomic snapshot of all fields.
+		var crv jwa.EllipticCurveAlgorithm
+		var hasCrv bool
+		var od, ox, oy []byte
+		if locker, ok := k.(rlocker); ok {
 			locker.rlock()
-			defer locker.runlock()
+			concrete := k.(*ecdsaPrivateKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
+			if concrete.crv != nil {
+				crv = *(concrete.crv)
+				hasCrv = true
+			}
+			od, ox, oy = concrete.d, concrete.x, concrete.y
+			locker.runlock()
+		} else {
+			// External implementation — use self-locking interface getters.
+			var ok bool
+			if crv, ok = k.Crv(); !ok {
+				return nil, fmt.Errorf(`missing "crv" field`)
+			}
+			hasCrv = true
+			if od, ok = k.D(); !ok {
+				return nil, fmt.Errorf(`missing "d" field`)
+			}
+			if ox, ok = k.X(); !ok {
+				return nil, fmt.Errorf(`missing "x" field`)
+			}
+			if oy, ok = k.Y(); !ok {
+				return nil, fmt.Errorf(`missing "y" field`)
+			}
 		}
 
-		crv, ok := k.Crv()
-		if !ok {
+		if !hasCrv {
 			return nil, fmt.Errorf(`missing "crv" field`)
 		}
 
 		if isECDH {
-			d, ok := k.D()
-			if !ok {
+			if od == nil {
 				return nil, fmt.Errorf(`missing "d" field`)
 			}
-			return buildECDHPrivateKey(crv, d)
+			return buildECDHPrivateKey(crv, od)
 		}
 
-		x, ok := k.X()
-		if !ok {
+		if ox == nil {
 			return nil, fmt.Errorf(`missing "x" field`)
 		}
-		y, ok := k.Y()
-		if !ok {
+		if oy == nil {
 			return nil, fmt.Errorf(`missing "y" field`)
 		}
-		pubk, err := buildECDSAPublicKey(crv, x, y)
+		if od == nil {
+			return nil, fmt.Errorf(`missing "d" field`)
+		}
+
+		pubk, err := buildECDSAPublicKey(crv, ox, oy)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to build public key: %w`, err)
 		}
@@ -205,12 +235,7 @@ func ecdsaJWKToRaw(keyif Key, hint any) (any, error) {
 		var key ecdsa.PrivateKey
 		var d big.Int
 
-		origD, ok := k.D()
-		if !ok {
-			return nil, fmt.Errorf(`missing "d" field`)
-		}
-
-		d.SetBytes(origD)
+		d.SetBytes(od)
 		key.D = &d
 		key.PublicKey = *pubk
 
@@ -231,24 +256,40 @@ func ecdsaJWKToRaw(keyif Key, hint any) (any, error) {
 			}
 		}
 
-		locker, ok := k.(rlocker)
-		if ok {
+		// See ECDSAPrivateKey case above for explanation of the rlocker pattern.
+		var crv jwa.EllipticCurveAlgorithm
+		var hasCrv bool
+		var x, y []byte
+		if locker, ok := k.(rlocker); ok {
 			locker.rlock()
-			defer locker.runlock()
+			concrete := k.(*ecdsaPublicKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
+			if concrete.crv != nil {
+				crv = *(concrete.crv)
+				hasCrv = true
+			}
+			x, y = concrete.x, concrete.y
+			locker.runlock()
+		} else {
+			var ok bool
+			if crv, ok = k.Crv(); !ok {
+				return nil, fmt.Errorf(`missing "crv" field`)
+			}
+			hasCrv = true
+			if x, ok = k.X(); !ok {
+				return nil, fmt.Errorf(`missing "x" field`)
+			}
+			if y, ok = k.Y(); !ok {
+				return nil, fmt.Errorf(`missing "y" field`)
+			}
 		}
 
-		crv, ok := k.Crv()
-		if !ok {
+		if !hasCrv {
 			return nil, fmt.Errorf(`missing "crv" field`)
 		}
-
-		x, ok := k.X()
-		if !ok {
+		if x == nil {
 			return nil, fmt.Errorf(`missing "x" field`)
 		}
-
-		y, ok := k.Y()
-		if !ok {
+		if y == nil {
 			return nil, fmt.Errorf(`missing "y" field`)
 		}
 		if isECDH {
@@ -305,12 +346,12 @@ func ecdsaThumbprint(hash crypto.Hash, crv, x, y string) []byte {
 
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638
-func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+func (k *ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
 	var key ecdsa.PublicKey
-	if err := Export(&k, &key); err != nil {
+	if err := Export(k, &key); err != nil {
 		return nil, fmt.Errorf(`failed to export ecdsa.PublicKey for thumbprint generation: %w`, err)
 	}
 
@@ -329,12 +370,12 @@ func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638
-func (k ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+func (k *ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
 	var key ecdsa.PrivateKey
-	if err := Export(&k, &key); err != nil {
+	if err := Export(k, &key); err != nil {
 		return nil, fmt.Errorf(`failed to export ecdsa.PrivateKey for thumbprint generation: %w`, err)
 	}
 

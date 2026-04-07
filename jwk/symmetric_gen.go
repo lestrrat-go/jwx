@@ -38,7 +38,7 @@ type symmetricKey struct {
 	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]any
-	mu                     *sync.RWMutex
+	mu                     sync.RWMutex
 	dc                     json.DecodeCtx
 }
 
@@ -47,24 +47,25 @@ var _ Key = &symmetricKey{}
 
 func newSymmetricKey() *symmetricKey {
 	return &symmetricKey{
-		mu:            &sync.RWMutex{},
 		privateParams: make(map[string]any),
 	}
 }
 
-func (h symmetricKey) KeyType() jwa.KeyType {
+func (h *symmetricKey) KeyType() jwa.KeyType {
 	return jwa.OctetSeq()
 }
 
-func (h symmetricKey) rlock() {
+func (h *symmetricKey) rlock() {
 	h.mu.RLock()
 }
 
-func (h symmetricKey) runlock() {
+func (h *symmetricKey) runlock() {
 	h.mu.RUnlock()
 }
 
 func (h *symmetricKey) Algorithm() (jwa.KeyAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm != nil {
 		return *(h.algorithm), true
 	}
@@ -72,6 +73,8 @@ func (h *symmetricKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 }
 
 func (h *symmetricKey) KeyID() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyID != nil {
 		return *(h.keyID), true
 	}
@@ -79,6 +82,8 @@ func (h *symmetricKey) KeyID() (string, bool) {
 }
 
 func (h *symmetricKey) KeyOps() (KeyOperationList, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyOps != nil {
 		return *(h.keyOps), true
 	}
@@ -86,6 +91,8 @@ func (h *symmetricKey) KeyOps() (KeyOperationList, bool) {
 }
 
 func (h *symmetricKey) KeyUsage() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyUsage != nil {
 		return *(h.keyUsage), true
 	}
@@ -93,6 +100,8 @@ func (h *symmetricKey) KeyUsage() (string, bool) {
 }
 
 func (h *symmetricKey) Octets() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.octets != nil {
 		return h.octets, true
 	}
@@ -100,6 +109,8 @@ func (h *symmetricKey) Octets() ([]byte, bool) {
 }
 
 func (h *symmetricKey) X509CertChain() (*cert.Chain, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertChain != nil {
 		return h.x509CertChain, true
 	}
@@ -107,6 +118,8 @@ func (h *symmetricKey) X509CertChain() (*cert.Chain, bool) {
 }
 
 func (h *symmetricKey) X509CertThumbprint() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprint != nil {
 		return *(h.x509CertThumbprint), true
 	}
@@ -114,6 +127,8 @@ func (h *symmetricKey) X509CertThumbprint() (string, bool) {
 }
 
 func (h *symmetricKey) X509CertThumbprintS256() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprintS256 != nil {
 		return *(h.x509CertThumbprintS256), true
 	}
@@ -121,6 +136,8 @@ func (h *symmetricKey) X509CertThumbprintS256() (string, bool) {
 }
 
 func (h *symmetricKey) X509URL() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509URL != nil {
 		return *(h.x509URL), true
 	}
@@ -508,11 +525,12 @@ LOOP:
 	return nil
 }
 
-func (h symmetricKey) MarshalJSON() ([]byte, error) {
+func (h *symmetricKey) MarshalJSON() ([]byte, error) {
 	data := make(map[string]any)
 	fields := make([]string, 0, 9)
 	data[KeyTypeKey] = jwa.OctetSeq()
 	fields = append(fields, KeyTypeKey)
+	h.mu.RLock()
 	if h.algorithm != nil {
 		data[AlgorithmKey] = *(h.algorithm)
 		fields = append(fields, AlgorithmKey)
@@ -553,6 +571,7 @@ func (h symmetricKey) MarshalJSON() ([]byte, error) {
 		data[k] = v
 		fields = append(fields, k)
 	}
+	h.mu.RUnlock()
 
 	sort.Strings(fields)
 	buf := pool.BytesBuffer().Get()

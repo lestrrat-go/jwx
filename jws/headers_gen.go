@@ -87,15 +87,13 @@ type stdHeaders struct {
 	x509CertThumbprintS256 *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	privateParams          map[string]any
-	mu                     *sync.RWMutex
+	mu                     sync.RWMutex
 	dc                     DecodeCtx
 	raw                    []byte // stores the raw version of the header so it can be used later
 }
 
 func NewHeaders() Headers {
-	return &stdHeaders{
-		mu: &sync.RWMutex{},
-	}
+	return &stdHeaders{}
 }
 
 func (h *stdHeaders) Algorithm() (jwa.SignatureAlgorithm, bool) {
@@ -217,6 +215,8 @@ func (h *stdHeaders) SetDecodeCtx(dc DecodeCtx) {
 }
 
 func (h *stdHeaders) rawBuffer() []byte {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	return h.raw
 }
 
@@ -625,7 +625,7 @@ func (h *stdHeaders) Keys() []string {
 	return keys
 }
 
-func (h stdHeaders) MarshalJSON() ([]byte, error) {
+func (h *stdHeaders) MarshalJSON() ([]byte, error) {
 	h.mu.RLock()
 	data := make(map[string]any)
 	keys := make([]string, 0, 11+len(h.privateParams))
