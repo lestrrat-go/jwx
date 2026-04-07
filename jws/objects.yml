@@ -1,0 +1,105 @@
+package: jws
+generator_comment: "tools/cmd/genheaders/main.go"
+output_file: headers_gen.go
+description: "JWS Header"
+rfc: "RFC7515"
+content_noun: "signed content"
+store_raw_on_unmarshal: true
+
+header_comment: |
+  Headers describe a standard JWS Header set. It is part of the JWS message
+  and is used to represet both Public or Protected headers, which in turn
+  can be found in each Signature object. If you are not sure how this works,
+  it is strongly recommended that you read RFC7515, especially the section
+  that describes the full JSON serialization format of JWS messages.
+
+  In most cases, you likely want to use the protected headers, as this is part of the signed content.
+
+pre_field_interface_methods:
+  - "Copy(Headers) error"
+  - "Merge(Headers) (Headers, error)"
+  - "Clone() (Headers, error)"
+
+extra_struct_fields:
+  - name: dc
+    type: DecodeCtx
+  - name: raw
+    type: "[]byte"
+    comment: "stores the raw version of the header so it can be used later"
+
+extra_methods:
+  - name: DecodeCtx
+    field: dc
+    returns: DecodeCtx
+    lock: read
+  - name: SetDecodeCtx
+    field: dc
+    arg_name: dc
+    arg_type: DecodeCtx
+    lock: write
+  - name: rawBuffer
+    field: raw
+    returns: "[]byte"
+    lock: read
+
+zero_vals:
+  jwa.SignatureAlgorithm: "jwa.EmptySignatureAlgorithm()"
+
+fields:
+  - name: algorithm
+    type: jwa.SignatureAlgorithm
+    json: alg
+    hasAccept: true
+    key_algorithm_cast: true
+    comment: https://tools.ietf.org/html/rfc7515#section-4.1.1
+  - name: jwkSetURL
+    unexported_name: jwkSetURL
+    exported_name: JWKSetURL
+    getter: JWKSetURL
+    json: jku
+    comment: https://tools.ietf.org/html/rfc7515#section-4.1.2
+  - name: jwk
+    exported_name: JWK
+    getter: JWK
+    type: jwk.Key
+    direct_storage: true
+    comment: https://tools.ietf.org/html/rfc7515#section-4.1.3
+  - name: keyID
+    json: kid
+    comment: https://tools.ietf.org/html/rfc7515#section-4.1.4
+  - name: x509URL
+    unexported_name: x509URL
+    exported_name: X509URL
+    getter: X509URL
+    json: x5u
+    comment: https://tools.ietf.org/html/rfc7515#section-4.1.5
+  - name: x509CertChain
+    unexported_name: x509CertChain
+    exported_name: X509CertChain
+    getter: X509CertChain
+    type: "*cert.Chain"
+    noDeref: true
+    json: x5c
+    comment: https://tools.ietf.org/html/rfc7515#section-4.1.6
+  - name: x509CertThumbprint
+    unexported_name: x509CertThumbprint
+    getter:  X509CertThumbprint
+    json: x5t
+    comment: https://tools.ietf.org/html/rfc7515#section-4.1.7
+  - name: x509CertThumbprintS256
+    unexported_name: x509CertThumbprintS256
+    exported_name: X509CertThumbprintS256
+    getter: X509CertThumbprintS256
+    json: "x5t#S256"
+    comment: https://tools.ietf.org/html/rfc7515#section-4.1.8
+  - name: typ
+    exported_name: Type
+    getter: Type
+    comment: https://tools.ietf.org/html/rfc7515#section-4.1.9
+  - name: contentType
+    json: cty
+    comment: https://tools.ietf.org/html/rfc7515#section-4.1.10
+  - name: critical
+    type: "[]string"
+    json: crit
+    comment: https://tools.ietf.org/html/rfc7515#section-4.1.11

@@ -28,37 +28,34 @@ replace github.com/lestrrat-go/jwx/v4/internal/jwxcodegen => ../../../internal/j
 
 ### Generator module path cleanup
 
-The current generator module paths are inconsistent, some use v3, one has a typo (`gitub`). Standardize all to `github.com/lestrrat-go/jwx/v4/tools/cmd/{name}`:
-
-| Tool | Current module path | New module path |
-|------|-------------------|-----------------|
-| genjwt | `github.com/lestrrat-go/jwx/v3/jwt/internal/cmd/gentoken` | `github.com/lestrrat-go/jwx/v4/tools/cmd/genjwt` |
-| genjws | `github.com/lestrrat-go/jwx/v3/jws/internal/cmd/genheader` | `github.com/lestrrat-go/jwx/v4/tools/cmd/genjws` |
-| genjwe | `github.com/lestrrat-go/jwx/v3/jwe/internal/cmd/genheader` | `github.com/lestrrat-go/jwx/v4/tools/cmd/genjwe` |
-| genjwk | `gitub.com/lestrrat-go/jwx/jwk/internal/cmd/genheader` | `github.com/lestrrat-go/jwx/v4/tools/cmd/genjwk` |
-| genjwa | `github.com/lestrrat-go/jwx/v3/tools/cmd/genalgs` | `github.com/lestrrat-go/jwx/v4/tools/cmd/genjwa` |
-| genoptions | `github.com/lestrrat-go/jwx/v3/jwe/tools/cmd/genoptions` | `github.com/lestrrat-go/jwx/v4/tools/cmd/genoptions` |
-| genreadfile | `github.com/lestrrat-go/jwx/v3/tools/cmd/genreadfile` | `github.com/lestrrat-go/jwx/v4/tools/cmd/genreadfile` |
-
-All paths under `github.com/lestrrat-go/jwx/v4/` can import `github.com/lestrrat-go/jwx/v4/internal/jwxcodegen`.
+The original generator module paths were inconsistent (v3 paths, one had a typo `gitub`). In Phases 2-3 they were standardized to `github.com/lestrrat-go/jwx/v4/tools/cmd/{name}`. In Phase 4, all generators move into the `internal/jwxcodegen` module, eliminating the separate `go.mod` files entirely. See `v4-codegen-unified-binary.md`.
 
 ### Package layout
 
 ```
 internal/jwxcodegen/
   go.mod
-  yaml.go           -- YAML2JSON
-  field.go          -- IsPointer, PointerElem, FieldStorageType, FieldStorageTypeIsIndirect
-  gen_has.go        -- GenerateHasCases (case clauses only)
-  gen_field.go      -- GenerateFieldCases (case clauses only)
-  gen_set.go        -- GenerateSetCases (case clauses only)
-  gen_remove.go     -- GenerateRemoveCases (case clauses only)
-  gen_unmarshal.go  -- GenerateUnmarshalCases (case clauses only)
-  gen_marshal.go    -- GenerateMarshalJSON (full method — no special cases across generators)
-  gen_keys.go       -- GenerateKeysMethod (full method — no special cases across generators)
-  gen_decode_ctx.go -- GenerateDecodeCtx / GenerateSetDecodeCtx (full methods)
-  gen_clone.go      -- GenerateCloneFrom (full method)
-  comment.go        -- WriteComment (moved from genoptions)
+  yaml.go          -- YAML2JSON
+  field.go         -- IsPointer, PointerElem, FieldStorageType, FieldStorageTypeIsIndirect
+  config.go        -- CaseConfig, MethodConfig, MarshalConfig, KeysConfig, CloneConfig
+  genhas.go        -- GenerateHasCases (case clauses only)
+  genfield.go      -- GenerateFieldCases (case clauses only)
+  genset.go        -- GenerateSetCases (case clauses only)
+  genremove.go     -- GenerateRemoveCases (case clauses only)
+  genunmarshal.go  -- GenerateUnmarshalCases (case clauses only)
+  genmarshal.go    -- GenerateMarshalJSON (full method — no special cases across generators)
+  genkeys.go       -- GenerateKeysMethod (full method — no special cases across generators)
+  gendecodectx.go  -- GenerateDecodeCtx / GenerateSetDecodeCtx (full methods)
+  genclone.go      -- GenerateCloneFrom (full method)
+  comment.go       -- WriteComment (moved from genoptions)
+  cmd/jwxcodegen/  -- unified binary (see v4-codegen-unified-binary.md)
+    main.go        -- subcommand dispatch
+    genjwa.go      -- JWA algorithm generation
+    genheaders.go  -- JWS/JWE header generation
+    genjwk.go      -- JWK key generation
+    genjwt.go      -- JWT token generation
+    genoptions.go  -- options generation
+    genreadfile.go -- ReadFile generation
 ```
 
 Naming convention: functions that emit case clauses for a switch (where callers may need to add their own special cases) are named `Generate*Cases`. Functions that emit a complete method (where no caller needs to customize) are named `Generate*Method` or `Generate*`.
@@ -190,25 +187,33 @@ All `Generate*` shared functions follow this pattern: emit case clauses only. Th
 
 ### Migration path
 
-Three phases, each independently committable and verifiable with `make generate` + diff:
+Four phases, each independently committable and verifiable with `make generate` + diff:
 
-**Phase 1: Split monolithic functions** (no shared code, no YAML changes)
+**Phase 1: Split monolithic functions** (no shared code, no YAML changes) — DONE
 1. Break down `generateObject` (genjwk), `generateToken` (genjwt), `Generate`/`GenerateTest` (genjwa), as described in per-tool design docs
 2. Unify genjws/genjwe into genheaders (header generators doc)
 3. Verify: `make generate` produces identical output
 
-**Phase 2: Create shared library and migrate**
+**Phase 2: Create shared library and migrate** — DONE
 1. Create `internal/jwxcodegen/` module with shared helpers (`YAML2JSON`, `IsPointer`, `PointerElem`, `FieldStorageType`, `FieldStorageTypeIsIndirect`, `WriteComment`)
 2. Create shared generation functions (`GenerateHasCases`, `GenerateFieldCases`, `GenerateSetCases`, etc.)
-3. Standardize generator module paths (see cleanup table above)
+3. Standardize generator module paths to `github.com/lestrrat-go/jwx/v4/tools/cmd/{name}`
 4. Update each `tools/cmd/gen*/go.mod` to add dependency + replace directive
 5. Replace local helpers and inline generation blocks with calls to `internal/jwxcodegen`
 6. Verify: `make generate` produces identical output
 
-**Phase 3: YAML schema migration**
+**Phase 3: YAML schema migration** — DONE
 1. Add `direct_storage` annotations to YAML configs (see exact field table above)
 2. Remove `fieldStorageTypeIsIndirect` from generators (replaced by `FieldStorageTypeIsIndirect` in shared library)
 3. Add `ident_name` to genoptions YAML, remove `WithCompact` hardcoded check
 4. Verify: `make generate` produces identical output
+
+**Phase 4: Consolidate into unified binary** — see `v4-codegen-unified-binary.md`
+1. Rename shared library files: `gen_xxx.go` → `genxxx.go`
+2. Create `internal/jwxcodegen/cmd/jwxcodegen/` with subcommand dispatch
+3. Move generator logic from `tools/cmd/gen*/main.go` into `cmd/jwxcodegen/genXxx.go`
+4. Move YAML config files to package directories
+5. Update shell scripts and remove `tools/cmd/gen*/` directories
+6. Verify: `make generate` produces identical output
 
 **Important**: YAML config changes and corresponding generator code changes must be committed together. Running an old generator against new YAML silently ignores new fields (e.g., `direct_storage: true` would be ignored, causing the field to be pointer-wrapped incorrectly).

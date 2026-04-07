@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Check documentation generator
         run: |
-          find . -name '*.md' | xargs env AUTODOC_DRYRUN=1 perl tools/autodoc.pl
+          find . -name '*.md' | xargs env AUTODOC_DRYRUN=1 perl scripts/autodoc.pl
       - name: Cache Go modules
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7 # v5.0.4
         with:

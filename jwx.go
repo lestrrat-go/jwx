@@ -1,5 +1,5 @@
-//go:generate ./tools/cmd/genreadfile.sh
-//go:generate ./tools/cmd/genoptions.sh
+//go:generate ./scripts/jwxcodegen.sh generate-readfile
+//go:generate ./scripts/jwxcodegen.sh generate-all-options
 //go:generate stringer -type=FormatKind
 //go:generate mv formatkind_string.go formatkind_string_gen.go
 

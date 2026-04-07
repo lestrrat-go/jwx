@@ -62,6 +62,7 @@ options:
       If not provided, context.Background() will be used.
   - ident: Serialization
     option_name: WithCompact
+    ident_name: WithSerialization
     interface: EncryptOption
     constant_value: fmtCompact
     comment: |
