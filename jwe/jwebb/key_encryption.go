@@ -64,6 +64,27 @@ func IsDirect(alg string) bool {
 	return alg == tokens.DIRECT
 }
 
+// IsMLKEM checks if the algorithm is an ML-KEM based algorithm
+func IsMLKEM(alg string) bool {
+	switch alg {
+	case tokens.ML_KEM_768, tokens.ML_KEM_1024,
+		tokens.ML_KEM_768_A192KW, tokens.ML_KEM_1024_A256KW:
+		return true
+	default:
+		return false
+	}
+}
+
+// IsMLKEMDirect checks if the algorithm is a direct ML-KEM algorithm (no key wrapping)
+func IsMLKEMDirect(alg string) bool {
+	switch alg {
+	case tokens.ML_KEM_768, tokens.ML_KEM_1024:
+		return true
+	default:
+		return false
+	}
+}
+
 // IsSymmetric checks if the algorithm is a symmetric key encryption algorithm
 func IsSymmetric(alg string) bool {
 	return IsAESKW(alg) || IsAESGCMKW(alg) || IsPBES2(alg) || IsDirect(alg)

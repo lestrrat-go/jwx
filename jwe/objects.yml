@@ -49,6 +49,9 @@ fields:
     reject_empty: true
   - name: contentType
     json: cty
+  - name: encapsulatedKey
+    type: "[]byte"
+    json: ek
   - name: critical
     type: "[]string"
     json: crit

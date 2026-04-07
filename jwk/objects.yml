@@ -159,3 +159,24 @@ key_types:
             getter: Crv
             type: jwa.EllipticCurveAlgorithm
             required: true
+  - filename: akp_gen.go
+    prefix: AKP
+    key_type: jwa.AKP()
+    objects:
+      - name: publicKey
+        raw_key_type: "interface{}"
+        fields:
+          - name: pub
+            type: "[]byte"
+            required: true
+      - name: privateKey
+        raw_key_type: "interface{}"
+        fields:
+          - name: pub
+            type: "[]byte"
+            required: true
+          - name: priv
+            type: "[]byte"
+            required: true
+          - name: z
+            type: "[]byte"

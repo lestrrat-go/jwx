@@ -25,6 +25,7 @@ const (
 	ContentEncryptionKey      = "enc"
 	ContentTypeKey            = "cty"
 	CriticalKey               = "crit"
+	EncapsulatedKeyKey        = "ek"
 	EphemeralPublicKeyKey     = "epk"
 	JWKKey                    = "jwk"
 	JWKSetURLKey              = "jku"
@@ -52,6 +53,7 @@ type Headers interface {
 	ContentEncryption() (jwa.ContentEncryptionAlgorithm, bool)
 	ContentType() (string, bool)
 	Critical() ([]string, bool)
+	EncapsulatedKey() ([]byte, bool)
 	EphemeralPublicKey() (jwk.Key, bool)
 	JWK() (jwk.Key, bool)
 	JWKSetURL() (string, bool)
@@ -81,7 +83,7 @@ type Headers interface {
 }
 
 // stdHeaderNames is a list of all standard header names defined in the JWE specification.
-var stdHeaderNames = []string{AgreementPartyUInfoKey, AgreementPartyVInfoKey, AlgorithmKey, CompressionKey, ContentEncryptionKey, ContentTypeKey, CriticalKey, EphemeralPublicKeyKey, JWKKey, JWKSetURLKey, KeyIDKey, TypeKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, X509URLKey}
+var stdHeaderNames = []string{AgreementPartyUInfoKey, AgreementPartyVInfoKey, AlgorithmKey, CompressionKey, ContentEncryptionKey, ContentTypeKey, CriticalKey, EncapsulatedKeyKey, EphemeralPublicKeyKey, JWKKey, JWKSetURLKey, KeyIDKey, TypeKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, X509URLKey}
 
 type stdHeaders struct {
 	agreementPartyUInfo    []byte
@@ -91,6 +93,7 @@ type stdHeaders struct {
 	contentEncryption      *jwa.ContentEncryptionAlgorithm
 	contentType            *string
 	critical               []string
+	encapsulatedKey        []byte
 	ephemeralPublicKey     jwk.Key
 	jwk                    jwk.Key
 	jwkSetURL              *string
@@ -160,6 +163,12 @@ func (h *stdHeaders) Critical() ([]string, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	return h.critical, true
+}
+
+func (h *stdHeaders) EncapsulatedKey() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.encapsulatedKey, true
 }
 
 func (h *stdHeaders) EphemeralPublicKey() (jwk.Key, bool) {
@@ -242,6 +251,7 @@ func (h *stdHeaders) clear() {
 	h.contentEncryption = nil
 	h.contentType = nil
 	h.critical = nil
+	h.encapsulatedKey = nil
 	h.ephemeralPublicKey = nil
 	h.jwk = nil
 	h.jwkSetURL = nil
@@ -278,6 +288,8 @@ func (h *stdHeaders) Has(name string) bool {
 		return h.contentType != nil
 	case CriticalKey:
 		return h.critical != nil
+	case EncapsulatedKeyKey:
+		return h.encapsulatedKey != nil
 	case EphemeralPublicKeyKey:
 		return h.ephemeralPublicKey != nil
 	case JWKKey:
@@ -341,6 +353,11 @@ func (h *stdHeaders) Field(name string) (any, bool) {
 			return nil, false
 		}
 		return h.critical, true
+	case EncapsulatedKeyKey:
+		if h.encapsulatedKey == nil {
+			return nil, false
+		}
+		return h.encapsulatedKey, true
 	case EphemeralPublicKeyKey:
 		if h.ephemeralPublicKey == nil {
 			return nil, false
@@ -460,6 +477,17 @@ func (h *stdHeaders) setNoLock(name string, value any) error {
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, CriticalKey, value)
+	case EncapsulatedKeyKey:
+		if v, ok := value.([]byte); ok {
+			if v == nil {
+				h.encapsulatedKey = nil
+			} else {
+				h.encapsulatedKey = make([]byte, len(v))
+				copy(h.encapsulatedKey, v)
+			}
+			return nil
+		}
+		return fmt.Errorf(`invalid value for %s key: %T`, EncapsulatedKeyKey, value)
 	case EphemeralPublicKeyKey:
 		if v, ok := value.(jwk.Key); ok {
 			h.ephemeralPublicKey = v
@@ -541,6 +569,8 @@ func (h *stdHeaders) Remove(key string) error {
 		h.contentType = nil
 	case CriticalKey:
 		h.critical = nil
+	case EncapsulatedKeyKey:
+		h.encapsulatedKey = nil
 	case EphemeralPublicKeyKey:
 		h.ephemeralPublicKey = nil
 	case JWKKey:
@@ -619,6 +649,10 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, CriticalKey, err)
 			}
 			h.critical = decoded
+		case EncapsulatedKeyKey:
+			if err := json.AssignNextBytesToken(&h.encapsulatedKey, dec); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, EncapsulatedKeyKey, err)
+			}
 		case EphemeralPublicKeyKey:
 			raw, err := dec.ReadValue()
 			if err != nil {
@@ -692,7 +726,7 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 func (h *stdHeaders) Keys() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	keys := make([]string, 0, 16+len(h.privateParams))
+	keys := make([]string, 0, 17+len(h.privateParams))
 	if h.agreementPartyUInfo != nil {
 		keys = append(keys, AgreementPartyUInfoKey)
 	}
@@ -713,6 +747,9 @@ func (h *stdHeaders) Keys() []string {
 	}
 	if h.critical != nil {
 		keys = append(keys, CriticalKey)
+	}
+	if h.encapsulatedKey != nil {
+		keys = append(keys, EncapsulatedKeyKey)
 	}
 	if h.ephemeralPublicKey != nil {
 		keys = append(keys, EphemeralPublicKeyKey)
@@ -791,6 +828,11 @@ func (dst *stdHeaders) cloneFrom(src *stdHeaders) {
 	} else {
 		dst.critical = nil
 	}
+	if src.encapsulatedKey != nil {
+		dst.encapsulatedKey = slices.Clone(src.encapsulatedKey)
+	} else {
+		dst.encapsulatedKey = nil
+	}
 	if src.ephemeralPublicKey != nil {
 		dst.ephemeralPublicKey = src.ephemeralPublicKey
 	} else {
@@ -855,7 +897,7 @@ func (dst *stdHeaders) cloneFrom(src *stdHeaders) {
 func (h *stdHeaders) MarshalJSON() ([]byte, error) {
 	h.mu.RLock()
 	data := make(map[string]any)
-	keys := make([]string, 0, 16+len(h.privateParams))
+	keys := make([]string, 0, 17+len(h.privateParams))
 	if h.agreementPartyUInfo != nil {
 		data[AgreementPartyUInfoKey] = h.agreementPartyUInfo
 		keys = append(keys, AgreementPartyUInfoKey)
@@ -883,6 +925,10 @@ func (h *stdHeaders) MarshalJSON() ([]byte, error) {
 	if h.critical != nil {
 		data[CriticalKey] = h.critical
 		keys = append(keys, CriticalKey)
+	}
+	if h.encapsulatedKey != nil {
+		data[EncapsulatedKeyKey] = h.encapsulatedKey
+		keys = append(keys, EncapsulatedKeyKey)
 	}
 	if h.ephemeralPublicKey != nil {
 		data[EphemeralPublicKeyKey] = h.ephemeralPublicKey

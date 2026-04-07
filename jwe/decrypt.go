@@ -19,6 +19,7 @@ type decrypter struct {
 	apv         []byte
 	cek         *[]byte
 	computedAad []byte
+	ek          []byte // ML-KEM encapsulated key (KEM ciphertext)
 	iv          []byte
 	keyiv       []byte
 	keysalt     []byte
@@ -102,6 +103,12 @@ func (d *decrypter) KeyTag(keytag []byte) *decrypter {
 // The key must be in its "raw" format (i.e. *ecdsa.PublicKey, instead of jwk.Key)
 func (d *decrypter) PublicKey(pubkey any) *decrypter {
 	d.pubkey = pubkey
+	return d
+}
+
+// EncapsulatedKey sets the ML-KEM ciphertext (from the "ek" header field)
+func (d *decrypter) EncapsulatedKey(ek []byte) *decrypter {
+	d.ek = ek
 	return d
 }
 
@@ -203,6 +210,17 @@ func (d *decrypter) DecryptKey(recipient Recipient, msg *Message) (cek []byte, e
 			return jwebb.KeyDecryptECDHES(recipientKey, cek, alg, d.apu, d.apv, d.privkey, d.pubkey, keysize)
 		}
 		return jwebb.KeyDecryptECDHESKeyWrap(recipientKey, recipientKey, keyalgStr, d.apu, d.apv, d.privkey, d.pubkey, keysize)
+	}
+
+	if jwebb.IsMLKEM(keyalgStr) {
+		if d.ek == nil {
+			return nil, fmt.Errorf(`decrypt key: ML-KEM algorithm %s requires "ek" header parameter`, keyalgStr)
+		}
+
+		if jwebb.IsMLKEMDirect(keyalgStr) {
+			return jwebb.KeyDecryptMLKEM(keyalgStr, ctalgStr, d.privkey, d.ek)
+		}
+		return jwebb.KeyDecryptMLKEMKeyWrap(recipientKey, keyalgStr, ctalgStr, d.privkey, d.ek)
 	}
 
 	if jwebb.IsRSA15(keyalgStr) {

@@ -66,6 +66,9 @@ algorithms:
       - name: OKP
         value: OKP
         comment: Octet string key pairs
+      - name: AKP
+        value: AKP
+        comment: Algorithm Key Pair (post-quantum KEM/signature keys)
 
   - name: EllipticCurveAlgorithm
     comment: EllipticCurveAlgorithm represents the algorithms used for EC keys
@@ -243,3 +246,19 @@ algorithms:
         token_reference: tokens.PBES2_HS512_A256KW
         returnval_comment: PBES2 + HMAC-SHA512 + AES key wrap (256) key encryption algorithm
         sym: true
+      - name: ML_KEM_768
+        value: ML-KEM-768
+        token_reference: tokens.ML_KEM_768
+        returnval_comment: ML-KEM-768 direct key agreement algorithm (FIPS 203)
+      - name: ML_KEM_1024
+        value: ML-KEM-1024
+        token_reference: tokens.ML_KEM_1024
+        returnval_comment: ML-KEM-1024 direct key agreement algorithm (FIPS 203)
+      - name: ML_KEM_768_A192KW
+        value: ML-KEM-768+A192KW
+        token_reference: tokens.ML_KEM_768_A192KW
+        returnval_comment: ML-KEM-768 + AES key wrap (192) key agreement algorithm (FIPS 203)
+      - name: ML_KEM_1024_A256KW
+        value: ML-KEM-1024+A256KW
+        token_reference: tokens.ML_KEM_1024_A256KW
+        returnval_comment: ML-KEM-1024 + AES key wrap (256) key agreement algorithm (FIPS 203)

@@ -28,6 +28,14 @@ type ByteWithSaltAndCount struct {
 	Count int
 }
 
+// ByteWithEncapsulatedKey holds the KEM ciphertext alongside the
+// derived key material. The ciphertext is populated into the JWE
+// header as the "ek" field during ML-KEM key encapsulation.
+type ByteWithEncapsulatedKey struct {
+	ByteKey
+	Ciphertext []byte
+}
+
 // ByteSource is an interface for things that return a byte sequence.
 // This is used for KeyGenerator so that the result of computations can
 // carry more than just the generate byte sequence.

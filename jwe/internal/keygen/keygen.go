@@ -124,6 +124,14 @@ func (k ByteWithIVAndTag) Populate(h Setter) error {
 	return nil
 }
 
+// Populate populates the header with the KEM ciphertext ('ek')
+func (k ByteWithEncapsulatedKey) Populate(h Setter) error {
+	if err := h.Set("ek", k.Ciphertext); err != nil {
+		return fmt.Errorf(`failed to write header: %w`, err)
+	}
+	return nil
+}
+
 // HeaderPopulate populates the header with the required PBES2
 // parameters ('p2s' and 'p2c')
 func (k ByteWithSaltAndCount) Populate(h Setter) error {
