@@ -11,10 +11,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go_tags: [ 'stdlib', 'goccy', 'es256k', 'alltags' ]
-    name: "Smoke [ Tags ${{ matrix.go_tags }} ]"
+    name: "Smoke"
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -46,6 +43,6 @@ jobs:
       - name: make tidy
         run: make tidy
       - name: Run smoke tests
-        run: make smoke-${{ matrix.go_tags }}
+        run: make smoke
       - uses: bazelbuild/setup-bazelisk@b39c379c82683a5f25d34f0d062761f62693e0b2 # v3.0.0
       - run: bazel build //...

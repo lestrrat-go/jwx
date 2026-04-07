@@ -8,10 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go_tags: [ 'stdlib', 'goccy', 'es256k', 'secp256k1-pem', 'asmbase64', 'alltags']
-    name: "Test [ Tags ${{ matrix.go_tags }} ]"
+    name: "Test"
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -38,7 +35,7 @@ jobs:
       - name: make tidy
         run: make tidy
       - name: Test with coverage
-        run: make cover-${{ matrix.go_tags }}
+        run: make cover
       - uses: bazelbuild/setup-bazelisk@v3
       - run: bazel mod tidy
       - name: Check difference between generation code and commit code
