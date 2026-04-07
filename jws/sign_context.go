@@ -77,6 +77,10 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 				return makeSignError(`"none" (jwa.NoSignature) cannot be used with jws.WithKey`)
 			}
 
+			if err := validateAlgorithmForKey(alg, data.key); err != nil {
+				return makeSignError(`%w`, err)
+			}
+
 			sb := signatureBuilderPool.Get()
 			sb.alg = alg
 			sb.protected = data.protected

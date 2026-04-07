@@ -69,8 +69,18 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 			if err := option.Value(&pair); err != nil {
 				return makeVerifyError(`invalid value for option WithKey: %w`, err)
 			}
+
+			alg, ok := pair.alg.(jwa.SignatureAlgorithm)
+			if !ok {
+				return makeVerifyError(`expected algorithm to be of type jwa.SignatureAlgorithm but got (%[1]q, %[1]T)`, pair.alg)
+			}
+
+			if err := validateAlgorithmForKey(alg, pair.key); err != nil {
+				return makeVerifyError(`%w`, err)
+			}
+
 			vc.keyProviders = append(vc.keyProviders, &staticKeyProvider{
-				alg: pair.alg.(jwa.SignatureAlgorithm),
+				alg: alg,
 				key: pair.key,
 			})
 		case identKeyProvider{}:
