@@ -469,38 +469,40 @@ func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
 	return nil
 }
 
-// NOTE: may need to remove this to allow pluggale key types
+// NOTE: may need to remove this to allow pluggable key types
 func cloneKey(src Key) (Key, error) {
-	var dst Key
-	switch src.(type) {
-	case RSAPrivateKey:
-		dst = newRSAPrivateKey()
-	case RSAPublicKey:
-		dst = newRSAPublicKey()
-	case ECDSAPrivateKey:
-		dst = newECDSAPrivateKey()
-	case ECDSAPublicKey:
-		dst = newECDSAPublicKey()
-	case OKPPrivateKey:
-		dst = newOKPPrivateKey()
-	case OKPPublicKey:
-		dst = newOKPPublicKey()
-	case SymmetricKey:
-		dst = newSymmetricKey()
+	switch src := src.(type) {
+	case *rsaPrivateKey:
+		dst := newRSAPrivateKey()
+		dst.cloneFrom(src)
+		return dst, nil
+	case *rsaPublicKey:
+		dst := newRSAPublicKey()
+		dst.cloneFrom(src)
+		return dst, nil
+	case *ecdsaPrivateKey:
+		dst := newECDSAPrivateKey()
+		dst.cloneFrom(src)
+		return dst, nil
+	case *ecdsaPublicKey:
+		dst := newECDSAPublicKey()
+		dst.cloneFrom(src)
+		return dst, nil
+	case *okpPrivateKey:
+		dst := newOKPPrivateKey()
+		dst.cloneFrom(src)
+		return dst, nil
+	case *okpPublicKey:
+		dst := newOKPPublicKey()
+		dst.cloneFrom(src)
+		return dst, nil
+	case *symmetricKey:
+		dst := newSymmetricKey()
+		dst.cloneFrom(src)
+		return dst, nil
 	default:
 		return nil, fmt.Errorf(`jwk.cloneKey: unknown key type %T`, src)
 	}
-
-	for _, k := range src.Keys() {
-		v, ok := src.Field(k)
-		if !ok {
-			return nil, fmt.Errorf(`jwk.cloneKey: failed to get %q`, k)
-		}
-		if err := dst.Set(k, v); err != nil {
-			return nil, fmt.Errorf(`jwk.cloneKey: failed to set %q: %w`, k, err)
-		}
-	}
-	return dst, nil
 }
 
 // Pem serializes the given jwk.Key in PEM encoded ASN.1 DER format,

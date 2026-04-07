@@ -394,12 +394,82 @@ func (k *rsaPublicKey) Remove(key string) error {
 	return nil
 }
 
-func (k *rsaPublicKey) Clone() (Key, error) {
-	key, err := cloneKey(k)
-	if err != nil {
-		return nil, fmt.Errorf(`rsaPublicKey.Clone: %w`, err)
+func (dst *rsaPublicKey) cloneFrom(src *rsaPublicKey) {
+	src.mu.RLock()
+	defer src.mu.RUnlock()
+	dst.mu.Lock()
+	defer dst.mu.Unlock()
+	if src.algorithm != nil {
+		tmp := *(src.algorithm)
+		dst.algorithm = &tmp
+	} else {
+		dst.algorithm = nil
 	}
-	return key, nil
+	if src.e != nil {
+		dst.e = slices.Clone(src.e)
+	} else {
+		dst.e = nil
+	}
+	if src.keyID != nil {
+		tmp := *(src.keyID)
+		dst.keyID = &tmp
+	} else {
+		dst.keyID = nil
+	}
+	if src.keyOps != nil {
+		tmp := slices.Clone(*src.keyOps)
+		dst.keyOps = &tmp
+	} else {
+		dst.keyOps = nil
+	}
+	if src.keyUsage != nil {
+		tmp := *(src.keyUsage)
+		dst.keyUsage = &tmp
+	} else {
+		dst.keyUsage = nil
+	}
+	if src.n != nil {
+		dst.n = slices.Clone(src.n)
+	} else {
+		dst.n = nil
+	}
+	if src.x509CertChain != nil {
+		dst.x509CertChain = src.x509CertChain
+	} else {
+		dst.x509CertChain = nil
+	}
+	if src.x509CertThumbprint != nil {
+		tmp := *(src.x509CertThumbprint)
+		dst.x509CertThumbprint = &tmp
+	} else {
+		dst.x509CertThumbprint = nil
+	}
+	if src.x509CertThumbprintS256 != nil {
+		tmp := *(src.x509CertThumbprintS256)
+		dst.x509CertThumbprintS256 = &tmp
+	} else {
+		dst.x509CertThumbprintS256 = nil
+	}
+	if src.x509URL != nil {
+		tmp := *(src.x509URL)
+		dst.x509URL = &tmp
+	} else {
+		dst.x509URL = nil
+	}
+	if len(src.privateParams) > 0 {
+		dst.privateParams = make(map[string]any, len(src.privateParams))
+		for k, v := range src.privateParams {
+			dst.privateParams[k] = v
+		}
+	} else {
+		dst.privateParams = make(map[string]any)
+	}
+}
+
+func (k *rsaPublicKey) Clone() (Key, error) {
+	dst := newRSAPublicKey()
+	dst.cloneFrom(k)
+	return dst, nil
 }
 
 func (k *rsaPublicKey) DecodeCtx() json.DecodeCtx {
@@ -1203,12 +1273,112 @@ func (k *rsaPrivateKey) Remove(key string) error {
 	return nil
 }
 
-func (k *rsaPrivateKey) Clone() (Key, error) {
-	key, err := cloneKey(k)
-	if err != nil {
-		return nil, fmt.Errorf(`rsaPrivateKey.Clone: %w`, err)
+func (dst *rsaPrivateKey) cloneFrom(src *rsaPrivateKey) {
+	src.mu.RLock()
+	defer src.mu.RUnlock()
+	dst.mu.Lock()
+	defer dst.mu.Unlock()
+	if src.algorithm != nil {
+		tmp := *(src.algorithm)
+		dst.algorithm = &tmp
+	} else {
+		dst.algorithm = nil
 	}
-	return key, nil
+	if src.d != nil {
+		dst.d = slices.Clone(src.d)
+	} else {
+		dst.d = nil
+	}
+	if src.dp != nil {
+		dst.dp = slices.Clone(src.dp)
+	} else {
+		dst.dp = nil
+	}
+	if src.dq != nil {
+		dst.dq = slices.Clone(src.dq)
+	} else {
+		dst.dq = nil
+	}
+	if src.e != nil {
+		dst.e = slices.Clone(src.e)
+	} else {
+		dst.e = nil
+	}
+	if src.keyID != nil {
+		tmp := *(src.keyID)
+		dst.keyID = &tmp
+	} else {
+		dst.keyID = nil
+	}
+	if src.keyOps != nil {
+		tmp := slices.Clone(*src.keyOps)
+		dst.keyOps = &tmp
+	} else {
+		dst.keyOps = nil
+	}
+	if src.keyUsage != nil {
+		tmp := *(src.keyUsage)
+		dst.keyUsage = &tmp
+	} else {
+		dst.keyUsage = nil
+	}
+	if src.n != nil {
+		dst.n = slices.Clone(src.n)
+	} else {
+		dst.n = nil
+	}
+	if src.p != nil {
+		dst.p = slices.Clone(src.p)
+	} else {
+		dst.p = nil
+	}
+	if src.q != nil {
+		dst.q = slices.Clone(src.q)
+	} else {
+		dst.q = nil
+	}
+	if src.qi != nil {
+		dst.qi = slices.Clone(src.qi)
+	} else {
+		dst.qi = nil
+	}
+	if src.x509CertChain != nil {
+		dst.x509CertChain = src.x509CertChain
+	} else {
+		dst.x509CertChain = nil
+	}
+	if src.x509CertThumbprint != nil {
+		tmp := *(src.x509CertThumbprint)
+		dst.x509CertThumbprint = &tmp
+	} else {
+		dst.x509CertThumbprint = nil
+	}
+	if src.x509CertThumbprintS256 != nil {
+		tmp := *(src.x509CertThumbprintS256)
+		dst.x509CertThumbprintS256 = &tmp
+	} else {
+		dst.x509CertThumbprintS256 = nil
+	}
+	if src.x509URL != nil {
+		tmp := *(src.x509URL)
+		dst.x509URL = &tmp
+	} else {
+		dst.x509URL = nil
+	}
+	if len(src.privateParams) > 0 {
+		dst.privateParams = make(map[string]any, len(src.privateParams))
+		for k, v := range src.privateParams {
+			dst.privateParams[k] = v
+		}
+	} else {
+		dst.privateParams = make(map[string]any)
+	}
+}
+
+func (k *rsaPrivateKey) Clone() (Key, error) {
+	dst := newRSAPrivateKey()
+	dst.cloneFrom(k)
+	return dst, nil
 }
 
 func (k *rsaPrivateKey) DecodeCtx() json.DecodeCtx {

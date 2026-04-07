@@ -518,6 +518,42 @@ func generateToken(obj *codegen.Object) error {
 	o.L("}")
 	o.L("}")
 
+	o.LL("func (dst *%s) cloneFrom(src *%s) {", obj.Name(false), obj.Name(false))
+	o.L("src.mu.RLock()")
+	o.L("defer src.mu.RUnlock()")
+	o.L("dst.mu.Lock()")
+	o.L("defer dst.mu.Unlock()")
+	o.L("dst.options = src.options")
+	for _, f := range obj.Fields() {
+		fname := f.Name(false)
+		o.L("if src.%s != nil {", fname)
+		if strings.HasPrefix(f.Type(), "[]") || strings.HasSuffix(f.Type(), "List") {
+			// Slice types and named slice types (e.g., types.StringList)
+			o.L("dst.%s = slices.Clone(src.%s)", fname, fname)
+		} else if IsPointer(f) {
+			// Pointer types stored as-is (e.g., *AddressClaim)
+			o.L("dst.%s = src.%s", fname, fname)
+		} else if fieldStorageTypeIsIndirect(f.Type()) {
+			// Value types stored behind pointer (*string, *types.NumericDate, *bool)
+			o.L("tmp := *(src.%s)", fname)
+			o.L("dst.%s = &tmp", fname)
+		} else {
+			o.L("dst.%s = src.%s", fname, fname)
+		}
+		o.L("} else {")
+		o.L("dst.%s = nil", fname)
+		o.L("}")
+	}
+	o.L("if len(src.privateClaims) > 0 {")
+	o.L("dst.privateClaims = make(map[string]any, len(src.privateClaims))")
+	o.L("for k, v := range src.privateClaims {")
+	o.L("dst.privateClaims[k] = v")
+	o.L("}")
+	o.L("} else {")
+	o.L("dst.privateClaims = make(map[string]any)")
+	o.L("}")
+	o.L("}")
+
 	var numericDateFields []codegen.Field
 	for _, field := range fields {
 		if field.Type() == "types.NumericDate" {

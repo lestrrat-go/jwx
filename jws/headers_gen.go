@@ -579,6 +579,85 @@ func (h *stdHeaders) Keys() []string {
 	return keys
 }
 
+func (dst *stdHeaders) cloneFrom(src *stdHeaders) {
+	src.mu.RLock()
+	defer src.mu.RUnlock()
+	dst.mu.Lock()
+	defer dst.mu.Unlock()
+	if src.algorithm != nil {
+		tmp := *(src.algorithm)
+		dst.algorithm = &tmp
+	} else {
+		dst.algorithm = nil
+	}
+	if src.contentType != nil {
+		tmp := *(src.contentType)
+		dst.contentType = &tmp
+	} else {
+		dst.contentType = nil
+	}
+	if src.critical != nil {
+		dst.critical = slices.Clone(src.critical)
+	} else {
+		dst.critical = nil
+	}
+	if src.jwk != nil {
+		dst.jwk = src.jwk
+	} else {
+		dst.jwk = nil
+	}
+	if src.jwkSetURL != nil {
+		tmp := *(src.jwkSetURL)
+		dst.jwkSetURL = &tmp
+	} else {
+		dst.jwkSetURL = nil
+	}
+	if src.keyID != nil {
+		tmp := *(src.keyID)
+		dst.keyID = &tmp
+	} else {
+		dst.keyID = nil
+	}
+	if src.typ != nil {
+		tmp := *(src.typ)
+		dst.typ = &tmp
+	} else {
+		dst.typ = nil
+	}
+	if src.x509CertChain != nil {
+		dst.x509CertChain = src.x509CertChain
+	} else {
+		dst.x509CertChain = nil
+	}
+	if src.x509CertThumbprint != nil {
+		tmp := *(src.x509CertThumbprint)
+		dst.x509CertThumbprint = &tmp
+	} else {
+		dst.x509CertThumbprint = nil
+	}
+	if src.x509CertThumbprintS256 != nil {
+		tmp := *(src.x509CertThumbprintS256)
+		dst.x509CertThumbprintS256 = &tmp
+	} else {
+		dst.x509CertThumbprintS256 = nil
+	}
+	if src.x509URL != nil {
+		tmp := *(src.x509URL)
+		dst.x509URL = &tmp
+	} else {
+		dst.x509URL = nil
+	}
+	if len(src.privateParams) > 0 {
+		dst.privateParams = make(map[string]any, len(src.privateParams))
+		for k, v := range src.privateParams {
+			dst.privateParams[k] = v
+		}
+	} else {
+		dst.privateParams = nil
+	}
+	dst.raw = slices.Clone(src.raw)
+}
+
 func (h *stdHeaders) MarshalJSON() ([]byte, error) {
 	h.mu.RLock()
 	data := make(map[string]any)
