@@ -19,50 +19,17 @@ test-cmd:
 test:
 	$(MAKE) test-cmd TESTOPTS=
 
-test-es256k:
-	$(MAKE) test-cmd TESTOPTS="-tags jwx_es256k"
-
-test-secp256k1-pem:
-	$(MAKE) test-cmd TESTOPTS="-tags jwx_es256k,jwx_secp256k1_pem"
-
-test-asmbase64:
-	$(MAKE) test-cmd TESTOPTS="-tags jwx_asmbase64"
-
-test-alltags:
-	$(MAKE) test-cmd TESTOPTS="-tags jwx_asmbase64,jwx_es256k,jwx_secp256k1_pem"
-
 cover-cmd:
 	env MODE=cover ./scripts/test.sh
 
 cover:
 	$(MAKE) cover-cmd TESTOPTS=
 
-cover-es256k:
-	$(MAKE) cover-cmd TESTOPTS="-tags jwx_es256k"
-
-cover-secp256k1-pem:
-	$(MAKE) cover-cmd TESTOPTS="-tags jwx_es256k,jwx_secp256k1"
-
-cover-asmbase64:
-	$(MAKE) cover-cmd TESTOPTS="-tags jwx_asmbase64"
-
-cover-alltags:
-	$(MAKE) cover-cmd TESTOPTS="-tags jwx_asmbase64,jwx_es256k,jwx_secp256k1_pem"
-
 smoke-cmd:
 	env MODE=short ./scripts/test.sh
 
 smoke:
 	$(MAKE) smoke-cmd TESTOPTS=
-
-smoke-es256k:
-	$(MAKE) smoke-cmd TESTOPTS="-tags jwx_es256k"
-
-smoke-secp256k1-pem:
-	$(MAKE) smoke-cmd TESTOPTS="-tags jwx_es256k,jwx_secp256k1_pem"
-
-smoke-alltags:
-	$(MAKE) smoke-cmd TESTOPTS="-tags jwx_es256k,jwx_secp256k1_pem"
 
 viewcover:
 	go tool cover -html=coverage.out
