@@ -143,7 +143,7 @@ func rsaJWKToRaw(key Key, hint any) (any, error) {
 		var hasDp, hasDq, hasQi bool
 		if locker, ok := key.(rlocker); ok {
 			locker.rlock()
-			concrete := key.(*rsaPrivateKey)
+			concrete := key.(*rsaPrivateKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
 			od, oq, op, on, oe = concrete.d, concrete.q, concrete.p, concrete.n, concrete.e
 			if concrete.dp != nil {
 				odp, hasDp = concrete.dp, true
@@ -246,7 +246,7 @@ func rsaJWKToRaw(key Key, hint any) (any, error) {
 		// See RSAPrivateKey case above for explanation of the rlocker pattern.
 		if locker, ok := key.(rlocker); ok {
 			locker.rlock()
-			concrete := key.(*rsaPublicKey)
+			concrete := key.(*rsaPublicKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
 			n, e = concrete.n, concrete.e
 			locker.runlock()
 		} else {

@@ -53,7 +53,7 @@ func octetSeqToRaw(key Key, hint any) (any, error) {
 		var ooctets []byte
 		if locker, ok := key.(rlocker); ok {
 			locker.rlock()
-			concrete := key.(*symmetricKey)
+			concrete := key.(*symmetricKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
 			ooctets = concrete.octets
 			locker.runlock()
 		} else {

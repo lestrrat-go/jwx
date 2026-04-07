@@ -191,7 +191,7 @@ func okpJWKToRaw(key Key, _ any /* this is unused because this is half baked */)
 		var x, d []byte
 		if locker, ok := key.(rlocker); ok {
 			locker.rlock()
-			concrete := key.(*okpPrivateKey)
+			concrete := key.(*okpPrivateKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
 			if concrete.crv != nil {
 				crv = *(concrete.crv)
 				hasCrv = true
@@ -235,7 +235,7 @@ func okpJWKToRaw(key Key, _ any /* this is unused because this is half baked */)
 		var x []byte
 		if locker, ok := key.(rlocker); ok {
 			locker.rlock()
-			concrete := key.(*okpPublicKey)
+			concrete := key.(*okpPublicKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
 			if concrete.crv != nil {
 				crv = *(concrete.crv)
 				hasCrv = true

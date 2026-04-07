@@ -181,7 +181,7 @@ func ecdsaJWKToRaw(keyif Key, hint any) (any, error) {
 		var od, ox, oy []byte
 		if locker, ok := k.(rlocker); ok {
 			locker.rlock()
-			concrete := k.(*ecdsaPrivateKey)
+			concrete := k.(*ecdsaPrivateKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
 			if concrete.crv != nil {
 				crv = *(concrete.crv)
 				hasCrv = true
@@ -262,7 +262,7 @@ func ecdsaJWKToRaw(keyif Key, hint any) (any, error) {
 		var x, y []byte
 		if locker, ok := k.(rlocker); ok {
 			locker.rlock()
-			concrete := k.(*ecdsaPublicKey)
+			concrete := k.(*ecdsaPublicKey) //nolint:forcetypeassert // rlocker is unexported; only our concrete types implement it
 			if concrete.crv != nil {
 				crv = *(concrete.crv)
 				hasCrv = true
