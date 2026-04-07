@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func makeKeySet(b *testing.B, n int) jwk.Set {

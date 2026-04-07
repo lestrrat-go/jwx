@@ -13,16 +13,16 @@ import (
 	"io"
 	"sync/atomic"
 
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/internal/pool"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
-	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v4/internal/base64"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/pool"
+	"github.com/lestrrat-go/jwx/v4/internal/tokens"
+	"github.com/lestrrat-go/jwx/v4/jwk"
 
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/aescbc"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/content_crypt"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwe/internal/aescbc"
+	"github.com/lestrrat-go/jwx/v4/jwe/internal/content_crypt"
+	"github.com/lestrrat-go/jwx/v4/jwe/internal/keygen"
 	"github.com/lestrrat-go/option/v3"
 )
 

@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/lestrrat-go/jwx/v3/jwk/jwkbb"
+	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
 )
 
 // PEMDecoder is an interface to describe an object that can decode

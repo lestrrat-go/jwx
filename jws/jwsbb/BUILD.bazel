@@ -14,7 +14,7 @@ go_library(
         "sign.go",
         "verify.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v3/jws/jwsbb",
+    importpath = "github.com/lestrrat-go/jwx/v4/jws/jwsbb",
     visibility = ["//visibility:public"],
     deps = [
         "//internal/base64",

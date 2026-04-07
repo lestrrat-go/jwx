@@ -5,8 +5,8 @@ import (
 
 	"encoding/base64"
 	"encoding/json"
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jws"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_message() {

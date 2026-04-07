@@ -1,9 +1,9 @@
-module github.com/lestrrat-go/jwx/v3/cmd/jwx
+module github.com/lestrrat-go/jwx/v4/cmd/jwx
 
 go 1.25.0
 
 require (
-	github.com/lestrrat-go/jwx/v3 v3.0.8
+	github.com/lestrrat-go/jwx/v4 v4.0.0
 	github.com/urfave/cli/v2 v2.26.0
 	golang.org/x/crypto v0.49.0
 )
@@ -23,4 +23,4 @@ require (
 	golang.org/x/sys v0.42.0 // indirect
 )
 
-replace github.com/lestrrat-go/jwx/v3 v3.0.0 => ../..
+replace github.com/lestrrat-go/jwx/v4 v4.0.0 => ../..

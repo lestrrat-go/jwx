@@ -27,15 +27,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/jwx/v3/cert"
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/internal/jose"
-	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwk"
-	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
+	"github.com/lestrrat-go/jwx/v4/cert"
+	"github.com/lestrrat-go/jwx/v4/internal/base64"
+	"github.com/lestrrat-go/jwx/v4/internal/jose"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v4/internal/tokens"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwk"
+	ourecdsa "github.com/lestrrat-go/jwx/v4/jwk/ecdsa"
 	"github.com/stretchr/testify/require"
 )
 
@@ -109,7 +109,7 @@ func init() {
 			Method: "X509CertThumbprintS256",
 		},
 		jwk.X509URLKey: {
-			Value:  "http://github.com/lestrrat-go/jwx/v3",
+			Value:  "http://github.com/lestrrat-go/jwx/v4",
 			Method: "X509URL",
 		},
 		"private": {Value: "boofoo"},

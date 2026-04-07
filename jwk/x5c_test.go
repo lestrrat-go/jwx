@@ -3,8 +3,8 @@ package jwk_test
 import (
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v3/cert"
-	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v4/cert"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/stretchr/testify/require"
 )
 

@@ -132,7 +132,7 @@ func generateAlgImports(o *codegen.Output, t Algorithm) {
 	}
 
 	if needsTokens {
-		pkgs = append(pkgs, "github.com/lestrrat-go/jwx/v3/internal/tokens")
+		pkgs = append(pkgs, "github.com/lestrrat-go/jwx/v4/internal/tokens")
 	}
 
 	for _, pkg := range pkgs {
@@ -417,7 +417,7 @@ func generateAlgTestImports(o *codegen.Output, t Algorithm) {
 	pkgs := []string{
 		"strconv",
 		"testing",
-		"github.com/lestrrat-go/jwx/v3/jwa",
+		"github.com/lestrrat-go/jwx/v4/jwa",
 		"github.com/stretchr/testify/require",
 	}
 	for _, pkg := range pkgs {

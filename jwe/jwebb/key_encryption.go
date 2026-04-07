@@ -1,7 +1,7 @@
 package jwebb
 
 import (
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
+	"github.com/lestrrat-go/jwx/v4/internal/tokens"
 )
 
 // IsECDHES checks if the algorithm is an ECDH-ES based algorithm

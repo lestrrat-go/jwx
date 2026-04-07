@@ -5,9 +5,9 @@ import (
 	"crypto/cipher"
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/aescbc"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/v4/internal/tokens"
+	"github.com/lestrrat-go/jwx/v4/jwe/internal/aescbc"
+	"github.com/lestrrat-go/jwx/v4/jwe/internal/keygen"
 )
 
 var gcm = &gcmFetcher{}

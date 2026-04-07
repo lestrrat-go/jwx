@@ -10,7 +10,7 @@ go_library(
         "key_to_error_map.go",
         "pool.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v3/internal/pool",
+    importpath = "github.com/lestrrat-go/jwx/v4/internal/pool",
     visibility = ["//:__subpackages__"],
 )
 

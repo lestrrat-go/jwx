@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/jwa"
 )
 
 // KeyParser represents a type that can parse a JSON representation of a JWK into

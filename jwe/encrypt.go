@@ -6,11 +6,11 @@ import (
 	"crypto/rsa"
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/content_crypt"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
-	"github.com/lestrrat-go/jwx/v3/jwe/jwebb"
+	"github.com/lestrrat-go/jwx/v4/internal/keyconv"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwe/internal/content_crypt"
+	"github.com/lestrrat-go/jwx/v4/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/v4/jwe/jwebb"
 )
 
 // encrypter is responsible for taking various components to encrypt a key.

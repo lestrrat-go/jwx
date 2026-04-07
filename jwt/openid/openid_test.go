@@ -11,14 +11,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v4/internal/tokens"
 
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwt"
-	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
-	"github.com/lestrrat-go/jwx/v3/jwt/openid"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwt"
+	"github.com/lestrrat-go/jwx/v4/jwt/internal/types"
+	"github.com/lestrrat-go/jwx/v4/jwt/openid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -263,12 +263,12 @@ func TestOpenIDClaims(t *testing.T) {
 			},
 		},
 		{
-			Value: "https://github.com/lestrrat-go/jwx/v3",
+			Value: "https://github.com/lestrrat-go/jwx/v4",
 			Key:   openid.ProfileKey,
 			Check: func(token openid.Token) {
 				v, ok := token.Profile()
 				require.True(t, ok, `token.Profile should succeed`)
-				require.Equal(t, v, "https://github.com/lestrrat-go/jwx/v3")
+				require.Equal(t, v, "https://github.com/lestrrat-go/jwx/v4")
 			},
 		},
 		{
@@ -281,12 +281,12 @@ func TestOpenIDClaims(t *testing.T) {
 			},
 		},
 		{
-			Value: "https://github.com/lestrrat-go/jwx/v3",
+			Value: "https://github.com/lestrrat-go/jwx/v4",
 			Key:   openid.WebsiteKey,
 			Check: func(token openid.Token) {
 				v, ok := token.Website()
 				require.True(t, ok, `token.Website should succeed`)
-				require.Equal(t, v, "https://github.com/lestrrat-go/jwx/v3")
+				require.Equal(t, v, "https://github.com/lestrrat-go/jwx/v4")
 			},
 		},
 		{

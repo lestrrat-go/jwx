@@ -1,6 +1,6 @@
 # Working with JWE
 
-In this document we describe how to work with JWK using `github.com/lestrrat-go/jwx/v3/jwe`
+In this document we describe how to work with JWK using `github.com/lestrrat-go/jwx/v4/jwe`
 
 * [Parsing](#parsing)
   * [Parse a JWE message stored in memory](#parse-a-jwe-message-stored-in-memory)
@@ -22,7 +22,7 @@ Also, be aware that a `jwe.Message` is not meant to be used for either decryptio
 
 ## Parse a JWE message stored in memory
 
-You can parse a JWE message in memory stored as `[]byte` into a [`jwe.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwe#Message) object. In this mode, there is no decryption performed.
+You can parse a JWE message in memory stored as `[]byte` into a [`jwe.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwe#Message) object. In this mode, there is no decryption performed.
 
 <!-- INCLUDE(examples/jwe_parse_example_test.go) -->
 ```go
@@ -33,7 +33,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v3/jwe"
+  "github.com/lestrrat-go/jwx/v4/jwe"
 )
 
 func Example_jwe_parse() {
@@ -55,7 +55,7 @@ source: [examples/jwe_parse_example_test.go](https://github.com/lestrrat-go/jwx/
 
 ## Parse a JWE message stored in a file
 
-To parse a JWE stored in a file, use [`jwe.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwe#ParseFS). [`jwe.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwe#ParseFS) accepts the same options as [`jwe.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwe#Parse).
+To parse a JWE stored in a file, use [`jwe.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwe#ParseFS). [`jwe.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwe#ParseFS) accepts the same options as [`jwe.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwe#Parse).
 
 <!-- INCLUDE(examples/jwe_parsefs_example_test.go) -->
 ```go
@@ -67,7 +67,7 @@ import (
   "os"
   "path/filepath"
 
-  "github.com/lestrrat-go/jwx/v3/jwe"
+  "github.com/lestrrat-go/jwx/v4/jwe"
 )
 
 func Example_jwe_ParseFS() {
@@ -115,9 +115,9 @@ import (
   "crypto/rsa"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwe"
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwe"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwe_encrypt() {
@@ -162,7 +162,7 @@ source: [examples/jwe_encrypt_example_test.go](https://github.com/lestrrat-go/jw
 
 Generally the only time you need to use a JSON serialization format is when you have to generate multiple recipients (encrypted keys) for a given payload using multiple encryption algorithms and keys.
 
-When this need arises, use the [`jwe.Encrypt()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#Encrypt) function with the `jwe.WithJSON()` option and multiple `jwe.WithKey()` options:
+When this need arises, use the [`jwe.Encrypt()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jws#Encrypt) function with the `jwe.WithJSON()` option and multiple `jwe.WithKey()` options:
 
 <!-- INCLUDE(examples/jwe_encrypt_json_example_test.go) -->
 ```go
@@ -173,9 +173,9 @@ import (
   "crypto/rsa"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwe"
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwe"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwe_encrypt_json() {
@@ -290,9 +290,9 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v3/internal/json"
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwe"
+  "github.com/lestrrat-go/jwx/v4/internal/json"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwe"
 )
 
 func Example_jwe_sign_with_headers() {
@@ -352,8 +352,8 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwe"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwe"
 )
 
 func Example_jwe_verify_with_key() {
@@ -397,9 +397,9 @@ import (
   "crypto/rsa"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwe"
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwe"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwe_verify_with_jwk_set() {
@@ -454,7 +454,7 @@ The filtering operates on parsed JWE messages and their headers, allowing you to
 
 ## Basic header filtering
 
-You can filter JWE headers using the [`jwe.HeaderNameFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwe#HeaderNameFilter):
+You can filter JWE headers using the [`jwe.HeaderNameFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwe#HeaderNameFilter):
 
 <!-- INCLUDE(examples/jwe_filter_basic_example_test.go) -->
 ```go
@@ -463,8 +463,8 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwe"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwe"
 )
 
 // Example_jwe_filter_basic demonstrates basic JWE HeaderFilter functionality
@@ -554,8 +554,8 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwe"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwe"
 )
 
 // Example_jwe_filter_advanced demonstrates advanced JWE HeaderFilter functionality

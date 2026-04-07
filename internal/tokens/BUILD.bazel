@@ -6,7 +6,7 @@ go_library(
         "jwe_tokens.go",
         "tokens.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v3/internal/tokens",
+    importpath = "github.com/lestrrat-go/jwx/v4/internal/tokens",
     visibility = ["//:__subpackages__"],
 )
 

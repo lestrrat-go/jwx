@@ -12,7 +12,7 @@ import (
 	"hash"
 	"sync/atomic"
 
-	"github.com/lestrrat-go/jwx/v3/internal/pool"
+	"github.com/lestrrat-go/jwx/v4/internal/pool"
 )
 
 const (

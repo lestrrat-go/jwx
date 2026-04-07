@@ -1,7 +1,7 @@
 package jwt
 
 import (
-	"github.com/lestrrat-go/jwx/v3/transform"
+	"github.com/lestrrat-go/jwx/v4/transform"
 )
 
 // TokenFilter is an interface that allows users to filter JWT claims.

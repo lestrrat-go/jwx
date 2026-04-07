@@ -13,7 +13,7 @@ go_library(
         "options_gen.go",
         "signature_gen.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v3/jwa",
+    importpath = "github.com/lestrrat-go/jwx/v4/jwa",
     visibility = ["//visibility:public"],
     deps = [
         "//internal/tokens",

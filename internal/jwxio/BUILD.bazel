@@ -3,6 +3,6 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "jwxio",
     srcs = ["jwxio.go"],
-    importpath = "github.com/lestrrat-go/jwx/v3/internal/jwxio",
+    importpath = "github.com/lestrrat-go/jwx/v4/internal/jwxio",
     visibility = ["//:__subpackages__"],
 )

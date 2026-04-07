@@ -3,10 +3,10 @@ package jwe_test
 import (
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/stretchr/testify/require"
 
-	"github.com/lestrrat-go/jwx/v3/jwe"
+	"github.com/lestrrat-go/jwx/v4/jwe"
 )
 
 func TestRecipient(t *testing.T) {

@@ -8,7 +8,7 @@ import (
 	"fmt"
 
 	"github.com/lestrrat-go/dsig"
-	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
+	"github.com/lestrrat-go/jwx/v4/internal/keyconv"
 )
 
 // Verify verifies a JWS signature using the specified key and algorithm.
