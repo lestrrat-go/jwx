@@ -243,6 +243,15 @@ func generateHeaders(cfg *HeaderConfig, obj *codegen.Object) error {
 	}
 	o.L("}")
 
+	// isZero() method
+	o.LL("func (h *stdHeaders) isZero() bool {")
+	o.L("return h.%s == nil &&", obj.Fields()[0].Name(false))
+	for _, f := range obj.Fields()[1:] {
+		o.L("h.%s == nil &&", f.Name(false))
+	}
+	o.L("len(h.privateParams) == 0")
+	o.L("}")
+
 	// Extra methods (DecodeCtx, SetDecodeCtx, rawBuffer)
 	for _, em := range cfg.ExtraMethods {
 		if em.ArgType != "" {

@@ -196,6 +196,21 @@ func (h *stdHeaders) clear() {
 	h.raw = nil
 }
 
+func (h *stdHeaders) isZero() bool {
+	return h.algorithm == nil &&
+		h.contentType == nil &&
+		h.critical == nil &&
+		h.jwk == nil &&
+		h.jwkSetURL == nil &&
+		h.keyID == nil &&
+		h.typ == nil &&
+		h.x509CertChain == nil &&
+		h.x509CertThumbprint == nil &&
+		h.x509CertThumbprintS256 == nil &&
+		h.x509URL == nil &&
+		len(h.privateParams) == 0
+}
+
 func (h *stdHeaders) DecodeCtx() DecodeCtx {
 	h.mu.RLock()
 	defer h.mu.RUnlock()

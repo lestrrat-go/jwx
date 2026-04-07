@@ -85,6 +85,13 @@ func IsMLKEMDirect(alg string) bool {
 	}
 }
 
+// IsDirectCEK checks if the algorithm uses direct key agreement
+// where the CEK is derived (not encrypted). This includes DIRECT,
+// bare ECDH-ES (without key wrapping), and direct ML-KEM modes.
+func IsDirectCEK(alg string) bool {
+	return IsDirect(alg) || alg == tokens.ECDH_ES || IsMLKEMDirect(alg)
+}
+
 // IsSymmetric checks if the algorithm is a symmetric key encryption algorithm
 func IsSymmetric(alg string) bool {
 	return IsAESKW(alg) || IsAESGCMKW(alg) || IsPBES2(alg) || IsDirect(alg)
