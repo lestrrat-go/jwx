@@ -20,13 +20,19 @@ var builtinKeyType = map[string]struct{}{}
 
 func init() {
 	// builtin values for KeyType
-	algorithms := make([]KeyType, 4)
-	algorithms[0] = NewKeyType("EC")
-	algorithms[1] = NewKeyType("OKP")
-	algorithms[2] = NewKeyType("oct")
-	algorithms[3] = NewKeyType("RSA")
+	algorithms := make([]KeyType, 5)
+	algorithms[0] = NewKeyType("AKP")
+	algorithms[1] = NewKeyType("EC")
+	algorithms[2] = NewKeyType("OKP")
+	algorithms[3] = NewKeyType("oct")
+	algorithms[4] = NewKeyType("RSA")
 
 	RegisterKeyType(algorithms...)
+}
+
+// AKP returns an object representing AKP. Algorithm Key Pair (post-quantum KEM/signature keys)
+func AKP() KeyType {
+	return lookupBuiltinKeyType("AKP")
 }
 
 // EC returns an object representing EC. Elliptic Curve

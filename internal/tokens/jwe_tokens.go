@@ -32,6 +32,12 @@ const (
 
 	// Direct key agreement
 	DIRECT = "dir"
+
+	// ML-KEM algorithms (post-quantum, FIPS 203)
+	ML_KEM_768         = "ML-KEM-768"
+	ML_KEM_1024        = "ML-KEM-1024"
+	ML_KEM_768_A192KW  = "ML-KEM-768+A192KW"
+	ML_KEM_1024_A256KW = "ML-KEM-1024+A256KW"
 )
 
 // JWE Content Encryption Algorithms

@@ -144,7 +144,7 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 	if err != nil {
 		return nil, fmt.Errorf(`failed to encrypt key: %w`, err)
 	}
-	if b.alg == jwa.ECDH_ES() || b.alg == jwa.DIRECT() {
+	if b.alg == jwa.ECDH_ES() || b.alg == jwa.DIRECT() || b.alg == jwa.ML_KEM_768() || b.alg == jwa.ML_KEM_1024() {
 		rawCEK = enckey.Bytes()
 	} else {
 		if err := r.SetEncryptedKey(enckey.Bytes()); err != nil {
@@ -475,6 +475,12 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 		if apv, ok := h2.AgreementPartyVInfo(); ok && len(apv) > 0 {
 			dec.AgreementPartyVInfo(apv)
 		}
+	case jwa.ML_KEM_768(), jwa.ML_KEM_1024(), jwa.ML_KEM_768_A192KW(), jwa.ML_KEM_1024_A256KW():
+		ek, ok := h2.EncapsulatedKey()
+		if !ok {
+			return nil, fmt.Errorf(`failed to get 'ek' field for ML-KEM`)
+		}
+		dec.EncapsulatedKey(ek)
 	case jwa.A128GCMKW(), jwa.A192GCMKW(), jwa.A256GCMKW():
 		if ivV, ok := h2.Field(InitializationVectorKey); ok {
 			if ivB64, ok := ivV.(string); ok {
@@ -725,7 +731,7 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 
 	var useRawCEK bool
 	for _, builder := range ec.builders {
-		if builder.alg == jwa.DIRECT() || builder.alg == jwa.ECDH_ES() {
+		if builder.alg == jwa.DIRECT() || builder.alg == jwa.ECDH_ES() || builder.alg == jwa.ML_KEM_768() || builder.alg == jwa.ML_KEM_1024() {
 			useRawCEK = true
 			break
 		}

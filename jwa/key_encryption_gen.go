@@ -21,7 +21,7 @@ var builtinKeyEncryptionAlgorithm = map[string]struct{}{}
 
 func init() {
 	// builtin values for KeyEncryptionAlgorithm
-	algorithms := make([]KeyEncryptionAlgorithm, 19)
+	algorithms := make([]KeyEncryptionAlgorithm, 23)
 	algorithms[0] = NewKeyEncryptionAlgorithm(tokens.A128GCMKW, WithIsSymmetric(true))
 	algorithms[1] = NewKeyEncryptionAlgorithm(tokens.A128KW, WithIsSymmetric(true))
 	algorithms[2] = NewKeyEncryptionAlgorithm(tokens.A192GCMKW, WithIsSymmetric(true))
@@ -33,14 +33,18 @@ func init() {
 	algorithms[8] = NewKeyEncryptionAlgorithm(tokens.ECDH_ES_A128KW)
 	algorithms[9] = NewKeyEncryptionAlgorithm(tokens.ECDH_ES_A192KW)
 	algorithms[10] = NewKeyEncryptionAlgorithm(tokens.ECDH_ES_A256KW)
-	algorithms[11] = NewKeyEncryptionAlgorithm(tokens.PBES2_HS256_A128KW, WithIsSymmetric(true))
-	algorithms[12] = NewKeyEncryptionAlgorithm(tokens.PBES2_HS384_A192KW, WithIsSymmetric(true))
-	algorithms[13] = NewKeyEncryptionAlgorithm(tokens.PBES2_HS512_A256KW, WithIsSymmetric(true))
-	algorithms[14] = NewKeyEncryptionAlgorithm(tokens.RSA1_5, WithDeprecated(true))
-	algorithms[15] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP)
-	algorithms[16] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_256)
-	algorithms[17] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_384)
-	algorithms[18] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_512)
+	algorithms[11] = NewKeyEncryptionAlgorithm(tokens.ML_KEM_1024)
+	algorithms[12] = NewKeyEncryptionAlgorithm(tokens.ML_KEM_1024_A256KW)
+	algorithms[13] = NewKeyEncryptionAlgorithm(tokens.ML_KEM_768)
+	algorithms[14] = NewKeyEncryptionAlgorithm(tokens.ML_KEM_768_A192KW)
+	algorithms[15] = NewKeyEncryptionAlgorithm(tokens.PBES2_HS256_A128KW, WithIsSymmetric(true))
+	algorithms[16] = NewKeyEncryptionAlgorithm(tokens.PBES2_HS384_A192KW, WithIsSymmetric(true))
+	algorithms[17] = NewKeyEncryptionAlgorithm(tokens.PBES2_HS512_A256KW, WithIsSymmetric(true))
+	algorithms[18] = NewKeyEncryptionAlgorithm(tokens.RSA1_5, WithDeprecated(true))
+	algorithms[19] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP)
+	algorithms[20] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_256)
+	algorithms[21] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_384)
+	algorithms[22] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_512)
 
 	RegisterKeyEncryptionAlgorithm(algorithms...)
 }
@@ -98,6 +102,26 @@ func ECDH_ES_A192KW() KeyEncryptionAlgorithm {
 // ECDH_ES_A256KW returns an object representing ECDH-ES + AES key wrap (256) key encryption algorithm.
 func ECDH_ES_A256KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm(tokens.ECDH_ES_A256KW)
+}
+
+// ML_KEM_1024 returns an object representing ML-KEM-1024 direct key agreement algorithm (FIPS 203).
+func ML_KEM_1024() KeyEncryptionAlgorithm {
+	return lookupBuiltinKeyEncryptionAlgorithm(tokens.ML_KEM_1024)
+}
+
+// ML_KEM_1024_A256KW returns an object representing ML-KEM-1024 + AES key wrap (256) key agreement algorithm (FIPS 203).
+func ML_KEM_1024_A256KW() KeyEncryptionAlgorithm {
+	return lookupBuiltinKeyEncryptionAlgorithm(tokens.ML_KEM_1024_A256KW)
+}
+
+// ML_KEM_768 returns an object representing ML-KEM-768 direct key agreement algorithm (FIPS 203).
+func ML_KEM_768() KeyEncryptionAlgorithm {
+	return lookupBuiltinKeyEncryptionAlgorithm(tokens.ML_KEM_768)
+}
+
+// ML_KEM_768_A192KW returns an object representing ML-KEM-768 + AES key wrap (192) key agreement algorithm (FIPS 203).
+func ML_KEM_768_A192KW() KeyEncryptionAlgorithm {
+	return lookupBuiltinKeyEncryptionAlgorithm(tokens.ML_KEM_768_A192KW)
 }
 
 // PBES2_HS256_A128KW returns an object representing PBES2 + HMAC-SHA256 + AES key wrap (128) key encryption algorithm.

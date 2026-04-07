@@ -138,6 +138,18 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 		}
 	}
 
+	if jwebb.IsMLKEM(keyalgStr) {
+		keyToUse := e.rawKey
+		if keyToUse == nil {
+			keyToUse = e.pubkey
+		}
+
+		if jwebb.IsMLKEMDirect(keyalgStr) {
+			return jwebb.KeyEncryptMLKEM(cek, keyalgStr, ctalgStr, keyToUse)
+		}
+		return jwebb.KeyEncryptMLKEMKeyWrap(cek, keyalgStr, ctalgStr, keyToUse)
+	}
+
 	if jwebb.IsRSA15(keyalgStr) {
 		keyToUse := e.rawKey
 		if keyToUse == nil {
