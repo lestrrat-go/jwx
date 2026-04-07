@@ -1045,45 +1045,38 @@ func parseCompact(buf []byte, storeProtectedHeaders bool) (*Message, error) {
 	return m, nil
 }
 
-type CustomDecoder = json.CustomDecoder
-type CustomDecodeFunc = json.CustomDecodeFunc
+// CustomDecoder is a generic interface for custom field decoders.
+type CustomDecoder[T any] = json.CustomDecoder[T]
 
-// RegisterCustomField allows users to specify that a private field
-// be decoded as an instance of the specified type. This option has
-// a global effect.
+// CustomDecodeFunc is a function-based implementation of CustomDecoder[T].
+type CustomDecodeFunc[T any] = json.CustomDecodeFunc[T]
+
+// RegisterCustomField registers a private field to be decoded as type T
+// using json.Unmarshal. This option has a global effect.
 //
-// For example, suppose you have a custom field `x-birthday`, which
-// you want to represent as a string formatted in RFC3339 in JSON,
-// but want it back as `time.Time`.
+//	jwe.RegisterCustomField[time.Time](`x-birthday`)
 //
-// In such case you would register a custom field as follows
+// For more fine-tuned control over the decoding process,
+// use RegisterCustomDecoder instead.
+func RegisterCustomField[T any](name string) {
+	json.RegisterTyped[T](registry, name)
+}
+
+// RegisterCustomDecoder registers a private field with a custom decoder
+// function. This option has a global effect.
 //
-//	jws.RegisterCustomField(`x-birthday`, time.Time{})
-//
-// Then you can use a `time.Time` variable to extract the value
-// of `x-birthday` field, instead of having to use `any`
-// and later convert it to `time.Time`
-//
-//	var bday time.Time
-//	_ = hdr.Get(`x-birthday`, &bday)
-//
-// If you need a more fine-tuned control over the decoding process,
-// you can register a `CustomDecoder`. For example, below shows
-// how to register a decoder that can parse RFC1123 format string:
-//
-//	jwe.RegisterCustomField(`x-birthday`, jwe.CustomDecodeFunc(func(data []byte) (any, error) {
-//	  return time.Parse(time.RFC1123, string(data))
+//	jwe.RegisterCustomDecoder(`x-birthday`, jwe.CustomDecodeFunc[time.Time](func(data []byte) (time.Time, error) {
+//	  var s string
+//	  if err := json.Unmarshal(data, &s); err != nil {
+//	    return time.Time{}, err
+//	  }
+//	  return time.Parse(time.RFC1123, s)
 //	}))
-//
-// Please note that use of custom fields can be problematic if you
-// are using a library that does not implement MarshalJSON/UnmarshalJSON
-// and you try to roundtrip from an object to JSON, and then back to an object.
-// For example, in the above example, you can _parse_ time values formatted
-// in the format specified in RFC822, but when you convert an object into
-// JSON, it will be formatted in RFC3339, because that's what `time.Time`
-// likes to do. To avoid this, it's always better to use a custom type
-// that wraps your desired type (in this case `time.Time`) and implement
-// MarshalJSON and UnmashalJSON.
-func RegisterCustomField(name string, object any) {
-	registry.Register(name, object)
+func RegisterCustomDecoder[T any](name string, dec CustomDecodeFunc[T]) {
+	json.RegisterCustomDecoder[T](registry, name, dec)
+}
+
+// UnregisterCustomField removes the registration for a custom field.
+func UnregisterCustomField(name string) {
+	registry.Unregister(name)
 }

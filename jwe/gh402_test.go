@@ -91,6 +91,6 @@ func TestGH402(t *testing.T) {
 	decrypt(false)
 
 	// register field deserialized and run decryption again
-	jwe.RegisterCustomField("clevis", Pin{})
+	jwe.RegisterCustomField[Pin]("clevis")
 	decrypt(true) // used to fail before, but this should pass
 }

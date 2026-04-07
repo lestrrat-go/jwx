@@ -49,7 +49,7 @@ func Example_jwt_get_claims() {
 	// However, it is possible to globally specify that a private
 	// claim should be parsed into a custom type.
 	// In the sample below `claim2` is to be an instance of time.Time
-	jwt.RegisterCustomField(`claim2`, time.Time{})
+	jwt.RegisterCustomField[time.Time](`claim2`)
 
 	tok = jwt.New()
 	if err := json.Unmarshal([]byte(`{"claim2":"2022-05-16T07:35:56+00:00"}`), tok); err != nil {
@@ -70,7 +70,7 @@ func Example_jwt_get_claims() {
 	// For example, in the case of `claim3`, it needs to call `jwk.ParseKey`
 	// which returns an interface that can't be instantiated like the
 	// `time.Time` value for `claim2`.
-	jwt.RegisterCustomField(`claim3`, jwt.CustomDecodeFunc(func(data []byte) (any, error) {
+	jwt.RegisterCustomDecoder(`claim3`, jwt.CustomDecodeFunc[jwk.Key](func(data []byte) (jwk.Key, error) {
 		return jwk.ParseKey[jwk.Key](data)
 	}))
 
