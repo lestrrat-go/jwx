@@ -4,7 +4,6 @@ package jwk
 
 import (
 	"crypto"
-	"sync"
 
 	"github.com/lestrrat-go/jwx/v3/cert"
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -21,26 +20,6 @@ const (
 	X509CertThumbprintKey     = "x5t"
 	X509CertThumbprintS256Key = "x5t#S256"
 )
-
-type fieldPair struct {
-	Name  string
-	Value any
-}
-
-var fieldPairPool = sync.Pool{
-	New: func() any {
-		return make([]fieldPair, 0, 17)
-	},
-}
-
-func getFieldPairList() []fieldPair {
-	return fieldPairPool.Get().([]fieldPair)
-}
-
-func putFieldPairList(list []fieldPair) {
-	list = list[:0]
-	fieldPairPool.Put(list)
-}
 
 // Key defines the minimal interface for each of the
 // key types. Their use and implementation differ significantly

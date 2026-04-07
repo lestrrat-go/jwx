@@ -1,6 +1,10 @@
 package jwk_test
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
 	"fmt"
 	"testing"
 
@@ -23,6 +27,59 @@ func makeKeySet(b *testing.B, n int) jwk.Set {
 		}
 	}
 	return set
+}
+
+func BenchmarkKeyClone(b *testing.B) {
+	rsaRaw, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		b.Fatal(err)
+	}
+	rsaKey, err := jwk.Import[jwk.RSAPrivateKey](rsaRaw)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	ecRaw, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		b.Fatal(err)
+	}
+	ecKey, err := jwk.Import[jwk.ECDSAPrivateKey](ecRaw)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	symKey, err := jwk.Import[jwk.SymmetricKey]([]byte("symmetric-key-value-for-benchmark"))
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.Run("RSAPrivateKey", func(b *testing.B) {
+		b.ReportAllocs()
+		for range b.N {
+			_, err := rsaKey.Clone()
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+	b.Run("ECDSAPrivateKey", func(b *testing.B) {
+		b.ReportAllocs()
+		for range b.N {
+			_, err := ecKey.Clone()
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+	b.Run("SymmetricKey", func(b *testing.B) {
+		b.ReportAllocs()
+		for range b.N {
+			_, err := symKey.Clone()
+			if err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
 }
 
 func BenchmarkLookupKeyID(b *testing.B) {

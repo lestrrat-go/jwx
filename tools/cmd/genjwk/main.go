@@ -510,12 +510,51 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("return nil") // currently unused, but who knows
 	o.L("}")
 
-	o.LL("func (k *%s) Clone() (Key, error) {", structName)
-	o.L("key, err := cloneKey(k)")
-	o.L("if err != nil {")
-	o.L("return nil, fmt.Errorf(`%s.Clone: %%w`, err)", structName)
+	o.LL("func (dst *%s) cloneFrom(src *%s) {", structName, structName)
+	o.L("src.mu.RLock()")
+	o.L("defer src.mu.RUnlock()")
+	o.L("dst.mu.Lock()")
+	o.L("defer dst.mu.Unlock()")
+	for _, f := range obj.Fields() {
+		fname := f.Name(false)
+		o.L("if src.%s != nil {", fname)
+		if strings.HasPrefix(f.Type(), "[]") {
+			// Slice types: defensive copy via slices.Clone
+			o.L("dst.%s = slices.Clone(src.%s)", fname, fname)
+		} else if IsPointer(f) && f.Bool(`noDeref`) {
+			// Pointer types stored as-is (e.g., *cert.Chain) — shallow copy
+			o.L("dst.%s = src.%s", fname, fname)
+		} else if f.Bool(`hasAccept`) && fieldStorageTypeIsIndirect(f.Type()) {
+			// Slice type behind pointer (e.g., *KeyOperationList) — clone the inner slice
+			o.L("tmp := slices.Clone(*src.%s)", fname)
+			o.L("dst.%s = &tmp", fname)
+		} else if fieldStorageTypeIsIndirect(f.Type()) {
+			// Value types stored behind pointer (*string, *jwa.KeyAlgorithm, etc.)
+			o.L("tmp := *(src.%s)", fname)
+			o.L("dst.%s = &tmp", fname)
+		} else {
+			// Direct value types
+			o.L("dst.%s = src.%s", fname, fname)
+		}
+		o.L("} else {")
+		o.L("dst.%s = nil", fname)
+		o.L("}")
+	}
+	// privateParams: shallow clone of map values (matches current Set() semantics)
+	o.L("if len(src.privateParams) > 0 {")
+	o.L("dst.privateParams = make(map[string]any, len(src.privateParams))")
+	o.L("for k, v := range src.privateParams {")
+	o.L("dst.privateParams[k] = v")
 	o.L("}")
-	o.L("return key, nil")
+	o.L("} else {")
+	o.L("dst.privateParams = make(map[string]any)")
+	o.L("}")
+	o.L("}")
+
+	o.LL("func (k *%s) Clone() (Key, error) {", structName)
+	o.L("dst := new%s()", ifName)
+	o.L("dst.cloneFrom(k)")
+	o.L("return dst, nil")
 	o.L("}")
 
 	o.LL("func (k *%s) DecodeCtx() json.DecodeCtx {", structName)

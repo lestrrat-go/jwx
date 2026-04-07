@@ -8,8 +8,6 @@
 package openid
 
 import (
-	"fmt"
-
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 )
@@ -17,17 +15,8 @@ import (
 var registry = json.NewRegistry()
 
 func (t *stdToken) Clone() (jwt.Token, error) {
-	var dst jwt.Token = New()
-
-	for _, k := range t.Keys() {
-		v, ok := t.Field(k)
-		if !ok {
-			return nil, fmt.Errorf(`openid.Clone: failed to get %s`, k)
-		}
-		if err := dst.Set(k, v); err != nil {
-			return nil, fmt.Errorf(`openid.Clone: failed to set %s: %w`, k, err)
-		}
-	}
+	dst := New().(*stdToken)
+	dst.cloneFrom(t)
 	return dst, nil
 }
 

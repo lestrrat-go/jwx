@@ -32,10 +32,8 @@ func (h *stdHeaders) isZero() bool {
 }
 
 func (h *stdHeaders) Clone() (Headers, error) {
-	dst := NewHeaders()
-	if err := h.Copy(dst); err != nil {
-		return nil, fmt.Errorf(`failed to copy header contents to new object: %w`, err)
-	}
+	dst := &stdHeaders{}
+	dst.cloneFrom(h)
 	return dst, nil
 }
 

@@ -533,18 +533,8 @@ func Equal(t1, t2 Token) bool {
 }
 
 func (t *stdToken) Clone() (Token, error) {
-	dst := New()
-
-	dst.Options().Set(*(t.Options()))
-	for _, k := range t.Keys() {
-		v, ok := t.Field(k)
-		if !ok {
-			return nil, fmt.Errorf(`jwt.Clone: failed to get %s`, k)
-		}
-		if err := dst.Set(k, v); err != nil {
-			return nil, fmt.Errorf(`jwt.Clone failed to set %s: %w`, k, err)
-		}
-	}
+	dst := New().(*stdToken)
+	dst.cloneFrom(t)
 	return dst, nil
 }
 

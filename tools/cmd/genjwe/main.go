@@ -386,6 +386,38 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("return keys")
 	o.L("}")
 
+	o.LL("func (dst *stdHeaders) cloneFrom(src *stdHeaders) {")
+	o.L("src.mu.RLock()")
+	o.L("defer src.mu.RUnlock()")
+	o.L("dst.mu.Lock()")
+	o.L("defer dst.mu.Unlock()")
+	for _, f := range obj.Fields() {
+		fname := f.Name(false)
+		o.L("if src.%s != nil {", fname)
+		if strings.HasPrefix(f.Type(), "[]") {
+			o.L("dst.%s = slices.Clone(src.%s)", fname, fname)
+		} else if IsPointer(f) {
+			o.L("dst.%s = src.%s", fname, fname)
+		} else if fieldStorageTypeIsIndirect(f.Type()) {
+			o.L("tmp := *(src.%s)", fname)
+			o.L("dst.%s = &tmp", fname)
+		} else {
+			o.L("dst.%s = src.%s", fname, fname)
+		}
+		o.L("} else {")
+		o.L("dst.%s = nil", fname)
+		o.L("}")
+	}
+	o.L("if len(src.privateParams) > 0 {")
+	o.L("dst.privateParams = make(map[string]any, len(src.privateParams))")
+	o.L("for k, v := range src.privateParams {")
+	o.L("dst.privateParams[k] = v")
+	o.L("}")
+	o.L("} else {")
+	o.L("dst.privateParams = map[string]any{}")
+	o.L("}")
+	o.L("}")
+
 	o.LL("func (h *stdHeaders) MarshalJSON() ([]byte, error) {")
 	o.L("data := make(map[string]any)")
 	o.L("keys := make([]string, 0, %d+len(h.privateParams))", len(obj.Fields()))
