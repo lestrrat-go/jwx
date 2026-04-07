@@ -264,6 +264,27 @@ func (h *stdHeaders) clear() {
 	h.privateParams = nil
 }
 
+func (h *stdHeaders) isZero() bool {
+	return h.agreementPartyUInfo == nil &&
+		h.agreementPartyVInfo == nil &&
+		h.algorithm == nil &&
+		h.compression == nil &&
+		h.contentEncryption == nil &&
+		h.contentType == nil &&
+		h.critical == nil &&
+		h.encapsulatedKey == nil &&
+		h.ephemeralPublicKey == nil &&
+		h.jwk == nil &&
+		h.jwkSetURL == nil &&
+		h.keyID == nil &&
+		h.typ == nil &&
+		h.x509CertChain == nil &&
+		h.x509CertThumbprint == nil &&
+		h.x509CertThumbprintS256 == nil &&
+		h.x509URL == nil &&
+		len(h.privateParams) == 0
+}
+
 func (h *stdHeaders) PrivateParams() map[string]any {
 	h.mu.RLock()
 	defer h.mu.RUnlock()

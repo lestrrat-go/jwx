@@ -7,7 +7,6 @@ package jwe
 import (
 	"bytes"
 	"context"
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"io"
@@ -23,6 +22,7 @@ import (
 	"github.com/lestrrat-go/jwx/v4/jwe/internal/aescbc"
 	"github.com/lestrrat-go/jwx/v4/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/v4/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/v4/jwe/jwebb"
 	"github.com/lestrrat-go/option/v3"
 )
 
@@ -81,19 +81,47 @@ type recipientBuilder struct {
 	headers Headers
 }
 
-func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryptionAlgorithm, _ *content_crypt.Generic) ([]byte, error) {
-	// we need the raw key for later use
-	rawKey := b.key
+func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryptionAlgorithm) ([]byte, error) {
+	// Resolve the key to its raw form and extract key ID.
+	resolvedKey := b.key
 
 	var keyID string
 	if ke, ok := b.key.(KeyEncrypter); ok {
+		// Custom key encrypter (e.g. HSM) — handle directly without
+		// going through the normal encrypter dispatch.
 		if kider, ok := ke.(KeyIDer); ok {
 			if v, ok := kider.KeyID(); ok {
 				keyID = v
 			}
 		}
-	} else if jwkKey, ok := b.key.(jwk.Key); ok {
-		// Meanwhile, grab the kid as well
+
+		hdr := b.headers
+		if hdr == nil {
+			hdr = NewHeaders()
+		}
+
+		_ = r.SetHeaders(hdr)
+
+		if err := hdr.Set(AlgorithmKey, b.alg); err != nil {
+			return nil, fmt.Errorf(`failed to set header: %w`, err)
+		}
+		if keyID != "" {
+			if err := hdr.Set(KeyIDKey, keyID); err != nil {
+				return nil, fmt.Errorf(`failed to set header: %w`, err)
+			}
+		}
+
+		encrypted, err := ke.EncryptKey(cek)
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encrypt key: %w`, err)
+		}
+		if err := r.SetEncryptedKey(encrypted); err != nil {
+			return nil, fmt.Errorf(`failed to set encrypted key: %w`, err)
+		}
+		return nil, nil
+	}
+
+	if jwkKey, ok := b.key.(jwk.Key); ok {
 		if v, ok := jwkKey.KeyID(); ok {
 			keyID = v
 		}
@@ -103,7 +131,7 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 			return nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to retrieve raw key out of %T: %w`, b.key, err)
 		}
 
-		rawKey = raw
+		resolvedKey = raw
 	}
 
 	// Extract ECDH-ES specific parameters if needed.
@@ -111,7 +139,7 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 
 	hdr := b.headers
 	if hdr == nil {
-		hdr = r.Headers()
+		hdr = NewHeaders()
 	}
 
 	if val, ok := hdr.AgreementPartyUInfo(); ok {
@@ -122,8 +150,7 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 		apv = val
 	}
 
-	// Create the encrypter using the new jwebb pattern
-	enc := newEncrypter(b.alg, calg, b.key, rawKey, apu, apv)
+	enc := newEncrypter(b.alg, calg, resolvedKey, apu, apv)
 
 	_ = r.SetHeaders(hdr)
 
@@ -144,7 +171,7 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 	if err != nil {
 		return nil, fmt.Errorf(`failed to encrypt key: %w`, err)
 	}
-	if b.alg == jwa.ECDH_ES() || b.alg == jwa.DIRECT() || b.alg == jwa.ML_KEM_768() || b.alg == jwa.ML_KEM_1024() {
+	if jwebb.IsDirectCEK(b.alg.String()) {
 		rawCEK = enckey.Bytes()
 	} else {
 		if err := r.SetEncryptedKey(enckey.Bytes()); err != nil {
@@ -392,7 +419,7 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 			return decrypted, nil
 		}
 	}
-	return nil, fmt.Errorf(`jwe.Decrypt: tried %d keys, but failed to match any of the keys with recipient (last error = %s)`, tried, lastError)
+	return nil, fmt.Errorf(`jwe.Decrypt: tried %d keys, but failed to match any of the keys with recipient (last error = %w)`, tried, lastError)
 }
 
 func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
@@ -408,12 +435,6 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 	if !ok {
 		return nil, fmt.Errorf(`jwe.Decrypt: failed to retrieve content encryption algorithm from protected headers`)
 	}
-	dec := newDecrypter(alg, ce, key).
-		AuthenticatedData(aad).
-		ComputedAuthenticatedData(computedAad).
-		InitializationVector(msg.initializationVector).
-		Tag(msg.tag).
-		CEK(dc.cek)
 
 	// The "alg" header can be in either protected/unprotected headers.
 	// prefer per-recipient headers (as it might be the case that the algorithm differs
@@ -436,6 +457,7 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 		return nil, fmt.Errorf(`jwe.Decrypt: failed to find "alg" header in either protected or per-recipient headers`)
 	}
 
+	// Merge protected and per-recipient headers for algorithm-specific param extraction
 	h2, err := protectedHeaders.Clone()
 	if err != nil {
 		return nil, fmt.Errorf(`jwe.Decrypt: failed to copy headers (1): %w`, err)
@@ -443,101 +465,41 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 
 	h2, err = h2.Merge(recipient.Headers())
 	if err != nil {
-		return nil, fmt.Errorf(`failed to copy headers (2): %w`, err)
+		return nil, fmt.Errorf(`jwe.Decrypt: failed to merge headers: %w`, err)
 	}
 
-	switch alg {
-	case jwa.ECDH_ES(), jwa.ECDH_ES_A128KW(), jwa.ECDH_ES_A192KW(), jwa.ECDH_ES_A256KW():
-		epk, ok := h2.Field(EphemeralPublicKeyKey)
-		if !ok {
-			return nil, fmt.Errorf(`failed to get 'epk' field`)
-		}
-		switch epk := epk.(type) {
-		case jwk.ECDSAPublicKey:
-			pubkey, err := jwk.Export[*ecdsa.PublicKey](epk)
-			if err != nil {
-				return nil, fmt.Errorf(`failed to get public key: %w`, err)
-			}
-			dec.PublicKey(pubkey)
-		case jwk.OKPPublicKey:
-			pubkey, err := jwk.Export[any](epk)
-			if err != nil {
-				return nil, fmt.Errorf(`failed to get public key: %w`, err)
-			}
-			dec.PublicKey(pubkey)
-		default:
-			return nil, fmt.Errorf("unexpected 'epk' type %T for alg %s", epk, alg)
-		}
-
-		if apu, ok := h2.AgreementPartyUInfo(); ok && len(apu) > 0 {
-			dec.AgreementPartyUInfo(apu)
-		}
-		if apv, ok := h2.AgreementPartyVInfo(); ok && len(apv) > 0 {
-			dec.AgreementPartyVInfo(apv)
-		}
-	case jwa.ML_KEM_768(), jwa.ML_KEM_1024(), jwa.ML_KEM_768_A192KW(), jwa.ML_KEM_1024_A256KW():
-		ek, ok := h2.EncapsulatedKey()
-		if !ok {
-			return nil, fmt.Errorf(`failed to get 'ek' field for ML-KEM`)
-		}
-		dec.EncapsulatedKey(ek)
-	case jwa.A128GCMKW(), jwa.A192GCMKW(), jwa.A256GCMKW():
-		if ivV, ok := h2.Field(InitializationVectorKey); ok {
-			if ivB64, ok := ivV.(string); ok {
-				iv, err := base64.DecodeString(ivB64)
-				if err != nil {
-					return nil, fmt.Errorf(`failed to b64-decode 'iv': %w`, err)
-				}
-				dec.KeyInitializationVector(iv)
-			}
-		}
-		if tagV, ok := h2.Field(TagKey); ok {
-			if tagB64, ok := tagV.(string); ok {
-				tag, err := base64.DecodeString(tagB64)
-				if err != nil {
-					return nil, fmt.Errorf(`failed to b64-decode 'tag': %w`, err)
-				}
-				dec.KeyTag(tag)
-			}
-		}
-	case jwa.PBES2_HS256_A128KW(), jwa.PBES2_HS384_A192KW(), jwa.PBES2_HS512_A256KW():
-		saltV, ok := h2.Field(SaltKey)
-		if !ok {
-			return nil, fmt.Errorf(`failed to get %q field`, SaltKey)
-		}
-		saltB64, ok := saltV.(string)
-		if !ok {
-			return nil, fmt.Errorf(`field %q is not a string`, SaltKey)
-		}
-
-		countV, ok := h2.Field(CountKey)
-		if !ok {
-			return nil, fmt.Errorf(`failed to get %q field`, CountKey)
-		}
-		countFlt, ok := countV.(float64)
-		if !ok {
-			return nil, fmt.Errorf(`field %q is not a number`, CountKey)
-		}
-
-		maxCount := dc.maxPBES2Count
-		minCount := dc.minPBES2Count
-		if countFlt > float64(maxCount) {
-			return nil, fmt.Errorf("invalid 'p2c' value")
-		}
-		if countFlt < float64(minCount) {
-			return nil, fmt.Errorf("invalid 'p2c' value")
-		}
-		salt, err := base64.DecodeString(saltB64)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to b64-decode 'salt': %w`, err)
-		}
-		dec.KeySalt(salt)
-		dec.KeyCount(int(countFlt))
-	}
-
-	plaintext, err := dec.Decrypt(recipient, msg.cipherText, msg)
+	// Create content cipher (needed by RSA-1.5 for key size, and for content decryption)
+	contentCipher, err := jwebb.CreateContentCipher(ce.String())
 	if err != nil {
-		return nil, fmt.Errorf(`jwe.Decrypt: decryption failed: %w`, err)
+		return nil, fmt.Errorf(`jwe.Decrypt: failed to create content cipher: %w`, err)
+	}
+
+	// Decrypt the CEK using per-family dispatch.
+	// Each function extracts its own algorithm-specific params from merged headers.
+	cekCtx := &decryptCEKContext{
+		maxPBES2Count: dc.maxPBES2Count,
+		minPBES2Count: dc.minPBES2Count,
+		ctalg:         ce,
+		contentCipher: contentCipher,
+	}
+	cek, err := decryptCEK(alg, key, recipient, h2, cekCtx)
+	if err != nil {
+		return nil, fmt.Errorf(`jwe.Decrypt: failed to decrypt key: %w`, err)
+	}
+
+	if dc.cek != nil {
+		*dc.cek = cek
+	}
+
+	// Decrypt the payload
+	computedAadFull := computedAad
+	if aad != nil {
+		computedAadFull = append(append(computedAadFull, tokens.Period), aad...)
+	}
+
+	plaintext, err := contentCipher.Decrypt(cek, msg.initializationVector, msg.cipherText, msg.tag, computedAadFull)
+	if err != nil {
+		return nil, fmt.Errorf(`jwe.Decrypt: failed to decrypt payload: %w`, err)
 	}
 
 	if v, ok := h2.Compression(); ok && v == jwa.Deflate() {
@@ -546,10 +508,6 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 			return nil, fmt.Errorf(`jwe.Decrypt: failed to uncompress payload: %w`, err)
 		}
 		plaintext = buf
-	}
-
-	if plaintext == nil {
-		return nil, fmt.Errorf(`failed to find matching recipient`)
 	}
 
 	return plaintext, nil
@@ -594,7 +552,7 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 			if !ok {
 				return fmt.Errorf("jwe.encrypt: WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", wk.alg)
 			}
-			if v == jwa.DIRECT() || v == jwa.ECDH_ES() {
+			if jwebb.IsDirectCEK(v.String()) {
 				useRawCEK = true
 			}
 			ec.builders = append(ec.builders, &recipientBuilder{
@@ -731,7 +689,7 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 
 	var useRawCEK bool
 	for _, builder := range ec.builders {
-		if builder.alg == jwa.DIRECT() || builder.alg == jwa.ECDH_ES() || builder.alg == jwa.ML_KEM_768() || builder.alg == jwa.ML_KEM_1024() {
+		if jwebb.IsDirectCEK(builder.alg.String()) {
 			useRawCEK = true
 			break
 		}
@@ -745,8 +703,7 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		r := recipientPool.Get()
 		defer recipientPool.Put(r)
 
-		// some builders require hint from the contentcrypt object
-		rawCEK, err := builder.Build(r, cek, ec.calg, contentcrypt)
+		rawCEK, err := builder.Build(r, cek, ec.calg)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to create recipient #%d: %w`, i, err)
 		}
@@ -820,13 +777,6 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		return nil, fmt.Errorf(`failed to encrypt payload: %w`, err)
 	}
 
-	// Fast path for compact serialization: assemble directly from
-	// pre-encoded headers and raw fields, avoiding the full Message
-	// construction and redundant header re-encoding that Compact() does.
-	if ec.format == fmtCompact {
-		return compactSerialize(aad, recipients[0].EncryptedKey(), iv, ciphertext, tag), nil
-	}
-
 	msg := msgPool.Get()
 	defer msgPool.Put(msg)
 
@@ -847,6 +797,8 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 	}
 
 	switch ec.format {
+	case fmtCompact:
+		return Compact(msg)
 	case fmtJSON:
 		return json.Marshal(msg)
 	case fmtJSONPretty:
