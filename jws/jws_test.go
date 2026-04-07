@@ -45,7 +45,7 @@ const badValue = "%badvalue%"
 
 func TestSanity(t *testing.T) {
 	t.Run("sanity: Verify with single key", func(t *testing.T) {
-		key, err := jwk.ParseKey([]byte(`{
+		key, err := jwk.ParseKey[jwk.Key]([]byte(`{
     "kty": "oct",
     "k": "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
   }`))
@@ -256,7 +256,7 @@ func (es *dummyECDSACryptoSigner) Sign(rand io.Reader, digest []byte, _ crypto.S
 var _ crypto.Signer = &dummyECDSACryptoSigner{}
 
 func testRoundtrip(t *testing.T, payload []byte, alg jwa.SignatureAlgorithm, signKey any, keys map[string]any) {
-	jwkKey, err := jwk.Import(signKey)
+	jwkKey, err := jwk.Import[jwk.Key](signKey)
 	require.NoError(t, err, `jwk.New should succeed`)
 	signKeys := []struct {
 		Name string
@@ -335,7 +335,7 @@ func TestRoundtrip(t *testing.T) {
 	t.Run("HMAC", func(t *testing.T) {
 		t.Parallel()
 		sharedkey := []byte("Avracadabra")
-		jwkKey, _ := jwk.Import(sharedkey)
+		jwkKey, _ := jwk.Import[jwk.Key](sharedkey)
 		keys := map[string]any{
 			"[]byte":  sharedkey,
 			"jwk.Key": jwkKey,
@@ -352,7 +352,7 @@ func TestRoundtrip(t *testing.T) {
 		t.Parallel()
 		key, err := jwxtest.GenerateEcdsaKey(jwa.P521())
 		require.NoError(t, err, "ECDSA key generated")
-		jwkKey, _ := jwk.Import(key.PublicKey)
+		jwkKey, _ := jwk.Import[jwk.Key](key.PublicKey)
 		keys := map[string]any{
 			"Verify(ecdsa.PublicKey)":  key.PublicKey,
 			"Verify(*ecdsa.PublicKey)": &key.PublicKey,
@@ -369,7 +369,7 @@ func TestRoundtrip(t *testing.T) {
 		t.Parallel()
 		key, err := jwxtest.GenerateRsaKey()
 		require.NoError(t, err, "RSA key generated")
-		jwkKey, _ := jwk.Import(key.PublicKey)
+		jwkKey, _ := jwk.Import[jwk.Key](key.PublicKey)
 		keys := map[string]any{
 			"Verify(rsa.PublicKey)":  key.PublicKey,
 			"Verify(*rsa.PublicKey)": &key.PublicKey,
@@ -387,7 +387,7 @@ func TestRoundtrip(t *testing.T) {
 		key, err := jwxtest.GenerateEd25519Key()
 		require.NoError(t, err, "ed25519 key generated")
 		pubkey := key.Public()
-		jwkKey, _ := jwk.Import(pubkey)
+		jwkKey, _ := jwk.Import[jwk.Key](pubkey)
 		keys := map[string]any{
 			"Verify(ed25519.Public())": pubkey,
 			// Meh, this doesn't work
@@ -710,10 +710,10 @@ func TestVerifySet(t *testing.T) {
 
 	makeSet := func(privkey jwk.Key) jwk.Set {
 		set := jwk.NewSet()
-		k1, err := jwk.Import([]byte("abracadabra"))
+		k1, err := jwk.Import[jwk.Key]([]byte("abracadabra"))
 		require.NoError(t, err, `jwk.Import should succeed`)
 		set.AddKey(k1)
-		k2, err := jwk.Import([]byte("opensesame"))
+		k2, err := jwk.Import[jwk.Key]([]byte("opensesame"))
 		require.NoError(t, err, `jwk.Import should succeed`)
 		set.AddKey(k2)
 		pubkey, err := jwk.PublicKeyOf(privkey)
@@ -912,7 +912,7 @@ func TestRFC7797(t *testing.T) {
       "k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
      }`
 
-	key, err := jwk.ParseKey([]byte(keysrc))
+	key, err := jwk.ParseKey[jwk.Key]([]byte(keysrc))
 	require.NoError(t, err, `jwk.Parse should succeed`)
 
 	t.Run("Invalid payload when b64 = false and NOT detached", func(t *testing.T) {
@@ -1423,7 +1423,7 @@ func TestGH840(t *testing.T) {
 	}`)
 
 	// Parse, serialize, slice and dice JWKs!
-	privkey, err := jwk.ParseKey(untrustedJWK)
+	privkey, err := jwk.ParseKey[jwk.Key](untrustedJWK)
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 	pubkey, err := jwk.PublicKeyOf(privkey)
@@ -1554,7 +1554,7 @@ func TestUnpaddedSignatureR(t *testing.T) {
 			rawKey, err := jwxtest.GenerateEcdsaKey(jwa.P256)
 			require.NoError(t, err, `jwxtest.GenerateEcdsaJwk should succeed`)
 
-			key, err := jwk.Import(rawKey)
+			key, err := jwk.Import[jwk.Key](rawKey)
 			require.NoError(t, err, `jwk.Import should succeed`)
 
 			pubkey, _ := key.PublicKey()
@@ -1605,7 +1605,7 @@ func TestUnpaddedSignatureR(t *testing.T) {
 	// This is the private key used to sign the payload
 	keySrc := `{"crv":"P-256","d":"MqGwMl-dlJFrMnu7rFyslPV8EdsVC7I4V19N-ADVqaU","kty":"EC","x":"Anf1p2lRrcXgZKpVRRC1xLxPiw_45PbOlygfbxvD8Es","y":"d0HiZq-aurVVLLtK-xqXPpzpWloZJNwKNve7akBDuvg"}`
 
-	privKey, err := jwk.ParseKey([]byte(keySrc))
+	privKey, err := jwk.ParseKey[jwk.Key]([]byte(keySrc))
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 	pubKey, err := jwk.PublicKeyOf(privKey)

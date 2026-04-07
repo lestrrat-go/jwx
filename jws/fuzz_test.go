@@ -26,7 +26,7 @@ func FuzzSignAndVerify(f *testing.F) {
 	f.Add([]byte(``))
 	f.Add([]byte(`The true sign of intelligence is not knowledge but imagination.`))
 
-	key, err := jwk.Import([]byte(`abracadabra-secret-key-1234567890`))
+	key, err := jwk.Import[jwk.Key]([]byte(`abracadabra-secret-key-1234567890`))
 	if err != nil {
 		f.Fatal(err)
 	}

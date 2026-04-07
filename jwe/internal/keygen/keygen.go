@@ -99,7 +99,7 @@ func X25519(alg string, enc string, keysize int, pubkey *ecdh.PublicKey, apu, ap
 // HeaderPopulate populates the header with the required EC-DSA public key
 // information ('epk' key)
 func (k ByteWithECPublicKey) Populate(h Setter) error {
-	key, err := jwk.Import(k.PublicKey)
+	key, err := jwk.Import[jwk.Key](k.PublicKey)
 	if err != nil {
 		return fmt.Errorf(`failed to create JWK: %w`, err)
 	}

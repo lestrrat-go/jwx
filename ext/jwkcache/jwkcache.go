@@ -256,12 +256,12 @@ func (cs *cachedSet) Clone() (jwk.Set, error) {
 	return set.Clone()
 }
 
-func (cs *cachedSet) Get(name string, dst any) error {
+func (cs *cachedSet) Field(name string) (any, bool) {
 	set, err := cs.cached()
 	if err != nil {
-		return err
+		return nil, false
 	}
-	return set.Get(name, dst)
+	return set.Field(name)
 }
 
 func (cs *cachedSet) Key(idx int) (jwk.Key, bool) {

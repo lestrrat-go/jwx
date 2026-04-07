@@ -28,7 +28,7 @@ func TestFieldNameFilter(t *testing.T) {
 			"e": "value_e"
 		}`
 
-		rawKey, err := jwk.ParseKey([]byte(src))
+		rawKey, err := jwk.ParseKey[jwk.Key]([]byte(src))
 		require.NoError(t, err, "jwk.ParseKey should succeed")
 
 		// Filter should return a key with only fields kty, a, b, c
@@ -74,7 +74,7 @@ func TestFieldNameFilter(t *testing.T) {
 			"e": "value_e"
 		}`
 
-		rawKey, err := jwk.ParseKey([]byte(src))
+		rawKey, err := jwk.ParseKey[jwk.Key]([]byte(src))
 		require.NoError(t, err, "jwk.ParseKey should succeed")
 
 		// Reject should return a key with only fields kty, d, e
@@ -110,7 +110,7 @@ func TestFieldNameFilter(t *testing.T) {
 		// we'll just verify Filter and Reject don't panic with a simple key
 		const src = `{ "kty": "oct", "k": "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ" }`
 
-		rawKey, err := jwk.ParseKey([]byte(src))
+		rawKey, err := jwk.ParseKey[jwk.Key]([]byte(src))
 		require.NoError(t, err, "jwk.ParseKey should succeed")
 
 		fn := jwk.NewFieldNameFilter("a", "b", "c")
@@ -134,7 +134,7 @@ func TestFieldNameFilter(t *testing.T) {
 			"c": "value_c"
 		}`
 
-		rawKey, err := jwk.ParseKey([]byte(src))
+		rawKey, err := jwk.ParseKey[jwk.Key]([]byte(src))
 		require.NoError(t, err, "jwk.ParseKey should succeed")
 
 		// Filter with empty FieldNameFilter should result in a key with only kty
@@ -166,7 +166,7 @@ func TestFieldNameFilter(t *testing.T) {
 			"d": "value_d"
 		}`
 
-		rawKey, err := jwk.ParseKey([]byte(src))
+		rawKey, err := jwk.ParseKey[jwk.Key]([]byte(src))
 		require.NoError(t, err, "jwk.ParseKey should succeed")
 
 		// Should not deadlock or have race conditions
@@ -202,7 +202,7 @@ func TestStandardFieldsFilter(t *testing.T) {
 			"custom2": "value2"
 		}`
 
-		rawKey, err := jwk.ParseKey([]byte(src))
+		rawKey, err := jwk.ParseKey[jwk.Key]([]byte(src))
 		require.NoError(t, err, "jwk.ParseKey should succeed")
 		require.NotNil(t, rawKey, "key should not be nil")
 

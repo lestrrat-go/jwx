@@ -16,7 +16,7 @@ func Example_jwk_filter_basic_fields() {
 		return
 	}
 
-	key, err := jwk.Import(rsaPrivateKey)
+	key, err := jwk.Import[jwk.Key](rsaPrivateKey)
 	if err != nil {
 		fmt.Printf("failed to import RSA key: %s\n", err)
 		return

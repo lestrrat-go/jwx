@@ -81,7 +81,7 @@ const (
 func validateKeyBeforeUse(key any) error {
 	jwkKey, ok := key.(jwk.Key)
 	if !ok {
-		converted, err := jwk.Import(key)
+		converted, err := jwk.Import[jwk.Key](key)
 		if err != nil {
 			return fmt.Errorf(`could not convert key of type %T to jwk.Key for validation: %w`, key, err)
 		}
@@ -556,7 +556,7 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 				}
 			}
 		}
-		imported, err := jwk.Import(key)
+		imported, err := jwk.Import[jwk.Key](key)
 		if err != nil {
 			return nil, fmt.Errorf(`unknown key type %T`, key)
 		}

@@ -26,7 +26,7 @@ func init() {
 		panic(err)
 	}
 
-	jwxRSAKey, err = jwk.Import(rsaKey)
+	jwxRSAKey, err = jwk.Import[jwk.Key](rsaKey)
 	if err != nil {
 		panic(err)
 	}
@@ -37,7 +37,7 @@ func init() {
 		panic(err)
 	}
 
-	jwxHMACKey, err = jwk.Import(hmacKeyBytes)
+	jwxHMACKey, err = jwk.Import[jwk.Key](hmacKeyBytes)
 	if err != nil {
 		panic(err)
 	}

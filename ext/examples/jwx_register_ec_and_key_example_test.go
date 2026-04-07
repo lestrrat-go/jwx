@@ -43,16 +43,23 @@ func init() {
 }
 
 func convertShangMiSm2(key *sm2.PrivateKey) (jwk.Key, error) {
-	return jwk.Import(key.PrivateKey)
+	return jwk.Import[jwk.Key](key.PrivateKey)
 }
 
-func convertJWKToShangMiSm2(key jwk.Key, _ any) (any, error) {
+func convertJWKToShangMiSm2(key jwk.Key, hint any) (any, error) {
+	// If the caller specifically wants *ecdsa.PrivateKey (e.g. JWS signing),
+	// let the default ECDSA exporter handle it so the embedded ecdsa key is returned.
+	switch hint.(type) {
+	case *ecdsa.PrivateKey, *ecdsa.PublicKey:
+		return nil, fmt.Errorf(`SM2 exporter: caller wants %T, deferring to default exporter: %w`, hint, jwk.ContinueError())
+	}
+
 	ecdsaKey, ok := key.(jwk.ECDSAPrivateKey)
 	if !ok {
 		return nil, fmt.Errorf(`invalid key type %T: %w`, key, jwk.ContinueError())
 	}
 	if v, ok := ecdsaKey.Crv(); !ok || v != SM2 {
-		return nil, fmt.Errorf(`cannote convert curve of type %s to ShangMi key: %w`, v, jwk.ContinueError())
+		return nil, fmt.Errorf(`cannot convert curve of type %s to ShangMi key: %w`, v, jwk.ContinueError())
 	}
 
 	var ret sm2.PrivateKey
@@ -83,7 +90,7 @@ func Example_shang_mi_sm2() {
 	shangmi2pk, _ := sm2.GenerateKey(rand.Reader)
 
 	// Create a jwk.Key from ShangMi SM2 private key
-	shangmi2JWK, err := jwk.Import(shangmi2pk)
+	shangmi2JWK, err := jwk.Import[jwk.Key](shangmi2pk)
 	if err != nil {
 		fmt.Printf("failed to create jwk.Key from raw ShangMi private key: %s\n", err)
 		return
@@ -135,7 +142,7 @@ func Example_shang_mi_sm2() {
 			fmt.Println(err)
 			return
 		}
-		eckjwk, err := jwk.Import(ecprivkey)
+		eckjwk, err := jwk.Import[jwk.Key](ecprivkey)
 		if err != nil {
 			fmt.Printf("failed to create jwk.Key from raw ShangMi public key: %s\n", err)
 			return

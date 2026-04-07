@@ -20,7 +20,7 @@ func Example_jwt_serialize_jws() {
 	}
 
 	rawKey := []byte(`abracadabra`)
-	jwkKey, err := jwk.Import(rawKey)
+	jwkKey, err := jwk.Import[jwk.Key](rawKey)
 	if err != nil {
 		fmt.Printf("failed to create symmetric key: %s\n", err)
 		return

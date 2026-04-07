@@ -26,7 +26,7 @@ func Example_jwt_parse_with_key_set() {
 			return
 		}
 		// This is the key we will use to sign
-		realKey, err := jwk.Import(privKey)
+		realKey, err := jwk.Import[jwk.Key](privKey)
 		if err != nil {
 			fmt.Printf("failed to create JWK: %s\n", err)
 			return
@@ -35,7 +35,7 @@ func Example_jwt_parse_with_key_set() {
 		realKey.Set(jwk.AlgorithmKey, jwa.RS256())
 
 		// For demonstration purposes, we also create a bogus key
-		bogusKey, err := jwk.Import([]byte("bogus"))
+		bogusKey, err := jwk.Import[jwk.Key]([]byte("bogus"))
 		if err != nil {
 			fmt.Printf("failed to create bogus JWK: %s\n", err)
 			return

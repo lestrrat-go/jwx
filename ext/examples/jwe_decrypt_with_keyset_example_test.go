@@ -26,12 +26,12 @@ func Example_jwe_verify_with_jwk_set() {
 	// Create a JWK Set
 	set := jwk.NewSet()
 	// Add some bogus keys
-	k1, _ := jwk.Import([]byte("abracadabra"))
+	k1, _ := jwk.Import[jwk.Key]([]byte("abracadabra"))
 	set.AddKey(k1)
-	k2, _ := jwk.Import([]byte("opensesame"))
+	k2, _ := jwk.Import[jwk.Key]([]byte("opensesame"))
 	set.AddKey(k2)
 	// Add the real thing
-	k3, _ := jwk.Import(privkey)
+	k3, _ := jwk.Import[jwk.Key](privkey)
 	k3.Set(jwk.AlgorithmKey, jwa.RSA_OAEP())
 	set.AddKey(k3)
 

@@ -27,13 +27,13 @@ func Example_jwt_serialize_jwe_jws() {
 		return
 	}
 
-	enckey, err := jwk.Import(privkey.PublicKey)
+	enckey, err := jwk.Import[jwk.Key](privkey.PublicKey)
 	if err != nil {
 		fmt.Printf("failed to create symmetric key: %s\n", err)
 		return
 	}
 
-	signkey, err := jwk.Import([]byte(`abracadabra`))
+	signkey, err := jwk.Import[jwk.Key]([]byte(`abracadabra`))
 	if err != nil {
 		fmt.Printf("failed to create symmetric key: %s\n", err)
 		return

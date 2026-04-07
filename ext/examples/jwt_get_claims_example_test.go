@@ -71,7 +71,7 @@ func Example_jwt_get_claims() {
 	// which returns an interface that can't be instantiated like the
 	// `time.Time` value for `claim2`.
 	jwt.RegisterCustomField(`claim3`, jwt.CustomDecodeFunc(func(data []byte) (any, error) {
-		return jwk.ParseKey(data)
+		return jwk.ParseKey[jwk.Key](data)
 	}))
 
 	tok = jwt.New()
