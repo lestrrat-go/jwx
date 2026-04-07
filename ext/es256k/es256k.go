@@ -9,10 +9,10 @@ package es256k
 import (
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	dsigsecp256k1 "github.com/lestrrat-go/dsig-secp256k1"
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
-	"github.com/lestrrat-go/jwx/v3/jws"
-	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	ourecdsa "github.com/lestrrat-go/jwx/v4/jwk/ecdsa"
+	"github.com/lestrrat-go/jwx/v4/jws"
+	"github.com/lestrrat-go/jwx/v4/jws/jwsbb"
 )
 
 // ES256K returns the ES256K signature algorithm identifier.

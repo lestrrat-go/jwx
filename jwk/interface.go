@@ -4,7 +4,7 @@ import (
 	"iter"
 	"sync"
 
-	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
 )
 
 // AsymmetricKey describes a Key that represents a key in an asymmetric key pair,

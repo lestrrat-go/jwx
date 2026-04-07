@@ -10,7 +10,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/urfave/cli/v2"
 )
 

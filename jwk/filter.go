@@ -1,7 +1,7 @@
 package jwk
 
 import (
-	"github.com/lestrrat-go/jwx/v3/transform"
+	"github.com/lestrrat-go/jwx/v4/transform"
 )
 
 // KeyFilter is an interface that allows users to filter JWK key fields.

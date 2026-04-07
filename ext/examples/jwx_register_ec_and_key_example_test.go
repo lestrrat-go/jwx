@@ -9,10 +9,10 @@ import (
 	"math/big"
 
 	"github.com/emmansun/gmsm/sm2"
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwk"
-	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
-	"github.com/lestrrat-go/jwx/v3/jws"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwk"
+	ourecdsa "github.com/lestrrat-go/jwx/v4/jwk/ecdsa"
+	"github.com/lestrrat-go/jwx/v4/jws"
 )
 
 // Setup. This is something that you probably should do in your adapter

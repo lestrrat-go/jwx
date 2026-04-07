@@ -3,7 +3,7 @@ package types_test
 import (
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
+	"github.com/lestrrat-go/jwx/v4/jwt/internal/types"
 	"github.com/stretchr/testify/require"
 )
 

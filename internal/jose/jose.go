@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
 )
 
 var executablePath string

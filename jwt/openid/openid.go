@@ -8,8 +8,8 @@
 package openid
 
 import (
-	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/jwt"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 var registry = json.NewRegistry()

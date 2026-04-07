@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"encoding/json"
-	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwk_usage() {

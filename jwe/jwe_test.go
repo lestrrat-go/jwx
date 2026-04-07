@@ -18,12 +18,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
 
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwe"
-	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwe"
+	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/stretchr/testify/require"
 )
 

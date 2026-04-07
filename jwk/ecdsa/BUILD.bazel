@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "ecdsa",
     srcs = ["ecdsa.go"],
-    importpath = "github.com/lestrrat-go/jwx/v3/jwk/ecdsa",
+    importpath = "github.com/lestrrat-go/jwx/v4/jwk/ecdsa",
     visibility = ["//visibility:public"],
     deps = ["//jwa"],
 )

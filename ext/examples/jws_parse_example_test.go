@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/lestrrat-go/jwx/v3/jws"
+	"github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_parse() {

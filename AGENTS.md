@@ -6,7 +6,7 @@ If you are writing code that *uses* jwx (not developing jwx itself):
 
 - **Examples**: See `examples/` directory for runnable usage patterns
 - **Documentation**: See `docs/` directory and package READMEs
-- **API Reference**: Use `go doc` or https://pkg.go.dev/github.com/lestrrat-go/jwx/v3
+- **API Reference**: Use `go doc` or https://pkg.go.dev/github.com/lestrrat-go/jwx/v4
 
 The rest of this document focuses on developing the jwx library itself.
 
@@ -18,13 +18,13 @@ This project requires **Go 1.25.0** or later. Check `go.mod` for the exact versi
 
 ## Module Path vs Physical Layout
 
-This repository uses a **flat layout** with vanity import paths. There is no physical `v3/` directory.
+This repository uses a **flat layout** with vanity import paths. There is no physical `v4/` directory.
 
 | Branch | Module Path | Physical Root |
 |--------|-------------|---------------|
-| `develop/v3` | `github.com/lestrrat-go/jwx/v3` | `/` (repo root) |
+| `develop/v4` | `github.com/lestrrat-go/jwx/v4` | `/` (repo root) |
 
-`import "github.com/lestrrat-go/jwx/v3/jwt"` → files are at `./jwt/`, not `./v3/jwt/`.
+`import "github.com/lestrrat-go/jwx/v4/jwt"` → files are at `./jwt/`, not `./v4/jwt/`.
 
 ## Code Generation
 
@@ -111,7 +111,7 @@ Benchmarks live in a separate repository: [github.com/jwx-go/benchmarks](https:/
 
 The `examples/go.mod` contains:
 ```go
-replace github.com/lestrrat-go/jwx/v3 v3.0.0 => ../
+replace github.com/lestrrat-go/jwx/v4 v4.0.0 => ../
 ```
 
 No `go.work` file is committed. When working across modules, either:

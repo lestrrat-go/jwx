@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/httprc/v3"
-	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/lestrrat-go/option/v3"
 )
 

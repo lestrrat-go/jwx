@@ -4,8 +4,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/stretchr/testify/require"
 )
 

@@ -1,4 +1,4 @@
-# github.com/lestrrat-go/jwx/v3 [![CI](https://github.com/lestrrat-go/jwx/actions/workflows/ci.yml/badge.svg)](https://github.com/lestrrat-go/jwx/actions/workflows/ci.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v3.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3) [![codecov.io](https://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=v3)](https://codecov.io/github/lestrrat-go/jwx?branch=v3)
+# github.com/lestrrat-go/jwx/v4 [![CI](https://github.com/lestrrat-go/jwx/actions/workflows/ci.yml/badge.svg)](https://github.com/lestrrat-go/jwx/actions/workflows/ci.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v4.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4) [![codecov.io](https://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=v3)](https://codecov.io/github/lestrrat-go/jwx?branch=v3)
 
 Go module implementing various JWx (JWA/JWE/JWK/JWS/JWT, otherwise known as JOSE) technologies.
 
@@ -38,11 +38,11 @@ import (
   "net/http"
   "time"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwe"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jws"
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwe"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jws"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example() {
@@ -149,7 +149,7 @@ source: [examples/jwx_readme_example_test.go](https://github.com/lestrrat-go/jwx
 
 # How-to Documentation
 
-* [API documentation](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3)
+* [API documentation](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4)
 * [How-to style documentation](./docs)
 * [Runnable Examples](./examples)
 
@@ -177,7 +177,7 @@ For example, a certain library looks like it had most of JWS, JWE, JWK covered, 
 
 Because I was writing the server side (and the client side for testing), I needed the *entire* JOSE toolset to properly implement my server, **and** they needed to be *flexible* enough to fulfill the entire spec that I was writing.
 
-So here's `github.com/lestrrat-go/jwx/v3`. This library is extensible, customizable, and hopefully well organized to the point that it is easy for you to slice and dice it.
+So here's `github.com/lestrrat-go/jwx/v4`. This library is extensible, customizable, and hopefully well organized to the point that it is easy for you to slice and dice it.
 
 ## Why would I use this library?
 

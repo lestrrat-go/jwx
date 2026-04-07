@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/internal/pool"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/pool"
+	"github.com/lestrrat-go/jwx/v4/internal/tokens"
 )
 
 const (

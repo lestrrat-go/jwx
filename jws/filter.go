@@ -1,7 +1,7 @@
 package jws
 
 import (
-	"github.com/lestrrat-go/jwx/v3/transform"
+	"github.com/lestrrat-go/jwx/v4/transform"
 )
 
 // HeaderFilter is an interface that allows users to filter JWS header fields.

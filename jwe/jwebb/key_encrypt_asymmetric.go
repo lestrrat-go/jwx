@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"hash"
 
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/v4/internal/tokens"
+	"github.com/lestrrat-go/jwx/v4/jwe/internal/keygen"
 )
 
 // KeyEncryptRSA15 encrypts the CEK using RSA PKCS#1 v1.5

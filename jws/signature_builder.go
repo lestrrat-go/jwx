@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/internal/pool"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/pool"
+	"github.com/lestrrat-go/jwx/v4/internal/tokens"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwk"
+	"github.com/lestrrat-go/jwx/v4/jws/jwsbb"
 )
 
 var signatureBuilderPool = pool.New[*signatureBuilder](allocSignatureBuilder, freeSignatureBuilder)

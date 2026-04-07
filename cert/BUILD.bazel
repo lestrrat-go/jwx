@@ -6,7 +6,7 @@ go_library(
         "cert.go",
         "chain.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v3/cert",
+    importpath = "github.com/lestrrat-go/jwx/v4/cert",
     visibility = ["//visibility:public"],
     deps = [
     	"//internal/base64",

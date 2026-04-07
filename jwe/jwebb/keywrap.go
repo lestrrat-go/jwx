@@ -6,8 +6,8 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v3/internal/pool"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
+	"github.com/lestrrat-go/jwx/v4/internal/pool"
+	"github.com/lestrrat-go/jwx/v4/internal/tokens"
 )
 
 var keywrapDefaultIV = []byte{0xa6, 0xa6, 0xa6, 0xa6, 0xa6, 0xa6, 0xa6, 0xa6}

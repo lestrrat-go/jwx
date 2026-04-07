@@ -6,7 +6,7 @@ go_library(
         "filter.go",
         "map.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v3/transform",
+    importpath = "github.com/lestrrat-go/jwx/v4/transform",
     visibility = ["//visibility:public"],
     deps = [
         "@com_github_lestrrat_go_blackmagic//:blackmagic",

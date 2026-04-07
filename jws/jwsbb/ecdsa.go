@@ -9,7 +9,7 @@ import (
 	"math/big"
 
 	"github.com/lestrrat-go/dsig"
-	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
+	"github.com/lestrrat-go/jwx/v4/internal/ecutil"
 )
 
 // ecdsaHashToDsigAlgorithm maps ECDSA hash functions to dsig algorithm constants

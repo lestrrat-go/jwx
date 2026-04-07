@@ -1,6 +1,6 @@
 # Working with JWS
 
-In this document we describe how to work with JWS using [`github.com/lestrrat-go/jwx/v3/jws`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws)
+In this document we describe how to work with JWS using [`github.com/lestrrat-go/jwx/v4/jws`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jws)
 
 * [Parsing](#parsing)
   * [Parse a JWS message stored in memory](#parse-a-jws-message-stored-in-memory)
@@ -35,7 +35,7 @@ to sign or verify using a parsed `jws.Message`. To do this, you would need to us
 
 ## Parse a JWS message stored in memory
 
-You can parse a JWS message in memory stored as `[]byte` into a [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#Message) object. In this mode, there is no verification performed.
+You can parse a JWS message in memory stored as `[]byte` into a [`jws.Message`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jws#Message) object. In this mode, there is no verification performed.
 
 <!-- INCLUDE(examples/jws_parse_example_test.go) -->
 ```go
@@ -46,7 +46,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_parse() {
@@ -68,7 +68,7 @@ source: [examples/jws_parse_example_test.go](https://github.com/lestrrat-go/jwx/
 
 ## Parse a JWS message stored in a file
 
-To parse a JWS stored in a file, use [`jws.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#ParseFS). [`jws.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#ParseFS) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#Parse).
+To parse a JWS stored in a file, use [`jws.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jws#ParseFS). [`jws.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jws#ParseFS) accepts the same options as [`jws.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jws#Parse).
 
 <!-- INCLUDE(examples/jws_parsefs_example_test.go) -->
 ```go
@@ -80,7 +80,7 @@ import (
   "os"
   "path/filepath"
 
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_ParseFS() {
@@ -125,10 +125,10 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jws"
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jws"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jws_use_jws_header() {
@@ -191,9 +191,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_sign() {
@@ -220,7 +220,7 @@ source: [examples/jws_sign_example_test.go](https://github.com/lestrrat-go/jwx/b
 
 Generally the only time you need to use a JSON serialization format is when you have to generate multiple signatures for a given payload using multiple signing algorithms and keys.
 
-When this need arises, use the [`jws.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#Sign) function with the `jws.WithJSON()` option and multiple `jws.WithKey()` options:
+When this need arises, use the [`jws.Sign()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jws#Sign) function with the `jws.WithJSON()` option and multiple `jws.WithKey()` options:
 
 <!-- INCLUDE(examples/jws_sign_json_example_test.go) -->
 ```go
@@ -229,9 +229,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_sign_json() {
@@ -276,9 +276,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_sign_detached_payload() {
@@ -327,9 +327,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_sign_with_headers() {
@@ -377,9 +377,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_verify_with_key() {
@@ -423,10 +423,10 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/internal/jwxtest"
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/internal/jwxtest"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_verify_with_jwk_set() {
@@ -542,9 +542,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_verify_detached_payload() {
@@ -616,7 +616,7 @@ payload, _ := jws.VerifyAuto(buf, jws.WithHTTPClient(client))
 
 Sometimes we do not offer a particular algorithm out of the box, but you have an implementation for it.
 
-In such scenarios, you can use the [`jws.RegisterSigner()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#RegisterSigner) and [`jws.RegisterVerifier()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#RegisterVerifier) functions to
+In such scenarios, you can use the [`jws.RegisterSigner()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jws#RegisterSigner) and [`jws.RegisterVerifier()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jws#RegisterVerifier) functions to
 generate your own verifier instance. 
 
 <!-- INCLUDE(examples/jws_custom_signer_verifier_example_test.go) -->
@@ -628,8 +628,8 @@ import (
   "fmt"
 
   "github.com/cloudflare/circl/sign/ed25519"
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_custom_signer_verifier() {
@@ -733,8 +733,8 @@ import (
   "fmt"
 
   "github.com/cloudflare/circl/sign/ed448"
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jws"
 
   // Importing jwx-circl-ed448 for its side effects registers Ed448
   // with jwa, jws, and jwk, making it fully available for JWS operations.
@@ -790,8 +790,8 @@ import (
   "encoding/base64"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_sign_with_custom_base64() {
@@ -845,7 +845,7 @@ The filtering operates on parsed JWS messages and their headers, allowing you to
 
 ## Basic header filtering
 
-You can filter JWS headers using the [`jws.HeaderNameFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jws#HeaderNameFilter):
+You can filter JWS headers using the [`jws.HeaderNameFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jws#HeaderNameFilter):
 
 <!-- INCLUDE(examples/jws_filter_basic_example_test.go) -->
 ```go
@@ -854,9 +854,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_header_filter_basic() {
@@ -934,9 +934,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_header_filter_advanced() {

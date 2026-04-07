@@ -4,7 +4,7 @@ import (
 	"crypto"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/concatkdf"
+	"github.com/lestrrat-go/jwx/v4/jwe/internal/concatkdf"
 )
 
 func BenchmarkRead(b *testing.B) {

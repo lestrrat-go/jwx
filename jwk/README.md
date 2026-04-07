@@ -1,4 +1,4 @@
-# JWK [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v3/jwk.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk)
+# JWK [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v4/jwk.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk)
 
 Package jwk implements JWK as described in [RFC7517](https://tools.ietf.org/html/rfc7517).
 If you are looking to use JWT wit JWKs, look no further than [github.com/lestrrat-go/jwx](../jwt).
@@ -23,7 +23,7 @@ If you are looking to use JWT wit JWKs, look no further than [github.com/lestrra
 
 # Documentation
 
-Please read the [API reference](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk), or
+Please read the [API reference](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk), or
 the how-to style documentation on how to use JWK can be found in the [docs directory](../docs/04-jwk.md).
 
 # Auto-Refresh a key during a long-running process
@@ -38,7 +38,7 @@ import (
   "time"
 
   "github.com/lestrrat-go/httprc/v3"
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwk_cache() {
@@ -109,8 +109,8 @@ import (
   "fmt"
   "log"
 
-  "github.com/lestrrat-go/jwx/v3/internal/json"
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/internal/json"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwk_usage() {

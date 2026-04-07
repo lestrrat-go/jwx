@@ -3,7 +3,7 @@ package cert_test
 import (
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v3/cert"
+	"github.com/lestrrat-go/jwx/v4/cert"
 	"github.com/stretchr/testify/require"
 )
 

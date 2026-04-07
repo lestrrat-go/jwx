@@ -15,8 +15,8 @@ import (
 	"reflect"
 	"slices"
 
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/base64"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/option/v3"
 )
 

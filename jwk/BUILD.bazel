@@ -29,7 +29,7 @@ go_library(
         "whitelist.go",
         "x509.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v3/jwk",
+    importpath = "github.com/lestrrat-go/jwx/v4/jwk",
     visibility = ["//visibility:public"],
     deps = [
         "//cert",

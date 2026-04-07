@@ -1,7 +1,7 @@
 package jws
 
 import (
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
+	"github.com/lestrrat-go/jwx/v4/internal/base64"
 )
 
 // Base64Encoder is an interface that can be used when encoding JWS message

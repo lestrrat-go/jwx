@@ -5,9 +5,9 @@ import (
 	"errors"
 	"io"
 
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/internal/jwxio"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
+	"github.com/lestrrat-go/jwx/v4/internal/base64"
+	"github.com/lestrrat-go/jwx/v4/internal/jwxio"
+	"github.com/lestrrat-go/jwx/v4/internal/tokens"
 )
 
 // SignBuffer combines the base64-encoded header and payload into a single byte slice

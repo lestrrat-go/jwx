@@ -5,7 +5,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rsa"
 
-	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 // Because the keys defined in github.com/lestrrat-go/jwx/jwk may also implement

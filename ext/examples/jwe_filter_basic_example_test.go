@@ -3,8 +3,8 @@ package examples_test
 import (
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwe"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwe"
 )
 
 // Example_jwe_filter_basic demonstrates basic JWE HeaderFilter functionality
