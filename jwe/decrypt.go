@@ -1,248 +1,200 @@
 package jwe
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v4/internal/tokens"
+	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/v4/jwe/jwebb"
+	"github.com/lestrrat-go/jwx/v4/jwk"
 )
 
-// decrypter is responsible for taking various components to decrypt a message.
-// its operation is not concurrency safe. You must provide locking yourself
-//
-//nolint:govet
-type decrypter struct {
-	aad         []byte
-	apu         []byte
-	apv         []byte
-	cek         *[]byte
-	computedAad []byte
-	ek          []byte // ML-KEM encapsulated key (KEM ciphertext)
-	iv          []byte
-	keyiv       []byte
-	keysalt     []byte
-	keytag      []byte
-	tag         []byte
-	privkey     any
-	pubkey      any
-	ctalg       jwa.ContentEncryptionAlgorithm
-	keyalg      jwa.KeyEncryptionAlgorithm
-	cipher      content_crypt.Cipher
-	keycount    int
+// decryptCEKContext holds algorithm-agnostic context needed during CEK decryption.
+type decryptCEKContext struct {
+	maxPBES2Count int
+	minPBES2Count int
+	ctalg         jwa.ContentEncryptionAlgorithm
+	contentCipher content_crypt.Cipher
 }
 
-// newDecrypter Creates a new Decrypter instance. You must supply the
-// rest of parameters via their respective setter methods before
-// calling Decrypt().
-//
-// privkey must be a private key in its "raw" format (i.e. something like
-// *rsa.PrivateKey, instead of jwk.Key)
-//
-// You should consider this object immutable once you assign values to it.
-func newDecrypter(keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryptionAlgorithm, privkey any) *decrypter {
-	return &decrypter{
-		ctalg:   ctalg,
-		keyalg:  keyalg,
-		privkey: privkey,
-	}
-}
-
-func (d *decrypter) AgreementPartyUInfo(apu []byte) *decrypter {
-	d.apu = apu
-	return d
-}
-
-func (d *decrypter) AgreementPartyVInfo(apv []byte) *decrypter {
-	d.apv = apv
-	return d
-}
-
-func (d *decrypter) AuthenticatedData(aad []byte) *decrypter {
-	d.aad = aad
-	return d
-}
-
-func (d *decrypter) ComputedAuthenticatedData(aad []byte) *decrypter {
-	d.computedAad = aad
-	return d
-}
-
-func (d *decrypter) ContentEncryptionAlgorithm(ctalg jwa.ContentEncryptionAlgorithm) *decrypter {
-	d.ctalg = ctalg
-	return d
-}
-
-func (d *decrypter) InitializationVector(iv []byte) *decrypter {
-	d.iv = iv
-	return d
-}
-
-func (d *decrypter) KeyCount(keycount int) *decrypter {
-	d.keycount = keycount
-	return d
-}
-
-func (d *decrypter) KeyInitializationVector(keyiv []byte) *decrypter {
-	d.keyiv = keyiv
-	return d
-}
-
-func (d *decrypter) KeySalt(keysalt []byte) *decrypter {
-	d.keysalt = keysalt
-	return d
-}
-
-func (d *decrypter) KeyTag(keytag []byte) *decrypter {
-	d.keytag = keytag
-	return d
-}
-
-// PublicKey sets the public key to be used in decoding EC based encryptions.
-// The key must be in its "raw" format (i.e. *ecdsa.PublicKey, instead of jwk.Key)
-func (d *decrypter) PublicKey(pubkey any) *decrypter {
-	d.pubkey = pubkey
-	return d
-}
-
-// EncapsulatedKey sets the ML-KEM ciphertext (from the "ek" header field)
-func (d *decrypter) EncapsulatedKey(ek []byte) *decrypter {
-	d.ek = ek
-	return d
-}
-
-func (d *decrypter) Tag(tag []byte) *decrypter {
-	d.tag = tag
-	return d
-}
-
-func (d *decrypter) CEK(ptr *[]byte) *decrypter {
-	d.cek = ptr
-	return d
-}
-
-func (d *decrypter) ContentCipher() (content_crypt.Cipher, error) {
-	if d.cipher == nil {
-		cipher, err := jwebb.CreateContentCipher(d.ctalg.String())
-		if err != nil {
-			return nil, err
-		}
-		d.cipher = cipher
-	}
-
-	return d.cipher, nil
-}
-
-func (d *decrypter) Decrypt(recipient Recipient, ciphertext []byte, msg *Message) (plaintext []byte, err error) {
-	cek, keyerr := d.DecryptKey(recipient, msg)
-	if keyerr != nil {
-		err = fmt.Errorf(`failed to decrypt key: %w`, keyerr)
-		return
-	}
-
-	cipher, ciphererr := d.ContentCipher()
-	if ciphererr != nil {
-		err = fmt.Errorf(`failed to fetch content crypt cipher: %w`, ciphererr)
-		return
-	}
-
-	computedAad := d.computedAad
-	if d.aad != nil {
-		computedAad = append(append(computedAad, tokens.Period), d.aad...)
-	}
-
-	plaintext, err = cipher.Decrypt(cek, d.iv, ciphertext, d.tag, computedAad)
-	if err != nil {
-		err = fmt.Errorf(`failed to decrypt payload: %w`, err)
-		return
-	}
-
-	if d.cek != nil {
-		*d.cek = cek
-	}
-	return plaintext, nil
-}
-
-func (d *decrypter) DecryptKey(recipient Recipient, msg *Message) (cek []byte, err error) {
-	keyalgStr := d.keyalg.String()
-	ctalgStr := d.ctalg.String()
-
+// decryptCEK dispatches key decryption to the appropriate per-family
+// function based on the algorithm. Each function extracts its own
+// algorithm-specific parameters from the merged headers.
+func decryptCEK(alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, headers Headers, ctx *decryptCEKContext) ([]byte, error) {
+	algStr := alg.String()
 	recipientKey := recipient.EncryptedKey()
-	if kd, ok := d.privkey.(KeyDecrypter); ok {
-		return kd.DecryptKey(d.keyalg, recipientKey, recipient, msg)
+
+	if kd, ok := key.(KeyDecrypter); ok {
+		return kd.DecryptKey(alg, recipientKey, recipient, nil)
 	}
 
-	if jwebb.IsDirect(keyalgStr) {
-		cek, ok := d.privkey.([]byte)
-		if !ok {
-			return nil, fmt.Errorf("decrypt key: []byte is required as the key for %s (got %T)", keyalgStr, d.privkey)
+	switch {
+	case jwebb.IsDirect(algStr):
+		return decryptKeyDirect(recipientKey, algStr, key)
+	case jwebb.IsPBES2(algStr):
+		return decryptKeyPBES2(recipientKey, algStr, key, headers, ctx.maxPBES2Count, ctx.minPBES2Count)
+	case jwebb.IsAESGCMKW(algStr):
+		return decryptKeyAESGCMKW(recipientKey, algStr, key, headers)
+	case jwebb.IsECDHES(algStr):
+		return decryptKeyECDHES(recipientKey, algStr, ctx.ctalg, key, headers)
+	case jwebb.IsMLKEM(algStr):
+		return decryptKeyMLKEM(recipientKey, algStr, ctx.ctalg, key, headers)
+	case jwebb.IsRSA15(algStr):
+		return decryptKeyRSA15(recipientKey, algStr, key, ctx.contentCipher)
+	case jwebb.IsRSAOAEP(algStr):
+		return decryptKeyRSAOAEP(recipientKey, algStr, key)
+	case jwebb.IsAESKW(algStr):
+		return decryptKeyAESKW(recipientKey, algStr, key)
+	default:
+		return nil, fmt.Errorf(`jwe: decrypt key: unsupported algorithm (%s)`, algStr)
+	}
+}
+
+func decryptKeyDirect(recipientKey []byte, alg string, key any) ([]byte, error) {
+	cek, err := requireByteKey(key, alg)
+	if err != nil {
+		return nil, err
+	}
+	return jwebb.KeyDecryptDirect(recipientKey, recipientKey, alg, cek)
+}
+
+func decryptKeyPBES2(recipientKey []byte, alg string, key any, headers Headers, maxCount, minCount int) ([]byte, error) {
+	password, err := requireByteKey(key, alg)
+	if err != nil {
+		return nil, err
+	}
+
+	saltV, ok := headers.Field(SaltKey)
+	if !ok {
+		return nil, fmt.Errorf(`jwe: decrypt key: missing %q field for PBES2`, SaltKey)
+	}
+	saltB64, ok := saltV.(string)
+	if !ok {
+		return nil, fmt.Errorf(`jwe: decrypt key: %q field is not a string`, SaltKey)
+	}
+
+	countV, ok := headers.Field(CountKey)
+	if !ok {
+		return nil, fmt.Errorf(`jwe: decrypt key: missing %q field for PBES2`, CountKey)
+	}
+	countFlt, ok := countV.(float64)
+	if !ok {
+		return nil, fmt.Errorf(`jwe: decrypt key: %q field is not a number`, CountKey)
+	}
+
+	if countFlt > float64(maxCount) || countFlt < float64(minCount) {
+		return nil, fmt.Errorf("jwe: decrypt key: invalid 'p2c' value")
+	}
+
+	saltBytes, err := base64.DecodeString(saltB64)
+	if err != nil {
+		return nil, fmt.Errorf(`jwe: decrypt key: failed to decode 'p2s': %w`, err)
+	}
+
+	salt := []byte(alg)
+	salt = append(salt, byte(0))
+	salt = append(salt, saltBytes...)
+	return jwebb.KeyDecryptPBES2(recipientKey, recipientKey, alg, password, salt, int(countFlt))
+}
+
+func decryptKeyAESGCMKW(recipientKey []byte, alg string, key any, headers Headers) ([]byte, error) {
+	sharedkey, err := requireByteKey(key, alg)
+	if err != nil {
+		return nil, err
+	}
+
+	var keyiv, keytag []byte
+	if ivV, ok := headers.Field(InitializationVectorKey); ok {
+		if ivB64, ok := ivV.(string); ok {
+			keyiv, err = base64.DecodeString(ivB64)
+			if err != nil {
+				return nil, fmt.Errorf(`jwe: decrypt key: failed to decode 'iv': %w`, err)
+			}
 		}
-		return jwebb.KeyDecryptDirect(recipientKey, recipientKey, keyalgStr, cek)
 	}
-
-	if jwebb.IsPBES2(keyalgStr) {
-		password, ok := d.privkey.([]byte)
-		if !ok {
-			return nil, fmt.Errorf("decrypt key: []byte is required as the password for %s (got %T)", keyalgStr, d.privkey)
+	if tagV, ok := headers.Field(TagKey); ok {
+		if tagB64, ok := tagV.(string); ok {
+			keytag, err = base64.DecodeString(tagB64)
+			if err != nil {
+				return nil, fmt.Errorf(`jwe: decrypt key: failed to decode 'tag': %w`, err)
+			}
 		}
-		salt := []byte(keyalgStr)
-		salt = append(salt, byte(0))
-		salt = append(salt, d.keysalt...)
-		return jwebb.KeyDecryptPBES2(recipientKey, recipientKey, keyalgStr, password, salt, d.keycount)
+	}
+	return jwebb.KeyDecryptAESGCMKW(recipientKey, recipientKey, alg, sharedkey, keyiv, keytag)
+}
+
+func decryptKeyECDHES(recipientKey []byte, alg string, ctalg jwa.ContentEncryptionAlgorithm, key any, headers Headers) ([]byte, error) {
+	ctalgStr := ctalg.String()
+	derivedAlg, keysize, keywrap, err := jwebb.KeyEncryptionECDHESKeySize(alg, ctalgStr)
+	if err != nil {
+		return nil, fmt.Errorf(`jwe: decrypt key: failed to determine ECDH-ES key size: %w`, err)
 	}
 
-	if jwebb.IsAESGCMKW(keyalgStr) {
-		sharedkey, ok := d.privkey.([]byte)
-		if !ok {
-			return nil, fmt.Errorf("decrypt key: []byte is required as the key for %s (got %T)", keyalgStr, d.privkey)
-		}
-		return jwebb.KeyDecryptAESGCMKW(recipientKey, recipientKey, keyalgStr, sharedkey, d.keyiv, d.keytag)
+	// Extract ephemeral public key from headers
+	epkV, ok := headers.Field(EphemeralPublicKeyKey)
+	if !ok {
+		return nil, fmt.Errorf(`jwe: decrypt key: missing 'epk' field for ECDH-ES`)
 	}
 
-	if jwebb.IsECDHES(keyalgStr) {
-		alg, keysize, keywrap, err := jwebb.KeyEncryptionECDHESKeySize(keyalgStr, ctalgStr)
+	var pubkey any
+	switch epk := epkV.(type) {
+	case jwk.ECDSAPublicKey:
+		pubkey, err = jwk.Export[*ecdsa.PublicKey](epk)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to determine ECDH-ES key size: %w`, err)
+			return nil, fmt.Errorf(`jwe: decrypt key: failed to export ECDSA public key: %w`, err)
 		}
-
-		if !keywrap {
-			return jwebb.KeyDecryptECDHES(recipientKey, cek, alg, d.apu, d.apv, d.privkey, d.pubkey, keysize)
-		}
-		return jwebb.KeyDecryptECDHESKeyWrap(recipientKey, recipientKey, keyalgStr, d.apu, d.apv, d.privkey, d.pubkey, keysize)
-	}
-
-	if jwebb.IsMLKEM(keyalgStr) {
-		if d.ek == nil {
-			return nil, fmt.Errorf(`decrypt key: ML-KEM algorithm %s requires "ek" header parameter`, keyalgStr)
-		}
-
-		if jwebb.IsMLKEMDirect(keyalgStr) {
-			return jwebb.KeyDecryptMLKEM(keyalgStr, ctalgStr, d.privkey, d.ek)
-		}
-		return jwebb.KeyDecryptMLKEMKeyWrap(recipientKey, keyalgStr, ctalgStr, d.privkey, d.ek)
-	}
-
-	if jwebb.IsRSA15(keyalgStr) {
-		cipher, err := d.ContentCipher()
+	case jwk.OKPPublicKey:
+		pubkey, err = jwk.Export[any](epk)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to fetch content crypt cipher: %w`, err)
+			return nil, fmt.Errorf(`jwe: decrypt key: failed to export OKP public key: %w`, err)
 		}
-		keysize := cipher.KeySize() / 2
-		return jwebb.KeyDecryptRSA15(recipientKey, recipientKey, d.privkey, keysize)
+	default:
+		return nil, fmt.Errorf("jwe: decrypt key: unexpected 'epk' type %T for %s", epk, alg)
 	}
 
-	if jwebb.IsRSAOAEP(keyalgStr) {
-		return jwebb.KeyDecryptRSAOAEP(recipientKey, recipientKey, keyalgStr, d.privkey)
+	var apu, apv []byte
+	if v, ok := headers.AgreementPartyUInfo(); ok && len(v) > 0 {
+		apu = v
+	}
+	if v, ok := headers.AgreementPartyVInfo(); ok && len(v) > 0 {
+		apv = v
 	}
 
-	if jwebb.IsAESKW(keyalgStr) {
-		sharedkey, ok := d.privkey.([]byte)
-		if !ok {
-			return nil, fmt.Errorf("[]byte is required as the key to decrypt %s", keyalgStr)
-		}
-		return jwebb.KeyDecryptAESKW(recipientKey, recipientKey, keyalgStr, sharedkey)
+	if !keywrap {
+		return jwebb.KeyDecryptECDHES(recipientKey, nil, derivedAlg, apu, apv, key, pubkey, keysize)
+	}
+	return jwebb.KeyDecryptECDHESKeyWrap(recipientKey, recipientKey, alg, apu, apv, key, pubkey, keysize)
+}
+
+func decryptKeyMLKEM(recipientKey []byte, alg string, ctalg jwa.ContentEncryptionAlgorithm, key any, headers Headers) ([]byte, error) {
+	ctalgStr := ctalg.String()
+
+	ek, ok := headers.EncapsulatedKey()
+	if !ok {
+		return nil, fmt.Errorf(`jwe: decrypt key: missing 'ek' field for ML-KEM`)
 	}
 
-	return nil, fmt.Errorf(`unsupported algorithm for key decryption (%s)`, keyalgStr)
+	if jwebb.IsMLKEMDirect(alg) {
+		return jwebb.KeyDecryptMLKEM(alg, ctalgStr, key, ek)
+	}
+	return jwebb.KeyDecryptMLKEMKeyWrap(recipientKey, alg, ctalgStr, key, ek)
+}
+
+func decryptKeyRSA15(recipientKey []byte, _ string, key any, contentCipher content_crypt.Cipher) ([]byte, error) {
+	keysize := contentCipher.KeySize() / 2
+	return jwebb.KeyDecryptRSA15(recipientKey, recipientKey, key, keysize)
+}
+
+func decryptKeyRSAOAEP(recipientKey []byte, alg string, key any) ([]byte, error) {
+	return jwebb.KeyDecryptRSAOAEP(recipientKey, recipientKey, alg, key)
+}
+
+func decryptKeyAESKW(recipientKey []byte, alg string, key any) ([]byte, error) {
+	sharedkey, err := requireByteKey(key, alg)
+	if err != nil {
+		return nil, err
+	}
+	return jwebb.KeyDecryptAESKW(recipientKey, recipientKey, alg, sharedkey)
 }

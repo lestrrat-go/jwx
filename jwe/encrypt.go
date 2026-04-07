@@ -21,180 +21,167 @@ type encrypter struct {
 	apv    []byte
 	ctalg  jwa.ContentEncryptionAlgorithm
 	keyalg jwa.KeyEncryptionAlgorithm
-	pubkey any
-	rawKey any
+	key    any
 }
 
 // newEncrypter creates a new Encrypter instance with all required parameters.
-// The content cipher is built internally during construction.
 //
-// pubkey must be a public key in its "raw" format (i.e. something like
-// *rsa.PublicKey, instead of jwk.Key)
+// key must be a resolved key in its "raw" format (e.g. *rsa.PublicKey,
+// []byte, etc.) — not a jwk.Key. The caller is responsible for resolving
+// jwk.Key to raw form before calling this function.
 //
 // You should consider this object immutable once created.
-func newEncrypter(keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryptionAlgorithm, pubkey any, rawKey any, apu, apv []byte) *encrypter {
+func newEncrypter(keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryptionAlgorithm, key any, apu, apv []byte) *encrypter {
 	return &encrypter{
 		apu:    apu,
 		apv:    apv,
 		ctalg:  ctalg,
 		keyalg: keyalg,
-		pubkey: pubkey,
-		rawKey: rawKey,
+		key:    key,
 	}
 }
 
+func requireByteKey(key any, alg string) ([]byte, error) {
+	b, ok := key.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("jwe: []byte is required as key for %s (got %T)", alg, key)
+	}
+	return b, nil
+}
+
 func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
-	keyalgStr := e.keyalg.String()
+	algStr := e.keyalg.String()
 	ctalgStr := e.ctalg.String()
 
-	if ke, ok := e.pubkey.(KeyEncrypter); ok {
-		encrypted, err := ke.EncryptKey(cek)
-		if err != nil {
-			return nil, err
-		}
-		return keygen.ByteKey(encrypted), nil
+	switch {
+	case jwebb.IsDirect(algStr):
+		return e.encryptKeyDirect(cek, algStr)
+	case jwebb.IsPBES2(algStr):
+		return e.encryptKeyPBES2(cek, algStr)
+	case jwebb.IsAESGCMKW(algStr):
+		return e.encryptKeyAESGCMKW(cek, algStr)
+	case jwebb.IsECDHES(algStr):
+		return e.encryptKeyECDHES(cek, algStr, ctalgStr)
+	case jwebb.IsMLKEM(algStr):
+		return e.encryptKeyMLKEM(cek, algStr, ctalgStr)
+	case jwebb.IsRSA15(algStr):
+		return e.encryptKeyRSA(cek, algStr, jwebb.KeyEncryptRSA15)
+	case jwebb.IsRSAOAEP(algStr):
+		return e.encryptKeyRSA(cek, algStr, jwebb.KeyEncryptRSAOAEP)
+	case jwebb.IsAESKW(algStr):
+		return e.encryptKeyAESKW(cek, algStr)
+	default:
+		return nil, fmt.Errorf(`jwe: encrypt key: unsupported algorithm (%s)`, algStr)
+	}
+}
+
+func (e *encrypter) encryptKeyDirect(cek []byte, alg string) (keygen.ByteSource, error) {
+	sharedkey, err := requireByteKey(e.key, alg)
+	if err != nil {
+		return nil, err
+	}
+	return jwebb.KeyEncryptDirect(cek, alg, sharedkey)
+}
+
+func (e *encrypter) encryptKeyPBES2(cek []byte, alg string) (keygen.ByteSource, error) {
+	password, err := requireByteKey(e.key, alg)
+	if err != nil {
+		return nil, err
+	}
+	return jwebb.KeyEncryptPBES2(cek, alg, password)
+}
+
+func (e *encrypter) encryptKeyAESGCMKW(cek []byte, alg string) (keygen.ByteSource, error) {
+	sharedkey, err := requireByteKey(e.key, alg)
+	if err != nil {
+		return nil, err
+	}
+	return jwebb.KeyEncryptAESGCMKW(cek, alg, sharedkey)
+}
+
+func (e *encrypter) encryptKeyAESKW(cek []byte, alg string) (keygen.ByteSource, error) {
+	sharedkey, err := requireByteKey(e.key, alg)
+	if err != nil {
+		return nil, err
+	}
+	return jwebb.KeyEncryptAESKW(cek, alg, sharedkey)
+}
+
+func (e *encrypter) encryptKeyECDHES(cek []byte, alg, ctalg string) (keygen.ByteSource, error) {
+	_, keysize, keywrap, err := jwebb.KeyEncryptionECDHESKeySize(alg, ctalg)
+	if err != nil {
+		return nil, fmt.Errorf(`jwe: encrypt key: failed to determine ECDH-ES key size: %w`, err)
 	}
 
-	if jwebb.IsDirect(keyalgStr) {
-		sharedkey, ok := e.rawKey.([]byte)
-		if !ok {
-			return nil, fmt.Errorf("encrypt key: []byte is required as the key for %s (got %T)", keyalgStr, e.rawKey)
-		}
-		return jwebb.KeyEncryptDirect(cek, keyalgStr, sharedkey)
+	keyToUse := e.key
+
+	// Normalize key to public key pointer form
+	switch key := keyToUse.(type) {
+	case *ecdsa.PublicKey:
+		// already correct
+	case ecdsa.PublicKey:
+		keyToUse = &key
+	case *ecdsa.PrivateKey:
+		keyToUse = &key.PublicKey
+	case ecdsa.PrivateKey:
+		keyToUse = &key.PublicKey
+	case *ecdh.PublicKey:
+		// already correct
+	case ecdh.PublicKey:
+		keyToUse = &key
+	case ecdh.PrivateKey:
+		keyToUse = key.PublicKey()
+	case *ecdh.PrivateKey:
+		keyToUse = key.PublicKey()
 	}
 
-	if jwebb.IsPBES2(keyalgStr) {
-		password, ok := e.rawKey.([]byte)
-		if !ok {
-			return nil, fmt.Errorf("encrypt key: []byte is required as the password for %s (got %T)", keyalgStr, e.rawKey)
-		}
-		return jwebb.KeyEncryptPBES2(cek, keyalgStr, password)
-	}
-
-	if jwebb.IsAESGCMKW(keyalgStr) {
-		sharedkey, ok := e.rawKey.([]byte)
-		if !ok {
-			return nil, fmt.Errorf("encrypt key: []byte is required as the key for %s (got %T)", keyalgStr, e.rawKey)
-		}
-		return jwebb.KeyEncryptAESGCMKW(cek, keyalgStr, sharedkey)
-	}
-
-	if jwebb.IsECDHES(keyalgStr) {
-		_, keysize, keywrap, err := jwebb.KeyEncryptionECDHESKeySize(keyalgStr, ctalgStr)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to determine ECDH-ES key size: %w`, err)
-		}
-
-		// Use rawKey for ECDH-ES operations - it should contain the actual key material
-		keyToUse := e.rawKey
-		if keyToUse == nil {
-			keyToUse = e.pubkey
-		}
-
-		switch key := keyToUse.(type) {
-		case *ecdsa.PublicKey:
-			// no op
-		case ecdsa.PublicKey:
-			keyToUse = &key
-		case *ecdsa.PrivateKey:
-			keyToUse = &key.PublicKey
-		case ecdsa.PrivateKey:
-			keyToUse = &key.PublicKey
-		case *ecdh.PublicKey:
-			// no op
-		case ecdh.PublicKey:
-			keyToUse = &key
-		case ecdh.PrivateKey:
-			keyToUse = key.PublicKey()
-		case *ecdh.PrivateKey:
-			keyToUse = key.PublicKey()
-		}
-
-		// Determine key type and call appropriate function
-		switch key := keyToUse.(type) {
-		case *ecdh.PublicKey:
-			if key.Curve() == ecdh.X25519() {
-				if !keywrap {
-					return jwebb.KeyEncryptECDHESX25519(cek, keyalgStr, e.apu, e.apv, key, keysize, ctalgStr)
-				}
-				return jwebb.KeyEncryptECDHESKeyWrapX25519(cek, keyalgStr, e.apu, e.apv, key, keysize, ctalgStr)
-			}
-
-			ecdsaKeyV, err := keyconv.ECDHToECDSA(key)
-			if err != nil {
-				return nil, fmt.Errorf(`encrypt: failed to convert ECDH public key to ECDSA: %w`, err)
-			}
-			keyToUse = ecdsaKeyV
-		}
-
-		switch key := keyToUse.(type) {
-		case *ecdsa.PublicKey:
+	// Handle ecdh.PublicKey (X25519 or convert to ECDSA)
+	switch key := keyToUse.(type) {
+	case *ecdh.PublicKey:
+		if key.Curve() == ecdh.X25519() {
 			if !keywrap {
-				return jwebb.KeyEncryptECDHESECDSA(cek, keyalgStr, e.apu, e.apv, key, keysize, ctalgStr)
+				return jwebb.KeyEncryptECDHESX25519(cek, alg, e.apu, e.apv, key, keysize, ctalg)
 			}
-			return jwebb.KeyEncryptECDHESKeyWrapECDSA(cek, keyalgStr, e.apu, e.apv, key, keysize, ctalgStr)
-		default:
-			return nil, fmt.Errorf(`encrypt: unsupported key type for ECDH-ES: %T`, keyToUse)
-		}
-	}
-
-	if jwebb.IsMLKEM(keyalgStr) {
-		keyToUse := e.rawKey
-		if keyToUse == nil {
-			keyToUse = e.pubkey
+			return jwebb.KeyEncryptECDHESKeyWrapX25519(cek, alg, e.apu, e.apv, key, keysize, ctalg)
 		}
 
-		if jwebb.IsMLKEMDirect(keyalgStr) {
-			return jwebb.KeyEncryptMLKEM(cek, keyalgStr, ctalgStr, keyToUse)
-		}
-		return jwebb.KeyEncryptMLKEMKeyWrap(cek, keyalgStr, ctalgStr, keyToUse)
-	}
-
-	if jwebb.IsRSA15(keyalgStr) {
-		keyToUse := e.rawKey
-		if keyToUse == nil {
-			keyToUse = e.pubkey
-		}
-
-		// Handle rsa.PublicKey by value - convert to pointer
-		if pk, ok := keyToUse.(rsa.PublicKey); ok {
-			keyToUse = &pk
-		}
-
-		pubkey, err := keyconv.RSAPublicKey(keyToUse)
+		ecdsaKeyV, err := keyconv.ECDHToECDSA(key)
 		if err != nil {
-			return nil, fmt.Errorf(`encrypt: failed to convert to RSA public key: %w`, err)
+			return nil, fmt.Errorf(`jwe: encrypt key: failed to convert ECDH public key to ECDSA: %w`, err)
 		}
-
-		return jwebb.KeyEncryptRSA15(cek, keyalgStr, pubkey)
+		keyToUse = ecdsaKeyV
 	}
 
-	if jwebb.IsRSAOAEP(keyalgStr) {
-		keyToUse := e.rawKey
-		if keyToUse == nil {
-			keyToUse = e.pubkey
+	switch key := keyToUse.(type) {
+	case *ecdsa.PublicKey:
+		if !keywrap {
+			return jwebb.KeyEncryptECDHESECDSA(cek, alg, e.apu, e.apv, key, keysize, ctalg)
 		}
+		return jwebb.KeyEncryptECDHESKeyWrapECDSA(cek, alg, e.apu, e.apv, key, keysize, ctalg)
+	default:
+		return nil, fmt.Errorf(`jwe: encrypt key: unsupported key type for ECDH-ES: %T`, keyToUse)
+	}
+}
 
-		// Handle rsa.PublicKey by value - convert to pointer
-		if pk, ok := keyToUse.(rsa.PublicKey); ok {
-			keyToUse = &pk
-		}
+func (e *encrypter) encryptKeyMLKEM(cek []byte, alg, ctalg string) (keygen.ByteSource, error) {
+	if jwebb.IsMLKEMDirect(alg) {
+		return jwebb.KeyEncryptMLKEM(cek, alg, ctalg, e.key)
+	}
+	return jwebb.KeyEncryptMLKEMKeyWrap(cek, alg, ctalg, e.key)
+}
 
-		pubkey, err := keyconv.RSAPublicKey(keyToUse)
-		if err != nil {
-			return nil, fmt.Errorf(`encrypt: failed to convert to RSA public key: %w`, err)
-		}
+func (e *encrypter) encryptKeyRSA(cek []byte, alg string, encryptFn func([]byte, string, *rsa.PublicKey) (keygen.ByteSource, error)) (keygen.ByteSource, error) {
+	keyToUse := e.key
 
-		return jwebb.KeyEncryptRSAOAEP(cek, keyalgStr, pubkey)
+	// Handle rsa.PublicKey by value - convert to pointer
+	if pk, ok := keyToUse.(rsa.PublicKey); ok {
+		keyToUse = &pk
 	}
 
-	if jwebb.IsAESKW(keyalgStr) {
-		sharedkey, ok := e.rawKey.([]byte)
-		if !ok {
-			return nil, fmt.Errorf("[]byte is required as the key to encrypt %s", keyalgStr)
-		}
-		return jwebb.KeyEncryptAESKW(cek, keyalgStr, sharedkey)
+	pubkey, err := keyconv.RSAPublicKey(keyToUse)
+	if err != nil {
+		return nil, fmt.Errorf(`jwe: encrypt key: failed to convert to RSA public key: %w`, err)
 	}
 
-	return nil, fmt.Errorf(`unsupported algorithm for key encryption (%s)`, keyalgStr)
+	return encryptFn(cek, alg, pubkey)
 }
