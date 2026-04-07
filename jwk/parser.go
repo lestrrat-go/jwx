@@ -85,6 +85,15 @@ func defaultParseKey(probe *KeyProbe, unmarshaler KeyUnmarshaler, data []byte) (
 		} else {
 			key = newOKPPublicKey()
 		}
+	case jwa.AKP():
+		// AKP keys use "priv" instead of "d" for private key material
+		privV, _ := probe.Field("Priv")
+		priv, _ := privV.(json.RawMessage)
+		if priv != nil {
+			key = newAKPPrivateKey()
+		} else {
+			key = newAKPPublicKey()
+		}
 	default:
 		return nil, fmt.Errorf(`invalid key type from JSON (%s)`, kty)
 	}

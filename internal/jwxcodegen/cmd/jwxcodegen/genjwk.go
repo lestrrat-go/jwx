@@ -619,8 +619,7 @@ func generateKeyUnmarshalJSON(o *codegen.Output, kt *KeyType, obj *codegen.Objec
 			o.L("h.%s = &alg", f.Name(false))
 		} else if f.Type() == "[]byte" {
 			name := f.Name(true)
-			switch f.Name(false) {
-			case "n", "e", "d", "p", "dp", "dq", "x", "y", "q", "qi", "octets":
+			if !f.Bool(`is_std`) {
 				name = kt.Prefix + f.Name(true)
 			}
 			o.L("case %sKey:", name)
@@ -629,7 +628,7 @@ func generateKeyUnmarshalJSON(o *codegen.Output, kt *KeyType, obj *codegen.Objec
 			o.L("}")
 		} else {
 			name := f.Name(true)
-			if f.Name(false) == "crv" {
+			if !f.Bool(`is_std`) {
 				name = kt.Prefix + f.Name(true)
 			}
 			o.L("case %sKey:", name)

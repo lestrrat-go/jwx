@@ -15,6 +15,22 @@ func TestKeyType(t *testing.T) {
 	t.Parallel()
 	t.Run(`Lookup the object`, func(t *testing.T) {
 		t.Parallel()
+		v, ok := jwa.LookupKeyType("AKP")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.AKP(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string AKP`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyType
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("AKP")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.AKP(), dst, `unmarshaled value should be equal to constant`)
+	})
+	t.Run(`stringification for AKP`, func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "AKP", jwa.AKP().String(), `stringified value matches`)
+	})
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
 		v, ok := jwa.LookupKeyType("EC")
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.EC(), v, `Lookup value should be equal to constant`)
@@ -85,6 +101,7 @@ func TestKeyType(t *testing.T) {
 	t.Run(`check list of elements`, func(t *testing.T) {
 		t.Parallel()
 		var expected = map[jwa.KeyType]struct{}{
+			jwa.AKP():      {},
 			jwa.EC():       {},
 			jwa.OKP():      {},
 			jwa.OctetSeq(): {},
