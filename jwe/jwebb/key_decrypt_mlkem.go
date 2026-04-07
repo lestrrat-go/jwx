@@ -5,8 +5,8 @@ import (
 	"crypto/mlkem"
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/mlkemkdf"
+	"github.com/lestrrat-go/jwx/v4/internal/tokens"
+	"github.com/lestrrat-go/jwx/v4/jwe/internal/mlkemkdf"
 )
 
 // KeyDecryptMLKEM performs ML-KEM decapsulation for direct key agreement.

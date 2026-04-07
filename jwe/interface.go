@@ -1,8 +1,8 @@
 package jwe
 
 import (
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwe/internal/keygen"
 )
 
 // KeyEncrypter is an interface for object that can encrypt a

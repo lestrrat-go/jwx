@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/lestrrat-go/jwx/v3/internal/ecutil"
+	"github.com/lestrrat-go/jwx/v4/internal/ecutil"
 )
 
 // # Converting between Raw Keys and `jwk.Key`s

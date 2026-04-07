@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/jwt"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/jwt"
 	"github.com/stretchr/testify/require"
 )
 
@@ -61,7 +61,7 @@ func TestTimeValidation(t *testing.T) {
 	t.Run(jwt.IssuerKey, func(t *testing.T) {
 		t.Parallel()
 		t1, err := jwt.NewBuilder().
-			Issuer("github.com/lestrrat-go/jwx/v3").
+			Issuer("github.com/lestrrat-go/jwx/v4").
 			Build()
 		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
@@ -156,7 +156,7 @@ func TestTimeValidation(t *testing.T) {
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
 		t.Parallel()
 		t1, err := jwt.NewBuilder().
-			Claim(jwt.SubjectKey, "github.com/lestrrat-go/jwx/v3").
+			Claim(jwt.SubjectKey, "github.com/lestrrat-go/jwx/v4").
 			Build()
 		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
@@ -454,7 +454,7 @@ func TestGH010(t *testing.T) {
 	t.Run(jwt.IssuerKey, func(t *testing.T) {
 		t.Parallel()
 		t1, err := jwt.NewBuilder().
-			Issuer("github.com/lestrrat-go/jwx/v3").
+			Issuer("github.com/lestrrat-go/jwx/v4").
 			Build()
 		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 
@@ -556,7 +556,7 @@ func TestGH010(t *testing.T) {
 	t.Run(jwt.SubjectKey, func(t *testing.T) {
 		t.Parallel()
 		t1, err := jwt.NewBuilder().
-			Claim(jwt.SubjectKey, "github.com/lestrrat-go/jwx/v3").
+			Claim(jwt.SubjectKey, "github.com/lestrrat-go/jwx/v4").
 			Build()
 		require.NoError(t, err, `jwt.NewBuilder should succeed`)
 

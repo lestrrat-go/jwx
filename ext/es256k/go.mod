@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1
 	github.com/lestrrat-go/dsig-secp256k1 v1.0.0
-	github.com/lestrrat-go/jwx/v3 v3.0.0
+	github.com/lestrrat-go/jwx/v4 v4.0.0
 	github.com/stretchr/testify v1.11.1
 )
 
@@ -19,4 +19,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/lestrrat-go/jwx/v3 => ../../
+replace github.com/lestrrat-go/jwx/v4 => ../../

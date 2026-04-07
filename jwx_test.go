@@ -10,15 +10,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v3"
-	"github.com/lestrrat-go/jwx/v3/internal/jose"
-	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwe"
-	"github.com/lestrrat-go/jwx/v3/jwk"
-	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
-	"github.com/lestrrat-go/jwx/v3/jws"
+	"github.com/lestrrat-go/jwx/v4"
+	"github.com/lestrrat-go/jwx/v4/internal/jose"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwe"
+	"github.com/lestrrat-go/jwx/v4/jwk"
+	ourecdsa "github.com/lestrrat-go/jwx/v4/jwk/ecdsa"
+	"github.com/lestrrat-go/jwx/v4/jws"
 	"github.com/stretchr/testify/require"
 )
 
@@ -362,7 +362,7 @@ func TestGuessFormat(t *testing.T) {
 		{
 			Name:     "JWT",
 			Expected: jwx.JWT,
-			Source:   []byte(`{"aud":"github.com/lestrrat-go/jwx/v3"}`),
+			Source:   []byte(`{"aud":"github.com/lestrrat-go/jwx/v4"}`),
 		},
 	}
 

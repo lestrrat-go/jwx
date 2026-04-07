@@ -1,6 +1,6 @@
 # Working with JWT
 
-In this document we describe how to work with JWT using `github.com/lestrrat-go/jwx/v3/jwt`
+In this document we describe how to work with JWT using `github.com/lestrrat-go/jwx/v4/jwt`
 
 - [Terminology](#terminology)
   - [Verification](#verification)
@@ -73,7 +73,7 @@ as well as validating the contents of the JWT object after it has been decoded.
 
 ## Parse a JWT
 
-To parse a JWT in either raw JSON or JWS compact serialization format, use [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Parse)
+To parse a JWT in either raw JSON or JWS compact serialization format, use [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwt#Parse)
 
 <!-- INCLUDE(examples/jwt_parse_example_test.go) -->
 ```go
@@ -82,8 +82,8 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_parse() {
@@ -104,7 +104,7 @@ In order to perform validation, please use `Validate()`.
 
 ## Parse a JWT from a filesystem
 
-To parse a JWT stored in a file, use [`jwt.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#ParseFS). [`jwt.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#ParseFS) accepts the same options as [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Parse).
+To parse a JWT stored in a file, use [`jwt.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwt#ParseFS). [`jwt.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwt#ParseFS) accepts the same options as [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwt#Parse).
 
 <!-- INCLUDE(examples/jwt_parsefs_example_test.go) -->
 ```go
@@ -115,7 +115,7 @@ import (
   "os"
   "path/filepath"
 
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_ParseFS() {
@@ -146,7 +146,7 @@ source: [examples/jwt_parsefs_example_test.go](https://github.com/lestrrat-go/jw
 
 ## Parse a JWT from a \*http.Request
 
-To parse a JWT stored within a \*http.Request object, use [`jwt.ParseRequest()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#ParseRequest). It by default looks for JWTs stored in the "Authorization" header, but can be configured to look under other headers and within the form fields.
+To parse a JWT stored within a \*http.Request object, use [`jwt.ParseRequest()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwt#ParseRequest). It by default looks for JWTs stored in the "Authorization" header, but can be configured to look under other headers and within the form fields.
 
 <!-- INCLUDE(examples/jwt_parse_request_example_test.go) -->
 ```go
@@ -157,7 +157,7 @@ import (
   "net/http"
   "net/url"
 
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_parse_request_authorization() {
@@ -242,7 +242,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_construct() {
@@ -287,7 +287,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_builder() {
@@ -316,7 +316,7 @@ source: [examples/jwt_builder_example_test.go](https://github.com/lestrrat-go/jw
 
 ## Parse and Verify a JWT (with single key)
 
-To parse a JWT _and_ verify that its content matches the signature as described in the JWS message, you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Parse) function.
+To parse a JWT _and_ verify that its content matches the signature as described in the JWS message, you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwt#Parse) function.
 
 <!-- INCLUDE(examples/jwt_parse_with_key_example_test.go) -->
 ```go
@@ -325,9 +325,9 @@ package examples_test
 import (
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_parse_with_key() {
@@ -351,11 +351,11 @@ func Example_jwt_parse_with_key() {
 source: [examples/jwt_parse_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwt_parse_with_key_example_test.go)
 <!-- END INCLUDE -->
 
-In the above example, `key` may either be the raw key (i.e. "crypto/ecdsa".PublicKey, "crypto/ecdsa".PrivateKey) or an instance of [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Key) (i.e. [`jwk.ECDSAPrivateKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ECDSAPrivateKey), [`jwk.ECDSAPublicKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ECDSAPublicKey)). The key type must match the algorithm being used.
+In the above example, `key` may either be the raw key (i.e. "crypto/ecdsa".PublicKey, "crypto/ecdsa".PrivateKey) or an instance of [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Key) (i.e. [`jwk.ECDSAPrivateKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#ECDSAPrivateKey), [`jwk.ECDSAPublicKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#ECDSAPublicKey)). The key type must match the algorithm being used.
 
 ## Parse and Verify a JWT (with a key set, matching `kid`)
 
-To parse a JWT _and_ verify that its content matches the signature as described in the JWS message using a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Set), you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Parse) function.
+To parse a JWT _and_ verify that its content matches the signature as described in the JWS message using a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Set), you need to add some options when calling the [`jwt.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwt#Parse) function.
 
 The following code does a lot of preparation to mimic a real JWKS signed JWT, but the code required in the user side is located towards the end.
 
@@ -370,9 +370,9 @@ import (
   "crypto/rsa"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_parse_with_key_set() {
@@ -513,9 +513,9 @@ import (
   "encoding/base64"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jws/jwsbb"
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jws/jwsbb"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_parse_with_key_provider_use_token() {
@@ -674,10 +674,10 @@ import (
   "net/http"
   "net/http/httptest"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jws"
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jws"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_parse_with_jku() {
@@ -753,7 +753,7 @@ in the documentation for `jws.VerifyAuto()`
 
 # JWT Validation
 
-To validate if the JWT's contents, such as if the JWT contains the proper "iss","sub","aut", etc, or the expiration information and such, use the [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Validate) function.
+To validate if the JWT's contents, such as if the JWT contains the proper "iss","sub","aut", etc, or the expiration information and such, use the [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwt#Validate) function.
 
 <!-- INCLUDE(examples/jwt_validate_example_test.go) -->
 ```go
@@ -764,7 +764,7 @@ import (
   "fmt"
   "time"
 
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_validate() {
@@ -814,7 +814,7 @@ source: [examples/jwt_validate_example_test.go](https://github.com/lestrrat-go/j
 
 ## Validate for specific claim values
 
-By default we only check for the time-related components of a token, such as "iat", "exp", and "nbf". To tell [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Validate) to check for other fields, use one of the various [`jwt.ValidateOption`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#ValidateOption) values, such as `jwt.WithClaimValue()`, `jwt.WithRequiredClaim()`, etc.
+By default we only check for the time-related components of a token, such as "iat", "exp", and "nbf". To tell [`jwt.Validate()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwt#Validate) to check for other fields, use one of the various [`jwt.ValidateOption`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwt#ValidateOption) values, such as `jwt.WithClaimValue()`, `jwt.WithRequiredClaim()`, etc.
 
 <!-- INCLUDE(examples/jwt_validate_issuer_example_test.go) -->
 ```go
@@ -824,7 +824,7 @@ import (
   "fmt"
   "time"
 
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_validate_issuer() {
@@ -864,7 +864,7 @@ import (
   "fmt"
   "time"
 
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_validate_validator() {
@@ -915,7 +915,7 @@ import (
   "fmt"
   "time"
 
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_validate_detect_error_type() {
@@ -1028,7 +1028,7 @@ err := jwt.Validate(tok, jwt.WithValidator(validator))
 
 JWT tokens can contain many different types of claims - standard claims like `iss`, `aud`, `exp`, as well as custom application-specific claims. Sometimes you need to create modified versions of tokens that only contain certain claims, either for security purposes, API compatibility, or to create specialized token types.
 
-While [`jwt.Token`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#Token) object itself does not offer ways to directly extract out these claims, you can use the [`jwt.TokenFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#TokenFilter) interface provides methods to filter JWT claims in a flexible way.
+While [`jwt.Token`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwt#Token) object itself does not offer ways to directly extract out these claims, you can use the [`jwt.TokenFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwt#TokenFilter) interface provides methods to filter JWT claims in a flexible way.
 
 ## Filtering Using Standard Claim Names
 
@@ -1044,7 +1044,7 @@ import (
   "fmt"
   "time"
 
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_filter_basic_claims() {
@@ -1102,7 +1102,7 @@ For OpenID tokens, you could also use `openid.StandardClaimsFilter()`.
 
 ## Advanced filtering scenarios
 
-If you want to control what gets filtered, you can create a [`jwt.TokenFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwt#TokenFilter) of your own. If all you want to do is filter by claim names, you can re-use the existing `jwt.ClaimNameFilter`. If you want you can also combine multiple filters to create sophisticated filtering logic.
+If you want to control what gets filtered, you can create a [`jwt.TokenFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwt#TokenFilter) of your own. If all you want to do is filter by claim names, you can re-use the existing `jwt.ClaimNameFilter`. If you want you can also combine multiple filters to create sophisticated filtering logic.
 
 <!-- INCLUDE(examples/jwt_filter_advanced_example_test.go) -->
 ```go
@@ -1112,7 +1112,7 @@ import (
   "fmt"
   "time"
 
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_filter_advanced_use_cases() {
@@ -1207,7 +1207,7 @@ import (
   "os"
   "time"
 
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_serialize_json() {
@@ -1242,9 +1242,9 @@ import (
   "fmt"
   "time"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_serialize_jws() {
@@ -1308,9 +1308,9 @@ import (
   "fmt"
   "time"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_serialize_jwe_jws() {
@@ -1389,7 +1389,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_flatten_Audience() {
@@ -1485,14 +1485,14 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jws"
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jws"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_plain_struct() {
   t1, err := jwt.NewBuilder().
-    Issuer("https://github.com/lestrrat-go/jwx/v3/examples").
+    Issuer("https://github.com/lestrrat-go/jwx/v4/examples").
     Subject("raw_struct").
     Claim("private", "foobar").
     Build()
@@ -1589,8 +1589,8 @@ import (
   "os"
   "time"
 
-  "github.com/lestrrat-go/jwx/v3/jwa"
-  "github.com/lestrrat-go/jwx/v3/jwt"
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_sign_with_custom_base64_encoder() {

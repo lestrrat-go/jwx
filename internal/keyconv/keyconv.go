@@ -11,7 +11,7 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/lestrrat-go/jwx/v3/jwk"
+	"github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 // KeyAs converts src to type T. src may be a jwk.Key or a raw crypto key.

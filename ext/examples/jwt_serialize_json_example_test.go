@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/lestrrat-go/jwx/v3/jwt"
+	"github.com/lestrrat-go/jwx/v4/jwt"
 )
 
 func Example_jwt_serialize_json() {

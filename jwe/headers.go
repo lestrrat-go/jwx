@@ -3,8 +3,8 @@ package jwe
 import (
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v3/internal/base64"
-	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/base64"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
 )
 
 type isZeroer interface {

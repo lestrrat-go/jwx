@@ -2,7 +2,7 @@
 
 # Package Map
 
-Module: `github.com/lestrrat-go/jwx/v3` — flat layout, no physical `v3/` directory.
+Module: `github.com/lestrrat-go/jwx/v4` — flat layout, no physical `v3/` directory.
 
 ## jwx (root)
 

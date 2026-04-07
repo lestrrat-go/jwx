@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v3/jwe/jwebb"
+	"github.com/lestrrat-go/jwx/v4/jwe/jwebb"
 	"github.com/stretchr/testify/require"
 )
 

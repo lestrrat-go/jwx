@@ -7,7 +7,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v3/internal/pool"
+	"github.com/lestrrat-go/jwx/v4/internal/pool"
 	"github.com/stretchr/testify/require"
 )
 

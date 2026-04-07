@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/lestrrat-go/httprc/v3 v3.0.5
-	github.com/lestrrat-go/jwx/v3 v3.0.0
+	github.com/lestrrat-go/jwx/v4 v4.0.0
 	github.com/lestrrat-go/option/v3 v3.0.0-alpha1
 	github.com/stretchr/testify v1.11.1
 )
@@ -17,5 +17,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/lestrrat-go/jwx/v3 => ../../
+replace github.com/lestrrat-go/jwx/v4 => ../../
 

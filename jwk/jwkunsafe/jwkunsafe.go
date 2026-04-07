@@ -18,9 +18,9 @@ package jwkunsafe
 import (
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwk"
-	"github.com/lestrrat-go/jwx/v3/jwk/internal/registry"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwk"
+	"github.com/lestrrat-go/jwx/v4/jwk/internal/registry"
 )
 
 // NewKey creates a new empty private (or symmetric) key for the given key type.

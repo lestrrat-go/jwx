@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"slices"
 
-	jwx "github.com/lestrrat-go/jwx/v3"
+	jwx "github.com/lestrrat-go/jwx/v4"
 	asmbase64 "github.com/segmentio/asm/base64"
 )
 

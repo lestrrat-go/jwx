@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/cloudflare/circl/sign/ed25519"
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jws"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_custom_signer_verifier() {

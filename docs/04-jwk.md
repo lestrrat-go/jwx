@@ -1,6 +1,6 @@
 # Working with JWK
 
-In this document we describe how to work with JWK using `github.com/lestrrat-go/jwx/v3/jwk`
+In this document we describe how to work with JWK using `github.com/lestrrat-go/jwx/v4/jwk`
 
 * [Terminology](#terminology)
   * [JWK / Key](#jwk--key)
@@ -37,8 +37,8 @@ Used to describe a JWK key, possibly of type RSA, ECDSA, OKP, or Symmetric.
 A "jwk" resource on the web can either contain a single JWK or an array of multiple JWKs.
 The latter is called a JWK Set.
 
-It is impossible to know what the resource contains beforehand, so functions like [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Parse)
-and [`jwk.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ParseFS) returns a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Set) by default.
+It is impossible to know what the resource contains beforehand, so functions like [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Parse)
+and [`jwk.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#ParseFS) returns a [`jwk.Set`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Set) by default.
 
 ## Raw Key
 
@@ -62,7 +62,7 @@ If given anything else, `jwk.Import` will return an error.
 
 ## Parse a set
 
-If you have a key set, or are unsure if the source is a set or a single key, you should use [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Parse)
+If you have a key set, or are unsure if the source is a set or a single key, you should use [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Parse)
 
 <!-- INCLUDE(examples/jwk_parse_jwks_example_test.go) -->
 ```go
@@ -73,7 +73,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwk_parse_jwks() {
@@ -109,7 +109,7 @@ source: [examples/jwk_parse_jwks_example_test.go](https://github.com/lestrrat-go
 
 ## Parse a key
 
-If you are sure that the source only contains a single key, you can use [`jwk.ParseKey()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ParseKey)
+If you are sure that the source only contains a single key, you can use [`jwk.ParseKey()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#ParseKey)
 
 <!-- INCLUDE(examples/jwk_parse_key_example_test.go) -->
 ```go
@@ -120,7 +120,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwk_parse_key() {
@@ -149,7 +149,7 @@ source: [examples/jwk_parse_key_example_test.go](https://github.com/lestrrat-go/
 
 ## Parse a key or a set in PEM format
 
-Sometimes keys come in ASN.1 DER PEM format.  To parse these files, use the [`jwk.WithPEM()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#WithPEM) option.
+Sometimes keys come in ASN.1 DER PEM format.  To parse these files, use the [`jwk.WithPEM()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#WithPEM) option.
 
 <!-- INCLUDE(examples/jwk_parse_with_pem_example_test.go) -->
 ```go
@@ -159,8 +159,8 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v3/internal/json"
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/internal/json"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwk_parse_with_pem() {
@@ -208,7 +208,7 @@ source: [examples/jwk_parse_with_pem_example_test.go](https://github.com/lestrra
 
 ## Parse a key from a file
 
-To parse keys stored in a file, [`jwk.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ParseFS) can be used. 
+To parse keys stored in a file, [`jwk.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#ParseFS) can be used. 
 
 <!-- INCLUDE(examples/jwk_parsefs_example_test.go) -->
 ```go
@@ -220,7 +220,7 @@ import (
   "os"
   "path/filepath"
 
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwk_ParseFS() {
@@ -265,7 +265,7 @@ func Example_jwk_ParseFS() {
 source: [examples/jwk_parsefs_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_parsefs_example_test.go)
 <!-- END INCLUDE -->
 
-`jwk.ParseFS()` accepts the same options as [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Parse), therefore you can read a PEM-encoded file via the following incantation:
+`jwk.ParseFS()` accepts the same options as [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Parse), therefore you can read a PEM-encoded file via the following incantation:
 
 <!-- INCLUDE(examples/jwk_parsefs_with_pem_example_test.go) -->
 ```go
@@ -277,7 +277,7 @@ import (
   "path/filepath"
 
   "encoding/json"
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwk_ParseFS_with_pem() {
@@ -357,7 +357,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 type Container struct {
@@ -414,11 +414,11 @@ source: [examples/jwk_struct_field_example_test.go](https://github.com/lestrrat-
 
 ## Using jwk.Import()
 
-Users can create a new key from scratch using [`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Import).
+Users can create a new key from scratch using [`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Import).
 
-[`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Import) requires the raw key as its argument.
+[`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Import) requires the raw key as its argument.
 There are other ways to creating keys from a raw key, but they require knowing its type in advance.
-Use [`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Import) when you have a key type which you do not know its underlying type in advance.
+Use [`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Import) when you have a key type which you do not know its underlying type in advance.
 
 It automatically creates the appropriate underlying key based on the given argument type.
 
@@ -443,7 +443,7 @@ import (
   "crypto/rsa"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwk_import() {
@@ -533,13 +533,13 @@ source: [examples/jwk_import_example_test.go](https://github.com/lestrrat-go/jwx
 
 ## Parse a key from a remote resource
 
-To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Fetch)
+To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Fetch)
 
-If you are going to be using this key repeatedly in a long running process, consider using [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Cache) or [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#CachedSet) described elsewhere in this document.
+If you are going to be using this key repeatedly in a long running process, consider using [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Cache) or [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#CachedSet) described elsewhere in this document.
 
 By default, `jwk.Fetch()` uses an HTTP client that blocks HTTPS-to-HTTP redirect downgrades and limits redirect chains to 5 hops. This prevents the most common SSRF vector where an attacker-controlled JWKS URL redirects to an internal HTTP service.
 
-When you supply your own client via `jwk.WithHTTPClient()` or `jwk.Configure(jwk.WithHTTPClient(...))`, the library uses it as-is — it does **not** automatically apply the default timeout or redirect policy. If you need to bring your own client (e.g. for custom TLS or proxy settings) while retaining the library's defaults, wrap it with [`jwk.WrapHTTPClientDefaults()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#WrapHTTPClientDefaults) before passing it:
+When you supply your own client via `jwk.WithHTTPClient()` or `jwk.Configure(jwk.WithHTTPClient(...))`, the library uses it as-is — it does **not** automatically apply the default timeout or redirect policy. If you need to bring your own client (e.g. for custom TLS or proxy settings) while retaining the library's defaults, wrap it with [`jwk.WrapHTTPClientDefaults()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#WrapHTTPClientDefaults) before passing it:
 
 ```go
 myClient := &http.Client{
@@ -562,7 +562,7 @@ import (
   "net/http/httptest"
   "os"
 
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwk_fetch() {
@@ -610,11 +610,11 @@ source: [examples/jwk_fetch_example_test.go](https://github.com/lestrrat-go/jwx/
 Sometimes you need to fetch a remote JWK, and use it multiple times in a long-running process.
 For example, you may act as an intermediary to some other service, and you may need to verify incoming JWT tokens against the tokens in said other service.
 
-Normally, you should be able to simply fetch the JWK using [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Fetch),
+Normally, you should be able to simply fetch the JWK using [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Fetch),
 but keys are usually routinely expired and rotated due to security reasons.
 In such cases you would need to refetch the JWK periodically, which is a pain.
 
-`github.com/lestrrat-go/jwx/v3/jwk` provides the [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Cache) and [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#CachedSet) to do this for you.
+`github.com/lestrrat-go/jwx/v4/jwk` provides the [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Cache) and [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#CachedSet) to do this for you.
 
 <!-- INCLUDE(examples/jwk_cache_example_test.go) -->
 ```go
@@ -626,7 +626,7 @@ import (
   "time"
 
   "github.com/lestrrat-go/httprc/v3"
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwk_cache() {
@@ -699,8 +699,8 @@ import (
 
   "github.com/lestrrat-go/httprc/v3"
   "github.com/lestrrat-go/httprc/v3/tracesink"
-  "github.com/lestrrat-go/jwx/v3/jwk"
-  "github.com/lestrrat-go/jwx/v3/jws"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jwk_cached_set() {
@@ -782,7 +782,7 @@ import (
   "os"
   "regexp"
 
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwk_whitelist() {
@@ -873,7 +873,7 @@ import (
   "crypto/rsa"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v3/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_jwk_key_specific_metehods() {
@@ -916,13 +916,13 @@ source: [examples/jwk_key_specific_methods_example_test.go](https://github.com/l
 
 ## Setting values to fields
 
-Using [`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Import) allows you to create a key whose fields have been properly populated, but sometimes there are other fields that you may want to populate in a key, such as`kid`, or other custom fields.
+Using [`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Import) allows you to create a key whose fields have been properly populated, but sometimes there are other fields that you may want to populate in a key, such as`kid`, or other custom fields.
 
-These fields can all be set using the [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Set) method.
+These fields can all be set using the [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Set) method.
 
-The [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Set) method takes the name of the key and a value to be associated with it. Some predefined keys have specific types (in which type checks are enforced), and others don't.
+The [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Set) method takes the name of the key and a value to be associated with it. Some predefined keys have specific types (in which type checks are enforced), and others don't.
 
-[`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Set) may not alter the Key Type (`kty`) field of a key.
+[`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Set) may not alter the Key Type (`kty`) field of a key.
 
 The `jwk` package defines field key names for predefined keys as constants, so you won't ever have to bang your head against the wall after finding out that you have a typo.
 
@@ -933,7 +933,7 @@ key.Set(`my-custom-field`, `unbelievable-value`)
 
 ## Converting a jwk.Key to a raw key
 
-As discussed in [Terminology](#terminology), this package calls the "original" keys (e.g. `rsa.PublicKey`, `ecdsa.PrivateKey`, etc.) "raw" keys. To obtain a raw key from a  [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Key) object, use the [`Raw()`](https://github.com/github.com/lestrrat-go/jwx/v3/jwk#Raw) method.
+As discussed in [Terminology](#terminology), this package calls the "original" keys (e.g. `rsa.PublicKey`, `ecdsa.PrivateKey`, etc.) "raw" keys. To obtain a raw key from a  [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Key) object, use the [`Raw()`](https://github.com/github.com/lestrrat-go/jwx/v4/jwk#Raw) method.
 
 ```go
 key, _ := jwk.ParseKey(src)
@@ -944,10 +944,10 @@ if err := key.Raw(&raw); err != nil {
 }
 ```
 
-In the above example, `raw` contains whatever the [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#Key) represents.
+In the above example, `raw` contains whatever the [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Key) represents.
 If `key` represents an RSA key, it will contain either a `rsa.PublicKey` or `rsa.PrivateKey`. If it represents an ECDSA key, an `ecdsa.PublicKey`, or `ecdsa.PrivateKey`, etc.
 
-If the only operation that you are performing is to grab the raw key out of a JSON JWK, use [`jwk.ParseRawKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ParseRawKey)
+If the only operation that you are performing is to grab the raw key out of a JSON JWK, use [`jwk.ParseRawKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#ParseRawKey)
 
 ```go
 var raw interface{}
@@ -958,7 +958,7 @@ if err := jwk.ParseRawKey(src, &raw); err != nil {
 
 ## Filtering Keys with KeyFilter
 
-The [`jwk.KeyFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#KeyFilter) interface provides a mechanism to selectively include or exclude specific fields when working with JWK keys. This is useful when you need to serialize keys with only certain fields, or when you want to create clean representations of keys for specific purposes.
+The [`jwk.KeyFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#KeyFilter) interface provides a mechanism to selectively include or exclude specific fields when working with JWK keys. This is useful when you need to serialize keys with only certain fields, or when you want to create clean representations of keys for specific purposes.
 
 KeyFilter objects provide two methods:
 - `Filter()`: Returns a new key containing only the fields that should be included
@@ -968,9 +968,9 @@ KeyFilter objects provide two methods:
 
 For convenience, the library provides pre-defined filters that include standard fields for each key type:
 
-- [`jwk.RSAStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#RSAStandardFieldsFilter) - for RSA keys
-- [`jwk.ECDSAStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ECDSAStandardFieldsFilter) - for ECDSA keys  
-- [`jwk.OKPStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#OKPStandardFieldsFilter) - for OKP keys
-- [`jwk.SymmetricStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#SymmetricStandardFieldsFilter) - for symmetric keys
+- [`jwk.RSAStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#RSAStandardFieldsFilter) - for RSA keys
+- [`jwk.ECDSAStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#ECDSAStandardFieldsFilter) - for ECDSA keys  
+- [`jwk.OKPStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#OKPStandardFieldsFilter) - for OKP keys
+- [`jwk.SymmetricStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#SymmetricStandardFieldsFilter) - for symmetric keys
 
 These functions return filters configured to include the standard fields defined in the JWK specification for each key type.

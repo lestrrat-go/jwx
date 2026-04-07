@@ -21,7 +21,7 @@ go_library(
         "verifier.go",
         "verify_context.go",
     ],
-    importpath = "github.com/lestrrat-go/jwx/v3/jws",
+    importpath = "github.com/lestrrat-go/jwx/v4/jws",
     visibility = ["//visibility:public"],
     deps = [
         "//cert",

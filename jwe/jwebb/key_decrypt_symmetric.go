@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/crypto/pbkdf2"
 
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
+	"github.com/lestrrat-go/jwx/v4/internal/tokens"
 )
 
 // AES key wrap decryption functions

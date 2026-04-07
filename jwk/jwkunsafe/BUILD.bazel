@@ -3,7 +3,7 @@ load("@rules_go//go:def.bzl", "go_library")
 go_library(
     name = "jwkunsafe",
     srcs = ["jwkunsafe.go"],
-    importpath = "github.com/lestrrat-go/jwx/v3/jwk/jwkunsafe",
+    importpath = "github.com/lestrrat-go/jwx/v4/jwk/jwkunsafe",
     visibility = ["//visibility:public"],
     deps = [
         "//jwa",

@@ -1,6 +1,6 @@
 package jwx
 
-import "github.com/lestrrat-go/jwx/v3/internal/base64"
+import "github.com/lestrrat-go/jwx/v4/internal/base64"
 
 // Base64Encoder is the interface for base64 encoding backends.
 // The default implementation uses encoding/base64.RawURLEncoding.

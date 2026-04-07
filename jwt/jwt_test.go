@@ -21,17 +21,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
-	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwe"
-	"github.com/lestrrat-go/jwx/v3/jwk"
-	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
-	"github.com/lestrrat-go/jwx/v3/jws"
-	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
-	"github.com/lestrrat-go/jwx/v3/jwt"
-	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v4/internal/tokens"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwe"
+	"github.com/lestrrat-go/jwx/v4/jwk"
+	ourecdsa "github.com/lestrrat-go/jwx/v4/jwk/ecdsa"
+	"github.com/lestrrat-go/jwx/v4/jws"
+	"github.com/lestrrat-go/jwx/v4/jws/jwsbb"
+	"github.com/lestrrat-go/jwx/v4/jwt"
+	"github.com/lestrrat-go/jwx/v4/jwt/internal/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1268,7 +1268,7 @@ func TestVerifyAuto(t *testing.T) {
 	defer srv.Close()
 
 	tok, err := jwt.NewBuilder().
-		Claim(jwt.IssuerKey, `https://github.com/lestrrat-go/jwx/v3`).
+		Claim(jwt.IssuerKey, `https://github.com/lestrrat-go/jwx/v4`).
 		Claim(jwt.SubjectKey, `jku-test`).
 		Build()
 
@@ -1290,7 +1290,7 @@ func TestVerifyAuto(t *testing.T) {
 	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(nil))
 	require.Error(t, err, `jwt.Parse should fail`)
 	wl = jwk.NewMapWhitelist().
-		Add(`https://github.com/lestrrat-go/jwx/v3`)
+		Add(`https://github.com/lestrrat-go/jwx/v4`)
 	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(nil, jwk.WithFetchWhitelist(wl)))
 	require.Error(t, err, `jwt.Parse should fail`)
 
