@@ -1,4 +1,4 @@
-//go:generate ../tools/cmd/genjwa.sh
+//go:generate ../scripts/jwxcodegen.sh generate-jwa -objects=objects.yml
 
 // Package jwa defines the various algorithm described in https://tools.ietf.org/html/rfc7518
 package jwa

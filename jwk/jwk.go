@@ -1,4 +1,4 @@
-//go:generate ../tools/cmd/genjwk.sh
+//go:generate ../scripts/jwxcodegen.sh generate-jwk -objects=objects.yml
 
 package jwk
 

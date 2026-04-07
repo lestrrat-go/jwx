@@ -1,4 +1,4 @@
-//go:generate ../tools/cmd/genjws.sh
+//go:generate ../scripts/jwxcodegen.sh generate-headers -objects=objects.yml
 
 // Package jws implements the digital signature on JSON based data
 // structures as described in https://tools.ietf.org/html/rfc7515
