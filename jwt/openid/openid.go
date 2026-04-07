@@ -31,23 +31,21 @@ func (t *stdToken) Clone() (jwt.Token, error) {
 	return dst, nil
 }
 
-// RegisterCustomField allows users to specify that a private field
-// be decoded as an instance of the specified type. This option has
-// a global effect.
+// RegisterCustomField registers a private claim to be decoded as type T
+// using json.Unmarshal. This option has a global effect.
 //
-// For example, suppose you have a custom field `x-birthday`, which
-// you want to represent as a string formatted in RFC3339 in JSON,
-// but want it back as `time.Time`.
-//
-// In that case you would register a custom field as follows
-//
-//	jwt.RegisterCustomField(`x-birthday`, timeT)
-//
-// Then `token.Get("x-birthday")` will still return an `any`,
-// but you can convert its type to `time.Time`
-//
-//	bdayif, _ := token.Get(`x-birthday`)
-//	bday := bdayif.(time.Time)
-func RegisterCustomField(name string, object any) {
-	registry.Register(name, object)
+//	openid.RegisterCustomField[time.Time](`x-birthday`)
+func RegisterCustomField[T any](name string) {
+	json.RegisterTyped[T](registry, name)
+}
+
+// RegisterCustomDecoder registers a private claim with a custom decoder
+// function. This option has a global effect.
+func RegisterCustomDecoder[T any](name string, dec json.CustomDecodeFunc[T]) {
+	json.RegisterCustomDecoder[T](registry, name, dec)
+}
+
+// UnregisterCustomField removes the registration for a custom field.
+func UnregisterCustomField(name string) {
+	registry.Unregister(name)
 }

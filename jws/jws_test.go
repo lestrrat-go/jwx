@@ -786,17 +786,17 @@ func TestCustomField(t *testing.T) {
 	// XXX has global effect!!!
 	const rfc3339Key = `x-test-rfc3339`
 	const rfc1123Key = `x-test-rfc1123`
-	jws.RegisterCustomField(rfc3339Key, time.Time{})
-	jws.RegisterCustomField(rfc1123Key, jws.CustomDecodeFunc(func(data []byte) (any, error) {
+	jws.RegisterCustomField[time.Time](rfc3339Key)
+	jws.RegisterCustomDecoder(rfc1123Key, jws.CustomDecodeFunc[time.Time](func(data []byte) (time.Time, error) {
 		var s string
 		if err := json.Unmarshal(data, &s); err != nil {
-			return nil, err
+			return time.Time{}, err
 		}
 		return time.Parse(time.RFC1123, s)
 	}))
 
-	defer jws.RegisterCustomField(rfc3339Key, nil)
-	defer jws.RegisterCustomField(rfc1123Key, nil)
+	defer jws.UnregisterCustomField(rfc3339Key)
+	defer jws.UnregisterCustomField(rfc1123Key)
 
 	expected := time.Date(2015, 11, 4, 5, 12, 52, 0, time.UTC)
 	rfc3339bytes, _ := expected.MarshalText() // RFC3339

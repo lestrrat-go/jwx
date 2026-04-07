@@ -66,11 +66,11 @@ For example, JSON objects are converted to `map[string]interface{}`, JSON arrays
 
 Sometimes you know beforehand that it makes sense for certain fields to be decoded into
 proper objects instead of generic maps or arrays. When you encounter this, you can use
-the `RegisterCustomField()` method in each of `jwe`, `jwk`, `jws`, and `jwt` packages.
+the `RegisterCustomField()` function in each of `jwe`, `jwk`, `jws`, and `jwt` packages.
 
 ```go
 func init() {
-  jwt.RegisterCustomField(`x-foo-bar`, mypkg.FooBar{})
+  jwt.RegisterCustomField[mypkg.FooBar](`x-foo-bar`)
 }
 ```
 
@@ -79,8 +79,17 @@ This tells the decoder that when it encounters a JWT token with the field named
 access this value by using `Get()`
 
 ```go
-var v mypkg.FooBar
-_ = token.Get(`x-foo-bar`, &v)
+v, err := jwt.Get[mypkg.FooBar](token, `x-foo-bar`)
+```
+
+If you need more control over the decoding process, use `RegisterCustomDecoder`:
+
+```go
+func init() {
+  jwt.RegisterCustomDecoder(`x-foo-bar`, jwt.CustomDecodeFunc[mypkg.FooBar](func(data []byte) (mypkg.FooBar, error) {
+    // custom decoding logic
+  }))
+}
 ```
 
 Do be aware that this has *global* effect. In the above example, all JWT tokens containing

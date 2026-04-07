@@ -57,11 +57,11 @@ Manual option functions in `{pkg}/options.go` supplement generated ones.
 | Custom key parsers | `jwk.RegisterKeyParser()` | jwk |
 | Custom key importers | `jwk.RegisterKeyImporter()` | jwk |
 | Custom key exporters | `jwk.RegisterKeyExporter()` | jwk |
-| Custom JWK fields | `jwk.RegisterCustomField()` | jwk |
-| Custom JWS fields | `jws.RegisterCustomField()` | jws |
-| Custom JWE fields | `jwe.RegisterCustomField()` | jwe |
-| Custom JWT claims | `jwt.RegisterCustomField()` | jwt |
-| Custom OIDC claims | `openid.RegisterCustomField()` | jwt/openid |
+| Custom JWK fields | `jwk.RegisterCustomField[T]()` / `jwk.RegisterCustomDecoder[T]()` | jwk |
+| Custom JWS fields | `jws.RegisterCustomField[T]()` / `jws.RegisterCustomDecoder[T]()` | jws |
+| Custom JWE fields | `jwe.RegisterCustomField[T]()` / `jwe.RegisterCustomDecoder[T]()` | jwe |
+| Custom JWT claims | `jwt.RegisterCustomField[T]()` / `jwt.RegisterCustomDecoder[T]()` | jwt |
+| Custom OIDC claims | `openid.RegisterCustomField[T]()` / `openid.RegisterCustomDecoder[T]()` | jwt/openid |
 | Custom signers | `jws.RegisterSigner()` | jws |
 | Custom verifiers | `jws.RegisterVerifier()` | jws |
 

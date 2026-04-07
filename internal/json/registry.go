@@ -6,19 +6,45 @@ import (
 	"sync"
 )
 
-// CustomDecoder is the interface we expect from RegisterCustomField in jws, jwe, jwk, and jwt packages.
-type CustomDecoder interface {
-	// Decode takes a JSON encoded byte slice and returns the desired
-	// decoded value, which will be used as the value for that field
-	// registered through RegisterCustomField
+// customDecoder is the internal interface for field decoders stored in the registry.
+// It returns any because different fields decode to different types.
+type customDecoder interface {
 	Decode([]byte) (any, error)
 }
 
-// CustomDecodeFunc is a stateless, function-based implementation of CustomDecoder
-type CustomDecodeFunc func([]byte) (any, error)
+// CustomDecoder is the public generic interface for custom field decoders.
+type CustomDecoder[T any] interface {
+	Decode([]byte) (T, error)
+}
 
-func (fn CustomDecodeFunc) Decode(data []byte) (any, error) {
+// CustomDecodeFunc is a function-based implementation of CustomDecoder[T].
+type CustomDecodeFunc[T any] func([]byte) (T, error)
+
+func (fn CustomDecodeFunc[T]) Decode(data []byte) (T, error) {
 	return fn(data)
+}
+
+// customDecoderAdapter wraps a CustomDecoder[T] to satisfy the internal customDecoder interface.
+type customDecoderAdapter[T any] struct {
+	dec CustomDecoder[T]
+}
+
+func (a *customDecoderAdapter[T]) Decode(data []byte) (any, error) {
+	return a.dec.Decode(data)
+}
+
+// objectTypeDecoder is a reflect-based decoder used by the untyped Register path.
+type objectTypeDecoder struct {
+	typ  reflect.Type
+	name string
+}
+
+func (dec *objectTypeDecoder) Decode(data []byte) (any, error) {
+	ptr := reflect.New(dec.typ).Interface()
+	if err := Unmarshal(data, ptr); err != nil {
+		return nil, fmt.Errorf(`failed to decode field %s: %w`, dec.name, err)
+	}
+	return reflect.ValueOf(ptr).Elem().Interface(), nil
 }
 
 // TypedDecoder is a generic decoder that unmarshals JSON into a concrete type T,
@@ -35,47 +61,48 @@ func (dec *TypedDecoder[T]) Decode(data []byte) (any, error) {
 	return v, nil
 }
 
-type objectTypeDecoder struct {
-	typ  reflect.Type
-	name string
-}
-
-func (dec *objectTypeDecoder) Decode(data []byte) (any, error) {
-	ptr := reflect.New(dec.typ).Interface()
-	if err := Unmarshal(data, ptr); err != nil {
-		return nil, fmt.Errorf(`failed to decode field %s: %w`, dec.name, err)
-	}
-	return reflect.ValueOf(ptr).Elem().Interface(), nil
-}
-
 type Registry struct {
 	mu   *sync.RWMutex
-	ctrs map[string]CustomDecoder
+	ctrs map[string]customDecoder
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
 		mu:   &sync.RWMutex{},
-		ctrs: make(map[string]CustomDecoder),
+		ctrs: make(map[string]customDecoder),
 	}
 }
 
-// Register registers a custom decoder for the given field name.
-// If object is nil, the registration is removed.
-// If object implements CustomDecoder, it is used directly.
+// RegisterTyped registers a generic TypedDecoder[T] for the given field name.
+func RegisterTyped[T any](r *Registry, name string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.ctrs[name] = &TypedDecoder[T]{name: name}
+}
+
+// RegisterCustomDecoder registers a CustomDecoder[T] for the given field name.
+func RegisterCustomDecoder[T any](r *Registry, name string, dec CustomDecoder[T]) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.ctrs[name] = &customDecoderAdapter[T]{dec: dec}
+}
+
+// Register registers a decoder for the given field name using the untyped
+// dispatch path. If object is nil, the registration is removed.
+// If object implements customDecoder, it is used directly.
 // Otherwise, an objectTypeDecoder is created using reflect.
-// New code should prefer RegisterTyped for compile-time type safety.
+//
+// This is used internally by WithTypedField for per-parse local registries.
+// New code should prefer RegisterTyped or RegisterCustomDecoder.
 func (r *Registry) Register(name string, object any) {
 	if object == nil {
-		r.mu.Lock()
-		defer r.mu.Unlock()
-		delete(r.ctrs, name)
+		r.Unregister(name)
 		return
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if ctr, ok := object.(CustomDecoder); ok {
+	if ctr, ok := object.(customDecoder); ok {
 		r.ctrs[name] = ctr
 	} else {
 		r.ctrs[name] = &objectTypeDecoder{
@@ -85,11 +112,11 @@ func (r *Registry) Register(name string, object any) {
 	}
 }
 
-// RegisterTyped registers a generic TypedDecoder[T] for the given field name.
-func RegisterTyped[T any](r *Registry, name string) {
+// Unregister removes the decoder for the given field name.
+func (r *Registry) Unregister(name string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	r.ctrs[name] = &TypedDecoder[T]{name: name}
+	delete(r.ctrs, name)
 }
 
 // Decode decodes the raw JSON value using the registered decoder for the
