@@ -26,6 +26,7 @@
 package jws
 
 import (
+	"crypto"
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -610,6 +611,20 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 	case []byte:
 		kty = jwa.OctetSeq()
 	default:
+		// For crypto.Signer from external packages (e.g. KMS-backed signers),
+		// extract the underlying public key type via .Public().
+		// Standard library types (*rsa.PrivateKey, etc.) are already handled
+		// by the concrete cases above.
+		if signer, ok := key.(crypto.Signer); ok {
+			pub := signer.Public()
+			// Guard: only recurse if the public key is not itself a crypto.Signer,
+			// to prevent infinite recursion from pathological implementations.
+			if _, isSigner := pub.(crypto.Signer); !isSigner {
+				if algs, err := AlgorithmsForKey(pub); err == nil {
+					return algs, nil
+				}
+			}
+		}
 		imported, err := jwk.Import(key)
 		if err != nil {
 			return nil, fmt.Errorf(`unknown key type %T`, key)
@@ -669,6 +684,21 @@ func isRegisteredUnderAnyCurve(alg jwa.SignatureAlgorithm) bool {
 	return false
 }
 
+// validateAlgorithmForKey checks that alg is compatible with key.
+// If the key type is not recognized (e.g. an opaque crypto.Signer whose
+// .Public() also returns an unrecognized type), validation is skipped
+// and the crypto layer will catch any real incompatibility.
+func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
+	algs, err := AlgorithmsForKey(key)
+	if err != nil {
+		return nil //nolint:nilerr // intentional: unrecognized key types skip validation
+	}
+	if !slices.Contains(algs, alg) {
+		return fmt.Errorf(`algorithm %q is not compatible with key type %T`, alg, key)
+	}
+	return nil
+}
+
 // Settings allows you to set global settings for this JWS operations.
 //
 // Currently, the only setting available is `jws.WithLegacySigners()`,
@@ -721,6 +751,10 @@ func Settings(options ...GlobalOption) {
 // Since this function avoids doing many checks that jws.Verify would perform,
 // you must ensure to perform the necessary checks including ensuring that algorithm is safe to use for your payload yourself.
 func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error) {
+	if err := validateAlgorithmForKey(alg, key); err != nil {
+		return nil, makeVerifyError(`%w`, err)
+	}
+
 	algstr := alg.String()
 
 	// Split the serialized JWT into its components

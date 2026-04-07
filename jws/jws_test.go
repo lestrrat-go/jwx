@@ -1942,3 +1942,109 @@ func TestMaxSignatures(t *testing.T) {
 		require.Error(t, err, `jws.Verify should fail when signatures exceed limit`)
 	})
 }
+
+func TestAlgorithmKeyMismatch(t *testing.T) {
+	rsaKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+
+	ecKey, err := jwxtest.GenerateEcdsaKey(jwa.P256())
+	require.NoError(t, err)
+
+	edKey, err := jwxtest.GenerateEd25519Key()
+	require.NoError(t, err)
+
+	hmacKey := jwxtest.GenerateSymmetricKey()
+
+	// Sign a valid HMAC message to use in Verify/VerifyCompactFast tests
+	validCompact, err := jws.Sign([]byte("test"), jws.WithKey(jwa.HS256(), hmacKey))
+	require.NoError(t, err)
+
+	testcases := []struct {
+		Name string
+		Alg  jwa.SignatureAlgorithm
+		Key  any
+	}{
+		{"RS256 with ECDSA key", jwa.RS256(), ecKey},
+		{"RS256 with Ed25519 key", jwa.RS256(), edKey},
+		{"RS256 with HMAC key", jwa.RS256(), hmacKey},
+		{"ES256 with RSA key", jwa.ES256(), rsaKey},
+		{"ES256 with Ed25519 key", jwa.ES256(), edKey},
+		{"ES256 with HMAC key", jwa.ES256(), hmacKey},
+		{"EdDSA with RSA key", jwa.EdDSA(), rsaKey},
+		{"EdDSA with ECDSA key", jwa.EdDSA(), ecKey},
+		{"EdDSA with HMAC key", jwa.EdDSA(), hmacKey},
+		{"HS256 with RSA key", jwa.HS256(), rsaKey},
+		{"HS256 with ECDSA key", jwa.HS256(), ecKey},
+		{"HS256 with Ed25519 key", jwa.HS256(), edKey},
+	}
+
+	for _, tc := range testcases {
+		t.Run("Sign/"+tc.Name, func(t *testing.T) {
+			_, err := jws.Sign([]byte("payload"), jws.WithKey(tc.Alg, tc.Key))
+			require.Error(t, err)
+			require.True(t, errors.Is(err, jws.SignError()), `error should be SignError`)
+			require.Contains(t, err.Error(), "not compatible")
+		})
+		t.Run("Verify/"+tc.Name, func(t *testing.T) {
+			_, err := jws.Verify(validCompact, jws.WithKey(tc.Alg, tc.Key))
+			require.Error(t, err)
+			require.True(t, errors.Is(err, jws.VerifyError()), `error should be VerifyError`)
+			require.Contains(t, err.Error(), "not compatible")
+		})
+		t.Run("VerifyCompactFast/"+tc.Name, func(t *testing.T) {
+			_, err := jws.VerifyCompactFast(tc.Key, validCompact, tc.Alg)
+			require.Error(t, err)
+			require.True(t, errors.Is(err, jws.VerifyError()), `error should be VerifyError`)
+			require.Contains(t, err.Error(), "not compatible")
+		})
+	}
+}
+
+// testCryptoSigner wraps a crypto.Signer so that AlgorithmsForKey
+// doesn't match it as a concrete standard library type.
+type testCryptoSigner struct {
+	crypto.Signer
+}
+
+func TestAlgorithmsForKeyCryptoSigner(t *testing.T) {
+	rsaKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+
+	signer := testCryptoSigner{rsaKey}
+
+	t.Run("AlgorithmsForKey resolves via Public()", func(t *testing.T) {
+		algs, err := jws.AlgorithmsForKey(signer)
+		require.NoError(t, err, `AlgorithmsForKey should succeed for crypto.Signer wrapping RSA`)
+
+		require.Contains(t, algs, jwa.RS256())
+		require.Contains(t, algs, jwa.PS256())
+	})
+
+	t.Run("matching algorithm passes validation", func(t *testing.T) {
+		signed, err := jws.Sign([]byte("payload"), jws.WithKey(jwa.RS256(), signer))
+		require.NoError(t, err, `Sign with matching crypto.Signer should succeed`)
+
+		_, err = jws.Verify(signed, jws.WithKey(jwa.RS256(), &rsaKey.PublicKey))
+		require.NoError(t, err, `Verify should succeed`)
+	})
+
+	t.Run("mismatching algorithm is rejected early", func(t *testing.T) {
+		_, err := jws.Sign([]byte("payload"), jws.WithKey(jwa.ES256(), signer))
+		require.Error(t, err)
+		require.True(t, errors.Is(err, jws.SignError()))
+		require.Contains(t, err.Error(), "not compatible")
+	})
+}
+
+func TestVerifyWithNonSignatureAlgorithm(t *testing.T) {
+	hmacKey := jwxtest.GenerateSymmetricKey()
+	signed, err := jws.Sign([]byte("test"), jws.WithKey(jwa.HS256(), hmacKey))
+	require.NoError(t, err)
+
+	// jwa.A128KW is a KeyEncryptionAlgorithm, not a SignatureAlgorithm.
+	// Previously the unchecked type assertion in verify_context would panic.
+	_, err = jws.Verify(signed, jws.WithKey(jwa.A128KW(), hmacKey))
+	require.Error(t, err)
+	require.True(t, errors.Is(err, jws.VerifyError()))
+	require.Contains(t, err.Error(), "SignatureAlgorithm")
+}
