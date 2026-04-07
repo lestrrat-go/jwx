@@ -1327,6 +1327,175 @@ func (t *stdToken) Claims() iter.Seq2[string, any] {
 	}
 }
 
+func (dst *stdToken) cloneFrom(src *stdToken) {
+	src.mu.RLock()
+	defer src.mu.RUnlock()
+	dst.mu.Lock()
+	defer dst.mu.Unlock()
+	dst.options = src.options
+	if src.address != nil {
+		dst.address = src.address
+	} else {
+		dst.address = nil
+	}
+	if src.audience != nil {
+		dst.audience = slices.Clone(src.audience)
+	} else {
+		dst.audience = nil
+	}
+	if src.birthdate != nil {
+		dst.birthdate = src.birthdate
+	} else {
+		dst.birthdate = nil
+	}
+	if src.email != nil {
+		tmp := *(src.email)
+		dst.email = &tmp
+	} else {
+		dst.email = nil
+	}
+	if src.emailVerified != nil {
+		tmp := *(src.emailVerified)
+		dst.emailVerified = &tmp
+	} else {
+		dst.emailVerified = nil
+	}
+	if src.expiration != nil {
+		tmp := *(src.expiration)
+		dst.expiration = &tmp
+	} else {
+		dst.expiration = nil
+	}
+	if src.familyName != nil {
+		tmp := *(src.familyName)
+		dst.familyName = &tmp
+	} else {
+		dst.familyName = nil
+	}
+	if src.gender != nil {
+		tmp := *(src.gender)
+		dst.gender = &tmp
+	} else {
+		dst.gender = nil
+	}
+	if src.givenName != nil {
+		tmp := *(src.givenName)
+		dst.givenName = &tmp
+	} else {
+		dst.givenName = nil
+	}
+	if src.issuedAt != nil {
+		tmp := *(src.issuedAt)
+		dst.issuedAt = &tmp
+	} else {
+		dst.issuedAt = nil
+	}
+	if src.issuer != nil {
+		tmp := *(src.issuer)
+		dst.issuer = &tmp
+	} else {
+		dst.issuer = nil
+	}
+	if src.jwtID != nil {
+		tmp := *(src.jwtID)
+		dst.jwtID = &tmp
+	} else {
+		dst.jwtID = nil
+	}
+	if src.locale != nil {
+		tmp := *(src.locale)
+		dst.locale = &tmp
+	} else {
+		dst.locale = nil
+	}
+	if src.middleName != nil {
+		tmp := *(src.middleName)
+		dst.middleName = &tmp
+	} else {
+		dst.middleName = nil
+	}
+	if src.name != nil {
+		tmp := *(src.name)
+		dst.name = &tmp
+	} else {
+		dst.name = nil
+	}
+	if src.nickname != nil {
+		tmp := *(src.nickname)
+		dst.nickname = &tmp
+	} else {
+		dst.nickname = nil
+	}
+	if src.notBefore != nil {
+		tmp := *(src.notBefore)
+		dst.notBefore = &tmp
+	} else {
+		dst.notBefore = nil
+	}
+	if src.phoneNumber != nil {
+		tmp := *(src.phoneNumber)
+		dst.phoneNumber = &tmp
+	} else {
+		dst.phoneNumber = nil
+	}
+	if src.phoneNumberVerified != nil {
+		tmp := *(src.phoneNumberVerified)
+		dst.phoneNumberVerified = &tmp
+	} else {
+		dst.phoneNumberVerified = nil
+	}
+	if src.picture != nil {
+		tmp := *(src.picture)
+		dst.picture = &tmp
+	} else {
+		dst.picture = nil
+	}
+	if src.preferredUsername != nil {
+		tmp := *(src.preferredUsername)
+		dst.preferredUsername = &tmp
+	} else {
+		dst.preferredUsername = nil
+	}
+	if src.profile != nil {
+		tmp := *(src.profile)
+		dst.profile = &tmp
+	} else {
+		dst.profile = nil
+	}
+	if src.subject != nil {
+		tmp := *(src.subject)
+		dst.subject = &tmp
+	} else {
+		dst.subject = nil
+	}
+	if src.updatedAt != nil {
+		tmp := *(src.updatedAt)
+		dst.updatedAt = &tmp
+	} else {
+		dst.updatedAt = nil
+	}
+	if src.website != nil {
+		tmp := *(src.website)
+		dst.website = &tmp
+	} else {
+		dst.website = nil
+	}
+	if src.zoneinfo != nil {
+		tmp := *(src.zoneinfo)
+		dst.zoneinfo = &tmp
+	} else {
+		dst.zoneinfo = nil
+	}
+	if len(src.privateClaims) > 0 {
+		dst.privateClaims = make(map[string]any, len(src.privateClaims))
+		for k, v := range src.privateClaims {
+			dst.privateClaims[k] = v
+		}
+	} else {
+		dst.privateClaims = make(map[string]any)
+	}
+}
+
 type claimPair struct {
 	Name  string
 	Value any
@@ -1446,7 +1615,6 @@ func (t *stdToken) MarshalJSON() ([]byte, error) {
 	enc := json.NewEncoder(buf)
 	enc.WriteToken(jsontext.BeginObject)
 	pairs := t.makePairs()
-	defer putClaimPairList(pairs)
 	for _, pair := range pairs {
 		enc.WriteToken(jsontext.String(pair.Name))
 		if pair.Name == AudienceKey {

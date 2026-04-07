@@ -416,12 +416,88 @@ func (k *ecdsaPublicKey) Remove(key string) error {
 	return nil
 }
 
-func (k *ecdsaPublicKey) Clone() (Key, error) {
-	key, err := cloneKey(k)
-	if err != nil {
-		return nil, fmt.Errorf(`ecdsaPublicKey.Clone: %w`, err)
+func (dst *ecdsaPublicKey) cloneFrom(src *ecdsaPublicKey) {
+	src.mu.RLock()
+	defer src.mu.RUnlock()
+	dst.mu.Lock()
+	defer dst.mu.Unlock()
+	if src.algorithm != nil {
+		tmp := *(src.algorithm)
+		dst.algorithm = &tmp
+	} else {
+		dst.algorithm = nil
 	}
-	return key, nil
+	if src.crv != nil {
+		tmp := *(src.crv)
+		dst.crv = &tmp
+	} else {
+		dst.crv = nil
+	}
+	if src.keyID != nil {
+		tmp := *(src.keyID)
+		dst.keyID = &tmp
+	} else {
+		dst.keyID = nil
+	}
+	if src.keyOps != nil {
+		tmp := slices.Clone(*src.keyOps)
+		dst.keyOps = &tmp
+	} else {
+		dst.keyOps = nil
+	}
+	if src.keyUsage != nil {
+		tmp := *(src.keyUsage)
+		dst.keyUsage = &tmp
+	} else {
+		dst.keyUsage = nil
+	}
+	if src.x != nil {
+		dst.x = slices.Clone(src.x)
+	} else {
+		dst.x = nil
+	}
+	if src.x509CertChain != nil {
+		dst.x509CertChain = src.x509CertChain
+	} else {
+		dst.x509CertChain = nil
+	}
+	if src.x509CertThumbprint != nil {
+		tmp := *(src.x509CertThumbprint)
+		dst.x509CertThumbprint = &tmp
+	} else {
+		dst.x509CertThumbprint = nil
+	}
+	if src.x509CertThumbprintS256 != nil {
+		tmp := *(src.x509CertThumbprintS256)
+		dst.x509CertThumbprintS256 = &tmp
+	} else {
+		dst.x509CertThumbprintS256 = nil
+	}
+	if src.x509URL != nil {
+		tmp := *(src.x509URL)
+		dst.x509URL = &tmp
+	} else {
+		dst.x509URL = nil
+	}
+	if src.y != nil {
+		dst.y = slices.Clone(src.y)
+	} else {
+		dst.y = nil
+	}
+	if len(src.privateParams) > 0 {
+		dst.privateParams = make(map[string]any, len(src.privateParams))
+		for k, v := range src.privateParams {
+			dst.privateParams[k] = v
+		}
+	} else {
+		dst.privateParams = make(map[string]any)
+	}
+}
+
+func (k *ecdsaPublicKey) Clone() (Key, error) {
+	dst := newECDSAPublicKey()
+	dst.cloneFrom(k)
+	return dst, nil
 }
 
 func (k *ecdsaPublicKey) DecodeCtx() json.DecodeCtx {
@@ -1113,12 +1189,93 @@ func (k *ecdsaPrivateKey) Remove(key string) error {
 	return nil
 }
 
-func (k *ecdsaPrivateKey) Clone() (Key, error) {
-	key, err := cloneKey(k)
-	if err != nil {
-		return nil, fmt.Errorf(`ecdsaPrivateKey.Clone: %w`, err)
+func (dst *ecdsaPrivateKey) cloneFrom(src *ecdsaPrivateKey) {
+	src.mu.RLock()
+	defer src.mu.RUnlock()
+	dst.mu.Lock()
+	defer dst.mu.Unlock()
+	if src.algorithm != nil {
+		tmp := *(src.algorithm)
+		dst.algorithm = &tmp
+	} else {
+		dst.algorithm = nil
 	}
-	return key, nil
+	if src.crv != nil {
+		tmp := *(src.crv)
+		dst.crv = &tmp
+	} else {
+		dst.crv = nil
+	}
+	if src.d != nil {
+		dst.d = slices.Clone(src.d)
+	} else {
+		dst.d = nil
+	}
+	if src.keyID != nil {
+		tmp := *(src.keyID)
+		dst.keyID = &tmp
+	} else {
+		dst.keyID = nil
+	}
+	if src.keyOps != nil {
+		tmp := slices.Clone(*src.keyOps)
+		dst.keyOps = &tmp
+	} else {
+		dst.keyOps = nil
+	}
+	if src.keyUsage != nil {
+		tmp := *(src.keyUsage)
+		dst.keyUsage = &tmp
+	} else {
+		dst.keyUsage = nil
+	}
+	if src.x != nil {
+		dst.x = slices.Clone(src.x)
+	} else {
+		dst.x = nil
+	}
+	if src.x509CertChain != nil {
+		dst.x509CertChain = src.x509CertChain
+	} else {
+		dst.x509CertChain = nil
+	}
+	if src.x509CertThumbprint != nil {
+		tmp := *(src.x509CertThumbprint)
+		dst.x509CertThumbprint = &tmp
+	} else {
+		dst.x509CertThumbprint = nil
+	}
+	if src.x509CertThumbprintS256 != nil {
+		tmp := *(src.x509CertThumbprintS256)
+		dst.x509CertThumbprintS256 = &tmp
+	} else {
+		dst.x509CertThumbprintS256 = nil
+	}
+	if src.x509URL != nil {
+		tmp := *(src.x509URL)
+		dst.x509URL = &tmp
+	} else {
+		dst.x509URL = nil
+	}
+	if src.y != nil {
+		dst.y = slices.Clone(src.y)
+	} else {
+		dst.y = nil
+	}
+	if len(src.privateParams) > 0 {
+		dst.privateParams = make(map[string]any, len(src.privateParams))
+		for k, v := range src.privateParams {
+			dst.privateParams[k] = v
+		}
+	} else {
+		dst.privateParams = make(map[string]any)
+	}
+}
+
+func (k *ecdsaPrivateKey) Clone() (Key, error) {
+	dst := newECDSAPrivateKey()
+	dst.cloneFrom(k)
+	return dst, nil
 }
 
 func (k *ecdsaPrivateKey) DecodeCtx() json.DecodeCtx {

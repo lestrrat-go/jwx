@@ -527,6 +527,63 @@ func (t *stdToken) Claims() iter.Seq2[string, any] {
 	}
 }
 
+func (dst *stdToken) cloneFrom(src *stdToken) {
+	src.mu.RLock()
+	defer src.mu.RUnlock()
+	dst.mu.Lock()
+	defer dst.mu.Unlock()
+	dst.options = src.options
+	if src.audience != nil {
+		dst.audience = slices.Clone(src.audience)
+	} else {
+		dst.audience = nil
+	}
+	if src.expiration != nil {
+		tmp := *(src.expiration)
+		dst.expiration = &tmp
+	} else {
+		dst.expiration = nil
+	}
+	if src.issuedAt != nil {
+		tmp := *(src.issuedAt)
+		dst.issuedAt = &tmp
+	} else {
+		dst.issuedAt = nil
+	}
+	if src.issuer != nil {
+		tmp := *(src.issuer)
+		dst.issuer = &tmp
+	} else {
+		dst.issuer = nil
+	}
+	if src.jwtID != nil {
+		tmp := *(src.jwtID)
+		dst.jwtID = &tmp
+	} else {
+		dst.jwtID = nil
+	}
+	if src.notBefore != nil {
+		tmp := *(src.notBefore)
+		dst.notBefore = &tmp
+	} else {
+		dst.notBefore = nil
+	}
+	if src.subject != nil {
+		tmp := *(src.subject)
+		dst.subject = &tmp
+	} else {
+		dst.subject = nil
+	}
+	if len(src.privateClaims) > 0 {
+		dst.privateClaims = make(map[string]any, len(src.privateClaims))
+		for k, v := range src.privateClaims {
+			dst.privateClaims[k] = v
+		}
+	} else {
+		dst.privateClaims = make(map[string]any)
+	}
+}
+
 type claimPair struct {
 	Name  string
 	Value any
@@ -589,7 +646,6 @@ func (t *stdToken) MarshalJSON() ([]byte, error) {
 	enc := json.NewEncoder(buf)
 	enc.WriteToken(jsontext.BeginObject)
 	pairs := t.makePairs()
-	defer putClaimPairList(pairs)
 	for _, pair := range pairs {
 		enc.WriteToken(jsontext.String(pair.Name))
 		if pair.Name == AudienceKey {
