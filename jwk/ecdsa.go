@@ -346,12 +346,12 @@ func ecdsaThumbprint(hash crypto.Hash, crv, x, y string) []byte {
 
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638
-func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+func (k *ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
 	var key ecdsa.PublicKey
-	if err := Export(&k, &key); err != nil {
+	if err := Export(k, &key); err != nil {
 		return nil, fmt.Errorf(`failed to export ecdsa.PublicKey for thumbprint generation: %w`, err)
 	}
 
@@ -370,12 +370,12 @@ func (k ecdsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638
-func (k ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+func (k *ecdsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
 	var key ecdsa.PrivateKey
-	if err := Export(&k, &key); err != nil {
+	if err := Export(k, &key); err != nil {
 		return nil, fmt.Errorf(`failed to export ecdsa.PrivateKey for thumbprint generation: %w`, err)
 	}
 

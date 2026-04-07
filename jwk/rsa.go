@@ -308,23 +308,23 @@ func (k *rsaPublicKey) PublicKey() (Key, error) {
 
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638
-func (k rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+func (k *rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
 	var key rsa.PrivateKey
-	if err := Export(&k, &key); err != nil {
+	if err := Export(k, &key); err != nil {
 		return nil, fmt.Errorf(`failed to export RSA private key: %w`, err)
 	}
 	return rsaThumbprint(hash, &key.PublicKey)
 }
 
-func (k rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+func (k *rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
 	var key rsa.PublicKey
-	if err := Export(&k, &key); err != nil {
+	if err := Export(k, &key); err != nil {
 		return nil, fmt.Errorf(`failed to export RSA public key: %w`, err)
 	}
 	return rsaThumbprint(hash, &key)
