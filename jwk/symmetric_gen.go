@@ -525,82 +525,125 @@ LOOP:
 	return nil
 }
 
-func (h *symmetricKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]any)
-	fields := make([]string, 0, 9)
-	data[KeyTypeKey] = jwa.OctetSeq()
-	fields = append(fields, KeyTypeKey)
+func (h *symmetricKey) makePairs() ([]fieldPair, error) {
+	pairs := getFieldPairList()
 	h.mu.RLock()
+	defer h.mu.RUnlock()
+	{
+		v, err := json.Marshal(jwa.OctetSeq())
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyTypeKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: v})
+	}
 	if h.algorithm != nil {
-		data[AlgorithmKey] = *(h.algorithm)
-		fields = append(fields, AlgorithmKey)
+		v, err := json.Marshal(*(h.algorithm))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, AlgorithmKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: AlgorithmKey, Value: v})
 	}
 	if h.keyID != nil {
-		data[KeyIDKey] = *(h.keyID)
-		fields = append(fields, KeyIDKey)
+		v, err := json.Marshal(*(h.keyID))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyIDKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: KeyIDKey, Value: v})
 	}
 	if h.keyOps != nil {
-		data[KeyOpsKey] = *(h.keyOps)
-		fields = append(fields, KeyOpsKey)
+		v, err := json.Marshal(*(h.keyOps))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyOpsKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: KeyOpsKey, Value: v})
 	}
 	if h.keyUsage != nil {
-		data[KeyUsageKey] = *(h.keyUsage)
-		fields = append(fields, KeyUsageKey)
+		v, err := json.Marshal(*(h.keyUsage))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyUsageKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: KeyUsageKey, Value: v})
 	}
 	if h.octets != nil {
-		data[SymmetricOctetsKey] = h.octets
-		fields = append(fields, SymmetricOctetsKey)
+		v, err := json.Marshal(base64.EncodeToString(h.octets))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, SymmetricOctetsKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: SymmetricOctetsKey, Value: v})
 	}
 	if h.x509CertChain != nil {
-		data[X509CertChainKey] = h.x509CertChain
-		fields = append(fields, X509CertChainKey)
+		v, err := json.Marshal(h.x509CertChain)
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertChainKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: X509CertChainKey, Value: v})
 	}
 	if h.x509CertThumbprint != nil {
-		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
-		fields = append(fields, X509CertThumbprintKey)
+		v, err := json.Marshal(*(h.x509CertThumbprint))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertThumbprintKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintKey, Value: v})
 	}
 	if h.x509CertThumbprintS256 != nil {
-		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
-		fields = append(fields, X509CertThumbprintS256Key)
+		v, err := json.Marshal(*(h.x509CertThumbprintS256))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertThumbprintS256Key, err)
+		}
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: v})
 	}
 	if h.x509URL != nil {
-		data[X509URLKey] = *(h.x509URL)
-		fields = append(fields, X509URLKey)
+		v, err := json.Marshal(*(h.x509URL))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509URLKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: X509URLKey, Value: v})
 	}
 	for k, v := range h.privateParams {
-		data[k] = v
-		fields = append(fields, k)
-	}
-	h.mu.RUnlock()
-
-	sort.Strings(fields)
-	buf := pool.BytesBuffer().Get()
-	defer pool.BytesBuffer().Put(buf)
-	buf.WriteByte(tokens.OpenCurlyBracket)
-	enc := json.NewEncoder(buf)
-	for i, f := range fields {
-		if i > 0 {
-			buf.WriteRune(tokens.Comma)
-		}
-		buf.WriteRune(tokens.DoubleQuote)
-		buf.WriteString(f)
-		buf.WriteString(`":`)
-		v := data[f]
+		var encoded []byte
 		switch v := v.(type) {
 		case []byte:
-			buf.WriteRune(tokens.DoubleQuote)
-			buf.WriteString(base64.EncodeToString(v))
-			buf.WriteRune(tokens.DoubleQuote)
-		default:
-			if err := enc.Encode(v); err != nil {
-				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
+			var err error
+			encoded, err = json.Marshal(base64.EncodeToString(v))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, k, err)
 			}
-			buf.Truncate(buf.Len() - 1)
+		default:
+			var err error
+			encoded, err = json.Marshal(v)
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, k, err)
+			}
 		}
+		pairs = append(pairs, fieldPair{Name: k, Value: encoded})
+	}
+
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].Name < pairs[j].Name
+	})
+
+	return pairs, nil
+}
+
+func (h *symmetricKey) MarshalJSON() ([]byte, error) {
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
+	pairs, err := h.makePairs()
+	if err != nil {
+		return nil, fmt.Errorf(`failed to make pairs: %w`, err)
+	}
+	buf.WriteByte(tokens.OpenCurlyBracket)
+
+	for i, pair := range pairs {
+		if i > 0 {
+			buf.WriteByte(tokens.Comma)
+		}
+		fmt.Fprintf(buf, "%q: %s", pair.Name, pair.Value)
 	}
 	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
+	putFieldPairList(pairs)
 	return ret, nil
 }
 

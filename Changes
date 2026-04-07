@@ -5,6 +5,11 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.0.14 UNRELEASED
+  * [jws][jwe][jwk] Replace intermediate map[string]any allocation in
+    MarshalJSON with a pair-slice + sync.Pool pattern, matching the approach
+    already used in jwt. Eliminates per-call map and key-slice allocations
+    in the serialization hot path.
+
   * [jwt][jwe][jws][jwk] Fix inconsistent mutex locking across main data
     structures. Named getters on JWK key types, MarshalJSON on JWK keys,
     UnmarshalJSON on JWE headers, makePairs/MarshalJSON on JWT tokens,
