@@ -12,8 +12,8 @@ All `*_gen.go` files are generated. NEVER edit directly.
 |-----------|-------|--------|
 | `tools/cmd/genoptions/` | `{pkg}/options.yaml` | `{pkg}/options_gen.go` |
 | `tools/cmd/genjwt/` | `tools/cmd/genjwt/objects.yml` | `jwt/*_gen.go` |
-| `tools/cmd/genjws/` | `tools/cmd/genjws/objects.yml` | `jws/*_gen.go` |
-| `tools/cmd/genjwe/` | `tools/cmd/genjwe/objects.yml` | `jwe/*_gen.go` |
+| `tools/cmd/genheaders/` | `tools/cmd/genheaders/jws-objects.yml` | `jws/headers_gen.go` |
+| `tools/cmd/genheaders/` | `tools/cmd/genheaders/jwe-objects.yml` | `jwe/headers_gen.go` |
 | `tools/cmd/genjwk/` | `tools/cmd/genjwk/objects.yml` | `jwk/*_gen.go` |
 | `tools/cmd/genjwa/` | `tools/cmd/genjwa/objects.yml` | `jwa/*_gen.go` |
 | `tools/cmd/genreadfile/` | (none) | `{pkg}/io.go` ReadFile helpers |

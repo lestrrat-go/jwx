@@ -65,6 +65,7 @@ options:
     skip_option: true
   - ident: Serialization
     option_name: WithCompact
+    ident_name: WithSerialization
     interface: SignVerifyParseOption
     constant_value: fmtCompact
     comment: |

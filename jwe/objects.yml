@@ -1,0 +1,93 @@
+package: jwe
+generator_comment: "tools/cmd/genheaders/main.go"
+output_file: headers_gen.go
+description: "JWE Header"
+rfc: "RFC7516"
+content_noun: "encrypted content"
+store_raw_on_unmarshal: false
+
+header_comment: |
+  Headers describe a standard JWE Header set. It is part of the JWE message
+  and is used to represent both Protected and Unprotected headers,
+  which in turn can be found in each Recipient object.
+  If you are not sure how this works, it is strongly recommended that
+  you read RFC7516, especially the section
+  that describes the full JSON serialization format of JWE messages.
+
+  In most cases, you likely want to use the protected headers, as this is the part of the encrypted content
+
+post_field_interface_methods:
+  - "Encode() ([]byte, error)"
+  - "Decode([]byte) error"
+  - "Clone() (Headers, error)"
+  - "Copy(Headers) error"
+  - "Merge(Headers) (Headers, error)"
+
+keys_comment: "// Keys returns a list of the keys contained in this header."
+
+zero_vals:
+  jwa.KeyEncryptionAlgorithm: "jwa.EmptyKeyEncryptionAlgorithm()"
+  jwa.CompressionAlgorithm: "jwa.NoCompress()"
+  jwa.ContentEncryptionAlgorithm: "jwa.EmptyContentEncryptionAlgorithm()"
+
+fields:
+  - name: agreementPartyUInfo
+    type: "[]byte"
+    json: apu
+  - name: agreementPartyVInfo
+    type: "[]byte"
+    json: apv
+  - name: algorithm
+    type: jwa.KeyEncryptionAlgorithm
+    json: alg
+  - name: compression
+    type: jwa.CompressionAlgorithm
+    json: zip
+  - name: contentEncryption
+    type: jwa.ContentEncryptionAlgorithm
+    json: enc
+    reject_empty: true
+  - name: contentType
+    json: cty
+  - name: critical
+    type: "[]string"
+    json: crit
+  - name: ephemeralPublicKey
+    type: jwk.Key
+    direct_storage: true
+    json: epk
+  - name: jwk
+    exported_name: JWK
+    getter: JWK
+    type: jwk.Key
+    direct_storage: true
+  - name: jwkSetURL
+    unexported_name: jwkSetURL
+    exported_name: JWKSetURL
+    getter: JWKSetURL
+    json: jku
+  - name: keyID
+    json: kid
+  - name: typ
+    exported_name: Type
+    getter: Type
+  - name: x509URL
+    unexported_name: x509URL
+    exported_name: X509URL
+    getter: X509URL
+    json: x5u
+  - name: x509CertChain
+    unexported_name: x509CertChain
+    exported_name: X509CertChain
+    getter: X509CertChain
+    type: "*cert.Chain"
+    json: x5c
+  - name: x509CertThumbprint
+    unexported_name: x509CertThumbprint
+    getter:  X509CertThumbprint
+    json: x5t
+  - name: x509CertThumbprintS256
+    unexported_name: x509CertThumbprintS256
+    exported_name: X509CertThumbprintS256
+    getter: X509CertThumbprintS256
+    json: "x5t#S256"

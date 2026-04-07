@@ -5,7 +5,7 @@ export GOEXPERIMENT := jsonv2
 generate:
 	@go generate
 	@$(MAKE) generate-jwa generate-jwe generate-jwk generate-jws generate-jwt
-	@./tools/cmd/gofmt.sh
+	@./scripts/gofmt.sh
 
 generate-%:
 	@go generate $(shell pwd -P)/$(patsubst generate-%,%,$@)
@@ -14,7 +14,7 @@ realclean:
 	rm coverage.out
 
 test-cmd:
-	env TESTOPTS="$(TESTOPTS)" ./tools/test.sh
+	env TESTOPTS="$(TESTOPTS)" ./scripts/test.sh
 
 test:
 	$(MAKE) test-cmd TESTOPTS=
@@ -32,7 +32,7 @@ test-alltags:
 	$(MAKE) test-cmd TESTOPTS="-tags jwx_asmbase64,jwx_es256k,jwx_secp256k1_pem"
 
 cover-cmd:
-	env MODE=cover ./tools/test.sh
+	env MODE=cover ./scripts/test.sh
 
 cover:
 	$(MAKE) cover-cmd TESTOPTS=
@@ -50,7 +50,7 @@ cover-alltags:
 	$(MAKE) cover-cmd TESTOPTS="-tags jwx_asmbase64,jwx_es256k,jwx_secp256k1_pem"
 
 smoke-cmd:
-	env MODE=short ./tools/test.sh
+	env MODE=short ./scripts/test.sh
 
 smoke:
 	$(MAKE) smoke-cmd TESTOPTS=
@@ -101,4 +101,4 @@ fuzz-jwk:
 	go test ./jwk/ -run "^$$" -fuzz FuzzParseKeyRoundtrip -fuzztime $(FUZZTIME)
 
 jwx:
-	@./tools/cmd/install-jwx.sh
+	@./scripts/install-jwx.sh

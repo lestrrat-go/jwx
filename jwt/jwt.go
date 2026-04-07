@@ -1,4 +1,4 @@
-//go:generate ../tools/cmd/genjwt.sh
+//go:generate ../scripts/jwxcodegen.sh generate-jwt -objects=objects.yml
 //go:generate stringer -type=TokenOption -output=token_options_gen.go
 
 // Package jwt implements JSON Web Tokens as described in https://tools.ietf.org/html/rfc7519

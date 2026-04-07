@@ -17,7 +17,7 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
       - name: Process markdown files
         run: |
-          find . -name '*.md' -not -name 'AGENTS.md' -not -name 'CLAUDE.md' | xargs perl tools/autodoc.pl
+          find . -name '*.md' -not -name 'AGENTS.md' -not -name 'CLAUDE.md' | xargs perl scripts/autodoc.pl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
  

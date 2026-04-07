@@ -1,4 +1,4 @@
-//go:generate ../tools/cmd/genjwe.sh
+//go:generate ../scripts/jwxcodegen.sh generate-headers -objects=objects.yml
 
 // Package jwe implements JWE as described in https://tools.ietf.org/html/rfc7516
 package jwe

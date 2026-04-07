@@ -43,15 +43,17 @@ Files matching `*_gen.go` are generated. Examples:
 
 ### Generator Locations
 
-| Generator | Location | Input Files | Output |
-|-----------|----------|-------------|--------|
-| `genoptions` | `tools/cmd/genoptions/` | `{jwa,jwe,jwk,jws,jwt}/options.yaml` | `*/options_gen.go` |
-| `genjwt` | `tools/cmd/genjwt/` | `tools/cmd/genjwt/objects.yml` | `jwt/*_gen.go` |
-| `genjws` | `tools/cmd/genjws/` | `tools/cmd/genjws/objects.yml` | `jws/*_gen.go` |
-| `genjwe` | `tools/cmd/genjwe/` | `tools/cmd/genjwe/objects.yml` | `jwe/*_gen.go` |
-| `genjwk` | `tools/cmd/genjwk/` | `tools/cmd/genjwk/objects.yml` | `jwk/*_gen.go` |
-| `genjwa` | `tools/cmd/genjwa/` | `tools/cmd/genjwa/objects.yml` | `jwa/*_gen.go` |
-| `genreadfile` | `tools/cmd/genreadfile/` | - | ReadFile helpers |
+All generators live in a single binary at `internal/jwxcodegen/cmd/jwxcodegen/`. Each is invoked via subcommand through `scripts/jwxcodegen.sh`, which builds and caches the binary. The `//go:generate` directives in each package call `scripts/jwxcodegen.sh` directly.
+
+| Generator | Subcommand | Input Files | Output |
+|-----------|------------|-------------|--------|
+| `genoptions` | `generate-options` | `{jwa,jwe,jwk,jws,jwt}/options.yaml` | `*/options_gen.go` |
+| `genjwt` | `generate-jwt` | `jwt/objects.yml` | `jwt/*_gen.go` |
+| `genheaders` | `generate-headers` | `jws/objects.yml` | `jws/headers_gen.go` |
+| `genheaders` | `generate-headers` | `jwe/objects.yml` | `jwe/headers_gen.go` |
+| `genjwk` | `generate-jwk` | `jwk/objects.yml` | `jwk/*_gen.go` |
+| `genjwa` | `generate-jwa` | `jwa/objects.yml` | `jwa/*_gen.go` |
+| `genreadfile` | `generate-readfile` | - | ReadFile helpers |
 
 ### Regeneration Commands
 
@@ -69,7 +71,7 @@ make generate-jwa
 # Regenerate options only (options.yaml → options_gen.go for all packages)
 go generate .
 # or directly:
-./tools/cmd/genoptions.sh
+./scripts/jwxcodegen.sh generate-all-options
 ```
 
 **Important:** `make generate-<pkg>` does **not** regenerate options. If you
@@ -101,9 +103,9 @@ This repository contains multiple Go modules. The nested modules use `replace` d
 | Main | `./go.mod` | Core library |
 | Examples | `./examples/go.mod` | Usage examples |
 | CLI | `./cmd/jwx/go.mod` | Command-line tool |
-| Perf Bench | `./bench/performance/go.mod` | Performance benchmarks |
-| Comparison | `./bench/comparison/go.mod` | Library comparison |
-| Generators | `./tools/cmd/*/go.mod` | Code generators |
+| Generators | `./internal/jwxcodegen/go.mod` | Code generators |
+
+Benchmarks live in a separate repository: [github.com/jwx-go/benchmarks](https://github.com/jwx-go/benchmarks).
 
 ### Local Development
 
@@ -147,7 +149,6 @@ make tidy
 Tests are run via `./tools/test.sh` which iterates over:
 - `.` (main module)
 - `./examples`
-- `./bench/performance`
 - `./cmd/jwx`
 
 ## Package Directory Map
@@ -208,10 +209,11 @@ Use `github.com/stretchr/testify/require` for assertions (not `assert`).
 | Task | Edit This | Then Run |
 |------|-----------|----------|
 | Add/edit any option | `{pkg}/options.yaml` | `make generate` or `go generate .` |
-| Add new JWS header field | `tools/cmd/genjws/objects.yml` | `make generate-jws` |
-| Add new JWK key field | `tools/cmd/genjwk/objects.yml` | `make generate-jwk` |
-| Add new algorithm | `tools/cmd/genjwa/objects.yml` | `make generate-jwa` |
-| Modify token fields | `tools/cmd/genjwt/objects.yml` | `make generate-jwt` |
+| Add new JWS header field | `jws/objects.yml` | `make generate-jws` |
+| Add new JWE header field | `jwe/objects.yml` | `make generate-jwe` |
+| Add new JWK key field | `jwk/objects.yml` | `make generate-jwk` |
+| Add new algorithm | `jwa/objects.yml` | `make generate-jwa` |
+| Modify token fields | `jwt/objects.yml` | `make generate-jwt` |
 
 ## File Naming Conventions
 

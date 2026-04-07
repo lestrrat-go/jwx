@@ -41,3 +41,6 @@ bazel-*
 # Go workspace files (local development only)
 go.work
 go.work.sum
+
+# Cached codegen binary
+scripts/.jwxcodegen
