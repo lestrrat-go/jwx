@@ -324,7 +324,7 @@ func generateHeaders(obj *codegen.Object) error {
 			o.L("if err != nil {")
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")
-			o.L("key, err := jwk.ParseKey(raw)")
+			o.L("key, err := jwk.ParseKey[jwk.Key](raw)")
 			o.L("if err != nil {")
 			o.L("return fmt.Errorf(`failed to parse JWK for key %%s: %%w`, %sKey, err)", f.Name(true))
 			o.L("}")

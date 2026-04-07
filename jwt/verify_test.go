@@ -117,7 +117,7 @@ func TestVerifyCompactFastSecurityBypass(t *testing.T) {
 		rsaKey, err := jwxtest.GenerateRsaKey()
 		require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)
 
-		jwkKey, err := jwk.Import(rsaKey)
+		jwkKey, err := jwk.Import[jwk.Key](rsaKey)
 		require.NoError(t, err, `jwk.Import should succeed`)
 
 		// Corrupt the key by setting invalid D value (private exponent)
@@ -144,7 +144,7 @@ func TestVerifyCompactFastSecurityBypass(t *testing.T) {
 		require.NoError(t, err, `jwt.Sign should succeed`)
 
 		// Try to verify with corrupted public key and validation enabled
-		corruptedPubKey, err := jwk.Import(&validKey.PublicKey)
+		corruptedPubKey, err := jwk.Import[jwk.Key](&validKey.PublicKey)
 		require.NoError(t, err, `jwk.Import should succeed`)
 
 		// Corrupt the N value (modulus)

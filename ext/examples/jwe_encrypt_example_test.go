@@ -16,7 +16,7 @@ func Example_jwe_encrypt() {
 		fmt.Printf("failed to create raw private key: %s\n", err)
 		return
 	}
-	privkey, err := jwk.Import(rawprivkey)
+	privkey, err := jwk.Import[jwk.Key](rawprivkey)
 	if err != nil {
 		fmt.Printf("failed to create private key: %s\n", err)
 		return

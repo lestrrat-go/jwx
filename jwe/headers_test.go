@@ -27,10 +27,10 @@ func TestHeaders(t *testing.T) {
 
 	rawKey, err := jwxtest.GenerateEcdsaKey(jwa.P521())
 	require.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`)
-	privKey, err := jwk.Import(rawKey)
+	privKey, err := jwk.Import[jwk.Key](rawKey)
 	require.NoError(t, err, `jwk.Import should succeed`)
 
-	pubKey, err := jwk.Import(rawKey.PublicKey)
+	pubKey, err := jwk.Import[jwk.Key](rawKey.PublicKey)
 	require.NoError(t, err, `jwk.Import should succeed`)
 
 	data := []struct {

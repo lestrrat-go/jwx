@@ -19,7 +19,7 @@ func TestKeyconv(t *testing.T) {
 		key, err := jwxtest.GenerateRsaKey()
 		require.NoError(t, err, `rsa.GenerateKey should succeed`)
 		t.Run("PrivateKey", func(t *testing.T) {
-			jwkKey, _ := jwk.Import(key)
+			jwkKey, _ := jwk.Import[jwk.Key](key)
 			testcases := []struct {
 				Src   any
 				Error bool
@@ -48,7 +48,7 @@ func TestKeyconv(t *testing.T) {
 		})
 		t.Run("PublicKey", func(t *testing.T) {
 			pubkey := &key.PublicKey
-			jwkKey, _ := jwk.Import(pubkey)
+			jwkKey, _ := jwk.Import[jwk.Key](pubkey)
 			testcases := []struct {
 				Src   any
 				Error bool
@@ -77,7 +77,7 @@ func TestKeyconv(t *testing.T) {
 		require.NoError(t, err, `ecdsa.GenerateKey should succeed`)
 
 		t.Run("PrivateKey", func(t *testing.T) {
-			jwkKey, _ := jwk.Import(key)
+			jwkKey, _ := jwk.Import[jwk.Key](key)
 			testcases := []struct {
 				Src   any
 				Error bool
@@ -102,7 +102,7 @@ func TestKeyconv(t *testing.T) {
 		})
 		t.Run("PublicKey", func(t *testing.T) {
 			pubkey := &key.PublicKey
-			jwkKey, _ := jwk.Import(pubkey)
+			jwkKey, _ := jwk.Import[jwk.Key](pubkey)
 			testcases := []struct {
 				Src   any
 				Error bool

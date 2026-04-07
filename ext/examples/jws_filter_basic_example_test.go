@@ -10,7 +10,7 @@ import (
 
 func Example_jws_header_filter_basic() {
 	// Create a key for signing
-	key, err := jwk.Import([]byte(`my-secret-key`))
+	key, err := jwk.Import[jwk.Key]([]byte(`my-secret-key`))
 	if err != nil {
 		fmt.Printf("failed to create key: %s\n", err)
 		return

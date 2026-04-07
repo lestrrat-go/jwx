@@ -37,7 +37,7 @@ z8CjezfckLs7UKJOlhu3OU9TFsiGDzSDBZdDWO1/uciJ/AAWeSmsBt8cKL0MirIr
 c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 -----END CERTIFICATE-----`
 
-	key, err := jwk.ParseKey([]byte(src), jwk.WithPEM(true))
+	key, err := jwk.ParseKey[jwk.RSAPublicKey]([]byte(src), jwk.WithPEM(true))
 	if err != nil {
 		fmt.Printf("failed to parse key in PEM format: %s\n", err)
 		return

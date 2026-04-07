@@ -27,7 +27,7 @@ func FuzzEncryptAndDecrypt(f *testing.F) {
 
 	// Use a symmetric key for fast encrypt/decrypt round-trips.
 	rawKey := []byte(`0123456789abcdef`) // 128-bit key for A128KW
-	key, err := jwk.Import(rawKey)
+	key, err := jwk.Import[jwk.Key](rawKey)
 	if err != nil {
 		f.Fatal(err)
 	}

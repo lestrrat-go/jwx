@@ -26,7 +26,7 @@ func FuzzSignAndParse(f *testing.F) {
 	f.Add(``, ``)
 	f.Add("github.com/lestrrat-go/jwx", "user@example.com")
 
-	key, err := jwk.Import([]byte(`abracadabra-secret-key-1234567890`))
+	key, err := jwk.Import[jwk.Key]([]byte(`abracadabra-secret-key-1234567890`))
 	if err != nil {
 		f.Fatal(err)
 	}

@@ -42,7 +42,7 @@ func Example_jwt_parse_with_jwks() {
 		{ // Preparation:
 			// Unlike our previous example, we DO NOT want to sign the payload.
 			// Therefore we do NOT set the "kid" value
-			realKey, err := jwk.Import(privKey)
+			realKey, err := jwk.Import[jwk.Key](privKey)
 			if err != nil {
 				fmt.Printf("failed to create JWK: %s\n", err)
 				return
@@ -64,7 +64,7 @@ func Example_jwt_parse_with_jwks() {
 
 			// Now create a key set that users will use to verity the signed payload against
 			// Normally these keys are available somewhere like https://www.googleapis.com/oauth2/v3/certs
-			pubKey, err := jwk.Import(privKey.PublicKey)
+			pubKey, err := jwk.Import[jwk.Key](privKey.PublicKey)
 			if err != nil {
 				fmt.Printf("failed to create JWK: %s\n", err)
 				return
@@ -134,7 +134,7 @@ func Example_jwt_sign_with_import_jwk() {
 	fmt.Printf("privateClaimKey -> '%s'\n", pc)
 
 	//convert jwk in bytes and return a new key
-	jwkey, err := jwk.ParseKey([]byte(jwkStr))
+	jwkey, err := jwk.ParseKey[jwk.Key]([]byte(jwkStr))
 	if err != nil {
 		fmt.Printf("failed to parse key: %s\n", err)
 		return
@@ -271,7 +271,7 @@ func Example_jwt_sign_token() {
 
 	{
 		// Signing a token (using JWK)
-		jwkKey, err := jwk.Import(key)
+		jwkKey, err := jwk.Import[jwk.Key](key)
 		if err != nil {
 			log.Printf("failed to create JWK key: %s", err)
 			return

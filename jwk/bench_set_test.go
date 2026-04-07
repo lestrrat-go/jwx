@@ -11,7 +11,7 @@ func makeKeySet(b *testing.B, n int) jwk.Set {
 	b.Helper()
 	set := jwk.NewSet()
 	for i := range n {
-		key, err := jwk.Import(fmt.Appendf(nil, "secret-key-value-%04d", i))
+		key, err := jwk.Import[jwk.Key](fmt.Appendf(nil, "secret-key-value-%04d", i))
 		if err != nil {
 			b.Fatalf("failed to create key: %v", err)
 		}

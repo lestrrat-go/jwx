@@ -228,7 +228,7 @@ func (s *set) UnmarshalJSON(data []byte) error {
 			}
 
 			for i, keysrc := range list {
-				key, err := ParseKey(keysrc, options...)
+				key, err := doParseKey(keysrc, options...)
 				if err != nil {
 					if !ignoreParseError {
 						return fmt.Errorf(`failed to decode key #%d in "keys": %w`, i, err)
@@ -260,7 +260,7 @@ func (s *set) UnmarshalJSON(data []byte) error {
 	// Not checking for len(s.keys) == 0, because it could be
 	// an empty key set
 	if !sawKeysField {
-		key, err := ParseKey(data, options...)
+		key, err := doParseKey(data, options...)
 		if err != nil {
 			return fmt.Errorf(`failed to parse sole key in key set`)
 		}

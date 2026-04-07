@@ -18,7 +18,7 @@ func Example_jwk_parse_key() {
     "kid":"1"
   }`
 
-	key, err := jwk.ParseKey([]byte(src))
+	key, err := jwk.ParseKey[jwk.ECDSAPublicKey]([]byte(src))
 	if err != nil {
 		fmt.Printf("failed parse key: %s\n", err)
 		return

@@ -43,7 +43,7 @@ func Example_jwk_struct_field() {
 
 	// Parse the intercepted `Proxy.Key` as a `jwk.Key`
 	// and assign it to `Container.Key`
-	key, err := jwk.ParseKey(p.Key)
+	key, err := jwk.ParseKey[jwk.Key](p.Key)
 	if err != nil {
 		fmt.Printf("failed to parse key: %s\n", err)
 		return

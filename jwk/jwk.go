@@ -61,7 +61,29 @@ func init() {
 //   - "crypto/ed25519".PrivateKey and "crypto/ed25519".PublicKey creates an OKP based key
 //   - "crypto/ecdh".PrivateKey and "crypto/ecdh".PublicKey creates an OKP based key
 //   - []byte creates a symmetric key
-func Import(raw any) (Key, error) {
+//
+// The type parameter T specifies the expected key type. Use [Key] when you
+// do not need a specific subtype:
+//
+//	key, err := jwk.Import[jwk.Key](rawKey)
+//
+// Use a concrete key type to obtain a typed result directly:
+//
+//	rsaKey, err := jwk.Import[jwk.RSAPrivateKey](rawRSAKey)
+func Import[T Key](raw any) (T, error) {
+	var zero T
+	key, err := doImport(raw)
+	if err != nil {
+		return zero, err
+	}
+	result, ok := key.(T)
+	if !ok {
+		return zero, importerr(`imported key is %T, not %T`, key, zero)
+	}
+	return result, nil
+}
+
+func doImport(raw any) (Key, error) {
 	if raw == nil {
 		return nil, importerr(`a non-nil key is required`)
 	}
@@ -121,7 +143,7 @@ func PublicKeyOf(v any) (Key, error) {
 		return pk.PublicKey()
 	}
 
-	jk, err := Import(v)
+	jk, err := doImport(v)
 	if err != nil {
 		return nil, fmt.Errorf(`jwk.PublicKeyOf: failed to convert key into JWK: %w`, err)
 	}
@@ -142,7 +164,7 @@ func PublicKeyOf(v any) (Key, error) {
 func PublicRawKeyOf(v any) (any, error) {
 	pk, ok := v.(PublicKeyer)
 	if !ok {
-		k, err := Import(v)
+		k, err := doImport(v)
 		if err != nil {
 			return nil, fmt.Errorf(`jwk.PublicRawKeyOf: failed to convert key to jwk.Key: %w`, err)
 		}
@@ -170,7 +192,7 @@ func PublicRawKeyOf(v any) (any, error) {
 // a pointer to an empty interface, or a pointer to the actual raw key type
 // such as *rsa.PrivateKey, *ecdsa.PublicKey, *[]byte, etc.
 func ParseRawKey(data []byte, rawkey any) error {
-	key, err := ParseKey(data)
+	key, err := doParseKey(data)
 	if err != nil {
 		return fmt.Errorf(`failed to parse key: %w`, err)
 	}
@@ -215,7 +237,29 @@ func (ctx *setDecodeCtx) IgnoreParseError() bool {
 // guarantee a valid key. For example, no checks against expiration dates
 // are performed for certificate expiration, no checks against missing
 // parameters are performed, etc.
-func ParseKey(data []byte, options ...ParseOption) (Key, error) {
+//
+// The type parameter T specifies the expected key type. Use [Key] when you
+// do not need a specific subtype:
+//
+//	key, err := jwk.ParseKey[jwk.Key](data)
+//
+// Use a concrete key type to obtain a typed result directly:
+//
+//	ecKey, err := jwk.ParseKey[jwk.ECDSAPublicKey](data)
+func ParseKey[T Key](data []byte, options ...ParseOption) (T, error) {
+	var zero T
+	key, err := doParseKey(data, options...)
+	if err != nil {
+		return zero, err
+	}
+	result, ok := key.(T)
+	if !ok {
+		return zero, parseerr(`parsed key is %T, not %T`, key, zero)
+	}
+	return result, nil
+}
+
+func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var parsePEM bool
 	var localReg *json.Registry
 	var pemDecoder PEMDecoder
@@ -253,7 +297,7 @@ func ParseKey(data []byte, options ...ParseOption) (Key, error) {
 		if err != nil {
 			return nil, fmt.Errorf(`failed to decode PEM/X.509 encoded key: %w`, err)
 		}
-		return Import(raw)
+		return doImport(raw)
 	}
 
 	probe, err := keyProbe.Probe(data)
@@ -336,7 +380,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			if err != nil {
 				return nil, parseerr(`failed to parse PEM encoded key: %w`, err)
 			}
-			key, err := Import(raw)
+			key, err := doImport(raw)
 			if err != nil {
 				return nil, parseerr(`failed to create jwk.Key from %T: %w`, raw, err)
 			}

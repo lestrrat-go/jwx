@@ -46,7 +46,7 @@ func init() {
       "qi":"VIMpMYbPf47dT1w_zDUXfPimsSegnMOA1zTaX7aGk_8urY6R8-ZW1FxU7AlWAyLWybqq6t16VFd7hQd0y6flUK4SlOydB61gwanOsXGOAOv82cHq0E3eL4HrtZkUuKvnPrMnsUUFlfUdybVzxyjz9JF_XyaY14ardLSjf4L_FNY"
      }`)
 
-	privkey, err := jwk.ParseKey(jwkstr)
+	privkey, err := jwk.ParseKey[jwk.Key](jwkstr)
 	if err != nil {
 		panic(err)
 	}
@@ -145,7 +145,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
       "qi":"VIMpMYbPf47dT1w_zDUXfPimsSegnMOA1zTaX7aGk_8urY6R8-ZW1FxU7AlWAyLWybqq6t16VFd7hQd0y6flUK4SlOydB61gwanOsXGOAOv82cHq0E3eL4HrtZkUuKvnPrMnsUUFlfUdybVzxyjz9JF_XyaY14ardLSjf4L_FNY"
      }`)
 
-	privkey, err := jwk.ParseKey(jwkstr)
+	privkey, err := jwk.ParseKey[jwk.Key](jwkstr)
 	require.NoError(t, err, `parsing jwk should succeed`)
 
 	rawkey, err := jwk.Export[*rsa.PrivateKey](privkey)
@@ -231,7 +231,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 				require.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext")
 			})
 			t.Run("WithKeySet", func(t *testing.T) {
-				pkJwk, err := jwk.Import(rawkey)
+				pkJwk, err := jwk.Import[jwk.Key](rawkey)
 				require.NoError(t, err, `jwk.New should succeed`)
 				// Keys are not going to be selected without an algorithm
 				require.NoError(t, pkJwk.Set(jwe.AlgorithmKey, jwa.RSA_OAEP()), `jwk.Set should succeed`)
@@ -403,7 +403,7 @@ func Test_GHIssue207(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.Name, func(t *testing.T) {
-			webKey, err := jwk.ParseKey([]byte(tc.Key))
+			webKey, err := jwk.ParseKey[jwk.Key]([]byte(tc.Key))
 			require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 			thumbprint, err := webKey.Thumbprint(crypto.SHA1)
@@ -553,7 +553,7 @@ func TestDecodePredefined_Direct(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.Algorithm.String(), func(t *testing.T) {
-			webKey, err := jwk.ParseKey([]byte(tc.Key))
+			webKey, err := jwk.ParseKey[jwk.Key]([]byte(tc.Key))
 			require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 			thumbprint, err := webKey.Thumbprint(crypto.SHA1)
@@ -737,7 +737,7 @@ func TestGH840(t *testing.T) {
 		"d": "870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE"
 	}`)
 
-	privkey, err := jwk.ParseKey(untrustedJWK)
+	privkey, err := jwk.ParseKey[jwk.Key](untrustedJWK)
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 	pubkey, err := privkey.PublicKey()
@@ -820,7 +820,7 @@ func TestGH1001(t *testing.T) {
 
 func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 	token := []byte("eyJhbGciOiJQQkVTMi1IUzI1NitBMTI4S1ciLCJlbmMiOiJBMjU2R0NNIiwicDJjIjoyMDAwMDAwMDAwLCJwMnMiOiJNNzczSnlmV2xlX2FsSXNrc0NOTU9BIn0=.S8B1kXdIR7BM6i_TaGsgqEOxU-1Sgdakp4mHq7UVhn-_REzOiGz2gg.gU_LfzhBXtQdwYjh.9QUIS-RWkLc.m9TudmzUoCzDhHsGGfzmCA")
-	key, err := jwk.Import([]byte(`abcdefg`))
+	key, err := jwk.Import[jwk.Key]([]byte(`abcdefg`))
 	require.NoError(t, err, `jwk.Import should succeed`)
 
 	{
@@ -869,7 +869,7 @@ func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 func TestMinPBES2Count(t *testing.T) {
 	// Encrypt a message using PBES2 (default p2c=10000)
 	password := []byte(`supersecret`)
-	key, err := jwk.Import(password)
+	key, err := jwk.Import[jwk.Key](password)
 	require.NoError(t, err, `jwk.Import should succeed`)
 
 	payload := []byte(`hello world`)
@@ -903,7 +903,7 @@ func TestMinPBES2Count(t *testing.T) {
 
 func TestPBES2CountPerCall(t *testing.T) {
 	password := []byte(`supersecret`)
-	key, err := jwk.Import(password)
+	key, err := jwk.Import[jwk.Key](password)
 	require.NoError(t, err, `jwk.Import should succeed`)
 
 	payload := []byte(`hello world`)

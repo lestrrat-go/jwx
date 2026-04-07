@@ -16,13 +16,17 @@
 //
 // You can parse a JWK from a JSON payload:
 //
-//	jwk.ParseKey([]byte(`{"kty":"EC",...}`))
+//	jwk.ParseKey[jwk.Key]([]byte(`{"kty":"EC",...}`))
 //
 // You can go back and forth between raw key types and JWKs:
 //
-//	jwkKey, _ := jwk.Import(rsaPrivateKey)
-//	var rawKey *rsa.PRrivateKey
-//	jwk.Export(jwkKey, &rawKey)
+//	jwkKey, _ := jwk.Import[jwk.Key](rsaPrivateKey)
+//	rawKey, _ := jwk.Export[*rsa.PrivateKey](jwkKey)
+//
+// When you know the expected key type, use a concrete type parameter:
+//
+//	rsaKey, _ := jwk.Import[jwk.RSAPrivateKey](rsaPrivateKey)
+//	ecKey, _ := jwk.ParseKey[jwk.ECDSAPublicKey](jsonData)
 //
 // You can use them to sign/verify/encrypt/decrypt:
 //

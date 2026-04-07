@@ -30,7 +30,7 @@ func generateRsaJwk(t *testing.T) jwk.Key {
 	t.Helper()
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err, `rsa.GenerateKey should succeed`)
-	jwkKey, err := jwk.Import(key)
+	jwkKey, err := jwk.Import[jwk.Key](key)
 	require.NoError(t, err, `jwk.Import should succeed`)
 	return jwkKey
 }
