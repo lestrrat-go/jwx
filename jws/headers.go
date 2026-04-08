@@ -44,7 +44,7 @@ func (h *stdHeaders) Merge(h2 Headers) (Headers, error) {
 
 // Clone creates a deep copy of the header
 func (h *stdHeaders) Clone() (Headers, error) {
-	dst := NewHeaders().(*stdHeaders)
+	dst, _ := NewHeaders().(*stdHeaders)
 	dst.cloneFrom(h)
 	return dst, nil
 }

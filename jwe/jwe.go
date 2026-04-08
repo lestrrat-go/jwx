@@ -291,6 +291,7 @@ func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 	dc.maxPBES2Count = int(maxPBES2Count.Load())
 	dc.minPBES2Count = int(minPBES2Count.Load())
 
+	var ctxOpt context.Context
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identMessage{}:
@@ -317,8 +318,11 @@ func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 		case identMinPBES2Count{}:
 			dc.minPBES2Count = option.MustGet[int](opt)
 		case identContext{}:
-			dc.ctx = option.MustGet[context.Context](opt)
+			ctxOpt = option.MustGet[context.Context](opt) //nolint:fatcontext // not nesting; selecting from options
 		}
+	}
+	if ctxOpt != nil {
+		dc.ctx = ctxOpt
 	}
 
 	if len(dc.keyProviders) < 1 {

@@ -15,7 +15,7 @@ import (
 var registry = json.NewRegistry()
 
 func (t *stdToken) Clone() (jwt.Token, error) {
-	dst := New().(*stdToken)
+	dst, _ := New().(*stdToken)
 	dst.cloneFrom(t)
 	return dst, nil
 }

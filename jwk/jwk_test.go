@@ -316,6 +316,7 @@ func TestNew(t *testing.T) {
 func TestGenericImport(t *testing.T) {
 	t.Parallel()
 	t.Run("RSAPrivateKey", func(t *testing.T) {
+		t.Parallel()
 		raw, err := rsa.GenerateKey(rand.Reader, 2048)
 		require.NoError(t, err)
 
@@ -325,6 +326,7 @@ func TestGenericImport(t *testing.T) {
 		require.Equal(t, jwa.RSA(), key.KeyType())
 	})
 	t.Run("ECDSAPublicKey", func(t *testing.T) {
+		t.Parallel()
 		raw, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		require.NoError(t, err)
 
@@ -334,12 +336,14 @@ func TestGenericImport(t *testing.T) {
 		require.Equal(t, jwa.EC(), key.KeyType())
 	})
 	t.Run("SymmetricKey", func(t *testing.T) {
+		t.Parallel()
 		key, err := jwk.Import[jwk.SymmetricKey]([]byte("my-secret"))
 		require.NoError(t, err)
 		require.NotNil(t, key)
 		require.Equal(t, jwa.OctetSeq(), key.KeyType())
 	})
 	t.Run("OKPPrivateKey", func(t *testing.T) {
+		t.Parallel()
 		_, priv, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 
@@ -349,11 +353,13 @@ func TestGenericImport(t *testing.T) {
 		require.Equal(t, jwa.OKP(), key.KeyType())
 	})
 	t.Run("TypeMismatch", func(t *testing.T) {
+		t.Parallel()
 		// Importing []byte produces SymmetricKey, not RSAPrivateKey
 		_, err := jwk.Import[jwk.RSAPrivateKey]([]byte("symmetric"))
 		require.Error(t, err)
 	})
 	t.Run("BaseInterface", func(t *testing.T) {
+		t.Parallel()
 		// Import[Key] always succeeds for valid input
 		key, err := jwk.Import[jwk.Key]([]byte("my-secret"))
 		require.NoError(t, err)
@@ -361,16 +367,19 @@ func TestGenericImport(t *testing.T) {
 	})
 }
 
+const testOctKeyJSON = `{"kty":"oct","k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"}`
+
 func TestGenericParseKey(t *testing.T) {
 	t.Parallel()
 	t.Run("JSON", func(t *testing.T) {
-		src := `{"kty":"oct","k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"}`
-		key, err := jwk.ParseKey[jwk.SymmetricKey]([]byte(src))
+		t.Parallel()
+		key, err := jwk.ParseKey[jwk.SymmetricKey]([]byte(testOctKeyJSON))
 		require.NoError(t, err)
 		require.NotNil(t, key)
 		require.Equal(t, jwa.OctetSeq(), key.KeyType())
 	})
 	t.Run("PEM", func(t *testing.T) {
+		t.Parallel()
 		raw, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		require.NoError(t, err)
 
@@ -387,17 +396,18 @@ func TestGenericParseKey(t *testing.T) {
 		require.Equal(t, jwa.EC(), key.KeyType())
 	})
 	t.Run("TypeMismatch", func(t *testing.T) {
-		src := `{"kty":"oct","k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"}`
-		_, err := jwk.ParseKey[jwk.RSAPrivateKey]([]byte(src))
+		t.Parallel()
+		_, err := jwk.ParseKey[jwk.RSAPrivateKey]([]byte(testOctKeyJSON))
 		require.Error(t, err)
 	})
 	t.Run("BaseInterface", func(t *testing.T) {
-		src := `{"kty":"oct","k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"}`
-		key, err := jwk.ParseKey[jwk.Key]([]byte(src))
+		t.Parallel()
+		key, err := jwk.ParseKey[jwk.Key]([]byte(testOctKeyJSON))
 		require.NoError(t, err)
 		require.NotNil(t, key)
 	})
 	t.Run("ErrorPropagation", func(t *testing.T) {
+		t.Parallel()
 		_, err := jwk.ParseKey[jwk.Key]([]byte(`not json`))
 		require.Error(t, err)
 	})

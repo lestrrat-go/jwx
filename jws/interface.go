@@ -65,10 +65,8 @@ type Message struct {
 }
 
 type Signature struct {
-	encoder   Base64Encoder
 	dc        DecodeCtx
 	headers   Headers // Unprotected Headers
 	protected Headers // Protected Headers
 	signature []byte  // Signature
-	detached  bool
 }
