@@ -177,10 +177,14 @@ func decryptKeyHPKE(recipientKey []byte, alg string, ctalg jwa.ContentEncryption
 
 	ek, ok := headers.EncapsulatedKey()
 	if !ok {
-		return nil, fmt.Errorf(`jwe: decrypt key: missing 'ek' field for HPKE`)
+		return nil, makeHPKEError(`decrypt key (HPKE): missing 'ek' field`)
 	}
 
-	return jwebb.KeyDecryptHPKEKE(recipientKey, alg, ctalgStr, key, ek)
+	cek, err := jwebb.KeyDecryptHPKEKE(recipientKey, alg, ctalgStr, key, ek)
+	if err != nil {
+		return nil, makeHPKEError(`decrypt key (HPKE): %w`, err)
+	}
+	return cek, nil
 }
 
 func decryptKeyMLKEM(recipientKey []byte, alg string, ctalg jwa.ContentEncryptionAlgorithm, key any, headers Headers) ([]byte, error) {
