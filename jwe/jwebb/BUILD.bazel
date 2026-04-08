@@ -4,6 +4,7 @@ go_library(
     name = "jwebb",
     srcs = [
         "content_cipher.go",
+        "ecdh_es_ext.go",
         "hpke_params.go",
         "jwebb.go",
         "key_decrypt_asymmetric.go",
