@@ -644,79 +644,65 @@ func (h *ecdsaPublicKey) UnmarshalJSON(buf []byte) error {
 }
 
 func (h *ecdsaPublicKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]any)
-	fields := make([]string, 0, 11)
-	data[KeyTypeKey] = jwa.EC()
-	fields = append(fields, KeyTypeKey)
+	pairs := getFieldPairList()
+	pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: jwa.EC()})
 	h.mu.RLock()
 	if h.algorithm != nil {
-		data[AlgorithmKey] = *(h.algorithm)
-		fields = append(fields, AlgorithmKey)
+		pairs = append(pairs, fieldPair{Name: AlgorithmKey, Value: *(h.algorithm)})
 	}
 	if h.crv != nil {
-		data[ECDSACrvKey] = *(h.crv)
-		fields = append(fields, ECDSACrvKey)
+		pairs = append(pairs, fieldPair{Name: ECDSACrvKey, Value: *(h.crv)})
 	}
 	if h.keyID != nil {
-		data[KeyIDKey] = *(h.keyID)
-		fields = append(fields, KeyIDKey)
+		pairs = append(pairs, fieldPair{Name: KeyIDKey, Value: *(h.keyID)})
 	}
 	if h.keyOps != nil {
-		data[KeyOpsKey] = *(h.keyOps)
-		fields = append(fields, KeyOpsKey)
+		pairs = append(pairs, fieldPair{Name: KeyOpsKey, Value: *(h.keyOps)})
 	}
 	if h.keyUsage != nil {
-		data[KeyUsageKey] = *(h.keyUsage)
-		fields = append(fields, KeyUsageKey)
+		pairs = append(pairs, fieldPair{Name: KeyUsageKey, Value: *(h.keyUsage)})
 	}
 	if h.x != nil {
-		data[ECDSAXKey] = h.x
-		fields = append(fields, ECDSAXKey)
+		pairs = append(pairs, fieldPair{Name: ECDSAXKey, Value: h.x})
 	}
 	if h.x509CertChain != nil {
-		data[X509CertChainKey] = h.x509CertChain
-		fields = append(fields, X509CertChainKey)
+		pairs = append(pairs, fieldPair{Name: X509CertChainKey, Value: h.x509CertChain})
 	}
 	if h.x509CertThumbprint != nil {
-		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
-		fields = append(fields, X509CertThumbprintKey)
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
 	}
 	if h.x509CertThumbprintS256 != nil {
-		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
-		fields = append(fields, X509CertThumbprintS256Key)
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
 	}
 	if h.x509URL != nil {
-		data[X509URLKey] = *(h.x509URL)
-		fields = append(fields, X509URLKey)
+		pairs = append(pairs, fieldPair{Name: X509URLKey, Value: *(h.x509URL)})
 	}
 	if h.y != nil {
-		data[ECDSAYKey] = h.y
-		fields = append(fields, ECDSAYKey)
+		pairs = append(pairs, fieldPair{Name: ECDSAYKey, Value: h.y})
 	}
 	for k, v := range h.privateParams {
-		data[k] = v
-		fields = append(fields, k)
+		pairs = append(pairs, fieldPair{Name: k, Value: v})
 	}
 	h.mu.RUnlock()
 
-	slices.Sort(fields)
+	slices.SortFunc(pairs, fieldPairLess)
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
 	enc := json.NewEncoder(buf)
 	enc.WriteToken(jsontext.BeginObject)
-	for _, f := range fields {
-		enc.WriteToken(jsontext.String(f))
-		v := data[f]
-		switch v := v.(type) {
+	for _, p := range pairs {
+		enc.WriteToken(jsontext.String(p.Name))
+		switch v := p.Value.(type) {
 		case []byte:
 			enc.WriteToken(jsontext.String(base64.EncodeToString(v)))
 		default:
 			if err := json.MarshalEncode(enc, v); err != nil {
-				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
+				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, p.Name, err)
 			}
 		}
 	}
 	enc.WriteToken(jsontext.EndObject)
+	putFieldPairList(pairs)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil
@@ -1440,83 +1426,68 @@ func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) (retErr error) {
 }
 
 func (h *ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]any)
-	fields := make([]string, 0, 12)
-	data[KeyTypeKey] = jwa.EC()
-	fields = append(fields, KeyTypeKey)
+	pairs := getFieldPairList()
+	pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: jwa.EC()})
 	h.mu.RLock()
 	if h.algorithm != nil {
-		data[AlgorithmKey] = *(h.algorithm)
-		fields = append(fields, AlgorithmKey)
+		pairs = append(pairs, fieldPair{Name: AlgorithmKey, Value: *(h.algorithm)})
 	}
 	if h.crv != nil {
-		data[ECDSACrvKey] = *(h.crv)
-		fields = append(fields, ECDSACrvKey)
+		pairs = append(pairs, fieldPair{Name: ECDSACrvKey, Value: *(h.crv)})
 	}
 	if h.d != nil {
-		data[ECDSADKey] = h.d
-		fields = append(fields, ECDSADKey)
+		pairs = append(pairs, fieldPair{Name: ECDSADKey, Value: h.d})
 	}
 	if h.keyID != nil {
-		data[KeyIDKey] = *(h.keyID)
-		fields = append(fields, KeyIDKey)
+		pairs = append(pairs, fieldPair{Name: KeyIDKey, Value: *(h.keyID)})
 	}
 	if h.keyOps != nil {
-		data[KeyOpsKey] = *(h.keyOps)
-		fields = append(fields, KeyOpsKey)
+		pairs = append(pairs, fieldPair{Name: KeyOpsKey, Value: *(h.keyOps)})
 	}
 	if h.keyUsage != nil {
-		data[KeyUsageKey] = *(h.keyUsage)
-		fields = append(fields, KeyUsageKey)
+		pairs = append(pairs, fieldPair{Name: KeyUsageKey, Value: *(h.keyUsage)})
 	}
 	if h.x != nil {
-		data[ECDSAXKey] = h.x
-		fields = append(fields, ECDSAXKey)
+		pairs = append(pairs, fieldPair{Name: ECDSAXKey, Value: h.x})
 	}
 	if h.x509CertChain != nil {
-		data[X509CertChainKey] = h.x509CertChain
-		fields = append(fields, X509CertChainKey)
+		pairs = append(pairs, fieldPair{Name: X509CertChainKey, Value: h.x509CertChain})
 	}
 	if h.x509CertThumbprint != nil {
-		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
-		fields = append(fields, X509CertThumbprintKey)
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
 	}
 	if h.x509CertThumbprintS256 != nil {
-		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
-		fields = append(fields, X509CertThumbprintS256Key)
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
 	}
 	if h.x509URL != nil {
-		data[X509URLKey] = *(h.x509URL)
-		fields = append(fields, X509URLKey)
+		pairs = append(pairs, fieldPair{Name: X509URLKey, Value: *(h.x509URL)})
 	}
 	if h.y != nil {
-		data[ECDSAYKey] = h.y
-		fields = append(fields, ECDSAYKey)
+		pairs = append(pairs, fieldPair{Name: ECDSAYKey, Value: h.y})
 	}
 	for k, v := range h.privateParams {
-		data[k] = v
-		fields = append(fields, k)
+		pairs = append(pairs, fieldPair{Name: k, Value: v})
 	}
 	h.mu.RUnlock()
 
-	slices.Sort(fields)
+	slices.SortFunc(pairs, fieldPairLess)
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
 	enc := json.NewEncoder(buf)
 	enc.WriteToken(jsontext.BeginObject)
-	for _, f := range fields {
-		enc.WriteToken(jsontext.String(f))
-		v := data[f]
-		switch v := v.(type) {
+	for _, p := range pairs {
+		enc.WriteToken(jsontext.String(p.Name))
+		switch v := p.Value.(type) {
 		case []byte:
 			enc.WriteToken(jsontext.String(base64.EncodeToString(v)))
 		default:
 			if err := json.MarshalEncode(enc, v); err != nil {
-				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
+				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, p.Name, err)
 			}
 		}
 	}
 	enc.WriteToken(jsontext.EndObject)
+	putFieldPairList(pairs)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil
