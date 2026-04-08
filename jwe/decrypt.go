@@ -164,10 +164,12 @@ func decryptKeyECDHES(recipientKey []byte, alg string, ctalg jwa.ContentEncrypti
 		apv = v
 	}
 
-	if !keywrap {
-		return jwebb.KeyDecryptECDHES(recipientKey, nil, derivedAlg, apu, apv, key, pubkey, keysize)
+	deriver, err := jwebb.NewECDHESKeyDeriver(key)
+	if err != nil {
+		return nil, fmt.Errorf(`jwe: decrypt key: %w`, err)
 	}
-	return jwebb.KeyDecryptECDHESKeyWrap(recipientKey, recipientKey, alg, apu, apv, key, pubkey, keysize)
+
+	return jwebb.KeyDecryptECDHESCustom(recipientKey, derivedAlg, apu, apv, deriver, pubkey, keysize, keywrap)
 }
 
 func decryptKeyHPKE(recipientKey []byte, alg string, ctalg jwa.ContentEncryptionAlgorithm, key any, headers Headers) ([]byte, error) {
