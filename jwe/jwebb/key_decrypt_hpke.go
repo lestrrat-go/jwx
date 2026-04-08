@@ -9,7 +9,7 @@ import (
 // encryptedCEK is the HPKE-sealed CEK from the JWE Encrypted Key field.
 // ek is the HPKE encapsulated key from the "ek" header field.
 func KeyDecryptHPKEKE(encryptedCEK []byte, alg, calg string, privkey any, ek []byte) ([]byte, error) {
-	_, kdf, aead, err := hpkeSuite(alg)
+	kdf, aead, err := hpkeSuite(alg)
 	if err != nil {
 		return nil, fmt.Errorf(`HPKE key decrypt: %w`, err)
 	}

@@ -24,12 +24,12 @@ var hpkeSuites = map[string]hpkeCiphersuite{
 	tokens.HPKE_7_KE: {ecdh.P256(), hpke.HKDFSHA256(), hpke.AES256GCM()},
 }
 
-func hpkeSuite(alg string) (hpke.KEM, hpke.KDF, hpke.AEAD, error) {
+func hpkeSuite(alg string) (hpke.KDF, hpke.AEAD, error) {
 	cs, ok := hpkeSuites[alg]
 	if !ok {
-		return nil, nil, nil, fmt.Errorf(`unsupported HPKE algorithm: %s`, alg)
+		return nil, nil, fmt.Errorf(`unsupported HPKE algorithm: %s`, alg)
 	}
-	return hpke.DHKEM(cs.curve), cs.kdf, cs.aead, nil
+	return cs.kdf, cs.aead, nil
 }
 
 // hpkeKEInfo builds the HPKE info parameter for Key Encryption mode
