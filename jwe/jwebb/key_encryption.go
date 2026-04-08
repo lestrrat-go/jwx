@@ -85,20 +85,11 @@ func IsMLKEMDirect(alg string) bool {
 	}
 }
 
-// IsHPKE checks if the algorithm is an HPKE-based algorithm
+// IsHPKE checks if the algorithm is an HPKE-based algorithm.
+// Built-in algorithms are pre-registered in the same registry
+// used by RegisterHPKEAlgorithm, so all lookups follow one path.
 func IsHPKE(alg string) bool {
-	switch alg {
-	case tokens.HPKE_0_KE, tokens.HPKE_1_KE, tokens.HPKE_2_KE,
-		tokens.HPKE_3_KE, tokens.HPKE_4_KE, tokens.HPKE_7_KE:
-		return true
-	default:
-		return false
-	}
-}
-
-// IsHPKEKeyEncryption checks if the algorithm is an HPKE key encryption algorithm
-func IsHPKEKeyEncryption(alg string) bool {
-	return IsHPKE(alg)
+	return isRegisteredHPKE(alg)
 }
 
 // IsDirectCEK checks if the algorithm uses direct key agreement

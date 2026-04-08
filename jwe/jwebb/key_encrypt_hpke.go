@@ -12,6 +12,11 @@ import (
 // It encrypts the CEK using the HPKE ciphersuite determined by alg, with the
 // content encryption algorithm calg bound into the HPKE info parameter.
 func KeyEncryptHPKEKE(cek []byte, alg, calg string, pubkey any) (keygen.ByteSource, error) {
+	// Try custom HPKE key encrypter (e.g., X448 from external modules)
+	if enc, ok := pubkey.(HPKEKeyEncrypter); ok {
+		return KeyEncryptHPKECustom(cek, alg, calg, enc)
+	}
+
 	kdf, aead, err := hpkeSuite(alg)
 	if err != nil {
 		return nil, fmt.Errorf(`HPKE key encrypt: %w`, err)

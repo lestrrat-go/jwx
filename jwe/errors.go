@@ -83,6 +83,31 @@ func makeRecipientError(err error) error {
 	return recipientError{err}
 }
 
+type hpkeError struct {
+	error
+}
+
+func (e hpkeError) Unwrap() error {
+	return e.error
+}
+
+func (hpkeError) Is(err error) bool {
+	_, ok := err.(hpkeError)
+	return ok
+}
+
+var errDefaultHPKEError = hpkeError{errors.New(`HPKE error`)}
+
+// HPKEError returns an error that can be passed to `errors.Is` to check
+// if the error originated from an HPKE encrypt or decrypt operation.
+func HPKEError() error {
+	return errDefaultHPKEError
+}
+
+func makeHPKEError(f string, args ...any) error {
+	return hpkeError{fmt.Errorf(f, args...)}
+}
+
 type parseError struct {
 	error
 }

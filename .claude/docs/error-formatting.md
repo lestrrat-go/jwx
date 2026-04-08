@@ -48,6 +48,7 @@ Only `jwt.UnknownPayloadTypeError()` remains a sentinel function (no struct type
 | `jws` | `ParseError()` | Parse failed |
 | `jwe` | `EncryptError()` | Encryption failed |
 | `jwe` | `DecryptError()` | Decryption failed |
+| `jwe` | `HPKEError()` | HPKE encrypt/decrypt operation failed |
 | `jwe` | `RecipientError()` | Recipient processing error |
 | `jwe` | `ParseError()` | Parse failed |
 | `jwk` | `ImportError()` | Key import failed |
