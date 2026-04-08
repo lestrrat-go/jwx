@@ -164,6 +164,11 @@ func decryptKeyECDHES(recipientKey []byte, alg string, ctalg jwa.ContentEncrypti
 		apv = v
 	}
 
+	// Try custom ECDH-ES key deriver (e.g., X448 from external modules)
+	if deriver, ok := key.(jwebb.ECDHESKeyDeriver); ok {
+		return jwebb.KeyDecryptECDHESCustom(recipientKey, derivedAlg, apu, apv, deriver, pubkey, keysize, keywrap)
+	}
+
 	if !keywrap {
 		return jwebb.KeyDecryptECDHES(recipientKey, nil, derivedAlg, apu, apv, key, pubkey, keysize)
 	}

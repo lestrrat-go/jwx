@@ -161,6 +161,10 @@ func (e *encrypter) encryptKeyECDHES(cek []byte, alg, ctalg string) (keygen.Byte
 		}
 		return jwebb.KeyEncryptECDHESKeyWrapECDSA(cek, alg, e.apu, e.apv, key, keysize, ctalg)
 	default:
+		// Try custom ECDH-ES key generator (e.g., X448 from external modules)
+		if gen, ok := keyToUse.(jwebb.ECDHESKeyGenerator); ok {
+			return jwebb.KeyEncryptECDHESCustom(cek, alg, e.apu, e.apv, gen, keysize, ctalg, keywrap)
+		}
 		return nil, fmt.Errorf(`jwe: encrypt key: unsupported key type for ECDH-ES: %T`, keyToUse)
 	}
 }
