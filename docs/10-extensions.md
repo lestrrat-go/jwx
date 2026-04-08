@@ -10,12 +10,21 @@ In v4, optional features are provided as standalone modules under [`github.com/j
 | [`github.com/jwx-go/ed448/v4`](https://github.com/jwx-go/ed448) | EdDSA (Ed448) | [`github.com/cloudflare/circl/sign/ed448`](https://pkg.go.dev/github.com/cloudflare/circl/sign/ed448) |
 | [`github.com/jwx-go/es256k/v4`](https://github.com/jwx-go/es256k) | ES256K (secp256k1) | [`github.com/decred/dcrd/dcrec/secp256k1/v4`](https://pkg.go.dev/github.com/decred/dcrd/dcrec/secp256k1/v4) |
 
+### Key Agreement / Encryption
+
+| Module | Capability | Key Package |
+|:-------|:-----------|:------------|
+| [`github.com/jwx-go/x448/v4`](https://github.com/jwx-go/x448) | X448 ECDH-ES, HPKE with DHKEM(X448) | [`github.com/cloudflare/circl/dh/x448`](https://pkg.go.dev/github.com/cloudflare/circl/dh/x448) |
+
 * [ML-DSA (Post-Quantum Signatures)](#ml-dsa-post-quantum-signatures)
   * [Signing and Verifying](#signing-and-verifying)
   * [Working with JWK](#working-with-jwk)
   * [Exporting Keys](#exporting-keys)
 * [Ed448](#ed448)
 * [ES256K (secp256k1)](#es256k-secp256k1)
+* [X448](#x448)
+  * [HPKE-5-KE (AES-256-GCM)](#hpke-5-ke-aes-256-gcm)
+  * [HPKE-6-KE (ChaCha20Poly1305)](#hpke-6-ke-chacha20poly1305)
 
 ---
 
@@ -442,3 +451,20 @@ func Example_jws_sign_es256k() {
 ```
 source: [examples/jws_sign_es256k_example_test.go](https://github.com/jwx-go/examples/blob/main/jws_sign_es256k_example_test.go)
 
+---
+
+# X448
+
+X448 is an elliptic curve providing ~224-bit security for key agreement. Unlike X25519, X448 is not in Go's standard library, so jwx v4 provides it as an extension module.
+
+To use X448, import [`github.com/jwx-go/x448/v4`](https://github.com/jwx-go/x448) for its side effects. Raw keys come from [`github.com/cloudflare/circl/dh/x448`](https://pkg.go.dev/github.com/cloudflare/circl/dh/x448). After import, X448 keys work with JWK (`kty=OKP`, `crv=X448`), ECDH-ES key agreement, and HPKE (HPKE-5-KE, HPKE-6-KE).
+
+## HPKE-5-KE (AES-256-GCM)
+
+<!-- INCLUDE(examples/jwe_encrypt_hpke5_example_test.go) -->
+<!-- END INCLUDE -->
+
+## HPKE-6-KE (ChaCha20Poly1305)
+
+<!-- INCLUDE(examples/jwe_encrypt_hpke6_example_test.go) -->
+<!-- END INCLUDE -->

@@ -12,6 +12,8 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
 * [Decrypting](#decrypting)
   * [Decrypting using a single key](#decrypting-using-a-single-key)
   * [Decrypting using a JWKS](#decrypting-using-a-jwks)
+* [HPKE (Hybrid Public Key Encryption)](#hpke-hybrid-public-key-encryption)
+* [ECDH-ES with X25519](#ecdh-es-with-x25519)
 * [Filtering JWE headers](#filtering-jwe-headers)
 
 # Parsing
@@ -438,6 +440,44 @@ func Example_jwe_verify_with_jwk_set() {
 ```
 source: [examples/jwe_decrypt_with_keyset_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_decrypt_with_keyset_example_test.go)
 <!-- END INCLUDE -->
+
+# HPKE (Hybrid Public Key Encryption)
+
+jwx v4 supports HPKE-based key encryption as defined in [draft-ietf-jose-hpke-encrypt](https://datatracker.ietf.org/doc/draft-ietf-jose-hpke-encrypt/). HPKE replaces the traditional two-step process (generate a random CEK, then wrap it) with a single KEM+KDF+AEAD operation.
+
+The following ciphersuites are built in:
+
+| Algorithm | KEM | KDF | AEAD |
+|:----------|:----|:----|:-----|
+| `HPKE-0-KE` | DHKEM(P-256) | HKDF-SHA256 | AES-128-GCM |
+| `HPKE-1-KE` | DHKEM(P-384) | HKDF-SHA384 | AES-256-GCM |
+| `HPKE-2-KE` | DHKEM(P-521) | HKDF-SHA512 | AES-256-GCM |
+| `HPKE-3-KE` | DHKEM(X25519) | HKDF-SHA256 | AES-128-GCM |
+| `HPKE-4-KE` | DHKEM(X25519) | HKDF-SHA256 | ChaCha20Poly1305 |
+| `HPKE-7-KE` | DHKEM(P-256) | HKDF-SHA256 | AES-256-GCM |
+
+X448 variants (HPKE-5-KE, HPKE-6-KE) are not built in because Go's standard library does not include X448. They can be provided by a companion module — see [Extension Modules](10-extensions.md#x448).
+
+Encrypt and decrypt with HPKE using the same `jwe.Encrypt` / `jwe.Decrypt` API as any other algorithm. Pass an `*ecdh.PublicKey` or `*ecdsa.PublicKey` for encryption, and the corresponding private key for decryption. `jwk.Key` values are also accepted.
+
+<!-- INCLUDE(examples/jwe_hpke_example_test.go) -->
+<!-- END INCLUDE -->
+
+For X25519-based HPKE (HPKE-3-KE, HPKE-4-KE):
+
+<!-- INCLUDE(examples/jwe_hpke_x25519_example_test.go) -->
+<!-- END INCLUDE -->
+
+HPKE stores the encapsulated key in the `"ek"` JWE header field. When parsing an HPKE message, this field is accessible via `headers.EncapsulatedKey()`.
+
+# ECDH-ES with X25519
+
+X25519 keys work with the standard ECDH-ES family of algorithms (`ECDH-ES`, `ECDH-ES+A128KW`, `ECDH-ES+A192KW`, `ECDH-ES+A256KW`) the same way NIST curves do. X25519 keys are represented in JWK as OKP keys with `crv=X25519`.
+
+<!-- INCLUDE(examples/jwe_ecdh_es_x25519_example_test.go) -->
+<!-- END INCLUDE -->
+
+For X448, import [`github.com/jwx-go/x448/v4`](https://github.com/jwx-go/x448) — see [Extension Modules](10-extensions.md#x448).
 
 # Filtering JWE headers
 
