@@ -108,73 +108,31 @@ func TestKeyDecryptRSAOAEP(t *testing.T) {
 	require.Equal(t, cek, decrypted)
 }
 
-func TestKeyDecryptECDHES(t *testing.T) {
-	// Generate ECDSA key pairs for Alice and Bob
-	alicePriv, err := jwxtest.GenerateEcdsaKey(jwa.P256())
-	require.NoError(t, err)
-	bobPriv, err := jwxtest.GenerateEcdsaKey(jwa.P256())
-	require.NoError(t, err)
-
-	apu := testAPU
-	apv := testAPV
-
-	// Test ECDH-ES direct key agreement (no key wrapping)
-	decrypted, err := jwebb.KeyDecryptECDHES(nil, nil, tokens.ECDH_ES, apu, apv, alicePriv, &bobPriv.PublicKey, 16)
-	require.NoError(t, err)
-	require.NotNil(t, decrypted)
-	require.Len(t, decrypted, 16)
-}
-
-func TestKeyDecryptECDHESKeyWrap(t *testing.T) {
+func TestKeyDecryptECDHESCustom(t *testing.T) {
 	cek := testCEK
 
-	// Generate ECDSA key pairs - use the same key for both sides to ensure compatibility
+	// Generate ECDSA key pair
 	privkey, err := jwxtest.GenerateEcdsaKey(jwa.P256())
 	require.NoError(t, err)
-	pubkey := &privkey.PublicKey
 
 	apu := testAPU
 	apv := testAPV
 
-	// First encrypt using ECDH-ES+A128KW
-	encrypted, err := jwebb.KeyEncryptECDHESKeyWrapECDSA(cek, tokens.ECDH_ES_A128KW, apu, apv, pubkey, 16, tokens.A128GCM)
+	// Encrypt using the unified path
+	gen, err := jwebb.NewECDHESKeyGenerator(&privkey.PublicKey)
 	require.NoError(t, err)
 
-	// Extract the public key from the encrypted result
-	// ECDH-ES encryption returns a ByteWithECPublicKey
+	encrypted, err := jwebb.KeyEncryptECDHESCustom(cek, tokens.ECDH_ES_A128KW, apu, apv, gen, 16, tokens.A128GCM, true)
+	require.NoError(t, err)
+
 	encryptedWithPubKey, ok := encrypted.(keygen.ByteWithECPublicKey)
 	require.True(t, ok, "encrypted result should have public key")
 
-	// Now decrypt using the corresponding private key and the ephemeral public key
-	decrypted, err := jwebb.KeyDecryptECDHESKeyWrap(encryptedWithPubKey.Bytes(), encryptedWithPubKey.Bytes(), tokens.ECDH_ES_A128KW, apu, apv, privkey, encryptedWithPubKey.PublicKey, 16)
+	// Decrypt using the unified path
+	deriver, err := jwebb.NewECDHESKeyDeriver(privkey)
+	require.NoError(t, err)
+
+	decrypted, err := jwebb.KeyDecryptECDHESCustom(encryptedWithPubKey.Bytes(), tokens.ECDH_ES_A128KW, apu, apv, deriver, encryptedWithPubKey.PublicKey, 16, true)
 	require.NoError(t, err)
 	require.Equal(t, cek, decrypted)
-}
-
-func TestDeriveECDHES(t *testing.T) {
-	// Generate ECDSA key pairs
-	alicePriv, err := jwxtest.GenerateEcdsaKey(jwa.P256())
-	require.NoError(t, err)
-	bobPriv, err := jwxtest.GenerateEcdsaKey(jwa.P256())
-	require.NoError(t, err)
-
-	apu := testAPU
-	apv := testAPV
-
-	// Test key derivation
-	key1, err := jwebb.DeriveECDHES(tokens.A128GCM, apu, apv, alicePriv, &bobPriv.PublicKey, 16)
-	require.NoError(t, err)
-	require.Len(t, key1, 16)
-
-	// Test that the same inputs produce the same key
-	key2, err := jwebb.DeriveECDHES(tokens.A128GCM, apu, apv, alicePriv, &bobPriv.PublicKey, 16)
-	require.NoError(t, err)
-	require.Equal(t, key1, key2)
-
-	// Test that different private keys produce different results
-	charliePriv, err := jwxtest.GenerateEcdsaKey(jwa.P256())
-	require.NoError(t, err)
-	key3, err := jwebb.DeriveECDHES(tokens.A128GCM, apu, apv, charliePriv, &bobPriv.PublicKey, 16)
-	require.NoError(t, err)
-	require.NotEqual(t, key1, key3)
 }

@@ -1,8 +1,6 @@
 package jwe
 
 import (
-	"crypto/ecdh"
-	"crypto/ecdsa"
 	"crypto/rsa"
 	"fmt"
 
@@ -115,54 +113,12 @@ func (e *encrypter) encryptKeyECDHES(cek []byte, alg, ctalg string) (keygen.Byte
 		return nil, fmt.Errorf(`jwe: encrypt key: failed to determine ECDH-ES key size: %w`, err)
 	}
 
-	keyToUse := e.key
-
-	// Normalize key to public key pointer form
-	switch key := keyToUse.(type) {
-	case *ecdsa.PublicKey:
-		// already correct
-	case ecdsa.PublicKey:
-		keyToUse = &key
-	case *ecdsa.PrivateKey:
-		keyToUse = &key.PublicKey
-	case ecdsa.PrivateKey:
-		keyToUse = &key.PublicKey
-	case *ecdh.PublicKey:
-		// already correct
-	case ecdh.PublicKey:
-		keyToUse = &key
-	case ecdh.PrivateKey:
-		keyToUse = key.PublicKey()
-	case *ecdh.PrivateKey:
-		keyToUse = key.PublicKey()
+	gen, err := jwebb.NewECDHESKeyGenerator(e.key)
+	if err != nil {
+		return nil, fmt.Errorf(`jwe: encrypt key: %w`, err)
 	}
 
-	// Handle ecdh.PublicKey (X25519 or convert to ECDSA)
-	switch key := keyToUse.(type) {
-	case *ecdh.PublicKey:
-		if key.Curve() == ecdh.X25519() {
-			if !keywrap {
-				return jwebb.KeyEncryptECDHESX25519(cek, alg, e.apu, e.apv, key, keysize, ctalg)
-			}
-			return jwebb.KeyEncryptECDHESKeyWrapX25519(cek, alg, e.apu, e.apv, key, keysize, ctalg)
-		}
-
-		ecdsaKeyV, err := keyconv.ECDHToECDSA(key)
-		if err != nil {
-			return nil, fmt.Errorf(`jwe: encrypt key: failed to convert ECDH public key to ECDSA: %w`, err)
-		}
-		keyToUse = ecdsaKeyV
-	}
-
-	switch key := keyToUse.(type) {
-	case *ecdsa.PublicKey:
-		if !keywrap {
-			return jwebb.KeyEncryptECDHESECDSA(cek, alg, e.apu, e.apv, key, keysize, ctalg)
-		}
-		return jwebb.KeyEncryptECDHESKeyWrapECDSA(cek, alg, e.apu, e.apv, key, keysize, ctalg)
-	default:
-		return nil, fmt.Errorf(`jwe: encrypt key: unsupported key type for ECDH-ES: %T`, keyToUse)
-	}
+	return jwebb.KeyEncryptECDHESCustom(cek, alg, e.apu, e.apv, gen, keysize, ctalg, keywrap)
 }
 
 func (e *encrypter) encryptKeyHPKE(cek []byte, alg, ctalg string) (keygen.ByteSource, error) {

@@ -4,6 +4,7 @@ go_library(
     name = "jwebb",
     srcs = [
         "content_cipher.go",
+        "ecdh_es_ext.go",
         "hpke_params.go",
         "jwebb.go",
         "key_decrypt_asymmetric.go",
@@ -20,6 +21,7 @@ go_library(
     importpath = "github.com/lestrrat-go/jwx/v4/jwe/jwebb",
     visibility = ["//jwe:__subpackages__"],
     deps = [
+        "//internal/ecutil",
         "//internal/keyconv",
         "//internal/pool",
         "//internal/tokens",
@@ -36,6 +38,7 @@ go_test(
     name = "jwebb_test",
     srcs = [
         "decrypt_test.go",
+        "ecdh_es_ext_test.go",
         "jwebb_test.go",
         "keywrap_test.go",
     ],
