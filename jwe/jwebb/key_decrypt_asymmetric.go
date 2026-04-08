@@ -1,20 +1,16 @@
 package jwebb
 
 import (
-	"crypto"
-	"crypto/aes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
-	"encoding/binary"
 	"fmt"
 	"hash"
 
 	"github.com/lestrrat-go/jwx/v4/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v4/internal/tokens"
-	"github.com/lestrrat-go/jwx/v4/jwe/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/v4/jwe/internal/keygen"
 )
 
@@ -54,54 +50,6 @@ func KeyEncryptionECDHESKeySize(alg, ctalg string) (string, uint32, bool, error)
 	default:
 		return "", 0, false, fmt.Errorf(`unsupported key encryption algorithm %s`, alg)
 	}
-}
-
-func DeriveECDHES(alg string, apu, apv []byte, privkeyif, pubkeyif any, keysize uint32) ([]byte, error) {
-	pubinfo := make([]byte, 4)
-	binary.BigEndian.PutUint32(pubinfo, keysize*tokens.BitsPerByte)
-
-	privkey, err := keyconv.ECDHPrivateKey(privkeyif)
-	if err != nil {
-		return nil, fmt.Errorf(`jwebb.DeriveECDHES: %w`, err)
-	}
-	pubkey, err := keyconv.ECDHPublicKey(pubkeyif)
-	if err != nil {
-		return nil, fmt.Errorf(`jwebb.DeriveECDHES: %w`, err)
-	}
-
-	zBytes, err := privkey.ECDH(pubkey)
-	if err != nil {
-		return nil, fmt.Errorf(`jwebb.DeriveECDHES: unable to determine Z: %w`, err)
-	}
-	kdf := concatkdf.New(crypto.SHA256, []byte(alg), zBytes, apu, apv, pubinfo, []byte{})
-	key := make([]byte, keysize)
-	if _, err := kdf.Read(key); err != nil {
-		return nil, fmt.Errorf(`jwebb.DeriveECDHES: failed to read kdf: %w`, err)
-	}
-
-	return key, nil
-}
-
-func KeyDecryptECDHESKeyWrap(_, enckey []byte, alg string, apu, apv []byte, privkey, pubkey any, keysize uint32) ([]byte, error) {
-	key, err := DeriveECDHES(alg, apu, apv, privkey, pubkey, keysize)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to derive ECDHES encryption key: %w`, err)
-	}
-
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to create cipher for ECDH-ES key wrap: %w`, err)
-	}
-
-	return Unwrap(block, enckey)
-}
-
-func KeyDecryptECDHES(_, _ []byte, alg string, apu, apv []byte, privkey, pubkey any, keysize uint32) ([]byte, error) {
-	key, err := DeriveECDHES(alg, apu, apv, privkey, pubkey, keysize)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to derive ECDHES encryption key: %w`, err)
-	}
-	return key, nil
 }
 
 // RSA key decryption functions

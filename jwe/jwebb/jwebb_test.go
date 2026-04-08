@@ -252,18 +252,17 @@ func TestKeyEncryptRSAOAEP(t *testing.T) {
 	require.NotEqual(t, cek, result.Bytes())
 }
 
-func TestKeyEncryptECDHESECDSA(t *testing.T) {
+func TestKeyEncryptECDHESCustom(t *testing.T) {
 	cek := testCEK
 
 	// Generate ECDSA key pair
 	privkey, err := jwxtest.GenerateEcdsaKey(jwa.P256())
 	require.NoError(t, err)
-	pubkey := &privkey.PublicKey
 
-	apu := testAPU
-	apv := testAPV
+	gen, err := jwebb.NewECDHESKeyGenerator(&privkey.PublicKey)
+	require.NoError(t, err)
 
-	result, err := jwebb.KeyEncryptECDHESECDSA(cek, tokens.ECDH_ES, apu, apv, pubkey, 16, tokens.A128GCM)
+	result, err := jwebb.KeyEncryptECDHESCustom(cek, tokens.ECDH_ES, testAPU, testAPV, gen, 16, tokens.A128GCM, false)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 }

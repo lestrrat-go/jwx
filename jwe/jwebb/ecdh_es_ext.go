@@ -3,9 +3,14 @@ package jwebb
 import (
 	"crypto"
 	"crypto/aes"
+	"crypto/ecdh"
+	"crypto/ecdsa"
+	"crypto/rand"
 	"encoding/binary"
 	"fmt"
 
+	"github.com/lestrrat-go/jwx/v4/internal/ecutil"
+	"github.com/lestrrat-go/jwx/v4/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v4/internal/tokens"
 	"github.com/lestrrat-go/jwx/v4/jwe/internal/concatkdf"
 	"github.com/lestrrat-go/jwx/v4/jwe/internal/keygen"
@@ -119,4 +124,147 @@ func KeyDecryptECDHESCustom(recipientKey []byte, alg string, apu, apv []byte, de
 	}
 
 	return Unwrap(block, recipientKey)
+}
+
+// NewECDHESKeyGenerator normalizes a raw key into an ECDHESKeyGenerator.
+// If the key already implements ECDHESKeyGenerator, it is returned as-is.
+// Otherwise, stdlib key types (*ecdh.PublicKey, *ecdsa.PublicKey, and their
+// private key counterparts) are wrapped in an adapter.
+func NewECDHESKeyGenerator(key any) (ECDHESKeyGenerator, error) {
+	if gen, ok := key.(ECDHESKeyGenerator); ok {
+		return gen, nil
+	}
+
+	switch k := key.(type) {
+	case *ecdh.PublicKey:
+		return &ecdhGenerator{key: k}, nil
+	case *ecdh.PrivateKey:
+		return &ecdhGenerator{key: k.PublicKey()}, nil
+	case ecdh.PrivateKey:
+		return &ecdhGenerator{key: k.PublicKey()}, nil
+	case *ecdsa.PublicKey:
+		return &ecdsaGenerator{key: k}, nil
+	case ecdsa.PublicKey:
+		return &ecdsaGenerator{key: &k}, nil
+	case *ecdsa.PrivateKey:
+		return &ecdsaGenerator{key: &k.PublicKey}, nil
+	case ecdsa.PrivateKey:
+		return &ecdsaGenerator{key: &k.PublicKey}, nil
+	default:
+		return nil, fmt.Errorf(`unsupported key type for ECDH-ES key generation: %T`, key)
+	}
+}
+
+// NewECDHESKeyDeriver normalizes a raw key into an ECDHESKeyDeriver.
+// If the key already implements ECDHESKeyDeriver, it is returned as-is.
+// Otherwise, stdlib private key types (*ecdh.PrivateKey, *ecdsa.PrivateKey)
+// are wrapped in an adapter.
+func NewECDHESKeyDeriver(key any) (ECDHESKeyDeriver, error) {
+	if d, ok := key.(ECDHESKeyDeriver); ok {
+		return d, nil
+	}
+
+	switch k := key.(type) {
+	case *ecdh.PrivateKey:
+		return &ecdhDeriver{key: k}, nil
+	case *ecdsa.PrivateKey:
+		return &ecdsaDeriver{key: k}, nil
+	default:
+		return nil, fmt.Errorf(`unsupported key type for ECDH-ES key derivation: %T`, key)
+	}
+}
+
+// ecdhGenerator wraps *ecdh.PublicKey to implement ECDHESKeyGenerator.
+// Handles both NIST curves (P-256, P-384, P-521) and X25519.
+type ecdhGenerator struct {
+	key *ecdh.PublicKey
+}
+
+func (g *ecdhGenerator) GenerateECDHES(alg string, keysize int, apu, apv []byte) ([]byte, any, error) {
+	priv, err := g.key.Curve().GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, nil, fmt.Errorf(`failed to generate ephemeral key: %w`, err)
+	}
+
+	z, err := priv.ECDH(g.key)
+	if err != nil {
+		return nil, nil, fmt.Errorf(`failed to compute ECDH: %w`, err)
+	}
+
+	derived, err := DeriveECDHESRaw(alg, z, apu, apv, keysize)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return derived, priv.PublicKey(), nil
+}
+
+// ecdsaGenerator wraps *ecdsa.PublicKey to implement ECDHESKeyGenerator.
+type ecdsaGenerator struct {
+	key *ecdsa.PublicKey
+}
+
+func (g *ecdsaGenerator) GenerateECDHES(alg string, keysize int, apu, apv []byte) ([]byte, any, error) {
+	priv, err := ecdsa.GenerateKey(g.key.Curve, rand.Reader)
+	if err != nil {
+		return nil, nil, fmt.Errorf(`failed to generate ephemeral key: %w`, err)
+	}
+
+	if !priv.PublicKey.Curve.IsOnCurve(g.key.X, g.key.Y) {
+		return nil, nil, fmt.Errorf(`public key used does not contain a point (X,Y) on the curve`)
+	}
+
+	z, _ := priv.PublicKey.Curve.ScalarMult(g.key.X, g.key.Y, priv.D.Bytes())
+	zBytes := ecutil.AllocECPointBuffer(z, priv.PublicKey.Curve)
+	defer ecutil.ReleaseECPointBuffer(zBytes)
+
+	derived, err := DeriveECDHESRaw(alg, zBytes, apu, apv, keysize)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return derived, &priv.PublicKey, nil
+}
+
+// ecdhDeriver wraps *ecdh.PrivateKey to implement ECDHESKeyDeriver.
+type ecdhDeriver struct {
+	key *ecdh.PrivateKey
+}
+
+func (d *ecdhDeriver) DeriveECDHES(alg string, keysize int, ephemeralPubKey any, apu, apv []byte) ([]byte, error) {
+	pub, err := keyconv.ECDHPublicKey(ephemeralPubKey)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to convert ephemeral public key: %w`, err)
+	}
+
+	z, err := d.key.ECDH(pub)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to compute ECDH: %w`, err)
+	}
+
+	return DeriveECDHESRaw(alg, z, apu, apv, keysize)
+}
+
+// ecdsaDeriver wraps *ecdsa.PrivateKey to implement ECDHESKeyDeriver.
+type ecdsaDeriver struct {
+	key *ecdsa.PrivateKey
+}
+
+func (d *ecdsaDeriver) DeriveECDHES(alg string, keysize int, ephemeralPubKey any, apu, apv []byte) ([]byte, error) {
+	ecdhPriv, err := d.key.ECDH()
+	if err != nil {
+		return nil, fmt.Errorf(`failed to convert ECDSA to ECDH private key: %w`, err)
+	}
+
+	pub, err := keyconv.ECDHPublicKey(ephemeralPubKey)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to convert ephemeral public key: %w`, err)
+	}
+
+	z, err := ecdhPriv.ECDH(pub)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to compute ECDH: %w`, err)
+	}
+
+	return DeriveECDHESRaw(alg, z, apu, apv, keysize)
 }
