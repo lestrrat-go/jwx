@@ -199,7 +199,8 @@ Use `github.com/stretchr/testify/require` for assertions (not `assert`).
 | Tag | Effect |
 |-----|--------|
 | `jwx_goccy` | Use `goccy/go-json` instead of `encoding/json` |
-| `jwx_asmbase64` | Use assembly-optimized base64 |
+
+Optional features (signature algorithms, backend replacements) are provided as extension modules under [`github.com/jwx-go`](https://github.com/jwx-go). See [Extension Modules](docs/10-extensions.md) for the full list.
 
 ## Quick Reference: Common Modifications
 
