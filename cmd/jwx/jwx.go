@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/urfave/cli/v2"
