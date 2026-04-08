@@ -4,8 +4,7 @@ import "github.com/lestrrat-go/jwx/v4/internal/base64"
 
 // Base64Encoder is the interface for base64 encoding backends.
 // The default implementation uses encoding/base64.RawURLEncoding.
-// Extension modules (e.g. github.com/jwx-go/asmbase64) can replace
-// the default by calling SetBase64Encoder in their init().
+// Custom backends can replace the default by calling SetBase64Encoder.
 type Base64Encoder = base64.Encoder
 
 // Base64Decoder is the interface for base64 decoding backends.

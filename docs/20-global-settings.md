@@ -18,18 +18,6 @@ Disable the tag if you feel like it's not worth the hassle.
 
 And when you *do* enable [github.com/goccy/go-json](https://github.com/goccy/go-json), and you encounter some mysterious error, I also trust that you know to file an issue to [github.com/goccy/go-json](https://github.com/goccy/go-json) and **NOT** to this library.
 
-## Switching to an assembly-optimized base64 encoder/decoder
-
-You can replace the default `encoding/base64` implementation with an assembly-optimized backend by importing [`github.com/jwx-go/asmbase64`](https://github.com/jwx-go/asmbase64) for its side effects:
-
-```go
-import _ "github.com/jwx-go/asmbase64"
-```
-
-In v3, this was activated via the `jwx_asmbase64` build tag, which is no longer supported.
-
-See [Extension Modules](./10-extensions.md#asmbase64-assembly-optimized-base64) for full documentation and examples.
-
 ## Using json.Number
 
 If you want to parse numbers in the incoming JSON objects as json.Number

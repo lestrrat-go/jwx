@@ -40,4 +40,4 @@ All `sort.Slice` / `sort.Strings` calls in library code and generated code repla
 | `jwx_goccy` | Removed |
 | `jwx_es256k` | Unchanged |
 | `jwx_secp256k1_pem` | Unchanged |
-| `jwx_asmbase64` | Unchanged |
+| `jwx_asmbase64` | Removed |
