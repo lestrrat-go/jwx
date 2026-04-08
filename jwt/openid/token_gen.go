@@ -5,7 +5,6 @@ package openid
 import (
 	"bytes"
 	"cmp"
-	"encoding/json/jsontext"
 	"fmt"
 	"iter"
 	"slices"
@@ -1612,24 +1611,31 @@ func (t *stdToken) makePairs() []claimPair {
 func (t *stdToken) MarshalJSON() ([]byte, error) {
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
-	enc := json.NewEncoder(buf)
-	enc.WriteToken(jsontext.BeginObject)
 	pairs := t.makePairs()
-	for _, pair := range pairs {
-		enc.WriteToken(jsontext.String(pair.Name))
+	buf.WriteByte('{')
+	for i, pair := range pairs {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		fmt.Fprintf(buf, `%q:`, pair.Name)
 		if pair.Name == AudienceKey {
 			if aud, ok := pair.Value.(types.StringList); ok {
-				if err := json.EncodeAudience(enc, aud, t.options.IsEnabled(jwt.FlattenAudience)); err != nil {
+				audBytes, err := json.MarshalAudience(aud, t.options.IsEnabled(jwt.FlattenAudience))
+				if err != nil {
 					return nil, fmt.Errorf(`failed to encode "aud": %w`, err)
 				}
+				buf.Write(audBytes)
 				continue
 			}
 		}
-		if err := json.MarshalEncode(enc, pair.Value); err != nil {
+		valBytes, err := json.Marshal(pair.Value)
+		if err != nil {
 			return nil, fmt.Errorf(`failed to encode value for field %q: %w`, pair.Name, err)
 		}
+		buf.Write(valBytes)
 	}
-	enc.WriteToken(jsontext.EndObject)
+	buf.WriteByte('}')
+	putClaimPairList(pairs)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil
