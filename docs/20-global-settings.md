@@ -18,17 +18,17 @@ Disable the tag if you feel like it's not worth the hassle.
 
 And when you *do* enable [github.com/goccy/go-json](https://github.com/goccy/go-json), and you encounter some mysterious error, I also trust that you know to file an issue to [github.com/goccy/go-json](https://github.com/goccy/go-json) and **NOT** to this library.
 
-## Enabling experimental base64 encoder/decoder
+## Switching to an assembly-optimized base64 encoder/decoder
 
-This feature is currently considered experimental.
+You can replace the default `encoding/base64` implementation with an assembly-optimized backend by importing [`github.com/jwx-go/asmbase64`](https://github.com/jwx-go/asmbase64) for its side effects:
 
-Currently, you can enable [github.com/segmentio/asm/base64](https://github.com/segmentio/asm/tree/main/base64) by specifying the `jwx_asmbase64` build tag
-
-```shell
-% go build -tags jwx_goccy ...
+```go
+import _ "github.com/jwx-go/asmbase64"
 ```
 
-In our limited testing, this does not seem to improve performance significantly: presumably the other bottlenecks are more dominant. If you care enough to use this option, you probably want to enable `jwx_goccy` build tag as well.
+In v3, this was activated via the `jwx_asmbase64` build tag, which is no longer supported.
+
+See [Extension Modules](./10-extensions.md#asmbase64-assembly-optimized-base64) for full documentation and examples.
 
 ## Using json.Number
 

@@ -43,7 +43,8 @@ Environment variables:
 | Tag | Effect |
 |-----|--------|
 | `jwx_goccy` | Use goccy/go-json |
-| `jwx_asmbase64` | Assembly-optimized base64 |
+
+Other optional features (signature algorithms, base64 backend) are now activated via side-effect imports of [extension modules](../docs/10-extensions.md), not build tags.
 
 ## Fuzz Tests
 
