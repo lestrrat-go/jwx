@@ -50,7 +50,7 @@ func Example_jwe_parse() {
   // {"ciphertext":"2hngnAVrmucUpJKLgIzYcg","encrypted_key":"KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA","header":{"alg":"RSA1_5"},"iv":"bK7z7Z3gEzFDgDQvNen0Ww","protected":"eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0","tag":"CHs3ZP7JtG430Dl9YAKLMAk"}
 }
 ```
-source: [examples/jwe_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_parse_example_test.go)
+source: [examples/jwe_parse_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_parse_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a JWE message stored in a file
@@ -94,7 +94,7 @@ func Example_jwe_ParseFS() {
   // {"ciphertext":"2hngnAVrmucUpJKLgIzYcg","encrypted_key":"KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA","header":{"alg":"RSA1_5"},"iv":"bK7z7Z3gEzFDgDQvNen0Ww","protected":"eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0","tag":"CHs3ZP7JtG430Dl9YAKLMAk"}
 }
 ```
-source: [examples/jwe_parsefs_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_parsefs_example_test.go)
+source: [examples/jwe_parsefs_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_parsefs_example_test.go)
 <!-- END INCLUDE -->
 
 # Encrypting
@@ -126,7 +126,7 @@ func Example_jwe_encrypt() {
     fmt.Printf("failed to create raw private key: %s\n", err)
     return
   }
-  privkey, err := jwk.Import(rawprivkey)
+  privkey, err := jwk.Import[jwk.Key](rawprivkey)
   if err != nil {
     fmt.Printf("failed to create private key: %s\n", err)
     return
@@ -155,7 +155,7 @@ func Example_jwe_encrypt() {
   // Lorem ipsum
 }
 ```
-source: [examples/jwe_encrypt_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_encrypt_example_test.go)
+source: [examples/jwe_encrypt_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_encrypt_example_test.go)
 <!-- END INCLUDE -->
 
 ## Generating a JWE message in JSON serialization format
@@ -184,7 +184,7 @@ func Example_jwe_encrypt_json() {
     fmt.Printf("failed to create raw private key: %s\n", err)
     return
   }
-  privkey, err := jwk.Import(rawprivkey)
+  privkey, err := jwk.Import[jwk.Key](rawprivkey)
   if err != nil {
     fmt.Printf("failed to create private key: %s\n", err)
     return
@@ -227,7 +227,7 @@ func Example_jwe_encrypt_json_multi() {
       fmt.Printf("failed to create raw private key: %s\n", err)
       return
     }
-    privkey, err := jwk.Import(rawprivkey)
+    privkey, err := jwk.Import[jwk.Key](rawprivkey)
     if err != nil {
       fmt.Printf("failed to create private key: %s\n", err)
       return
@@ -268,7 +268,7 @@ func Example_jwe_encrypt_json_multi() {
   // Lorem ipsum
 }
 ```
-source: [examples/jwe_encrypt_json_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_encrypt_json_example_test.go)
+source: [examples/jwe_encrypt_json_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_encrypt_json_example_test.go)
 <!-- END INCLUDE -->
 
 ## Including arbitrary headers
@@ -290,7 +290,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v4/internal/json"
+  "encoding/json"
   "github.com/lestrrat-go/jwx/v4/jwa"
   "github.com/lestrrat-go/jwx/v4/jwe"
 )
@@ -333,7 +333,7 @@ func Example_jwe_sign_with_headers() {
   // {"alg":"RSA-OAEP","enc":"A256GCM","x-example":true}
 }
 ```
-source: [examples/jwe_encrypt_with_headers_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_encrypt_with_headers_example_test.go)
+source: [examples/jwe_encrypt_with_headers_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_encrypt_with_headers_example_test.go)
 <!-- END INCLUDE -->
 
 # Decrypting
@@ -374,7 +374,7 @@ func Example_jwe_verify_with_key() {
   // Lorem ipsum
 }
 ```
-source: [examples/jwe_decrypt_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_decrypt_with_key_example_test.go)
+source: [examples/jwe_decrypt_with_key_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_decrypt_with_key_example_test.go)
 <!-- END INCLUDE -->
 
 ## Decrypting using a JWKS
@@ -418,12 +418,12 @@ func Example_jwe_verify_with_jwk_set() {
   // Create a JWK Set
   set := jwk.NewSet()
   // Add some bogus keys
-  k1, _ := jwk.Import([]byte("abracadabra"))
+  k1, _ := jwk.Import[jwk.Key]([]byte("abracadabra"))
   set.AddKey(k1)
-  k2, _ := jwk.Import([]byte("opensesame"))
+  k2, _ := jwk.Import[jwk.Key]([]byte("opensesame"))
   set.AddKey(k2)
   // Add the real thing
-  k3, _ := jwk.Import(privkey)
+  k3, _ := jwk.Import[jwk.Key](privkey)
   k3.Set(jwk.AlgorithmKey, jwa.RSA_OAEP())
   set.AddKey(k3)
 
@@ -436,7 +436,7 @@ func Example_jwe_verify_with_jwk_set() {
   // OUTPUT:
 }
 ```
-source: [examples/jwe_decrypt_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_decrypt_with_keyset_example_test.go)
+source: [examples/jwe_decrypt_with_keyset_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_decrypt_with_keyset_example_test.go)
 <!-- END INCLUDE -->
 
 # Filtering JWE headers
@@ -540,7 +540,7 @@ func Example_jwe_filter_basic() {
   // OUTPUT:
 }
 ```
-source: [examples/jwe_filter_basic_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_filter_basic_example_test.go)
+source: [examples/jwe_filter_basic_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_filter_basic_example_test.go)
 <!-- END INCLUDE -->
 
 ## Advanced header filtering
@@ -674,14 +674,22 @@ func Example_jwe_filter_advanced() {
 // validateJWESecurityHeaders checks if security headers meet requirements
 func validateJWESecurityHeaders(headers jwe.Headers) bool {
   // Check security level
-  var securityLevel string
-  if err := headers.Get("security_level", &securityLevel); err != nil || securityLevel != "high" {
+  securityLevelV, ok := headers.Field("security_level")
+  if !ok {
+    return false
+  }
+  securityLevel, ok := securityLevelV.(string)
+  if !ok || securityLevel != "high" {
     return false
   }
 
   // Check access control
-  var accessControl string
-  if err := headers.Get("access_control", &accessControl); err != nil || accessControl != "restricted" {
+  accessControlV, ok := headers.Field("access_control")
+  if !ok {
+    return false
+  }
+  accessControl, ok := accessControlV.(string)
+  if !ok || accessControl != "restricted" {
     return false
   }
 
@@ -704,8 +712,12 @@ func validateJWEServiceHeaders(headers jwe.Headers) bool {
   }
 
   // Validate API version format
-  var apiVersion string
-  if err := headers.Get("api_version", &apiVersion); err != nil || len(apiVersion) < 5 {
+  apiVersionV, ok := headers.Field("api_version")
+  if !ok {
+    return false
+  }
+  apiVersion, ok := apiVersionV.(string)
+  if !ok || len(apiVersion) < 5 {
     return false
   }
 
@@ -753,5 +765,5 @@ func createJWEEnvironmentHeaders(originalHeaders jwe.Headers, environment string
   }
 }
 ```
-source: [examples/jwe_filter_advanced_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwe_filter_advanced_example_test.go)
+source: [examples/jwe_filter_advanced_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_filter_advanced_example_test.go)
 <!-- END INCLUDE -->
