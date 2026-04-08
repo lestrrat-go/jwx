@@ -104,7 +104,7 @@ func Example_jwk_parse_jwks() {
   // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
 }
 ```
-source: [examples/jwk_parse_jwks_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_parse_jwks_example_test.go)
+source: [examples/jwk_parse_jwks_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_parse_jwks_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a key
@@ -133,7 +133,7 @@ func Example_jwk_parse_key() {
     "kid":"1"
   }`
 
-  key, err := jwk.ParseKey([]byte(src))
+  key, err := jwk.ParseKey[jwk.ECDSAPublicKey]([]byte(src))
   if err != nil {
     fmt.Printf("failed parse key: %s\n", err)
     return
@@ -144,7 +144,7 @@ func Example_jwk_parse_key() {
   // {"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"}
 }
 ```
-source: [examples/jwk_parse_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_parse_key_example_test.go)
+source: [examples/jwk_parse_key_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_parse_key_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a key or a set in PEM format
@@ -159,7 +159,7 @@ import (
   "fmt"
   "os"
 
-  "github.com/lestrrat-go/jwx/v4/internal/json"
+  "encoding/json"
   "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
@@ -192,7 +192,7 @@ z8CjezfckLs7UKJOlhu3OU9TFsiGDzSDBZdDWO1/uciJ/AAWeSmsBt8cKL0MirIr
 c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 -----END CERTIFICATE-----`
 
-  key, err := jwk.ParseKey([]byte(src), jwk.WithPEM(true))
+  key, err := jwk.ParseKey[jwk.RSAPublicKey]([]byte(src), jwk.WithPEM(true))
   if err != nil {
     fmt.Printf("failed to parse key in PEM format: %s\n", err)
     return
@@ -203,7 +203,7 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
   // {"e":"AQAB","kty":"RSA","n":"vws4H_OxVS3CW1zvUgjsH443df9zCAblLVPPdeRD11Jl1OZmGS7rtQNjQyT5xGpeuk77ZJcfDNLx-mSEtiYQV37GD5MPz-RX3hP2azuLvxoBseaHE6kC8tkDed8buQLl1hgms15KmKnt7E8B-EK21YRj0w6ZzehIllTbbj6gDJ39kZ2VHdLf5-4W0Kyh9cM4aA0si2jQJQsohW2rpt89b-IagFau-sxP3GFUjSEvyXIamXhS0NLWuAW9UvY_RwhnIo5BzmWZd_y2R305T-QTrHtb_8aGav8mP3uDx6AMDp_0UMKFUO4mpoOusMnrplUPS4Lz6RNpffmrrglOEuRZ_eSFzGL35OeL12aYSyrbFIVsc_aLs6MkoplsuSG6Zhx345h_dA2a8Ub5khr6bksPzGLer-bpBrQQsy21unvCIUz5y7uaYhV3Ql-aIZ-dwpEgZ3xxAvdKKeoCGQlhH_4J0sSuutUtuTLfrBSgLHJEv2HIzeynChL2CYR8aku_nL68VTdmSt9UY2JGMOf9U8BIfGRpkWBvI8hddMxNm8wF-09WScaZ2JWu7qW_l2jOdgesPIWRg-Hm3NaRSHqAWCOqVUJk9WkCAye0FPALqSvH0ApDKxNtGZb5JZRCW19TqmhgXbAqIf5hsxDaGIXZcW9SCqapZPw7Ccs7BOKSFvmM9p0"}
 }
 ```
-source: [examples/jwk_parse_with_pem_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_parse_with_pem_example_test.go)
+source: [examples/jwk_parse_with_pem_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_parse_with_pem_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a key from a file
@@ -262,7 +262,7 @@ func Example_jwk_ParseFS() {
   // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
 }
 ```
-source: [examples/jwk_parsefs_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_parsefs_example_test.go)
+source: [examples/jwk_parsefs_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_parsefs_example_test.go)
 <!-- END INCLUDE -->
 
 `jwk.ParseFS()` accepts the same options as [`jwk.Parse()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Parse), therefore you can read a PEM-encoded file via the following incantation:
@@ -330,7 +330,7 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
   // {"keys":[{"e":"AQAB","kty":"RSA","n":"vws4H_OxVS3CW1zvUgjsH443df9zCAblLVPPdeRD11Jl1OZmGS7rtQNjQyT5xGpeuk77ZJcfDNLx-mSEtiYQV37GD5MPz-RX3hP2azuLvxoBseaHE6kC8tkDed8buQLl1hgms15KmKnt7E8B-EK21YRj0w6ZzehIllTbbj6gDJ39kZ2VHdLf5-4W0Kyh9cM4aA0si2jQJQsohW2rpt89b-IagFau-sxP3GFUjSEvyXIamXhS0NLWuAW9UvY_RwhnIo5BzmWZd_y2R305T-QTrHtb_8aGav8mP3uDx6AMDp_0UMKFUO4mpoOusMnrplUPS4Lz6RNpffmrrglOEuRZ_eSFzGL35OeL12aYSyrbFIVsc_aLs6MkoplsuSG6Zhx345h_dA2a8Ub5khr6bksPzGLer-bpBrQQsy21unvCIUz5y7uaYhV3Ql-aIZ-dwpEgZ3xxAvdKKeoCGQlhH_4J0sSuutUtuTLfrBSgLHJEv2HIzeynChL2CYR8aku_nL68VTdmSt9UY2JGMOf9U8BIfGRpkWBvI8hddMxNm8wF-09WScaZ2JWu7qW_l2jOdgesPIWRg-Hm3NaRSHqAWCOqVUJk9WkCAye0FPALqSvH0ApDKxNtGZb5JZRCW19TqmhgXbAqIf5hsxDaGIXZcW9SCqapZPw7Ccs7BOKSFvmM9p0"}]}
 }
 ```
-source: [examples/jwk_parsefs_with_pem_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_parsefs_with_pem_example_test.go)
+source: [examples/jwk_parsefs_with_pem_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_parsefs_with_pem_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a key as a struct field
@@ -395,7 +395,7 @@ func Example_jwk_struct_field() {
 
   // Parse the intercepted `Proxy.Key` as a `jwk.Key`
   // and assign it to `Container.Key`
-  key, err := jwk.ParseKey(p.Key)
+  key, err := jwk.ParseKey[jwk.Key](p.Key)
   if err != nil {
     fmt.Printf("failed to parse key: %s\n", err)
     return
@@ -407,7 +407,7 @@ func Example_jwk_struct_field() {
   // {"key":{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"}}
 }
 ```
-source: [examples/jwk_struct_field_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_struct_field_example_test.go)
+source: [examples/jwk_struct_field_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_struct_field_example_test.go)
 <!-- END INCLUDE -->
 
 # Construction
@@ -452,33 +452,32 @@ func Example_jwk_import() {
   // Assume that the file contains a JWK in JSON format
   //
   //  buf, _ := os.ReadFile(file)
-  //  key, _ := jwk.Import(buf)
+  //  key, _ := jwk.Import[jwk.Key](buf)
   //
-  // This is not right, because the jwk.Import() function determines
-  // the type of `jwk.Key` to create based on the TYPE of the argument.
+  // This is not right, because jwk.Import() determines the type of
+  // `jwk.Key` to create based on the TYPE of the argument.
   // In this case the type of `buf` is always []byte, and therefore
   // it will always create a symmetric key.
   //
   // What you want to do is to _parse_ `buf`.
   //
   //  keyset, _ := jwk.Parse(buf)
-  //  key, _    := jwk.ParseKey(buf)
+  //  key, _    := jwk.ParseKey[jwk.Key](buf)
   //
   // See other examples in examples/jwk_parse_key_example_test.go and
   // examples/jwk_parse_jwks_example_test.go
 
   // []byte -> jwk.SymmetricKey
+  //
+  // Use the concrete type parameter to get the typed key directly.
   {
     raw := []byte("Lorem Ipsum")
-    key, err := jwk.Import(raw)
+    key, err := jwk.Import[jwk.SymmetricKey](raw)
     if err != nil {
       fmt.Printf("failed to create symmetric key: %s\n", err)
       return
     }
-    if _, ok := key.(jwk.SymmetricKey); !ok {
-      fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
-      return
-    }
+    _ = key
   }
 
   // *rsa.PrivateKey -> jwk.RSAPrivateKey
@@ -490,15 +489,12 @@ func Example_jwk_import() {
       return
     }
 
-    key, err := jwk.Import(raw)
+    key, err := jwk.Import[jwk.RSAPrivateKey](raw)
     if err != nil {
-      fmt.Printf("failed to create symmetric key: %s\n", err)
+      fmt.Printf("failed to create RSA private key: %s\n", err)
       return
     }
-    if _, ok := key.(jwk.RSAPrivateKey); !ok {
-      fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
-      return
-    }
+    _ = key
     // PublicKey is omitted for brevity
   }
 
@@ -511,22 +507,19 @@ func Example_jwk_import() {
       return
     }
 
-    key, err := jwk.Import(raw)
+    key, err := jwk.Import[jwk.ECDSAPrivateKey](raw)
     if err != nil {
-      fmt.Printf("failed to create symmetric key: %s\n", err)
+      fmt.Printf("failed to create ECDSA private key: %s\n", err)
       return
     }
-    if _, ok := key.(jwk.ECDSAPrivateKey); !ok {
-      fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
-      return
-    }
+    _ = key
     // PublicKey is omitted for brevity
   }
 
   // OUTPUT:
 }
 ```
-source: [examples/jwk_import_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_import_example_test.go)
+source: [examples/jwk_import_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_import_example_test.go)
 <!-- END INCLUDE -->
 
 # Fetching JWK Sets
@@ -602,7 +595,7 @@ func Example_jwk_fetch() {
   // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
 }
 ```
-source: [examples/jwk_fetch_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_fetch_example_test.go)
+source: [examples/jwk_fetch_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_fetch_example_test.go)
 <!-- END INCLUDE -->
 
 ## Auto-refreshing remote keys
@@ -626,7 +619,8 @@ import (
   "time"
 
   "github.com/lestrrat-go/httprc/v3"
-  "github.com/lestrrat-go/jwx/v4/jwk"
+
+  "github.com/jwx-go/jwkcache/v4"
 )
 
 func Example_jwk_cache() {
@@ -635,15 +629,15 @@ func Example_jwk_cache() {
 
   const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
 
-  // First, set up the `jwk.Cache` object. You need to pass it a
+  // First, set up the `jwkcache.Cache` object. You need to pass it a
   // `context.Context` object to control the lifecycle of the background fetching goroutine.
-  c, err := jwk.NewCache(ctx, httprc.NewClient())
+  c, err := jwkcache.NewCache(ctx, httprc.NewClient())
   if err != nil {
     fmt.Printf("failed to create cache: %s\n", err)
     return
   }
 
-  // Tell *jwk.Cache that we only want to refresh this JWKS periodically.
+  // Tell the cache that we only want to refresh this JWKS periodically.
   if err := c.Register(ctx, googleCerts); err != nil {
     fmt.Printf("failed to register google JWKS: %s\n", err)
     return
@@ -667,7 +661,7 @@ MAIN:
     //
     // By "reasonably" we mean that we cannot guarantee that the keys will be refreshed
     // immediately after it has been rotated in the remote source. But it should be close\
-    // enough, and should you need to forcefully refresh the token using the `(jwk.Cache).Refresh()` method.
+    // enough, and should you need to forcefully refresh the token using the `(jwkcache.Cache).Refresh()` method.
     //
     // If refetching the keyset fails, a cached version will be returned from the previous
     // successful sync
@@ -683,7 +677,7 @@ MAIN:
   // OUTPUT:
 }
 ```
-source: [examples/jwk_cache_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_cache_example_test.go)
+source: [examples/jwk_cache_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_cache_example_test.go)
 <!-- END INCLUDE -->
 
 <!-- INCLUDE(examples/jwk_cached_set_example_test.go) -->
@@ -701,6 +695,8 @@ import (
   "github.com/lestrrat-go/httprc/v3/tracesink"
   "github.com/lestrrat-go/jwx/v4/jwk"
   "github.com/lestrrat-go/jwx/v4/jws"
+
+  "github.com/jwx-go/jwkcache/v4"
 )
 
 func Example_jwk_cached_set() {
@@ -710,7 +706,7 @@ func Example_jwk_cached_set() {
   const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
 
   // The first steps are the same as examples/jwk_cache_example_test.go
-  c, err := jwk.NewCache(
+  c, err := jwkcache.NewCache(
     ctx,
     httprc.NewClient(
       httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stderr, nil)))),
@@ -728,8 +724,8 @@ func Example_jwk_cached_set() {
   if err := c.Register(
     ctx,
     googleCerts,
-    jwk.WithMaxInterval(24*time.Hour*7),
-    jwk.WithMinInterval(15*time.Minute),
+    jwkcache.WithMaxInterval(24*time.Hour*7),
+    jwkcache.WithMinInterval(15*time.Minute),
   ); err != nil {
     fmt.Printf("failed to register google JWKS: %s\n", err)
     return
@@ -756,7 +752,7 @@ func Example_jwk_cached_set() {
   // OUTPUT:
 }
 ```
-source: [examples/jwk_cached_set_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_cached_set_example_test.go)
+source: [examples/jwk_cached_set_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_cached_set_example_test.go)
 <!-- END INCLUDE -->
 
 ## Using Whitelists
@@ -853,7 +849,7 @@ func Example_jwk_whitelist() {
   // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
 }
 ```
-source: [examples/jwk_whitelist_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_whitelist_example_test.go)
+source: [examples/jwk_whitelist_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_whitelist_example_test.go)
 <!-- END INCLUDE -->
 
 # Working with jwk.Key
@@ -883,22 +879,20 @@ func Example_jwk_key_specific_metehods() {
     return
   }
 
-  key, err := jwk.Import(raw)
+  // Use the concrete type parameter to get the typed key directly,
+  // instead of importing as jwk.Key and then type-asserting.
+  rsakey, err := jwk.Import[jwk.RSAPrivateKey](raw)
   if err != nil {
-    fmt.Printf("failed to create jwk.Key from RSA private key: %s\n", err)
+    fmt.Printf("failed to create jwk.RSAPrivateKey from RSA private key: %s\n", err)
     return
   }
 
-  rsakey, ok := key.(jwk.RSAPrivateKey)
-  if !ok {
-    fmt.Printf("failed to convert jwk.Key into jwk.RSAPrivateKey (was %T)\n", key)
-    return
-  }
-
+  // Once you have the typed key, you can access RSA-specific methods
+  // without a type assertion.
+  //
   // We won't print these values, because each time they are
   // generated the contents will be different, and thus our
-  // tests would fail. But here you can see that once you
-  // convert the type you can access the RSA-specific methods
+  // tests would fail.
   _, _ = rsakey.D()
   _, _ = rsakey.DP()
   _, _ = rsakey.DQ()
@@ -911,7 +905,7 @@ func Example_jwk_key_specific_metehods() {
   //
 }
 ```
-source: [examples/jwk_key_specific_methods_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_key_specific_methods_example_test.go)
+source: [examples/jwk_key_specific_methods_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_key_specific_methods_example_test.go)
 <!-- END INCLUDE -->
 
 ## Setting values to fields

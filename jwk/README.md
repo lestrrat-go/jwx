@@ -38,7 +38,8 @@ import (
   "time"
 
   "github.com/lestrrat-go/httprc/v3"
-  "github.com/lestrrat-go/jwx/v4/jwk"
+
+  "github.com/jwx-go/jwkcache/v4"
 )
 
 func Example_jwk_cache() {
@@ -47,15 +48,15 @@ func Example_jwk_cache() {
 
   const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
 
-  // First, set up the `jwk.Cache` object. You need to pass it a
+  // First, set up the `jwkcache.Cache` object. You need to pass it a
   // `context.Context` object to control the lifecycle of the background fetching goroutine.
-  c, err := jwk.NewCache(ctx, httprc.NewClient())
+  c, err := jwkcache.NewCache(ctx, httprc.NewClient())
   if err != nil {
     fmt.Printf("failed to create cache: %s\n", err)
     return
   }
 
-  // Tell *jwk.Cache that we only want to refresh this JWKS periodically.
+  // Tell the cache that we only want to refresh this JWKS periodically.
   if err := c.Register(ctx, googleCerts); err != nil {
     fmt.Printf("failed to register google JWKS: %s\n", err)
     return
@@ -79,7 +80,7 @@ MAIN:
     //
     // By "reasonably" we mean that we cannot guarantee that the keys will be refreshed
     // immediately after it has been rotated in the remote source. But it should be close\
-    // enough, and should you need to forcefully refresh the token using the `(jwk.Cache).Refresh()` method.
+    // enough, and should you need to forcefully refresh the token using the `(jwkcache.Cache).Refresh()` method.
     //
     // If refetching the keyset fails, a cached version will be returned from the previous
     // successful sync
@@ -95,7 +96,7 @@ MAIN:
   // OUTPUT:
 }
 ```
-source: [examples/jwk_cache_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_cache_example_test.go)
+source: [examples/jwk_cache_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_cache_example_test.go)
 <!-- END INCLUDE -->
 
 Parse and use a JWK key:
@@ -109,7 +110,7 @@ import (
   "fmt"
   "log"
 
-  "github.com/lestrrat-go/jwx/v4/internal/json"
+  "encoding/json"
   "github.com/lestrrat-go/jwx/v4/jwk"
 )
 
@@ -132,8 +133,7 @@ func Example_jwk_usage() {
   }
 
   for i := 0; i < set.Len(); i++ {
-    var rawkey any // This is where we would like to store the raw key, like *rsa.PrivateKey or *ecdsa.PrivateKey
-    key, ok := set.Key(i)  // This retrieves the corresponding jwk.Key
+    key, ok := set.Key(i) // This retrieves the corresponding jwk.Key
     if !ok {
       log.Printf("failed to get key at index %d", i)
       return
@@ -141,14 +141,14 @@ func Example_jwk_usage() {
 
     // jws and jwe operations can be performed using jwk.Key, but you could also
     // covert it to their "raw" forms, such as *rsa.PrivateKey or *ecdsa.PrivateKey
-    if err := jwk.Export(key, &rawkey); err != nil {
+    rawkeyV, err := jwk.Export[any](key)
+    if err != nil {
       log.Printf("failed to create public key: %s", err)
       return
     }
-    _ = rawkey
 
     // You can create jwk.Key from a raw key, too
-    fromRawKey, err := jwk.Import(rawkey)
+    fromRawKey, err := jwk.Import[jwk.Key](rawkeyV)
     if err != nil {
       log.Printf("failed to acquire raw key from jwk.Key: %s", err)
       return
@@ -184,13 +184,9 @@ func Example_jwk_marshal_json() {
   raw := []byte("01234567890123456789012345678901234567890123456789ABCDEF")
 
   // This would create a symmetric key
-  key, err := jwk.Import(raw)
+  key, err := jwk.Import[jwk.SymmetricKey](raw)
   if err != nil {
     fmt.Printf("failed to create symmetric key: %s\n", err)
-    return
-  }
-  if _, ok := key.(jwk.SymmetricKey); !ok {
-    fmt.Printf("expected jwk.SymmetricKey, got %T\n", key)
     return
   }
 
@@ -211,5 +207,5 @@ func Example_jwk_marshal_json() {
   // }
 }
 ```
-source: [examples/jwk_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_example_test.go)
+source: [examples/jwk_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_example_test.go)
 <!-- END INCLUDE -->
