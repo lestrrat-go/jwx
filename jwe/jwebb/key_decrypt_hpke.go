@@ -10,6 +10,11 @@ import (
 // encryptedCEK is the HPKE-sealed CEK from the JWE Encrypted Key field.
 // ek is the HPKE encapsulated key from the "ek" header field.
 func KeyDecryptHPKEKE(encryptedCEK []byte, alg, calg string, privkey any, ek []byte) ([]byte, error) {
+	// Try custom HPKE key decrypter (e.g., X448 from external modules)
+	if dec, ok := privkey.(HPKEKeyDecrypter); ok {
+		return KeyDecryptHPKECustom(encryptedCEK, alg, calg, dec, ek)
+	}
+
 	kdf, aead, err := hpkeSuite(alg)
 	if err != nil {
 		return nil, fmt.Errorf(`HPKE key decrypt: %w`, err)

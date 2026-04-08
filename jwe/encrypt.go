@@ -122,7 +122,11 @@ func (e *encrypter) encryptKeyECDHES(cek []byte, alg, ctalg string) (keygen.Byte
 }
 
 func (e *encrypter) encryptKeyHPKE(cek []byte, alg, ctalg string) (keygen.ByteSource, error) {
-	return jwebb.KeyEncryptHPKEKE(cek, alg, ctalg, e.key)
+	result, err := jwebb.KeyEncryptHPKEKE(cek, alg, ctalg, e.key)
+	if err != nil {
+		return nil, makeHPKEError(`encrypt key (HPKE): %w`, err)
+	}
+	return result, nil
 }
 
 func (e *encrypter) encryptKeyMLKEM(cek []byte, alg, ctalg string) (keygen.ByteSource, error) {
