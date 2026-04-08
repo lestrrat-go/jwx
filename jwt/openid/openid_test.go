@@ -766,7 +766,7 @@ func TestWithBase64Encoder(t *testing.T) {
 		}
 
 		rBytes := r.Bytes()
-		rBytesPadded := make([]byte, keyBytes)
+		rBytesPadded := make([]byte, keyBytes, 2*keyBytes)
 		copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
 
 		sBytes := s.Bytes()

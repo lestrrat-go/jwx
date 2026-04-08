@@ -164,24 +164,34 @@ func (s *set) MarshalJSON() ([]byte, error) {
 	}
 	slices.Sort(fields)
 
-	enc.WriteToken(jsontext.BeginObject)
+	if err := enc.WriteToken(jsontext.BeginObject); err != nil {
+		return nil, fmt.Errorf(`failed to write begin object: %w`, err)
+	}
 	for _, field := range fields {
-		enc.WriteToken(jsontext.String(field))
+		if err := enc.WriteToken(jsontext.String(field)); err != nil {
+			return nil, fmt.Errorf(`failed to write field name %q: %w`, field, err)
+		}
 		if field != keysKey {
 			if err := json.MarshalEncode(enc, s.privateParams[field]); err != nil {
 				return nil, fmt.Errorf(`failed to marshal field %q: %w`, field, err)
 			}
 		} else {
-			enc.WriteToken(jsontext.BeginArray)
+			if err := enc.WriteToken(jsontext.BeginArray); err != nil {
+				return nil, fmt.Errorf(`failed to write begin array: %w`, err)
+			}
 			for i, k := range s.keys {
 				if err := json.MarshalEncode(enc, k); err != nil {
 					return nil, fmt.Errorf(`failed to marshal key #%d: %w`, i, err)
 				}
 			}
-			enc.WriteToken(jsontext.EndArray)
+			if err := enc.WriteToken(jsontext.EndArray); err != nil {
+				return nil, fmt.Errorf(`failed to write end array: %w`, err)
+			}
 		}
 	}
-	enc.WriteToken(jsontext.EndObject)
+	if err := enc.WriteToken(jsontext.EndObject); err != nil {
+		return nil, fmt.Errorf(`failed to write end object: %w`, err)
+	}
 
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())

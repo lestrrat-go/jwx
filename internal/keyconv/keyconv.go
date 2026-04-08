@@ -33,7 +33,11 @@ func KeyAs[T any](src any) (T, error) {
 		if rv.IsValid() && rv.Type() == target.Elem() {
 			ptr := reflect.New(rv.Type())
 			ptr.Elem().Set(rv)
-			return ptr.Interface().(T), nil
+			v, ok := ptr.Interface().(T)
+			if !ok {
+				return zero, fmt.Errorf(`keyconv: expected %T, got %T`, zero, src)
+			}
+			return v, nil
 		}
 	}
 	return zero, fmt.Errorf(`keyconv: expected %T, got %T`, zero, src)

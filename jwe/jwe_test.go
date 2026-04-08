@@ -195,7 +195,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 	}, 0, 2*len(templates))
 
 	for _, tmpl := range templates {
-		options := make([]jwe.EncryptOption, len(tmpl.Options))
+		options := make([]jwe.EncryptOption, len(tmpl.Options), len(tmpl.Options)+2)
 		copy(options, tmpl.Options)
 
 		for _, compression := range []jwa.CompressionAlgorithm{jwa.NoCompress(), jwa.Deflate()} {

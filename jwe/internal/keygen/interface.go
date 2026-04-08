@@ -33,6 +33,7 @@ type ByteWithSaltAndCount struct {
 // header as the "ek" field during ML-KEM key encapsulation.
 type ByteWithEncapsulatedKey struct {
 	ByteKey
+
 	Ciphertext []byte
 }
 
