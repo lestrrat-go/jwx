@@ -191,6 +191,102 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 	})
 	t.Run(`Lookup the object`, func(t *testing.T) {
 		t.Parallel()
+		v, ok := jwa.LookupKeyEncryptionAlgorithm("HPKE-0-KE")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.HPKE_0_KE(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string HPKE-0-KE`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("HPKE-0-KE")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.HPKE_0_KE(), dst, `unmarshaled value should be equal to constant`)
+	})
+	t.Run(`stringification for HPKE-0-KE`, func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "HPKE-0-KE", jwa.HPKE_0_KE().String(), `stringified value matches`)
+	})
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupKeyEncryptionAlgorithm("HPKE-1-KE")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.HPKE_1_KE(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string HPKE-1-KE`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("HPKE-1-KE")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.HPKE_1_KE(), dst, `unmarshaled value should be equal to constant`)
+	})
+	t.Run(`stringification for HPKE-1-KE`, func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "HPKE-1-KE", jwa.HPKE_1_KE().String(), `stringified value matches`)
+	})
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupKeyEncryptionAlgorithm("HPKE-2-KE")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.HPKE_2_KE(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string HPKE-2-KE`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("HPKE-2-KE")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.HPKE_2_KE(), dst, `unmarshaled value should be equal to constant`)
+	})
+	t.Run(`stringification for HPKE-2-KE`, func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "HPKE-2-KE", jwa.HPKE_2_KE().String(), `stringified value matches`)
+	})
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupKeyEncryptionAlgorithm("HPKE-3-KE")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.HPKE_3_KE(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string HPKE-3-KE`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("HPKE-3-KE")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.HPKE_3_KE(), dst, `unmarshaled value should be equal to constant`)
+	})
+	t.Run(`stringification for HPKE-3-KE`, func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "HPKE-3-KE", jwa.HPKE_3_KE().String(), `stringified value matches`)
+	})
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupKeyEncryptionAlgorithm("HPKE-4-KE")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.HPKE_4_KE(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string HPKE-4-KE`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("HPKE-4-KE")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.HPKE_4_KE(), dst, `unmarshaled value should be equal to constant`)
+	})
+	t.Run(`stringification for HPKE-4-KE`, func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "HPKE-4-KE", jwa.HPKE_4_KE().String(), `stringified value matches`)
+	})
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
+		v, ok := jwa.LookupKeyEncryptionAlgorithm("HPKE-7-KE")
+		require.True(t, ok, `Lookup should succeed`)
+		require.Equal(t, jwa.HPKE_7_KE(), v, `Lookup value should be equal to constant`)
+	})
+	t.Run(`Unmarshal the string HPKE-7-KE`, func(t *testing.T) {
+		t.Parallel()
+		var dst jwa.KeyEncryptionAlgorithm
+		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("HPKE-7-KE")), &dst), `UnmarshalJSON is successful`)
+		require.Equal(t, jwa.HPKE_7_KE(), dst, `unmarshaled value should be equal to constant`)
+	})
+	t.Run(`stringification for HPKE-7-KE`, func(t *testing.T) {
+		t.Parallel()
+		require.Equal(t, "HPKE-7-KE", jwa.HPKE_7_KE().String(), `stringified value matches`)
+	})
+	t.Run(`Lookup the object`, func(t *testing.T) {
+		t.Parallel()
 		v, ok := jwa.LookupKeyEncryptionAlgorithm("ML-KEM-1024")
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.ML_KEM_1024(), v, `Lookup value should be equal to constant`)
@@ -421,6 +517,24 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 		t.Run(`ECDH_ES_A256KW`, func(t *testing.T) {
 			require.False(t, jwa.ECDH_ES_A256KW().IsSymmetric(), `jwa.ECDH_ES_A256KW returns expected value`)
 		})
+		t.Run(`HPKE_0_KE`, func(t *testing.T) {
+			require.False(t, jwa.HPKE_0_KE().IsSymmetric(), `jwa.HPKE_0_KE returns expected value`)
+		})
+		t.Run(`HPKE_1_KE`, func(t *testing.T) {
+			require.False(t, jwa.HPKE_1_KE().IsSymmetric(), `jwa.HPKE_1_KE returns expected value`)
+		})
+		t.Run(`HPKE_2_KE`, func(t *testing.T) {
+			require.False(t, jwa.HPKE_2_KE().IsSymmetric(), `jwa.HPKE_2_KE returns expected value`)
+		})
+		t.Run(`HPKE_3_KE`, func(t *testing.T) {
+			require.False(t, jwa.HPKE_3_KE().IsSymmetric(), `jwa.HPKE_3_KE returns expected value`)
+		})
+		t.Run(`HPKE_4_KE`, func(t *testing.T) {
+			require.False(t, jwa.HPKE_4_KE().IsSymmetric(), `jwa.HPKE_4_KE returns expected value`)
+		})
+		t.Run(`HPKE_7_KE`, func(t *testing.T) {
+			require.False(t, jwa.HPKE_7_KE().IsSymmetric(), `jwa.HPKE_7_KE returns expected value`)
+		})
 		t.Run(`ML_KEM_1024`, func(t *testing.T) {
 			require.False(t, jwa.ML_KEM_1024().IsSymmetric(), `jwa.ML_KEM_1024 returns expected value`)
 		})
@@ -472,6 +586,12 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			jwa.ECDH_ES_A128KW():     {},
 			jwa.ECDH_ES_A192KW():     {},
 			jwa.ECDH_ES_A256KW():     {},
+			jwa.HPKE_0_KE():          {},
+			jwa.HPKE_1_KE():          {},
+			jwa.HPKE_2_KE():          {},
+			jwa.HPKE_3_KE():          {},
+			jwa.HPKE_4_KE():          {},
+			jwa.HPKE_7_KE():          {},
 			jwa.ML_KEM_1024():        {},
 			jwa.ML_KEM_1024_A256KW(): {},
 			jwa.ML_KEM_768():         {},

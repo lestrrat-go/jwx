@@ -64,6 +64,8 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 		return e.encryptKeyECDHES(cek, algStr, ctalgStr)
 	case jwebb.IsMLKEM(algStr):
 		return e.encryptKeyMLKEM(cek, algStr, ctalgStr)
+	case jwebb.IsHPKE(algStr):
+		return e.encryptKeyHPKE(cek, algStr, ctalgStr)
 	case jwebb.IsRSA15(algStr):
 		return e.encryptKeyRSA(cek, algStr, jwebb.KeyEncryptRSA15)
 	case jwebb.IsRSAOAEP(algStr):
@@ -161,6 +163,10 @@ func (e *encrypter) encryptKeyECDHES(cek []byte, alg, ctalg string) (keygen.Byte
 	default:
 		return nil, fmt.Errorf(`jwe: encrypt key: unsupported key type for ECDH-ES: %T`, keyToUse)
 	}
+}
+
+func (e *encrypter) encryptKeyHPKE(cek []byte, alg, ctalg string) (keygen.ByteSource, error) {
+	return jwebb.KeyEncryptHPKEKE(cek, alg, ctalg, e.key)
 }
 
 func (e *encrypter) encryptKeyMLKEM(cek []byte, alg, ctalg string) (keygen.ByteSource, error) {

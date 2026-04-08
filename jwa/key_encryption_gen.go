@@ -21,7 +21,7 @@ var builtinKeyEncryptionAlgorithm = map[string]struct{}{}
 
 func init() {
 	// builtin values for KeyEncryptionAlgorithm
-	algorithms := make([]KeyEncryptionAlgorithm, 23)
+	algorithms := make([]KeyEncryptionAlgorithm, 29)
 	algorithms[0] = NewKeyEncryptionAlgorithm(tokens.A128GCMKW, WithIsSymmetric(true))
 	algorithms[1] = NewKeyEncryptionAlgorithm(tokens.A128KW, WithIsSymmetric(true))
 	algorithms[2] = NewKeyEncryptionAlgorithm(tokens.A192GCMKW, WithIsSymmetric(true))
@@ -33,18 +33,24 @@ func init() {
 	algorithms[8] = NewKeyEncryptionAlgorithm(tokens.ECDH_ES_A128KW)
 	algorithms[9] = NewKeyEncryptionAlgorithm(tokens.ECDH_ES_A192KW)
 	algorithms[10] = NewKeyEncryptionAlgorithm(tokens.ECDH_ES_A256KW)
-	algorithms[11] = NewKeyEncryptionAlgorithm(tokens.ML_KEM_1024)
-	algorithms[12] = NewKeyEncryptionAlgorithm(tokens.ML_KEM_1024_A256KW)
-	algorithms[13] = NewKeyEncryptionAlgorithm(tokens.ML_KEM_768)
-	algorithms[14] = NewKeyEncryptionAlgorithm(tokens.ML_KEM_768_A192KW)
-	algorithms[15] = NewKeyEncryptionAlgorithm(tokens.PBES2_HS256_A128KW, WithIsSymmetric(true))
-	algorithms[16] = NewKeyEncryptionAlgorithm(tokens.PBES2_HS384_A192KW, WithIsSymmetric(true))
-	algorithms[17] = NewKeyEncryptionAlgorithm(tokens.PBES2_HS512_A256KW, WithIsSymmetric(true))
-	algorithms[18] = NewKeyEncryptionAlgorithm(tokens.RSA1_5, WithDeprecated(true))
-	algorithms[19] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP)
-	algorithms[20] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_256)
-	algorithms[21] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_384)
-	algorithms[22] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_512)
+	algorithms[11] = NewKeyEncryptionAlgorithm(tokens.HPKE_0_KE)
+	algorithms[12] = NewKeyEncryptionAlgorithm(tokens.HPKE_1_KE)
+	algorithms[13] = NewKeyEncryptionAlgorithm(tokens.HPKE_2_KE)
+	algorithms[14] = NewKeyEncryptionAlgorithm(tokens.HPKE_3_KE)
+	algorithms[15] = NewKeyEncryptionAlgorithm(tokens.HPKE_4_KE)
+	algorithms[16] = NewKeyEncryptionAlgorithm(tokens.HPKE_7_KE)
+	algorithms[17] = NewKeyEncryptionAlgorithm(tokens.ML_KEM_1024)
+	algorithms[18] = NewKeyEncryptionAlgorithm(tokens.ML_KEM_1024_A256KW)
+	algorithms[19] = NewKeyEncryptionAlgorithm(tokens.ML_KEM_768)
+	algorithms[20] = NewKeyEncryptionAlgorithm(tokens.ML_KEM_768_A192KW)
+	algorithms[21] = NewKeyEncryptionAlgorithm(tokens.PBES2_HS256_A128KW, WithIsSymmetric(true))
+	algorithms[22] = NewKeyEncryptionAlgorithm(tokens.PBES2_HS384_A192KW, WithIsSymmetric(true))
+	algorithms[23] = NewKeyEncryptionAlgorithm(tokens.PBES2_HS512_A256KW, WithIsSymmetric(true))
+	algorithms[24] = NewKeyEncryptionAlgorithm(tokens.RSA1_5, WithDeprecated(true))
+	algorithms[25] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP)
+	algorithms[26] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_256)
+	algorithms[27] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_384)
+	algorithms[28] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_512)
 
 	RegisterKeyEncryptionAlgorithm(algorithms...)
 }
@@ -102,6 +108,36 @@ func ECDH_ES_A192KW() KeyEncryptionAlgorithm {
 // ECDH_ES_A256KW returns an object representing ECDH-ES + AES key wrap (256) key encryption algorithm.
 func ECDH_ES_A256KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm(tokens.ECDH_ES_A256KW)
+}
+
+// HPKE_0_KE returns an object representing HPKE-0-KE key encryption (DHKEM(P-256) + HKDF-SHA256 + AES-128-GCM). Based on draft-ietf-jose-hpke-encrypt-16: API is not yet stable.
+func HPKE_0_KE() KeyEncryptionAlgorithm {
+	return lookupBuiltinKeyEncryptionAlgorithm(tokens.HPKE_0_KE)
+}
+
+// HPKE_1_KE returns an object representing HPKE-1-KE key encryption (DHKEM(P-384) + HKDF-SHA384 + AES-256-GCM). Based on draft-ietf-jose-hpke-encrypt-16: API is not yet stable.
+func HPKE_1_KE() KeyEncryptionAlgorithm {
+	return lookupBuiltinKeyEncryptionAlgorithm(tokens.HPKE_1_KE)
+}
+
+// HPKE_2_KE returns an object representing HPKE-2-KE key encryption (DHKEM(P-521) + HKDF-SHA512 + AES-256-GCM). Based on draft-ietf-jose-hpke-encrypt-16: API is not yet stable.
+func HPKE_2_KE() KeyEncryptionAlgorithm {
+	return lookupBuiltinKeyEncryptionAlgorithm(tokens.HPKE_2_KE)
+}
+
+// HPKE_3_KE returns an object representing HPKE-3-KE key encryption (DHKEM(X25519) + HKDF-SHA256 + AES-128-GCM). Based on draft-ietf-jose-hpke-encrypt-16: API is not yet stable.
+func HPKE_3_KE() KeyEncryptionAlgorithm {
+	return lookupBuiltinKeyEncryptionAlgorithm(tokens.HPKE_3_KE)
+}
+
+// HPKE_4_KE returns an object representing HPKE-4-KE key encryption (DHKEM(X25519) + HKDF-SHA256 + ChaCha20Poly1305). Based on draft-ietf-jose-hpke-encrypt-16: API is not yet stable.
+func HPKE_4_KE() KeyEncryptionAlgorithm {
+	return lookupBuiltinKeyEncryptionAlgorithm(tokens.HPKE_4_KE)
+}
+
+// HPKE_7_KE returns an object representing HPKE-7-KE key encryption (DHKEM(P-256) + HKDF-SHA256 + AES-256-GCM). Based on draft-ietf-jose-hpke-encrypt-16: API is not yet stable.
+func HPKE_7_KE() KeyEncryptionAlgorithm {
+	return lookupBuiltinKeyEncryptionAlgorithm(tokens.HPKE_7_KE)
 }
 
 // ML_KEM_1024 returns an object representing ML-KEM-1024 direct key agreement algorithm (FIPS 203).
