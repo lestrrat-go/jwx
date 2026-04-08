@@ -1,6 +1,6 @@
 #!/bin/bash
 
-UNTRACKED=$(git ls-files --others --exclude-standard)
+UNTRACKED=$(git ls-files --others --exclude-standard -- ':!examples/')
 DIFF=$(git diff)
 
 st=0
