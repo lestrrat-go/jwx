@@ -47,7 +47,7 @@ import (
 
 func Example() {
   // Parse, serialize, slice and dice JWKs!
-  privkey, err := jwk.ParseKey(jsonRSAPrivateKey)
+  privkey, err := jwk.ParseKey[jwk.Key](jsonRSAPrivateKey)
   if err != nil {
     fmt.Printf("failed to parse JWK: %s\n", err)
     return
@@ -90,7 +90,7 @@ func Example() {
 
     // Work with *http.Request!
     {
-      req, err := http.NewRequest(http.MethodGet, `https://github.com/lestrrat-go/jwx`, nil)
+      req, _ := http.NewRequest(http.MethodGet, `https://github.com/lestrrat-go/jwx`, nil)
       req.Header.Set(`Authorization`, fmt.Sprintf(`Bearer %s`, signed))
 
       verifiedToken, err := jwt.ParseRequest(req, jwt.WithKey(jwa.RS256(), pubkey))
@@ -144,7 +144,7 @@ func Example() {
   // OUTPUT:
 }
 ```
-source: [examples/jwx_readme_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwx_readme_example_test.go)
+source: [examples/jwx_readme_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwx_readme_example_test.go)
 <!-- END INCLUDE -->
 
 # How-to Documentation

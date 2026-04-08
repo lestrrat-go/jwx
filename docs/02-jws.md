@@ -63,7 +63,7 @@ func Example_jws_parse() {
   // {"payload":"TG9yZW0gaXBzdW0","protected":"eyJhbGciOiJIUzI1NiJ9","signature":"idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo"}
 }
 ```
-source: [examples/jws_parse_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_parse_example_test.go)
+source: [examples/jws_parse_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_parse_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a JWS message stored in a file
@@ -107,7 +107,7 @@ func Example_jws_ParseFS() {
   // {"payload":"TG9yZW0gaXBzdW0","protected":"eyJhbGciOiJIUzI1NiJ9","signature":"idbECxA8ZhQbU0ddZmzdRZxQmHjwvw77lT2bwqGgNMo"}
 }
 ```
-source: [examples/jws_parsefs_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_parsefs_example_test.go)
+source: [examples/jws_parsefs_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_parsefs_example_test.go)
 <!-- END INCLUDE -->
 
 ## Parse a JWS message and access JWS headers
@@ -132,7 +132,7 @@ import (
 )
 
 func Example_jws_use_jws_header() {
-  key, err := jwk.Import([]byte(`abracadabra`))
+  key, err := jwk.Import[jwk.Key]([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf(`failed to create new symmetric key: %s`, err)
     return
@@ -172,7 +172,7 @@ func Example_jws_use_jws_header() {
   // "secret-key"
 }
 ```
-source: [examples/jws_use_jws_header_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_use_jws_header_example_test.go)
+source: [examples/jws_use_jws_header_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_use_jws_header_example_test.go)
 <!-- END INCLUDE -->
 
 # Signing
@@ -197,7 +197,7 @@ import (
 )
 
 func Example_jws_sign() {
-  key, err := jwk.Import([]byte(`abracadabra`))
+  key, err := jwk.Import[jwk.Key]([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create key: %s\n", err)
     return
@@ -213,7 +213,7 @@ func Example_jws_sign() {
   // eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.EjVtju0uXjSz6QevNgAqN1ESd9aNCP7-tJLifkQ0_C0
 }
 ```
-source: [examples/jws_sign_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_sign_example_test.go)
+source: [examples/jws_sign_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_sign_example_test.go)
 <!-- END INCLUDE -->
 
 ## Generating a JWS message in JSON serialization format
@@ -238,7 +238,7 @@ func Example_jws_sign_json() {
   var keys []jwk.Key
 
   for i := 0; i < 3; i++ {
-    key, err := jwk.Import([]byte(fmt.Sprintf(`abracadabra-%d`, i)))
+    key, err := jwk.Import[jwk.Key]([]byte(fmt.Sprintf(`abracadabra-%d`, i)))
     if err != nil {
       fmt.Printf("failed to create key: %s\n", err)
       return
@@ -261,7 +261,7 @@ func Example_jws_sign_json() {
   // {"payload":"TG9yZW0gaXBzdW0","signatures":[{"protected":"eyJhbGciOiJIUzI1NiJ9","signature":"bCQtU2y4PEnG78dUN-tXea8YEwhBAzLX7ZEYlRVtX_g"},{"protected":"eyJhbGciOiJIUzI1NiJ9","signature":"0ovW79M_bbaRDBrBLaNKN7rgJeXaSRAnu5rhAuRXBR4"},{"protected":"eyJhbGciOiJIUzI1NiJ9","signature":"ZkUzwlK5E6LFKsYEIyUvskOKLMDxE0MvvkvNrwINNWE"}]}
 }
 ```
-source: [examples/jws_sign_json_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_sign_json_example_test.go)
+source: [examples/jws_sign_json_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_sign_json_example_test.go)
 <!-- END INCLUDE -->
 
 ## Generating a JWS message with detached payload
@@ -284,7 +284,7 @@ import (
 func Example_jws_sign_detached_payload() {
   payload := `$.02`
 
-  key, err := jwk.Import([]byte(`abracadabra`))
+  key, err := jwk.Import[jwk.Key]([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create symmetric key: %s\n", err)
     return
@@ -309,7 +309,7 @@ func Example_jws_sign_detached_payload() {
   // eyJhbGciOiJIUzI1NiIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..lnRw_MSpQjARa5LWqPcu8Qls9p3wYGrC6tz4-nr0rkA
 }
 ```
-source: [examples/jws_sign_detached_payload_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_sign_detached_payload_example_test.go)
+source: [examples/jws_sign_detached_payload_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_sign_detached_payload_example_test.go)
 <!-- END INCLUDE -->
 
 ## Including arbitrary headers
@@ -333,7 +333,7 @@ import (
 )
 
 func Example_jws_sign_with_headers() {
-  key, err := jwk.Import([]byte(`abracadabra`))
+  key, err := jwk.Import[jwk.Key]([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create key: %s\n", err)
     return
@@ -351,7 +351,7 @@ func Example_jws_sign_with_headers() {
   // eyJhbGciOiJIUzI1NiIsIngtZXhhbXBsZSI6dHJ1ZX0.TG9yZW0gaXBzdW0.9nIX0hN7u1b97UcjmrVvd5y1ubkQp_1gz1V3Mkkcm14
 }
 ```
-source: [examples/jws_sign_with_headers_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_sign_with_headers_example_test.go)
+source: [examples/jws_sign_with_headers_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_sign_with_headers_example_test.go)
 <!-- END INCLUDE -->
 
 ## Using cloud KMS services
@@ -385,7 +385,7 @@ import (
 func Example_jws_verify_with_key() {
   const src = `eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0.EjVtju0uXjSz6QevNgAqN1ESd9aNCP7-tJLifkQ0_C0`
 
-  key, err := jwk.Import([]byte(`abracadabra`))
+  key, err := jwk.Import[jwk.Key]([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create key: %s\n", err)
     return
@@ -401,7 +401,7 @@ func Example_jws_verify_with_key() {
   // Lorem ipsum
 }
 ```
-source: [examples/jws_verify_with_key_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_verify_with_key_example_test.go)
+source: [examples/jws_verify_with_key_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_verify_with_key_example_test.go)
 <!-- END INCLUDE -->
 
 ## Verification using a JWKS
@@ -421,9 +421,10 @@ For more discussion on why/how `alg`/`kid` values work, please read the [relevan
 package examples_test
 
 import (
+  "crypto/rand"
+  "crypto/rsa"
   "fmt"
 
-  "github.com/lestrrat-go/jwx/v4/internal/jwxtest"
   "github.com/lestrrat-go/jwx/v4/jwa"
   "github.com/lestrrat-go/jwx/v4/jwk"
   "github.com/lestrrat-go/jwx/v4/jws"
@@ -432,7 +433,12 @@ import (
 func Example_jws_verify_with_jwk_set() {
   // Setup payload, private key, and signed payload first...
   const payload = "Lorem ipsum"
-  privkey, err := jwxtest.GenerateRsaJwk()
+  rawkey, err := rsa.GenerateKey(rand.Reader, 2048)
+  if err != nil {
+    fmt.Printf("failed to generate RSA key: %s\n", err)
+    return
+  }
+  privkey, err := jwk.Import[jwk.Key](rawkey)
   if err != nil {
     fmt.Printf("failed to create private key: %s\n", err)
     return
@@ -443,11 +449,11 @@ func Example_jws_verify_with_jwk_set() {
   // Create a JWK Set
   set := jwk.NewSet()
   // Add some bogus keys
-  k1, _ := jwk.Import([]byte("abracadabra"))
+  k1, _ := jwk.Import[jwk.Key]([]byte("abracadabra"))
   _ = set.AddKey(k1)
   _ = k1.Set(jwk.KeyIDKey, "key-01")
 
-  k2, _ := jwk.Import([]byte("opensesame"))
+  k2, _ := jwk.Import[jwk.Key]([]byte("opensesame"))
   _ = set.AddKey(k2)
   _ = k1.Set(jwk.KeyIDKey, "key-02")
 
@@ -528,7 +534,7 @@ func Example_jws_verify_with_jwk_set() {
   // OUTPUT:
 }
 ```
-source: [examples/jws_verify_with_keyset_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_verify_with_keyset_example_test.go)
+source: [examples/jws_verify_with_keyset_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_verify_with_keyset_example_test.go)
 <!-- END INCLUDE -->
 
 ## Verification using a detached payload
@@ -551,7 +557,7 @@ func Example_jws_verify_detached_payload() {
   serialized := `eyJhbGciOiJIUzI1NiIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..lnRw_MSpQjARa5LWqPcu8Qls9p3wYGrC6tz4-nr0rkA`
   payload := `$.02`
 
-  key, err := jwk.Import([]byte(`abracadabra`))
+  key, err := jwk.Import[jwk.Key]([]byte(`abracadabra`))
   if err != nil {
     fmt.Printf("failed to create symmetric key: %s\n", err)
     return
@@ -568,7 +574,7 @@ func Example_jws_verify_detached_payload() {
   // $.02
 }
 ```
-source: [examples/jws_verify_detached_payload_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_verify_detached_payload_example_test.go)
+source: [examples/jws_verify_detached_payload_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_verify_detached_payload_example_test.go)
 <!-- END INCLUDE -->
 
 ## Verification using `jku`
@@ -718,7 +724,7 @@ func (CirclEdDSAVerifier) Verify(key any, payload, signature []byte) error {
   return fmt.Errorf(`failed to verify EdDSA signature`)
 }
 ```
-source: [examples/jws_custom_signer_verifier_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_custom_signer_verifier_example_test.go)
+source: [examples/jws_custom_signer_verifier_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_custom_signer_verifier_example_test.go)
 <!-- END INCLUDE -->
 
 ## Extension Algorithms (Ed448, ES256K, ML-DSA)
@@ -776,7 +782,7 @@ func Example_jws_sign_with_custom_base64() {
   // eyJhbGciOiJIUzI1NiJ9.TG9yZW0gaXBzdW0=.DahnsWNiVXmt23d2nUx_ePAZLy2nodC-Oh0bIB88cck=
 }
 ```
-source: [examples/jws_sign_with_custom_base64_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_sign_with_custom_base64_example_test.go)
+source: [examples/jws_sign_with_custom_base64_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_sign_with_custom_base64_example_test.go)
 <!-- END INCLUDE -->
 
 You can use these option for `jwt.Sign` and `jwt.Parse` as well. See the [JWT docs for an example](./01-jwt.md#using-a-custom-base64-encoder).
@@ -812,7 +818,7 @@ import (
 
 func Example_jws_header_filter_basic() {
   // Create a key for signing
-  key, err := jwk.Import([]byte(`my-secret-key`))
+  key, err := jwk.Import[jwk.Key]([]byte(`my-secret-key`))
   if err != nil {
     fmt.Printf("failed to create key: %s\n", err)
     return
@@ -871,7 +877,7 @@ func Example_jws_header_filter_basic() {
   // OUTPUT:
 }
 ```
-source: [examples/jws_filter_basic_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_filter_basic_example_test.go)
+source: [examples/jws_filter_basic_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_filter_basic_example_test.go)
 <!-- END INCLUDE -->
 
 ## Advanced header filtering
@@ -892,13 +898,13 @@ import (
 
 func Example_jws_header_filter_advanced() {
   // Create keys for multi-signature JWS
-  key1, err := jwk.Import([]byte(`secret-key-1`))
+  key1, err := jwk.Import[jwk.Key]([]byte(`secret-key-1`))
   if err != nil {
     fmt.Printf("failed to create key1: %s\n", err)
     return
   }
 
-  key2, err := jwk.Import([]byte(`secret-key-2`))
+  key2, err := jwk.Import[jwk.Key]([]byte(`secret-key-2`))
   if err != nil {
     fmt.Printf("failed to create key2: %s\n", err)
     return
@@ -986,23 +992,20 @@ func Example_jws_header_filter_advanced() {
 // Helper function to demonstrate validation using filtered JWS headers
 func validateJWSSecurityHeaders(headers jws.Headers) {
   // Check security level
-  var secLevel string
-  if err := headers.Get("security-level", &secLevel); err != nil {
+  if _, ok := headers.Field("security-level"); !ok {
     fmt.Println("✗ Security level not found")
   }
 
   // Check internal use flag
-  var internalUse string
-  if err := headers.Get("internal-use", &internalUse); err != nil {
+  if _, ok := headers.Field("internal-use"); !ok {
     fmt.Println("✗ Internal use flag missing")
   }
 
   // Check service identification
-  var service string
-  if err := headers.Get("service", &service); err != nil {
+  if _, ok := headers.Field("service"); !ok {
     fmt.Println("✗ Service identification missing")
   }
 }
 ```
-source: [examples/jws_filter_advanced_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_filter_advanced_example_test.go)
+source: [examples/jws_filter_advanced_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_filter_advanced_example_test.go)
 <!-- END INCLUDE -->
