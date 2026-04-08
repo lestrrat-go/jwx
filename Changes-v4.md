@@ -14,12 +14,11 @@ These are changes that are incompatible with the v3.x.x version.
   Users opt in by importing the modules they need:
 
   - `github.com/jwx-go/es256k/v4` — ES256K/secp256k1 support (was `jwx_es256k` build tag)
-  - `github.com/jwx-go/asmbase64/v4` — assembly-optimized base64 (was `jwx_asmbase64` build tag)
   - `github.com/jwx-go/jwkcache/v4` — JWK Set caching via HTTP (was `jwk.Cache` in the main module)
   - `github.com/jwx-go/mldsa/v4` — ML-DSA signature support (new)
   - `github.com/jwx-go/examples/v4` — examples (was `examples/` directory in the main repo)
 
-  Build-tag gating (`jwx_goccy`, `jwx_es256k`, `jwx_asmbase64`) is no longer supported.
+  Build-tag gating (`jwx_goccy`, `jwx_es256k`) is no longer supported.
 
 * `ReadFile()` has been removed from all packages. Use `ParseFS(fs.FS, path, ...options)`
   instead, which accepts an `fs.FS` and a path within that filesystem.

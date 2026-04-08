@@ -77,9 +77,8 @@ Internal `internal/json` package abstracts the choice. Custom field registry (`j
 
 Pluggable at runtime via `SetBase64Encoder`/`SetBase64Decoder` (exposed as `jwx.SetBase64Encoder`/`jwx.SetBase64Decoder` in the top-level package):
 - Default: `encoding/base64`
-- Optional: `github.com/jwx-go/asmbase64` (assembly-optimized, via side-effect import)
 
-Internal `internal/base64` package abstracts the choice. See [Extension Modules](../docs/10-extensions.md#asmbase64-assembly-optimized-base64) for usage.
+Internal `internal/base64` package abstracts the choice.
 
 ## Multi-Module Layout
 
