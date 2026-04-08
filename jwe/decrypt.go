@@ -41,6 +41,8 @@ func decryptCEK(alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, he
 		return decryptKeyECDHES(recipientKey, algStr, ctx.ctalg, key, headers)
 	case jwebb.IsMLKEM(algStr):
 		return decryptKeyMLKEM(recipientKey, algStr, ctx.ctalg, key, headers)
+	case jwebb.IsHPKE(algStr):
+		return decryptKeyHPKE(recipientKey, algStr, ctx.ctalg, key, headers)
 	case jwebb.IsRSA15(algStr):
 		return decryptKeyRSA15(recipientKey, algStr, key, ctx.contentCipher)
 	case jwebb.IsRSAOAEP(algStr):
@@ -166,6 +168,17 @@ func decryptKeyECDHES(recipientKey []byte, alg string, ctalg jwa.ContentEncrypti
 		return jwebb.KeyDecryptECDHES(recipientKey, nil, derivedAlg, apu, apv, key, pubkey, keysize)
 	}
 	return jwebb.KeyDecryptECDHESKeyWrap(recipientKey, recipientKey, alg, apu, apv, key, pubkey, keysize)
+}
+
+func decryptKeyHPKE(recipientKey []byte, alg string, ctalg jwa.ContentEncryptionAlgorithm, key any, headers Headers) ([]byte, error) {
+	ctalgStr := ctalg.String()
+
+	ek, ok := headers.EncapsulatedKey()
+	if !ok {
+		return nil, fmt.Errorf(`jwe: decrypt key: missing 'ek' field for HPKE`)
+	}
+
+	return jwebb.KeyDecryptHPKEKE(recipientKey, alg, ctalgStr, key, ek)
 }
 
 func decryptKeyMLKEM(recipientKey []byte, alg string, ctalg jwa.ContentEncryptionAlgorithm, key any, headers Headers) ([]byte, error) {

@@ -116,3 +116,10 @@ These are changes that are incompatible with the v3.x.x version.
 * ML-KEM (FIPS 203) key encapsulation is now supported for JWE. The supported
   algorithms include `ML-KEM-768` and `ML-KEM-1024` (standalone), as well as
   hybrid variants `ML-KEM-768+A192KW` and `ML-KEM-1024+A256KW`.
+
+* HPKE key encryption (draft-ietf-jose-hpke-encrypt-16) is now supported for JWE.
+  Six algorithms are available: `HPKE-0-KE` through `HPKE-7-KE`, covering
+  DHKEM(P-256), DHKEM(P-384), DHKEM(P-521), and DHKEM(X25519) with various
+  KDF/AEAD combinations. Uses Go 1.26 `crypto/hpke`. X448 variants will be
+  provided by a companion module. **This is based on a draft specification and
+  the API is not yet stable.**

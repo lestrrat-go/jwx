@@ -85,6 +85,22 @@ func IsMLKEMDirect(alg string) bool {
 	}
 }
 
+// IsHPKE checks if the algorithm is an HPKE-based algorithm
+func IsHPKE(alg string) bool {
+	switch alg {
+	case tokens.HPKE_0_KE, tokens.HPKE_1_KE, tokens.HPKE_2_KE,
+		tokens.HPKE_3_KE, tokens.HPKE_4_KE, tokens.HPKE_7_KE:
+		return true
+	default:
+		return false
+	}
+}
+
+// IsHPKEKeyEncryption checks if the algorithm is an HPKE key encryption algorithm
+func IsHPKEKeyEncryption(alg string) bool {
+	return IsHPKE(alg)
+}
+
 // IsDirectCEK checks if the algorithm uses direct key agreement
 // where the CEK is derived (not encrypted). This includes DIRECT,
 // bare ECDH-ES (without key wrapping), and direct ML-KEM modes.
