@@ -71,6 +71,11 @@ fields:
     json: jku
   - name: keyID
     json: kid
+  - name: pskID
+    exported_name: PSKID
+    getter: PSKID
+    type: "[]byte"
+    json: psk_id
   - name: typ
     exported_name: Type
     getter: Type

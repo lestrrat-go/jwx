@@ -33,6 +33,14 @@ const (
 	// Direct key agreement
 	DIRECT = "dir"
 
+	// HPKE Key Encryption algorithms (draft-ietf-jose-hpke-encrypt)
+	HPKE_0_KE = "HPKE-0-KE"
+	HPKE_1_KE = "HPKE-1-KE"
+	HPKE_2_KE = "HPKE-2-KE"
+	HPKE_3_KE = "HPKE-3-KE"
+	HPKE_4_KE = "HPKE-4-KE"
+	HPKE_7_KE = "HPKE-7-KE"
+
 	// ML-KEM algorithms (post-quantum, FIPS 203)
 	ML_KEM_768         = "ML-KEM-768"
 	ML_KEM_1024        = "ML-KEM-1024"

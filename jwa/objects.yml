@@ -246,6 +246,30 @@ algorithms:
         token_reference: tokens.PBES2_HS512_A256KW
         returnval_comment: PBES2 + HMAC-SHA512 + AES key wrap (256) key encryption algorithm
         sym: true
+      - name: HPKE_0_KE
+        value: HPKE-0-KE
+        token_reference: tokens.HPKE_0_KE
+        returnval_comment: HPKE-0-KE key encryption (DHKEM(P-256) + HKDF-SHA256 + AES-128-GCM)
+      - name: HPKE_1_KE
+        value: HPKE-1-KE
+        token_reference: tokens.HPKE_1_KE
+        returnval_comment: HPKE-1-KE key encryption (DHKEM(P-384) + HKDF-SHA384 + AES-256-GCM)
+      - name: HPKE_2_KE
+        value: HPKE-2-KE
+        token_reference: tokens.HPKE_2_KE
+        returnval_comment: HPKE-2-KE key encryption (DHKEM(P-521) + HKDF-SHA512 + AES-256-GCM)
+      - name: HPKE_3_KE
+        value: HPKE-3-KE
+        token_reference: tokens.HPKE_3_KE
+        returnval_comment: HPKE-3-KE key encryption (DHKEM(X25519) + HKDF-SHA256 + AES-128-GCM)
+      - name: HPKE_4_KE
+        value: HPKE-4-KE
+        token_reference: tokens.HPKE_4_KE
+        returnval_comment: HPKE-4-KE key encryption (DHKEM(X25519) + HKDF-SHA256 + ChaCha20Poly1305)
+      - name: HPKE_7_KE
+        value: HPKE-7-KE
+        token_reference: tokens.HPKE_7_KE
+        returnval_comment: HPKE-7-KE key encryption (DHKEM(P-256) + HKDF-SHA256 + AES-256-GCM)
       - name: ML_KEM_768
         value: ML-KEM-768
         token_reference: tokens.ML_KEM_768
