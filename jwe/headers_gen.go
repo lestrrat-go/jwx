@@ -30,6 +30,7 @@ const (
 	JWKKey                    = "jwk"
 	JWKSetURLKey              = "jku"
 	KeyIDKey                  = "kid"
+	PSKIDKey                  = "psk_id"
 	TypeKey                   = "typ"
 	X509CertChainKey          = "x5c"
 	X509CertThumbprintKey     = "x5t"
@@ -58,6 +59,7 @@ type Headers interface {
 	JWK() (jwk.Key, bool)
 	JWKSetURL() (string, bool)
 	KeyID() (string, bool)
+	PSKID() ([]byte, bool)
 	Type() (string, bool)
 	X509CertChain() (*cert.Chain, bool)
 	X509CertThumbprint() (string, bool)
@@ -83,7 +85,7 @@ type Headers interface {
 }
 
 // stdHeaderNames is a list of all standard header names defined in the JWE specification.
-var stdHeaderNames = []string{AgreementPartyUInfoKey, AgreementPartyVInfoKey, AlgorithmKey, CompressionKey, ContentEncryptionKey, ContentTypeKey, CriticalKey, EncapsulatedKeyKey, EphemeralPublicKeyKey, JWKKey, JWKSetURLKey, KeyIDKey, TypeKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, X509URLKey}
+var stdHeaderNames = []string{AgreementPartyUInfoKey, AgreementPartyVInfoKey, AlgorithmKey, CompressionKey, ContentEncryptionKey, ContentTypeKey, CriticalKey, EncapsulatedKeyKey, EphemeralPublicKeyKey, JWKKey, JWKSetURLKey, KeyIDKey, PSKIDKey, TypeKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, X509URLKey}
 
 type stdHeaders struct {
 	agreementPartyUInfo    []byte
@@ -98,6 +100,7 @@ type stdHeaders struct {
 	jwk                    jwk.Key
 	jwkSetURL              *string
 	keyID                  *string
+	pskID                  []byte
 	typ                    *string
 	x509CertChain          *cert.Chain
 	x509CertThumbprint     *string
@@ -201,6 +204,12 @@ func (h *stdHeaders) KeyID() (string, bool) {
 	return *(h.keyID), true
 }
 
+func (h *stdHeaders) PSKID() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.pskID, true
+}
+
 func (h *stdHeaders) Type() (string, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -256,6 +265,7 @@ func (h *stdHeaders) clear() {
 	h.jwk = nil
 	h.jwkSetURL = nil
 	h.keyID = nil
+	h.pskID = nil
 	h.typ = nil
 	h.x509CertChain = nil
 	h.x509CertThumbprint = nil
@@ -277,6 +287,7 @@ func (h *stdHeaders) isZero() bool {
 		h.jwk == nil &&
 		h.jwkSetURL == nil &&
 		h.keyID == nil &&
+		h.pskID == nil &&
 		h.typ == nil &&
 		h.x509CertChain == nil &&
 		h.x509CertThumbprint == nil &&
@@ -319,6 +330,8 @@ func (h *stdHeaders) Has(name string) bool {
 		return h.jwkSetURL != nil
 	case KeyIDKey:
 		return h.keyID != nil
+	case PSKIDKey:
+		return h.pskID != nil
 	case TypeKey:
 		return h.typ != nil
 	case X509CertChainKey:
@@ -399,6 +412,11 @@ func (h *stdHeaders) Field(name string) (any, bool) {
 			return nil, false
 		}
 		return *(h.keyID), true
+	case PSKIDKey:
+		if h.pskID == nil {
+			return nil, false
+		}
+		return h.pskID, true
 	case TypeKey:
 		if h.typ == nil {
 			return nil, false
@@ -533,6 +551,17 @@ func (h *stdHeaders) setNoLock(name string, value any) error {
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, KeyIDKey, value)
+	case PSKIDKey:
+		if v, ok := value.([]byte); ok {
+			if v == nil {
+				h.pskID = nil
+			} else {
+				h.pskID = make([]byte, len(v))
+				copy(h.pskID, v)
+			}
+			return nil
+		}
+		return fmt.Errorf(`invalid value for %s key: %T`, PSKIDKey, value)
 	case TypeKey:
 		if v, ok := value.(string); ok {
 			h.typ = &v
@@ -600,6 +629,8 @@ func (h *stdHeaders) Remove(key string) error {
 		h.jwkSetURL = nil
 	case KeyIDKey:
 		h.keyID = nil
+	case PSKIDKey:
+		h.pskID = nil
 	case TypeKey:
 		h.typ = nil
 	case X509CertChainKey:
@@ -702,6 +733,10 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 			if err := json.AssignNextStringToken(&h.keyID, dec, nil); err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, KeyIDKey, err)
 			}
+		case PSKIDKey:
+			if err := json.AssignNextBytesToken(&h.pskID, dec); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, PSKIDKey, err)
+			}
 		case TypeKey:
 			if err := json.AssignNextStringToken(&h.typ, dec, nil); err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, TypeKey, err)
@@ -747,7 +782,7 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 func (h *stdHeaders) Keys() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	keys := make([]string, 0, 17+len(h.privateParams))
+	keys := make([]string, 0, 18+len(h.privateParams))
 	if h.agreementPartyUInfo != nil {
 		keys = append(keys, AgreementPartyUInfoKey)
 	}
@@ -783,6 +818,9 @@ func (h *stdHeaders) Keys() []string {
 	}
 	if h.keyID != nil {
 		keys = append(keys, KeyIDKey)
+	}
+	if h.pskID != nil {
+		keys = append(keys, PSKIDKey)
 	}
 	if h.typ != nil {
 		keys = append(keys, TypeKey)
@@ -876,6 +914,11 @@ func (dst *stdHeaders) cloneFrom(src *stdHeaders) {
 	} else {
 		dst.keyID = nil
 	}
+	if src.pskID != nil {
+		dst.pskID = slices.Clone(src.pskID)
+	} else {
+		dst.pskID = nil
+	}
 	if src.typ != nil {
 		tmp := *(src.typ)
 		dst.typ = &tmp
@@ -918,7 +961,7 @@ func (dst *stdHeaders) cloneFrom(src *stdHeaders) {
 func (h *stdHeaders) MarshalJSON() ([]byte, error) {
 	h.mu.RLock()
 	data := make(map[string]any)
-	keys := make([]string, 0, 17+len(h.privateParams))
+	keys := make([]string, 0, 18+len(h.privateParams))
 	if h.agreementPartyUInfo != nil {
 		data[AgreementPartyUInfoKey] = h.agreementPartyUInfo
 		keys = append(keys, AgreementPartyUInfoKey)
@@ -966,6 +1009,10 @@ func (h *stdHeaders) MarshalJSON() ([]byte, error) {
 	if h.keyID != nil {
 		data[KeyIDKey] = *(h.keyID)
 		keys = append(keys, KeyIDKey)
+	}
+	if h.pskID != nil {
+		data[PSKIDKey] = h.pskID
+		keys = append(keys, PSKIDKey)
 	}
 	if h.typ != nil {
 		data[TypeKey] = *(h.typ)
