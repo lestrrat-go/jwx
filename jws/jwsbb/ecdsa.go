@@ -73,7 +73,7 @@ func PackECDSASignature(r *big.Int, sbig *big.Int, curveBits int) ([]byte, error
 
 	// Serialize r and s into fixed-length bytes
 	rBytes := r.Bytes()
-	rBytesPadded := make([]byte, keyBytes)
+	rBytesPadded := make([]byte, keyBytes, 2*keyBytes)
 	copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
 
 	sBytes := sbig.Bytes()

@@ -533,7 +533,7 @@ func Equal(t1, t2 Token) bool {
 }
 
 func (t *stdToken) Clone() (Token, error) {
-	dst := New().(*stdToken)
+	dst, _ := New().(*stdToken)
 	dst.cloneFrom(t)
 	return dst, nil
 }

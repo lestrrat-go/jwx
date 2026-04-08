@@ -54,7 +54,7 @@ func freeVerifyContext(vc *verifyContext) *verifyContext {
 }
 
 func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
-	//nolint:forcetypeassert
+	var ctxOpt context.Context
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identMessage{}:
@@ -82,18 +82,25 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 		case identKeyUsed{}:
 			vc.keyUsed = option.MustGet[*any](opt)
 		case identContext{}:
-			vc.ctx = option.MustGet[context.Context](opt)
+			ctxOpt = option.MustGet[context.Context](opt) //nolint:fatcontext // not nesting; selecting from options
 		case identValidateKey{}:
 			vc.validateKey = option.MustGet[bool](opt)
 		case identStrictCriticalHeaders{}:
 			vc.strictCritical = option.MustGet[bool](opt)
 		case identSerialization{}:
-			vc.parseOptions = append(vc.parseOptions, opt.(ParseOption))
+			po, ok := opt.(ParseOption)
+			if !ok {
+				return makeVerifyError(`invalid jws.VerifyOption: expected ParseOption`)
+			}
+			vc.parseOptions = append(vc.parseOptions, po)
 		case identBase64Encoder{}:
 			vc.encoder = option.MustGet[Base64Encoder](opt)
 		default:
 			return makeVerifyError(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, opt.Ident()), `jws.ident`))
 		}
+	}
+	if ctxOpt != nil {
+		vc.ctx = ctxOpt
 	}
 
 	if len(vc.keyProviders) < 1 {

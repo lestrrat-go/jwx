@@ -732,7 +732,7 @@ func TestParseRequest(t *testing.T) {
 		{
 			Name: "Token not present (w/ multiple options)",
 			Request: func() *http.Request {
-				return httptest.NewRequest(http.MethodGet, u, nil)
+				return httptest.NewRequestWithContext(t.Context(), http.MethodGet, u, nil)
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
 				return jwt.ParseRequest(req,
@@ -748,7 +748,7 @@ func TestParseRequest(t *testing.T) {
 		{
 			Name: "Token not present (w/o options)",
 			Request: func() *http.Request {
-				return httptest.NewRequest(http.MethodGet, u, nil)
+				return httptest.NewRequestWithContext(t.Context(), http.MethodGet, u, nil)
 			},
 			Parse: func(req *http.Request) (jwt.Token, error) {
 				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
@@ -758,7 +758,7 @@ func TestParseRequest(t *testing.T) {
 		{
 			Name: "Token in Authorization header (w/o extra options)",
 			Request: func() *http.Request {
-				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, u, nil)
 				req.Header.Add("Authorization", "Bearer "+string(signed))
 				return req
 			},
@@ -769,7 +769,7 @@ func TestParseRequest(t *testing.T) {
 		{
 			Name: "Token in Authorization header (w/o extra options, using jwk.Set)",
 			Request: func() *http.Request {
-				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, u, nil)
 				req.Header.Add("Authorization", "Bearer "+string(signed))
 				return req
 			},
@@ -782,7 +782,7 @@ func TestParseRequest(t *testing.T) {
 		{
 			Name: "Token in Authorization header but we specified another header key",
 			Request: func() *http.Request {
-				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, u, nil)
 				req.Header.Add("Authorization", "Bearer "+string(signed))
 				return req
 			},
@@ -794,7 +794,7 @@ func TestParseRequest(t *testing.T) {
 		{
 			Name: fmt.Sprintf("Token in %s header (w/ option)", xauth),
 			Request: func() *http.Request {
-				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, u, nil)
 				req.Header.Add(xauth, string(signed))
 				return req
 			},
@@ -805,7 +805,7 @@ func TestParseRequest(t *testing.T) {
 		{
 			Name: fmt.Sprintf("Invalid token in %s header", xauth),
 			Request: func() *http.Request {
-				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, u, nil)
 				req.Header.Add(xauth, string(signed)+"foobarbaz")
 				return req
 			},
@@ -817,7 +817,7 @@ func TestParseRequest(t *testing.T) {
 		{
 			Name: "Token in access_token form field (w/ option)",
 			Request: func() *http.Request {
-				req := httptest.NewRequest(http.MethodPost, u, nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, u, nil)
 				// for whatever reason, I can't populate req.Body and get this to work
 				// so populating req.Form directly instead
 				req.Form = url.Values{}
@@ -831,7 +831,7 @@ func TestParseRequest(t *testing.T) {
 		{
 			Name: "Token in cookie (w/ option)",
 			Request: func() *http.Request {
-				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, u, nil)
 				req.AddCookie(&http.Cookie{Name: "cookie", Value: string(signed)})
 				return req
 			},
@@ -842,7 +842,7 @@ func TestParseRequest(t *testing.T) {
 		{
 			Name: "Invalid token in cookie",
 			Request: func() *http.Request {
-				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, u, nil)
 				req.AddCookie(&http.Cookie{Name: "cookie", Value: string(signed) + "foobarbaz"})
 				return req
 			},
@@ -854,7 +854,7 @@ func TestParseRequest(t *testing.T) {
 		{
 			Name: "Token in access_token form field (w/o option)",
 			Request: func() *http.Request {
-				req := httptest.NewRequest(http.MethodPost, u, nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, u, nil)
 				// for whatever reason, I can't populate req.Body and get this to work
 				// so populating req.Form directly instead
 				req.Form = url.Values{}
@@ -869,7 +869,7 @@ func TestParseRequest(t *testing.T) {
 		{
 			Name: "Invalid token in access_token form field",
 			Request: func() *http.Request {
-				req := httptest.NewRequest(http.MethodPost, u, nil)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, u, nil)
 				// for whatever reason, I can't populate req.Body and get this to work
 				// so populating req.Form directly instead
 				req.Form = url.Values{}
@@ -900,7 +900,7 @@ func TestParseRequest(t *testing.T) {
 	// One extra test. Make sure we can extract the cookie object that we used
 	// when parsing from cookies
 	t.Run("jwt.WithCookie", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, u, nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, u, nil)
 		req.AddCookie(&http.Cookie{Name: "cookie", Value: string(signed)})
 		var dst *http.Cookie
 		_, err := jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithCookie(&dst), jwt.WithKey(jwa.ES256(), pubkey))
@@ -1591,7 +1591,7 @@ func TestGH1175(t *testing.T) {
 	signed, err := jwt.Sign(token, jwt.WithKey(jwa.HS256(), secret))
 	require.NoError(t, err, `jwt.Sign should succeed`)
 
-	req := httptest.NewRequest(http.MethodGet, `http://example.com`, nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, `http://example.com`, nil)
 	req.Header.Set("Authorization", "Bearer "+string(signed))
 
 	_, err = jwt.ParseRequest(req, jwt.WithKey(jwa.HS256(), secret))

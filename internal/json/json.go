@@ -191,6 +191,5 @@ func (dc *decodeCtx) StrictStrings() bool {
 
 func Dump(v any) {
 	enc := jsontext.NewEncoder(os.Stdout, jsontext.WithIndent("\t"))
-	//nolint:errchkjson
 	_ = jsonv2.MarshalEncode(enc, v)
 }

@@ -64,6 +64,7 @@ func Validate(t Token, options ...ValidateOption) error {
 	var extraValidators []Validator
 	var resetValidators bool
 	var collectErrors bool
+	var ctxOpt context.Context
 	for _, o := range options {
 		switch o.Ident() {
 		case identClock{}:
@@ -76,7 +77,7 @@ func Validate(t Token, options ...ValidateOption) error {
 		case identTruncation{}:
 			trunc = option.MustGet[time.Duration](o)
 		case identContext{}:
-			ctx = option.MustGet[context.Context](o)
+			ctxOpt = option.MustGet[context.Context](o) //nolint:fatcontext // not nesting; selecting from options
 		case identResetValidators{}:
 			resetValidators = option.MustGet[bool](o)
 		case identCollectErrors{}:
@@ -100,6 +101,10 @@ func Validate(t Token, options ...ValidateOption) error {
 			}
 			extraValidators = append(extraValidators, v)
 		}
+	}
+
+	if ctxOpt != nil {
+		ctx = ctxOpt
 	}
 
 	ctx = SetValidationCtxSkew(ctx, skew)
