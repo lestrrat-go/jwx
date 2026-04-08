@@ -606,75 +606,62 @@ func (h *rsaPublicKey) UnmarshalJSON(buf []byte) error {
 }
 
 func (h *rsaPublicKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]any)
-	fields := make([]string, 0, 10)
-	data[KeyTypeKey] = jwa.RSA()
-	fields = append(fields, KeyTypeKey)
+	pairs := getFieldPairList()
+	pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: jwa.RSA()})
 	h.mu.RLock()
 	if h.algorithm != nil {
-		data[AlgorithmKey] = *(h.algorithm)
-		fields = append(fields, AlgorithmKey)
+		pairs = append(pairs, fieldPair{Name: AlgorithmKey, Value: *(h.algorithm)})
 	}
 	if h.e != nil {
-		data[RSAEKey] = h.e
-		fields = append(fields, RSAEKey)
+		pairs = append(pairs, fieldPair{Name: RSAEKey, Value: h.e})
 	}
 	if h.keyID != nil {
-		data[KeyIDKey] = *(h.keyID)
-		fields = append(fields, KeyIDKey)
+		pairs = append(pairs, fieldPair{Name: KeyIDKey, Value: *(h.keyID)})
 	}
 	if h.keyOps != nil {
-		data[KeyOpsKey] = *(h.keyOps)
-		fields = append(fields, KeyOpsKey)
+		pairs = append(pairs, fieldPair{Name: KeyOpsKey, Value: *(h.keyOps)})
 	}
 	if h.keyUsage != nil {
-		data[KeyUsageKey] = *(h.keyUsage)
-		fields = append(fields, KeyUsageKey)
+		pairs = append(pairs, fieldPair{Name: KeyUsageKey, Value: *(h.keyUsage)})
 	}
 	if h.n != nil {
-		data[RSANKey] = h.n
-		fields = append(fields, RSANKey)
+		pairs = append(pairs, fieldPair{Name: RSANKey, Value: h.n})
 	}
 	if h.x509CertChain != nil {
-		data[X509CertChainKey] = h.x509CertChain
-		fields = append(fields, X509CertChainKey)
+		pairs = append(pairs, fieldPair{Name: X509CertChainKey, Value: h.x509CertChain})
 	}
 	if h.x509CertThumbprint != nil {
-		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
-		fields = append(fields, X509CertThumbprintKey)
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
 	}
 	if h.x509CertThumbprintS256 != nil {
-		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
-		fields = append(fields, X509CertThumbprintS256Key)
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
 	}
 	if h.x509URL != nil {
-		data[X509URLKey] = *(h.x509URL)
-		fields = append(fields, X509URLKey)
+		pairs = append(pairs, fieldPair{Name: X509URLKey, Value: *(h.x509URL)})
 	}
 	for k, v := range h.privateParams {
-		data[k] = v
-		fields = append(fields, k)
+		pairs = append(pairs, fieldPair{Name: k, Value: v})
 	}
 	h.mu.RUnlock()
 
-	slices.Sort(fields)
+	slices.SortFunc(pairs, fieldPairLess)
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
 	enc := json.NewEncoder(buf)
 	enc.WriteToken(jsontext.BeginObject)
-	for _, f := range fields {
-		enc.WriteToken(jsontext.String(f))
-		v := data[f]
-		switch v := v.(type) {
+	for _, p := range pairs {
+		enc.WriteToken(jsontext.String(p.Name))
+		switch v := p.Value.(type) {
 		case []byte:
 			enc.WriteToken(jsontext.String(base64.EncodeToString(v)))
 		default:
 			if err := json.MarshalEncode(enc, v); err != nil {
-				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
+				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, p.Name, err)
 			}
 		}
 	}
 	enc.WriteToken(jsontext.EndObject)
+	putFieldPairList(pairs)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil
@@ -1568,99 +1555,80 @@ func (h *rsaPrivateKey) UnmarshalJSON(buf []byte) (retErr error) {
 }
 
 func (h *rsaPrivateKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]any)
-	fields := make([]string, 0, 16)
-	data[KeyTypeKey] = jwa.RSA()
-	fields = append(fields, KeyTypeKey)
+	pairs := getFieldPairList()
+	pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: jwa.RSA()})
 	h.mu.RLock()
 	if h.algorithm != nil {
-		data[AlgorithmKey] = *(h.algorithm)
-		fields = append(fields, AlgorithmKey)
+		pairs = append(pairs, fieldPair{Name: AlgorithmKey, Value: *(h.algorithm)})
 	}
 	if h.d != nil {
-		data[RSADKey] = h.d
-		fields = append(fields, RSADKey)
+		pairs = append(pairs, fieldPair{Name: RSADKey, Value: h.d})
 	}
 	if h.dp != nil {
-		data[RSADPKey] = h.dp
-		fields = append(fields, RSADPKey)
+		pairs = append(pairs, fieldPair{Name: RSADPKey, Value: h.dp})
 	}
 	if h.dq != nil {
-		data[RSADQKey] = h.dq
-		fields = append(fields, RSADQKey)
+		pairs = append(pairs, fieldPair{Name: RSADQKey, Value: h.dq})
 	}
 	if h.e != nil {
-		data[RSAEKey] = h.e
-		fields = append(fields, RSAEKey)
+		pairs = append(pairs, fieldPair{Name: RSAEKey, Value: h.e})
 	}
 	if h.keyID != nil {
-		data[KeyIDKey] = *(h.keyID)
-		fields = append(fields, KeyIDKey)
+		pairs = append(pairs, fieldPair{Name: KeyIDKey, Value: *(h.keyID)})
 	}
 	if h.keyOps != nil {
-		data[KeyOpsKey] = *(h.keyOps)
-		fields = append(fields, KeyOpsKey)
+		pairs = append(pairs, fieldPair{Name: KeyOpsKey, Value: *(h.keyOps)})
 	}
 	if h.keyUsage != nil {
-		data[KeyUsageKey] = *(h.keyUsage)
-		fields = append(fields, KeyUsageKey)
+		pairs = append(pairs, fieldPair{Name: KeyUsageKey, Value: *(h.keyUsage)})
 	}
 	if h.n != nil {
-		data[RSANKey] = h.n
-		fields = append(fields, RSANKey)
+		pairs = append(pairs, fieldPair{Name: RSANKey, Value: h.n})
 	}
 	if h.p != nil {
-		data[RSAPKey] = h.p
-		fields = append(fields, RSAPKey)
+		pairs = append(pairs, fieldPair{Name: RSAPKey, Value: h.p})
 	}
 	if h.q != nil {
-		data[RSAQKey] = h.q
-		fields = append(fields, RSAQKey)
+		pairs = append(pairs, fieldPair{Name: RSAQKey, Value: h.q})
 	}
 	if h.qi != nil {
-		data[RSAQIKey] = h.qi
-		fields = append(fields, RSAQIKey)
+		pairs = append(pairs, fieldPair{Name: RSAQIKey, Value: h.qi})
 	}
 	if h.x509CertChain != nil {
-		data[X509CertChainKey] = h.x509CertChain
-		fields = append(fields, X509CertChainKey)
+		pairs = append(pairs, fieldPair{Name: X509CertChainKey, Value: h.x509CertChain})
 	}
 	if h.x509CertThumbprint != nil {
-		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
-		fields = append(fields, X509CertThumbprintKey)
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
 	}
 	if h.x509CertThumbprintS256 != nil {
-		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
-		fields = append(fields, X509CertThumbprintS256Key)
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
 	}
 	if h.x509URL != nil {
-		data[X509URLKey] = *(h.x509URL)
-		fields = append(fields, X509URLKey)
+		pairs = append(pairs, fieldPair{Name: X509URLKey, Value: *(h.x509URL)})
 	}
 	for k, v := range h.privateParams {
-		data[k] = v
-		fields = append(fields, k)
+		pairs = append(pairs, fieldPair{Name: k, Value: v})
 	}
 	h.mu.RUnlock()
 
-	slices.Sort(fields)
+	slices.SortFunc(pairs, fieldPairLess)
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
 	enc := json.NewEncoder(buf)
 	enc.WriteToken(jsontext.BeginObject)
-	for _, f := range fields {
-		enc.WriteToken(jsontext.String(f))
-		v := data[f]
-		switch v := v.(type) {
+	for _, p := range pairs {
+		enc.WriteToken(jsontext.String(p.Name))
+		switch v := p.Value.(type) {
 		case []byte:
 			enc.WriteToken(jsontext.String(base64.EncodeToString(v)))
 		default:
 			if err := json.MarshalEncode(enc, v); err != nil {
-				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
+				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, p.Name, err)
 			}
 		}
 	}
 	enc.WriteToken(jsontext.EndObject)
+	putFieldPairList(pairs)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil

@@ -3,7 +3,9 @@
 package jwk
 
 import (
+	"cmp"
 	"crypto"
+	"sync"
 
 	"github.com/lestrrat-go/jwx/v4/cert"
 	"github.com/lestrrat-go/jwx/v4/jwa"
@@ -101,4 +103,29 @@ type Key interface {
 	X509CertThumbprint() (string, bool)
 	// X509CertThumbprintS256 returns `x5t#S256` of a JWK
 	X509CertThumbprintS256() (string, bool)
+}
+
+type fieldPair struct {
+	Name  string
+	Value any
+}
+
+var fieldPairPool = sync.Pool{
+	New: func() any {
+		return make([]fieldPair, 0, 16)
+	},
+}
+
+func getFieldPairList() []fieldPair {
+	//nolint:forcetypeassert
+	return fieldPairPool.Get().([]fieldPair)
+}
+
+func putFieldPairList(list []fieldPair) {
+	list = list[:0]
+	fieldPairPool.Put(list) //nolint:staticcheck
+}
+
+func fieldPairLess(a, b fieldPair) int {
+	return cmp.Compare(a.Name, b.Name)
 }

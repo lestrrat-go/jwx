@@ -688,46 +688,42 @@ func generateKeyUnmarshalJSON(o *codegen.Output, kt *KeyType, obj *codegen.Objec
 
 func generateKeyMarshalJSON(o *codegen.Output, kt *KeyType, obj *codegen.Object, structName string) {
 	o.LL("func (h *%s) MarshalJSON() ([]byte, error) {", structName)
-	o.L("data := make(map[string]any)")
-	o.L("fields := make([]string, 0, %d)", len(obj.Fields()))
-	o.L("data[KeyTypeKey] = %s", kt.KeyType)
-	o.L("fields = append(fields, KeyTypeKey)")
+	o.L("pairs := getFieldPairList()")
+	o.L("pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: %s})", kt.KeyType)
 	o.L("h.mu.RLock()")
 	for _, f := range obj.Fields() {
 		keyName := keyConstantName(f, kt.Prefix)
 		o.L("if h.%s != nil {", f.Name(false))
 		if jwxcodegen.FieldStorageTypeIsIndirect(f) {
-			o.L("data[%s] = *(h.%s)", keyName, f.Name(false))
+			o.L("pairs = append(pairs, fieldPair{Name: %s, Value: *(h.%s)})", keyName, f.Name(false))
 		} else {
-			o.L("data[%s] = h.%s", keyName, f.Name(false))
+			o.L("pairs = append(pairs, fieldPair{Name: %s, Value: h.%s})", keyName, f.Name(false))
 		}
-		o.L("fields = append(fields, %s)", keyName)
 		o.L("}")
 	}
 	o.L("for k, v := range h.privateParams {")
-	o.L("data[k] = v")
-	o.L("fields = append(fields, k)")
+	o.L("pairs = append(pairs, fieldPair{Name: k, Value: v})")
 	o.L("}")
 	o.L("h.mu.RUnlock()")
 
-	o.LL("slices.Sort(fields)")
+	o.LL("slices.SortFunc(pairs, fieldPairLess)")
 	o.L("buf := pool.BytesBuffer().Get()")
 	o.L("defer pool.BytesBuffer().Put(buf)")
 	o.L("enc := json.NewEncoder(buf)")
 	o.L("enc.WriteToken(jsontext.BeginObject)")
-	o.L("for _, f := range fields {")
-	o.L("enc.WriteToken(jsontext.String(f))")
-	o.L("v := data[f]")
-	o.L("switch v := v.(type) {")
+	o.L("for _, p := range pairs {")
+	o.L("enc.WriteToken(jsontext.String(p.Name))")
+	o.L("switch v := p.Value.(type) {")
 	o.L("case []byte:")
 	o.L("enc.WriteToken(jsontext.String(base64.EncodeToString(v)))")
 	o.L("default:")
 	o.L("if err := json.MarshalEncode(enc, v); err != nil {")
-	o.L("return nil, fmt.Errorf(`failed to encode value for field %%s: %%w`, f, err)")
+	o.L("return nil, fmt.Errorf(`failed to encode value for field %%s: %%w`, p.Name, err)")
 	o.L("}")
 	o.L("}")
 	o.L("}")
 	o.L("enc.WriteToken(jsontext.EndObject)")
+	o.L("putFieldPairList(pairs)")
 	o.L("ret := make([]byte, buf.Len())")
 	o.L("copy(ret, buf.Bytes())")
 	o.L("return ret, nil")
@@ -758,8 +754,10 @@ func generateGenericHeaders(fields codegen.FieldList, keyTypes []*KeyType) error
 
 	o.LL("import (")
 	pkgs := []string{
+		"cmp",
 		"crypto/x509",
 		"fmt",
+		"sync",
 		"github.com/lestrrat-go/jwx/v4/jwa",
 	}
 	for _, pkg := range pkgs {
@@ -769,6 +767,7 @@ func generateGenericHeaders(fields codegen.FieldList, keyTypes []*KeyType) error
 
 	generateStdKeyConstants(o, fields)
 	generateKeyInterfaceDef(o, fields)
+	generateFieldPairType(o)
 
 	if err := o.WriteFile("interface_gen.go", codegen.WithFormatCode(true)); err != nil {
 		if cfe, ok := err.(codegen.CodeFormatError); ok {
@@ -855,5 +854,28 @@ func generateKeyInterfaceDef(o *codegen.Output, fields codegen.FieldList) {
 		}
 		o.R(", bool)")
 	}
+	o.L("}")
+}
+
+func generateFieldPairType(o *codegen.Output) {
+	o.LL("type fieldPair struct {")
+	o.L("Name  string")
+	o.L("Value any")
+	o.L("}")
+	o.LL("var fieldPairPool = sync.Pool{")
+	o.L("New: func() any {")
+	o.L("return make([]fieldPair, 0, 16)")
+	o.L("},")
+	o.L("}")
+	o.LL("func getFieldPairList() []fieldPair {")
+	o.L("//nolint:forcetypeassert")
+	o.L("return fieldPairPool.Get().([]fieldPair)")
+	o.L("}")
+	o.LL("func putFieldPairList(list []fieldPair) {")
+	o.L("list = list[:0]")
+	o.L("fieldPairPool.Put(list) //nolint:staticcheck")
+	o.L("}")
+	o.LL("func fieldPairLess(a, b fieldPair) int {")
+	o.L("return cmp.Compare(a.Name, b.Name)")
 	o.L("}")
 }
