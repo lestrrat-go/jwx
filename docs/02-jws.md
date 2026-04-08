@@ -18,6 +18,7 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
   * [Verification using a detached payload](#verification-using-a-detached-payload)
   * [Verification using `jku`](#verification-using-jku)
 * [Using a custom signing/verification algorithm](#using-a-custom-signingverification-algorithm)
+* [Extension algorithms (Ed448, ES256K, ML-DSA)](#extension-algorithms-ed448-es256k-ml-dsa)
 * [Using a custom base64 encoder](#using-a-custom-base64-encoder)
 * [Filtering JWS headers](#filtering-jws-headers)
 
@@ -720,54 +721,9 @@ func (CirclEdDSAVerifier) Verify(key any, payload, signature []byte) error {
 source: [examples/jws_custom_signer_verifier_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_custom_signer_verifier_example_test.go)
 <!-- END INCLUDE -->
 
-## Enabling Ed448
+## Extension Algorithms (Ed448, ES256K, ML-DSA)
 
-Ed448 support is not included by default. Import the `ed448` module for side effects to enable it:
-
-<!-- INCLUDE(examples/jws_ed448_example_test.go) -->
-```go
-package examples_test
-
-import (
-  "fmt"
-
-  "github.com/cloudflare/circl/sign/ed448"
-  "github.com/lestrrat-go/jwx/v4/jwa"
-  "github.com/lestrrat-go/jwx/v4/jws"
-
-  // Importing jwx-circl-ed448 for its side effects registers Ed448
-  // with jwa, jws, and jwk, making it fully available for JWS operations.
-  _ "github.com/lestrrat-go/jwx-circl-ed448"
-)
-
-func Example_jws_sign_ed448() {
-  pub, priv, err := ed448.GenerateKey(nil)
-  if err != nil {
-    fmt.Printf("failed to generate key: %s\n", err)
-    return
-  }
-
-  payload := []byte("Hello, Ed448!")
-
-  signed, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd448(), priv))
-  if err != nil {
-    fmt.Printf("failed to sign: %s\n", err)
-    return
-  }
-
-  verified, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd448(), pub))
-  if err != nil {
-    fmt.Printf("failed to verify: %s\n", err)
-    return
-  }
-
-  fmt.Printf("%s\n", verified)
-  // OUTPUT:
-  // Hello, Ed448!
-}
-```
-source: [examples/jws_ed448_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_ed448_example_test.go)
-<!-- END INCLUDE -->
+Optional signature algorithms are provided as separate extension modules under [`github.com/jwx-go`](https://github.com/jwx-go). See [Extension Modules](./10-extensions.md) for full documentation and examples.
 
 # Using a custom base64 encoder
 
