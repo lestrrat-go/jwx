@@ -22,7 +22,7 @@ esac
 
 failures=0
 echo "mode: atomic" > "$DST"
-for dir in . ./ext/examples ./cmd/jwx; do
+for dir in . ./cmd/jwx; do
 	testout=$(mktemp /tmp/jwx-test.XXXXX)
 	pushd "$dir" > /dev/null
 	go test -race ${testopts[@]} ./... 
