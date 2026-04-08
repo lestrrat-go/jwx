@@ -4,6 +4,7 @@ package jws
 
 import (
 	"bytes"
+	"cmp"
 	"encoding/json/jsontext"
 	"fmt"
 	"slices"
@@ -673,76 +674,89 @@ func (dst *stdHeaders) cloneFrom(src *stdHeaders) {
 	dst.raw = slices.Clone(src.raw)
 }
 
+type fieldPair struct {
+	Name  string
+	Value any
+}
+
+var fieldPairPool = sync.Pool{
+	New: func() any {
+		return make([]fieldPair, 0, 16)
+	},
+}
+
+func getFieldPairList() []fieldPair {
+	//nolint:forcetypeassert
+	return fieldPairPool.Get().([]fieldPair)
+}
+
+func putFieldPairList(list []fieldPair) {
+	list = list[:0]
+	fieldPairPool.Put(list) //nolint:staticcheck
+}
+
+func fieldPairLess(a, b fieldPair) int {
+	return cmp.Compare(a.Name, b.Name)
+}
+
 func (h *stdHeaders) MarshalJSON() ([]byte, error) {
+	pairs := getFieldPairList()
 	h.mu.RLock()
-	data := make(map[string]any)
-	keys := make([]string, 0, 11+len(h.privateParams))
 	if h.algorithm != nil {
-		data[AlgorithmKey] = *(h.algorithm)
-		keys = append(keys, AlgorithmKey)
+		pairs = append(pairs, fieldPair{Name: AlgorithmKey, Value: *(h.algorithm)})
 	}
 	if h.contentType != nil {
-		data[ContentTypeKey] = *(h.contentType)
-		keys = append(keys, ContentTypeKey)
+		pairs = append(pairs, fieldPair{Name: ContentTypeKey, Value: *(h.contentType)})
 	}
 	if h.critical != nil {
-		data[CriticalKey] = h.critical
-		keys = append(keys, CriticalKey)
+		pairs = append(pairs, fieldPair{Name: CriticalKey, Value: h.critical})
 	}
 	if h.jwk != nil {
-		data[JWKKey] = h.jwk
-		keys = append(keys, JWKKey)
+		pairs = append(pairs, fieldPair{Name: JWKKey, Value: h.jwk})
 	}
 	if h.jwkSetURL != nil {
-		data[JWKSetURLKey] = *(h.jwkSetURL)
-		keys = append(keys, JWKSetURLKey)
+		pairs = append(pairs, fieldPair{Name: JWKSetURLKey, Value: *(h.jwkSetURL)})
 	}
 	if h.keyID != nil {
-		data[KeyIDKey] = *(h.keyID)
-		keys = append(keys, KeyIDKey)
+		pairs = append(pairs, fieldPair{Name: KeyIDKey, Value: *(h.keyID)})
 	}
 	if h.typ != nil {
-		data[TypeKey] = *(h.typ)
-		keys = append(keys, TypeKey)
+		pairs = append(pairs, fieldPair{Name: TypeKey, Value: *(h.typ)})
 	}
 	if h.x509CertChain != nil {
-		data[X509CertChainKey] = h.x509CertChain
-		keys = append(keys, X509CertChainKey)
+		pairs = append(pairs, fieldPair{Name: X509CertChainKey, Value: h.x509CertChain})
 	}
 	if h.x509CertThumbprint != nil {
-		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
-		keys = append(keys, X509CertThumbprintKey)
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
 	}
 	if h.x509CertThumbprintS256 != nil {
-		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
-		keys = append(keys, X509CertThumbprintS256Key)
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
 	}
 	if h.x509URL != nil {
-		data[X509URLKey] = *(h.x509URL)
-		keys = append(keys, X509URLKey)
+		pairs = append(pairs, fieldPair{Name: X509URLKey, Value: *(h.x509URL)})
 	}
 	for k, v := range h.privateParams {
-		data[k] = v
-		keys = append(keys, k)
+		pairs = append(pairs, fieldPair{Name: k, Value: v})
 	}
 	h.mu.RUnlock()
-	slices.Sort(keys)
+	slices.SortFunc(pairs, fieldPairLess)
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
 	enc := json.NewEncoder(buf)
 	enc.WriteToken(jsontext.BeginObject)
-	for _, k := range keys {
-		enc.WriteToken(jsontext.String(k))
-		switch v := data[k].(type) {
+	for _, p := range pairs {
+		enc.WriteToken(jsontext.String(p.Name))
+		switch v := p.Value.(type) {
 		case []byte:
 			enc.WriteToken(jsontext.String(base64.EncodeToString(v)))
 		default:
 			if err := json.MarshalEncode(enc, v); err != nil {
-				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, k, err)
+				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, p.Name, err)
 			}
 		}
 	}
 	enc.WriteToken(jsontext.EndObject)
+	putFieldPairList(pairs)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
 	return ret, nil
