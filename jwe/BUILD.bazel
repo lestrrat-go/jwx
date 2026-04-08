@@ -47,6 +47,7 @@ go_test(
         "fuzz_test.go",
         "gh402_test.go",
         "headers_test.go",
+        "hpke_test.go",
         "jwe_test.go",
         "message_test.go",
         "mlkem_test.go",
