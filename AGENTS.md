@@ -126,7 +126,6 @@ make test
 
 # Run tests with specific build tags
 make test-goccy       # Use goccy/go-json
-make test-es256k      # Enable ES256K support
 make test-alltags     # All optional features
 
 # Run short/smoke tests
@@ -200,8 +199,6 @@ Use `github.com/stretchr/testify/require` for assertions (not `assert`).
 | Tag | Effect |
 |-----|--------|
 | `jwx_goccy` | Use `goccy/go-json` instead of `encoding/json` |
-| `jwx_es256k` | Enable secp256k1/ES256K algorithm support |
-| `jwx_secp256k1_pem` | Enable PEM encoding for secp256k1 keys |
 | `jwx_asmbase64` | Use assembly-optimized base64 |
 
 ## Quick Reference: Common Modifications
