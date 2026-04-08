@@ -18,7 +18,6 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
   * [Verification using a detached payload](#verification-using-a-detached-payload)
   * [Verification using `jku`](#verification-using-jku)
 * [Using a custom signing/verification algorithm](#using-a-custom-signingverification-algorithm)
-* [Enabling ES256K](#enabling-es256k)
 * [Using a custom base64 encoder](#using-a-custom-base64-encoder)
 * [Filtering JWS headers](#filtering-jws-headers)
 
@@ -769,10 +768,6 @@ func Example_jws_sign_ed448() {
 ```
 source: [examples/jws_ed448_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_ed448_example_test.go)
 <!-- END INCLUDE -->
-
-# Enabling ES256K
-
-See [Enabling Optional Signature Methods](./20-global-settings.md#enabling-optional-signature-methods)
 
 # Using a custom base64 encoder
 

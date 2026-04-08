@@ -7,7 +7,6 @@
 ```bash
 make test              # All tests, stdlib JSON, race detector
 make test-goccy        # With goccy/go-json
-make test-es256k       # With ES256K/secp256k1
 make test-alltags      # All optional features
 make smoke             # Short/smoke tests only
 make cover             # Coverage report
@@ -44,8 +43,6 @@ Environment variables:
 | Tag | Effect |
 |-----|--------|
 | `jwx_goccy` | Use goccy/go-json |
-| `jwx_es256k` | Enable secp256k1/ES256K |
-| `jwx_secp256k1_pem` | Enable secp256k1 PEM encoding |
 | `jwx_asmbase64` | Assembly-optimized base64 |
 
 ## Fuzz Tests
