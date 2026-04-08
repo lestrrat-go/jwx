@@ -43,7 +43,11 @@ for my $filename (@files) {
         $output->print($content);
         $output->print("```\n");
 
-        $output->print("source: [$include_filename](https://github.com/lestrrat-go/jwx/blob/$link_ref/$include_filename)\n");
+        if ($include_filename =~ m{^examples/(.+)$}) {
+            $output->print("source: [$include_filename](https://github.com/jwx-go/examples/blob/$link_ref/$1)\n");
+        } else {
+            $output->print("source: [$include_filename](https://github.com/lestrrat-go/jwx/blob/$link_ref/$include_filename)\n");
+        }
     
         # now we need to skip copying until the end of INCLUDE
         $skip_until_end = 1;
