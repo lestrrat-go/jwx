@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "jwkunsafe",
@@ -16,4 +16,14 @@ alias(
     name = "go_default_library",
     actual = ":jwkunsafe",
     visibility = ["//visibility:public"],
+)
+
+go_test(
+    name = "jwkunsafe_test",
+    srcs = ["jwkunsafe_test.go"],
+    deps = [
+        ":jwkunsafe",
+        "//jwa",
+        "@com_github_stretchr_testify//require",
+    ],
 )

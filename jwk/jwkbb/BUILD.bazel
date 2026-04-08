@@ -5,9 +5,6 @@ go_library(
     srcs = ["x509.go"],
     importpath = "github.com/lestrrat-go/jwx/v4/jwk/jwkbb",
     visibility = ["//visibility:public"],
-    deps = [
-        "@com_github_lestrrat_go_blackmagic//:blackmagic",
-    ],
 )
 
 alias(
