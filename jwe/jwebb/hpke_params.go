@@ -33,7 +33,8 @@ func hpkeSuite(alg string) (hpke.KDF, hpke.AEAD, error) {
 }
 
 // hpkeKEInfo builds the HPKE info parameter for Key Encryption mode
-// per draft-ietf-jose-hpke-encrypt-16:
+// per draft-ietf-jose-hpke-encrypt-16
+// (https://datatracker.ietf.org/doc/draft-ietf-jose-hpke-encrypt/16/):
 //
 //	"JOSE-HPKE rcpt" || 0xFF || enc_value || 0xFF
 func hpkeKEInfo(calg string) []byte {
