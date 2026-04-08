@@ -4,7 +4,6 @@ package jwk
 
 import (
 	"bytes"
-	"encoding/json/jsontext"
 	"fmt"
 	"slices"
 	"sync"
@@ -595,20 +594,24 @@ func (h *symmetricKey) MarshalJSON() ([]byte, error) {
 	slices.SortFunc(pairs, fieldPairLess)
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
-	enc := json.NewEncoder(buf)
-	enc.WriteToken(jsontext.BeginObject)
-	for _, p := range pairs {
-		enc.WriteToken(jsontext.String(p.Name))
+	buf.WriteByte('{')
+	for i, p := range pairs {
+		if i > 0 {
+			buf.WriteByte(',')
+		}
+		fmt.Fprintf(buf, `%q:`, p.Name)
 		switch v := p.Value.(type) {
 		case []byte:
-			enc.WriteToken(jsontext.String(base64.EncodeToString(v)))
+			fmt.Fprintf(buf, `%q`, base64.EncodeToString(v))
 		default:
-			if err := json.MarshalEncode(enc, v); err != nil {
+			valBytes, err := json.Marshal(v)
+			if err != nil {
 				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, p.Name, err)
 			}
+			buf.Write(valBytes)
 		}
 	}
-	enc.WriteToken(jsontext.EndObject)
+	buf.WriteByte('}')
 	putFieldPairList(pairs)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
