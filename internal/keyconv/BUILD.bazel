@@ -5,11 +5,7 @@ go_library(
     srcs = ["keyconv.go"],
     importpath = "github.com/lestrrat-go/jwx/v4/internal/keyconv",
     visibility = ["//:__subpackages__"],
-    deps = [
-        "//jwk",
-        "@com_github_lestrrat_go_blackmagic//:blackmagic",
-        "@org_golang_x_crypto//ed25519",
-    ],
+    deps = ["//jwk"],
 )
 
 go_test(

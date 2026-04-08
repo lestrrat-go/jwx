@@ -1,5 +1,5 @@
-load("@rules_go//go:def.bzl", "go_library", "go_test")
 load("@gazelle//:def.bzl", "gazelle")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 # gazelle:prefix github.com/lestrrat-go/jwx/v4
 # gazelle:go_naming_convention import_alias
@@ -9,6 +9,7 @@ gazelle(name = "gazelle")
 go_library(
     name = "jwx",
     srcs = [
+        "base64.go",
         "format.go",
         "formatkind_string_gen.go",
         "jwx.go",
@@ -17,9 +18,9 @@ go_library(
     importpath = "github.com/lestrrat-go/jwx/v4",
     visibility = ["//visibility:public"],
     deps = [
-        "//internal/json",
+        "//internal/base64",
         "//internal/tokens",
-        "@com_github_lestrrat_go_option_v2//:option",
+        "@com_github_lestrrat_go_option_v3//:option",
     ],
 )
 

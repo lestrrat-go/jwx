@@ -10,9 +10,8 @@ go_library(
     visibility = ["//:__subpackages__"],
     deps = [
         "//internal/ecutil",
-        "//jwa",
-        "//jwe/internal/concatkdf",
         "//internal/tokens",
+        "//jwe/internal/concatkdf",
         "//jwk",
     ],
 )
