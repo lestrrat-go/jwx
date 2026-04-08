@@ -110,32 +110,32 @@ func ECDH_ES_A256KW() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm(tokens.ECDH_ES_A256KW)
 }
 
-// HPKE_0_KE returns an object representing HPKE-0-KE key encryption (DHKEM(P-256) + HKDF-SHA256 + AES-128-GCM).
+// HPKE_0_KE returns an object representing HPKE-0-KE key encryption (DHKEM(P-256) + HKDF-SHA256 + AES-128-GCM). Based on draft-ietf-jose-hpke-encrypt-16: API is not yet stable.
 func HPKE_0_KE() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm(tokens.HPKE_0_KE)
 }
 
-// HPKE_1_KE returns an object representing HPKE-1-KE key encryption (DHKEM(P-384) + HKDF-SHA384 + AES-256-GCM).
+// HPKE_1_KE returns an object representing HPKE-1-KE key encryption (DHKEM(P-384) + HKDF-SHA384 + AES-256-GCM). Based on draft-ietf-jose-hpke-encrypt-16: API is not yet stable.
 func HPKE_1_KE() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm(tokens.HPKE_1_KE)
 }
 
-// HPKE_2_KE returns an object representing HPKE-2-KE key encryption (DHKEM(P-521) + HKDF-SHA512 + AES-256-GCM).
+// HPKE_2_KE returns an object representing HPKE-2-KE key encryption (DHKEM(P-521) + HKDF-SHA512 + AES-256-GCM). Based on draft-ietf-jose-hpke-encrypt-16: API is not yet stable.
 func HPKE_2_KE() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm(tokens.HPKE_2_KE)
 }
 
-// HPKE_3_KE returns an object representing HPKE-3-KE key encryption (DHKEM(X25519) + HKDF-SHA256 + AES-128-GCM).
+// HPKE_3_KE returns an object representing HPKE-3-KE key encryption (DHKEM(X25519) + HKDF-SHA256 + AES-128-GCM). Based on draft-ietf-jose-hpke-encrypt-16: API is not yet stable.
 func HPKE_3_KE() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm(tokens.HPKE_3_KE)
 }
 
-// HPKE_4_KE returns an object representing HPKE-4-KE key encryption (DHKEM(X25519) + HKDF-SHA256 + ChaCha20Poly1305).
+// HPKE_4_KE returns an object representing HPKE-4-KE key encryption (DHKEM(X25519) + HKDF-SHA256 + ChaCha20Poly1305). Based on draft-ietf-jose-hpke-encrypt-16: API is not yet stable.
 func HPKE_4_KE() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm(tokens.HPKE_4_KE)
 }
 
-// HPKE_7_KE returns an object representing HPKE-7-KE key encryption (DHKEM(P-256) + HKDF-SHA256 + AES-256-GCM).
+// HPKE_7_KE returns an object representing HPKE-7-KE key encryption (DHKEM(P-256) + HKDF-SHA256 + AES-256-GCM). Based on draft-ietf-jose-hpke-encrypt-16: API is not yet stable.
 func HPKE_7_KE() KeyEncryptionAlgorithm {
 	return lookupBuiltinKeyEncryptionAlgorithm(tokens.HPKE_7_KE)
 }
