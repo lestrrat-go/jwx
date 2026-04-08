@@ -16,9 +16,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Checkout examples
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: jwx-go/examples
+          path: examples
       - name: Process markdown files
         run: |
-          find . -name '*.md' -not -name 'AGENTS.md' -not -name 'CLAUDE.md' | xargs perl scripts/autodoc.pl
+          find . -name '*.md' -not -name 'AGENTS.md' -not -name 'CLAUDE.md' -not -path './examples/*' | xargs perl scripts/autodoc.pl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
  
