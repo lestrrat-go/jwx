@@ -6,3 +6,9 @@ go_library(
     importpath = "github.com/lestrrat-go/jwx/v4/internal/jwxio",
     visibility = ["//:__subpackages__"],
 )
+
+alias(
+    name = "go_default_library",
+    actual = ":jwxio",
+    visibility = ["//:__subpackages__"],
+)

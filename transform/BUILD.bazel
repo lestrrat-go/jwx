@@ -8,16 +8,11 @@ go_library(
     ],
     importpath = "github.com/lestrrat-go/jwx/v4/transform",
     visibility = ["//visibility:public"],
-    deps = [
-        "@com_github_lestrrat_go_blackmagic//:blackmagic",
-    ],
 )
 
 go_test(
     name = "transform_test",
-    srcs = [
-        "map_test.go",
-    ],
+    srcs = ["map_test.go"],
     deps = [
         ":transform",
         "//jwt",

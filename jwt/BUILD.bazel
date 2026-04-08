@@ -3,10 +3,11 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "jwt",
     srcs = [
+        "accessors.go",
         "builder_gen.go",
         "errors.go",
-        "filter.go",
         "fastpath.go",
+        "filter.go",
         "http.go",
         "interface.go",
         "io.go",
@@ -24,26 +25,28 @@ go_library(
     deps = [
         "//:jwx",
         "//internal/base64",
-        "//transform",
         "//internal/json",
-        "//internal/tokens",
         "//internal/pool",
+        "//internal/tokens",
         "//jwa",
         "//jwe",
         "//jwk",
         "//jws",
         "//jws/jwsbb",
         "//jwt/internal/types",
-        "@com_github_lestrrat_go_blackmagic//:blackmagic",
-        "@com_github_lestrrat_go_option_v2//:option",
+        "//transform",
+        "@com_github_lestrrat_go_option_v3//:option",
     ],
 )
 
 go_test(
     name = "jwt_test",
     srcs = [
+        "filter_test.go",
+        "fuzz_test.go",
         "jwt_test.go",
         "options_gen_test.go",
+        "structured_errors_test.go",
         "token_options_test.go",
         "token_test.go",
         "validate_test.go",
@@ -53,13 +56,14 @@ go_test(
     deps = [
         "//internal/json",
         "//internal/jwxtest",
+        "//internal/tokens",
         "//jwa",
         "//jwe",
         "//jwk",
         "//jwk/ecdsa",
         "//jws",
+        "//jws/jwsbb",
         "//jwt/internal/types",
-	"@com_github_lestrrat_go_httprc_v3//:httprc",
         "@com_github_stretchr_testify//require",
     ],
 )

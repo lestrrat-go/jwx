@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "json.go",
         "registry.go",
-        "stdlib.go",
     ],
     importpath = "github.com/lestrrat-go/jwx/v4/internal/json",
     visibility = ["//:__subpackages__"],

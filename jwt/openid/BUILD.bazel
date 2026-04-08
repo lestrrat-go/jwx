@@ -14,13 +14,11 @@ go_library(
     importpath = "github.com/lestrrat-go/jwx/v4/jwt/openid",
     visibility = ["//visibility:public"],
     deps = [
-        "//internal/base64",
         "//internal/json",
         "//internal/pool",
         "//internal/tokens",
         "//jwt",
         "//jwt/internal/types",
-        "@com_github_lestrrat_go_blackmagic//:blackmagic",
     ],
 )
 
