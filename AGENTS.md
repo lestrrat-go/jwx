@@ -4,9 +4,10 @@
 
 If you are writing code that *uses* jwx (not developing jwx itself):
 
-- **Examples**: See `examples/` directory for runnable usage patterns
+- **Examples**: See [`github.com/jwx-go/examples`](https://github.com/jwx-go/examples) for runnable usage patterns (locally at `examples/` when checked out via `go.work`)
 - **Documentation**: See `docs/` directory and package READMEs
 - **API Reference**: Use `go doc` or https://pkg.go.dev/github.com/lestrrat-go/jwx/v4
+- **Migrating from v3?** See [`MIGRATION.md`](MIGRATION.md) for a complete guide, and [`github.com/jwx-go/jwxmigrate`](https://github.com/jwx-go/jwxmigrate) for machine-readable migration rules and automated checking
 
 The rest of this document focuses on developing the jwx library itself.
 
@@ -101,7 +102,7 @@ This repository contains multiple Go modules. The nested modules use `replace` d
 | Module | Path | Purpose |
 |--------|------|---------|
 | Main | `./go.mod` | Core library |
-| Examples | `./examples/go.mod` | Usage examples |
+| Examples | [`github.com/jwx-go/examples`](https://github.com/jwx-go/examples) | Usage examples (external repo, local at `./examples/` via `go.work`) |
 | CLI | `./cmd/jwx/go.mod` | Command-line tool |
 | Generators | `./internal/jwxcodegen/go.mod` | Code generators |
 
@@ -109,14 +110,7 @@ Benchmarks live in a separate repository: [github.com/jwx-go/benchmarks](https:/
 
 ### Local Development
 
-The `examples/go.mod` contains:
-```go
-replace github.com/lestrrat-go/jwx/v4 v4.0.0 => ../
-```
-
-No `go.work` file is committed. When working across modules, either:
-1. Create a temporary `go.work` file (it is .gitignored)
-2. Rely on the `replace` directives already in place
+No `go.work` file is committed. When working across modules (including examples and extensions), create a temporary `go.work` file (it is .gitignored). If a `go.work` file is present, read it to discover local paths to companion modules (extensions, examples, etc.).
 
 ## Development Commands
 
@@ -145,9 +139,8 @@ make tidy
 
 ### Test Script Details
 
-Tests are run via `./tools/test.sh` which iterates over:
+Tests are run via `./scripts/test.sh` which iterates over:
 - `.` (main module)
-- `./examples`
 - `./cmd/jwx`
 
 ## Package Directory Map
@@ -223,16 +216,17 @@ Optional features (signature algorithms, backend replacements) are provided as e
 | `options.yaml` | Option definitions (input to genoptions) |
 | `objects.yml` | Object definitions (input to package-specific generators) |
 
-## Examples Directory
+## Examples
+
+Examples live in [`github.com/jwx-go/examples`](https://github.com/jwx-go/examples) (locally at `./examples/` when checked out).
 
 Naming convention: `{package}_xxx_example_test.go`
 - `jwt_parse_example_test.go`
 - `jws_sign_example_test.go`
 - `jwx_example_test.go` (cross-package)
 - `jwx_readme_example_test.go` (cross-package, used in README)
-- `jwx_register_ec_and_key_example_test.go` (cross-package, key registration)
 
-Examples are included in `docs/` via autodoc markers:
+Examples are included in `docs/` via autodoc markers (resolved by `scripts/autodoc.pl`):
 ```markdown
 <!-- INCLUDE(examples/jwt_parse_example_test.go) -->
 <!-- END INCLUDE -->
@@ -249,6 +243,7 @@ Read linked doc BEFORE working in that area. No exceptions.
 | Understanding package relationships, imports | `.claude/docs/dependencies.md` |
 | Working with errors, error handling patterns | `.claude/docs/error-formatting.md` |
 | Code generation, options pattern, extension points, JSON/base64 backends | `.claude/docs/internals.md` |
+| Extension modules (ES256K, Ed448, ML-DSA, X448, asmbase64, jwkcache) | `docs/10-extensions.md` |
 
 ## Cache Maintenance
 
