@@ -59,6 +59,14 @@ func Encode(src []byte) []byte {
 	return dst
 }
 
+func AppendEncode(dst, src []byte) []byte {
+	return getEncoder().AppendEncode(dst, src)
+}
+
+func EncodedLen(n int) int {
+	return getEncoder().EncodedLen(n)
+}
+
 func EncodeToString(src []byte) string {
 	return getEncoder().EncodeToString(src)
 }

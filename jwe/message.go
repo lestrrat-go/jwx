@@ -556,3 +556,23 @@ func Compact(m *Message, _ ...CompactOption) ([]byte, error) {
 	result := bytes.Clone(buf.Bytes())
 	return result, nil
 }
+
+// compactSerialize assembles a JWE compact serialization from pre-encoded
+// protected headers (aad) and raw binary fields. This avoids the redundant
+// Clone/Merge/Encode cycle that Compact() performs.
+func compactSerialize(aad, encryptedKey, iv, ciphertext, tag []byte) []byte {
+	size := len(aad) + base64.EncodedLen(len(encryptedKey)) + base64.EncodedLen(len(iv)) + base64.EncodedLen(len(ciphertext)) + base64.EncodedLen(len(tag)) + 4
+	buf := make([]byte, 0, size)
+
+	buf = append(buf, aad...)
+	buf = append(buf, tokens.Period)
+	buf = base64.AppendEncode(buf, encryptedKey)
+	buf = append(buf, tokens.Period)
+	buf = base64.AppendEncode(buf, iv)
+	buf = append(buf, tokens.Period)
+	buf = base64.AppendEncode(buf, ciphertext)
+	buf = append(buf, tokens.Period)
+	buf = base64.AppendEncode(buf, tag)
+
+	return buf
+}

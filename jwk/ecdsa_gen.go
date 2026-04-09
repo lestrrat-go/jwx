@@ -734,7 +734,10 @@ func (h *ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteByte(tokens.Comma)
 		}
-		fmt.Fprintf(buf, "%q: %s", pair.Name, pair.Value)
+		buf.WriteByte('"')
+		buf.WriteString(pair.Name)
+		buf.WriteString(`": `)
+		buf.Write(pair.Value.([]byte))
 	}
 	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
@@ -1555,7 +1558,10 @@ func (h *ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteByte(tokens.Comma)
 		}
-		fmt.Fprintf(buf, "%q: %s", pair.Name, pair.Value)
+		buf.WriteByte('"')
+		buf.WriteString(pair.Name)
+		buf.WriteString(`": `)
+		buf.Write(pair.Value.([]byte))
 	}
 	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
