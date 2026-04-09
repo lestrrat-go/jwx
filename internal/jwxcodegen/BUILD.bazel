@@ -1,0 +1,32 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "jwxcodegen",
+    srcs = [
+        "comment.go",
+        "config.go",
+        "field.go",
+        "genclone.go",
+        "gendecodectx.go",
+        "genfield.go",
+        "genhas.go",
+        "genkeys.go",
+        "genmarshal.go",
+        "genremove.go",
+        "genset.go",
+        "genunmarshal.go",
+        "yaml.go",
+    ],
+    importpath = "github.com/lestrrat-go/jwx/v4/internal/jwxcodegen",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "@com_github_goccy_go_yaml//:go_default_library",
+        "@com_github_lestrrat_go_codegen//:go_default_library",
+    ],
+)
+
+alias(
+    name = "go_default_library",
+    actual = ":jwxcodegen",
+    visibility = ["//:__subpackages__"],
+)
