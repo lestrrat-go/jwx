@@ -5,7 +5,10 @@ package jwk
 import (
 	"bytes"
 	"crypto"
+	"crypto/ecdh"
 	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -88,6 +91,41 @@ func doImport(raw any) (Key, error) {
 		return nil, importerr(`a non-nil key is required`)
 	}
 
+	// Fast path: type switch for built-in types avoids reflect.TypeOf + mutex
+	switch v := raw.(type) {
+	case *rsa.PrivateKey:
+		return importRSAPrivateKeyPtr(v)
+	case *rsa.PublicKey:
+		return importRSAPublicKeyPtr(v)
+	case rsa.PrivateKey:
+		return importRSAPrivateKey(v)
+	case rsa.PublicKey:
+		return importRSAPublicKey(v)
+	case *ecdsa.PrivateKey:
+		return importECDSAPrivateKeyPtr(v)
+	case *ecdsa.PublicKey:
+		return importECDSAPublicKeyPtr(v)
+	case ecdsa.PrivateKey:
+		return importECDSAPrivateKey(v)
+	case ecdsa.PublicKey:
+		return importECDSAPublicKey(v)
+	case ed25519.PrivateKey:
+		return importEd25519PrivateKey(v)
+	case ed25519.PublicKey:
+		return importEd25519PublicKey(v)
+	case *ecdh.PrivateKey:
+		return importECDHPrivateKeyPtr(v)
+	case *ecdh.PublicKey:
+		return importECDHPublicKeyPtr(v)
+	case ecdh.PrivateKey:
+		return importECDHPrivateKey(v)
+	case ecdh.PublicKey:
+		return importECDHPublicKey(v)
+	case []byte:
+		return importSymmetricKey(v)
+	}
+
+	// Slow path: registered importers for custom/extension types
 	muKeyImporters.RLock()
 	conv, ok := keyImporters[reflect.TypeOf(raw)]
 	muKeyImporters.RUnlock()

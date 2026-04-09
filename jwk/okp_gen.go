@@ -48,9 +48,7 @@ var _ OKPPublicKey = &okpPublicKey{}
 var _ Key = &okpPublicKey{}
 
 func newOKPPublicKey() *okpPublicKey {
-	return &okpPublicKey{
-		privateParams: make(map[string]any),
-	}
+	return &okpPublicKey{}
 }
 
 func (h *okpPublicKey) KeyType() jwa.KeyType {
@@ -452,7 +450,7 @@ func (dst *okpPublicKey) cloneFrom(src *okpPublicKey) {
 			dst.privateParams[k] = v
 		}
 	} else {
-		dst.privateParams = make(map[string]any)
+		dst.privateParams = nil
 	}
 }
 
@@ -805,9 +803,7 @@ var _ OKPPrivateKey = &okpPrivateKey{}
 var _ Key = &okpPrivateKey{}
 
 func newOKPPrivateKey() *okpPrivateKey {
-	return &okpPrivateKey{
-		privateParams: make(map[string]any),
-	}
+	return &okpPrivateKey{}
 }
 
 func (h *okpPrivateKey) KeyType() jwa.KeyType {
@@ -1243,7 +1239,7 @@ func (dst *okpPrivateKey) cloneFrom(src *okpPrivateKey) {
 			dst.privateParams[k] = v
 		}
 	} else {
-		dst.privateParams = make(map[string]any)
+		dst.privateParams = nil
 	}
 }
 

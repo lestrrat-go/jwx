@@ -46,9 +46,7 @@ var _ AKPPublicKey = &akpPublicKey{}
 var _ Key = &akpPublicKey{}
 
 func newAKPPublicKey() *akpPublicKey {
-	return &akpPublicKey{
-		privateParams: make(map[string]any),
-	}
+	return &akpPublicKey{}
 }
 
 func (h *akpPublicKey) KeyType() jwa.KeyType {
@@ -420,7 +418,7 @@ func (dst *akpPublicKey) cloneFrom(src *akpPublicKey) {
 			dst.privateParams[k] = v
 		}
 	} else {
-		dst.privateParams = make(map[string]any)
+		dst.privateParams = nil
 	}
 }
 
@@ -751,9 +749,7 @@ var _ AKPPrivateKey = &akpPrivateKey{}
 var _ Key = &akpPrivateKey{}
 
 func newAKPPrivateKey() *akpPrivateKey {
-	return &akpPrivateKey{
-		privateParams: make(map[string]any),
-	}
+	return &akpPrivateKey{}
 }
 
 func (h *akpPrivateKey) KeyType() jwa.KeyType {
@@ -1193,7 +1189,7 @@ func (dst *akpPrivateKey) cloneFrom(src *akpPrivateKey) {
 			dst.privateParams[k] = v
 		}
 	} else {
-		dst.privateParams = make(map[string]any)
+		dst.privateParams = nil
 	}
 }
 

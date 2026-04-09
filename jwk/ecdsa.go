@@ -119,7 +119,11 @@ func buildECDHPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ecd
 		return nil, fmt.Errorf(`jwk: unsupported ECDH curve %s`, alg)
 	}
 
-	return ecdhcrv.NewPublicKey(append([]byte{0x04}, append(xbuf, ybuf...)...))
+	buf := make([]byte, 1+len(xbuf)+len(ybuf))
+	buf[0] = 0x04
+	copy(buf[1:], xbuf)
+	copy(buf[1+len(xbuf):], ybuf)
+	return ecdhcrv.NewPublicKey(buf)
 }
 
 func buildECDHPrivateKey(alg jwa.EllipticCurveAlgorithm, dbuf []byte) (*ecdh.PrivateKey, error) {
@@ -154,12 +158,19 @@ func ecdsaJWKToRaw(keyif Key, hint any) (any, error) {
 		isECDH = true
 	}
 
-	extracted, err := extractEmbeddedKey(keyif, ecdsaConvertibleTypes)
-	if err != nil {
-		return nil, fmt.Errorf(`jwk: failed to extract embedded key: %w`, err)
+	// Fast path: built-in concrete types need no reflection
+	switch keyif.(type) {
+	case *ecdsaPrivateKey, *ecdsaPublicKey:
+		// already a concrete type, skip extractEmbeddedKey
+	default:
+		extracted, err := extractEmbeddedKey(keyif, ecdsaConvertibleTypes)
+		if err != nil {
+			return nil, fmt.Errorf(`jwk: failed to extract embedded key: %w`, err)
+		}
+		keyif = extracted
 	}
 
-	switch k := extracted.(type) {
+	switch k := keyif.(type) {
 	case ECDSAPrivateKey:
 		var crv jwa.EllipticCurveAlgorithm
 		var hasCrv bool

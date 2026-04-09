@@ -17,11 +17,28 @@ func init() {
 	RegisterKeyExporter(KeyKind(jwa.OKP().String()), KeyExportFunc(okpJWKToRaw))
 }
 
+// Pre-computed normalized KeyKind values for built-in OKP curves.
+var (
+	okpEd25519Kind KeyKind
+	okpX25519Kind  KeyKind
+)
+
+func init() {
+	okpEd25519Kind = KeyKind(jwa.OKP().String() + ":" + jwa.Ed25519().String()).normalize()
+	okpX25519Kind = KeyKind(jwa.OKP().String() + ":" + jwa.X25519().String()).normalize()
+}
+
 func okpKeyKind(crv func() (jwa.EllipticCurveAlgorithm, bool)) KeyKind {
 	if c, ok := crv(); ok {
-		return KeyKind(jwa.OKP().String() + ":" + c.String())
+		switch c {
+		case jwa.Ed25519():
+			return okpEd25519Kind
+		case jwa.X25519():
+			return okpX25519Kind
+		}
+		return KeyKind(jwa.OKP().String() + ":" + c.String()).normalize()
 	}
-	return KeyKind(jwa.OKP().String())
+	return normalizedOKP
 }
 
 func (k *okpPublicKey) KeyKind() KeyKind  { return okpKeyKind(k.Crv) }
@@ -172,13 +189,20 @@ var okpConvertibleKeys = []reflect.Type{
 }
 
 // This is half baked. I think it will blow up if we used ecdh.* keys and/or x25519 keys
-func okpJWKToRaw(key Key, _ any) (any, error) {
-	extracted, err := extractEmbeddedKey(key, okpConvertibleKeys)
-	if err != nil {
-		return nil, fmt.Errorf(`jwk.OKP: failed to extract embedded key: %w`, err)
+func okpJWKToRaw(keyif Key, _ any) (any, error) {
+	// Fast path: built-in concrete types need no reflection
+	switch keyif.(type) {
+	case *okpPrivateKey, *okpPublicKey:
+		// already a concrete type, skip extractEmbeddedKey
+	default:
+		extracted, err := extractEmbeddedKey(keyif, okpConvertibleKeys)
+		if err != nil {
+			return nil, fmt.Errorf(`jwk.OKP: failed to extract embedded key: %w`, err)
+		}
+		keyif = extracted
 	}
 
-	switch key := extracted.(type) {
+	switch key := keyif.(type) {
 	case OKPPrivateKey:
 		// rlocker is unexported with unexported methods, so only our
 		// concrete types implement it. A successful assertion lets us
