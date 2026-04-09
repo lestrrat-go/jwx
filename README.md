@@ -1,30 +1,43 @@
-# github.com/lestrrat-go/jwx/v4 [![CI](https://github.com/lestrrat-go/jwx/actions/workflows/ci.yml/badge.svg)](https://github.com/lestrrat-go/jwx/actions/workflows/ci.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v4.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4) [![codecov.io](https://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=v3)](https://codecov.io/github/lestrrat-go/jwx?branch=v3)
+# github.com/lestrrat-go/jwx/v4 [![CI](https://github.com/lestrrat-go/jwx/actions/workflows/ci.yml/badge.svg)](https://github.com/lestrrat-go/jwx/actions/workflows/ci.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v4.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4) [![codecov.io](https://codecov.io/github/lestrrat-go/jwx/coverage.svg?branch=develop-v4)](https://codecov.io/github/lestrrat-go/jwx?branch=develop-v4)
 
 Go module implementing various JWx (JWA/JWE/JWK/JWS/JWT, otherwise known as JOSE) technologies.
 
-If you are using this module in your product or your company, please add  your product and/or company name in the [Wiki](https://github.com/lestrrat-go/jwx/wiki/Users)! It really helps keeping up our motivation.
+If you are using this module in your product or your company, please add your product and/or company name in the [Wiki](https://github.com/lestrrat-go/jwx/wiki/Users)! It really helps keeping up our motivation.
+
+# Requirements
+
+* Go 1.26 or later
+* `GOEXPERIMENT=jsonv2`
+
+# Install
+
+```
+go get github.com/lestrrat-go/jwx/v4
+```
+
+# Migrating from v3
+
+If you are migrating from `github.com/lestrrat-go/jwx/v3`, see [`MIGRATION.md`](MIGRATION.md) for a step-by-step guide with before/after code examples. For a complete list of breaking changes and new features, see [`Changes-v4.md`](Changes-v4.md).
+
+If you are using v0, v1, or v2, you are strongly encouraged to migrate to v4.
 
 # Features
 
 * Complete coverage of JWA/JWE/JWK/JWS/JWT, not just JWT+minimum tool set.
   * Supports JWS messages with multiple signatures, both compact and JSON serialization
   * Supports JWS with detached payload
-  * Supports JWS with unencoded payload (RFC7797)
+  * Supports JWS with unencoded payload (RFC 7797)
   * Supports JWE messages with multiple recipients, both compact and JSON serialization
-  * Most operations work with either JWK or raw keys e.g. *rsa.PrivateKey, *ecdsa.PrivateKey, etc).
-* Opinionated, but very uniform API. Everything is symmetric, and follows a standard convention
-  * jws.Parse/Verify/Sign
-  * jwe.Parse/Encrypt/Decrypt
-  * Arguments are organized as explicit required parameters and optional WithXXXX() style options.
+  * Most operations work with either JWK or raw keys (e.g. `*rsa.PrivateKey`, `*ecdsa.PrivateKey`, etc).
+* Opinionated, but very uniform API. Everything is symmetric and follows a standard convention
+  * `jws.Parse` / `Verify` / `Sign`
+  * `jwe.Parse` / `Encrypt` / `Decrypt`
+  * Arguments are organized as explicit required parameters and optional `WithXXXX()` style options.
+* Post-quantum cryptography support (ML-KEM, ML-DSA, HPKE)
+* Extension module architecture for opt-in features. See [Extension Modules](docs/10-extensions.md).
 * Extra utilities
-  * `jwk.Cache` to always keep a JWKS up-to-date
+  * [`jwkcache`](https://github.com/jwx-go/jwkcache) extension to always keep a JWKS up-to-date
   * [bazel](https://bazel.build)-ready
-
-Some more in-depth discussion on why you might want to use this library over others
-can be found in the [Description section](#description)
-
-If you are using v0 or v1, you are strongly encouraged to migrate to using v3
-(the version that comes with the README you are reading).
 
 # SYNOPSIS
 
@@ -147,24 +160,33 @@ func Example() {
 source: [examples/jwx_readme_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwx_readme_example_test.go)
 <!-- END INCLUDE -->
 
-# How-to Documentation
+# Documentation
 
-* [API documentation](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4)
-* [How-to style documentation](./docs)
-* [Runnable Examples](./examples)
+* [API Reference](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4)
+* [How-to Documentation](./docs)
+* [Runnable Examples](https://github.com/jwx-go/examples)
+* [Extension Modules](docs/10-extensions.md)
 
-# Description
+# Packages and Standards
 
-This Go module implements JWA, JWE, JWK, JWS, and JWT. Please see the following table for the list of
-available packages:
+This module implements the following specifications:
 
-| Package name                                              | Notes                                           |
-|-----------------------------------------------------------|-------------------------------------------------|
-| [jwt](https://github.com/lestrrat-go/jwx/tree/v3/jwt) | [RFC 7519](https://tools.ietf.org/html/rfc7519) |
-| [jwk](https://github.com/lestrrat-go/jwx/tree/v3/jwk) | [RFC 7517](https://tools.ietf.org/html/rfc7517) + [RFC 7638](https://tools.ietf.org/html/rfc7638) |
-| [jwa](https://github.com/lestrrat-go/jwx/tree/v3/jwa) | [RFC 7518](https://tools.ietf.org/html/rfc7518) |
-| [jws](https://github.com/lestrrat-go/jwx/tree/v3/jws) | [RFC 7515](https://tools.ietf.org/html/rfc7515) + [RFC 7797](https://tools.ietf.org/html/rfc7797) |
-| [jwe](https://github.com/lestrrat-go/jwx/tree/v3/jwe) | [RFC 7516](https://tools.ietf.org/html/rfc7516) |
+| Package | Specification |
+|---------|---------------|
+| [jwa](https://github.com/lestrrat-go/jwx/tree/v4/jwa) | [RFC 7518](https://tools.ietf.org/html/rfc7518) (JSON Web Algorithms) |
+| [jwk](https://github.com/lestrrat-go/jwx/tree/v4/jwk) | [RFC 7517](https://tools.ietf.org/html/rfc7517) (JSON Web Key), [RFC 7638](https://tools.ietf.org/html/rfc7638) (JWK Thumbprint), [RFC 8037](https://tools.ietf.org/html/rfc8037) (CFRG Curves) |
+| [jws](https://github.com/lestrrat-go/jwx/tree/v4/jws) | [RFC 7515](https://tools.ietf.org/html/rfc7515) (JSON Web Signature), [RFC 7797](https://tools.ietf.org/html/rfc7797) (Unencoded Payload) |
+| [jwe](https://github.com/lestrrat-go/jwx/tree/v4/jwe) | [RFC 7516](https://tools.ietf.org/html/rfc7516) (JSON Web Encryption) |
+| [jwt](https://github.com/lestrrat-go/jwx/tree/v4/jwt) | [RFC 7519](https://tools.ietf.org/html/rfc7519) (JSON Web Token) |
+
+Additionally supported via the main module or [extension modules](docs/10-extensions.md):
+
+| Specification | Support |
+|---------------|---------|
+| [FIPS 203](https://csrc.nist.gov/pubs/fips/203/final) (ML-KEM) | JWE key encapsulation: ML-KEM-768, ML-KEM-1024, hybrid variants |
+| [FIPS 204](https://csrc.nist.gov/pubs/fips/204/final) (ML-DSA) | JWS signatures via [`github.com/jwx-go/mldsa`](https://github.com/jwx-go/mldsa) |
+| [draft-ietf-jose-hpke-encrypt](https://datatracker.ietf.org/doc/draft-ietf-jose-hpke-encrypt/) | JWE HPKE key encryption (draft; API not yet stable) |
+
 ## History
 
 My goal was to write a server that heavily uses JWK and JWT. At first glance
@@ -211,7 +233,7 @@ to specify alternate structs to parse objects with custom fields)
 In the end I think it comes down to your usage pattern, and priorities.
 Some general guidelines that come to mind are:
 
-* If you want a single library to handle everything JWx, such as using JWE, JWK, JWS, handling [auto-refreshing JWKs](https://github.com/lestrrat-go/jwx/blob/v3/docs/04-jwk.md#auto-refreshing-remote-keys), use this module.
+* If you want a single library to handle everything JWx, such as using JWE, JWK, JWS, handling [auto-refreshing JWKs](https://github.com/jwx-go/jwkcache), use this module.
 * If you want to honor all possible custom fields transparently, use this module.
 * If you want a standardized clean API, use this module.
 
@@ -230,16 +252,17 @@ Please make sure to include tests that exercise the changes you made.
 
 If you are editing auto-generated files (those files with the `_gen.go` suffix, please make sure that you do the following:
 
-1. Edit the generator, not the generated files (e.g. internal/cmd/genreadfile/main.go)
+1. Edit the generator, not the generated files (e.g. `internal/jwxcodegen/cmd/jwxcodegen/`)
 2. Run `make generate` (or `go generate`) to generate the new code
 3. Commit _both_ the generator _and_ the generated files
 
 ## Discussions / Usage
 
-Please try [discussions](https://github.com/lestrrat-go/jwx/tree/v3/discussions) first.
+Please try [discussions](https://github.com/lestrrat-go/jwx/discussions) first.
 
 # Related Modules
 
+* [github.com/jwx-go/jwkcache](https://github.com/jwx-go/jwkcache) - Auto-refreshing JWK Set cache
 * [github.com/lestrrat-go/echo-middleware-jwx](https://github.com/lestrrat-go/echo-middleware-jwx) - Sample Echo middleware
 * [github.com/jwx-go/crypto-signer/gcp](https://github.com/jwx-go/crypto-signer/tree/main/gcp) - GCP KMS wrapper that implements [`crypto.Signer`](https://pkg.go.dev/crypto#Signer)
 * [github.com/jwx-go/crypto-signer/aws](https://github.com/jwx-go/crypto-signer/tree/main/aws) - AWS KMS wrapper that implements [`crypto.Signer`](https://pkg.go.dev/crypto#Signer)
