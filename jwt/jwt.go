@@ -199,11 +199,19 @@ type parseCtx struct {
 	pedantic           bool
 	skipVerification   bool
 	validate           bool
+	lenientBase64      bool // when true, skip VerifyCompactFast to use lenient base64 decoding
 	withKeyCount       int
 	withKey            *withKey // this is used to detect if we have a WithKey option
 }
 
 func parseBytes(data []byte, options ...ParseOption) (Token, error) {
+	// Fast path: exactly one WithKey option, data looks like compact JWS.
+	data = bytes.TrimSpace(data)
+	var fctx fastParseCtx
+	if tryFastPath(&fctx, data, options) {
+		return parseCompactFast(data, &fctx)
+	}
+
 	var ctx parseCtx
 
 	// Validation is turned on by default. You need to specify
@@ -258,6 +266,10 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 		case identStrictStringClaims{}:
 			v := option.MustGet[bool](o)
 			ctx.strictStringClaims = &v
+		case identStrictBase64Encoding{}:
+			if !option.MustGet[bool](o) {
+				ctx.lenientBase64 = true
+			}
 		}
 	}
 
@@ -278,7 +290,6 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 		ctx.verifyOpts = converted
 	}
 
-	data = bytes.TrimSpace(data)
 	return parse(&ctx, data)
 }
 
@@ -297,7 +308,7 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 		return nil, _JwsVerifySkipped, nil
 	}
 
-	if lvo == 1 && ctx.withKeyCount == 1 {
+	if lvo == 1 && ctx.withKeyCount == 1 && !ctx.lenientBase64 {
 		wk := ctx.withKey
 		alg, ok := wk.alg.(jwa.SignatureAlgorithm)
 		if ok && len(wk.options) == 0 {

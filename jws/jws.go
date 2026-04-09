@@ -662,6 +662,11 @@ func Settings(options ...GlobalOption) {
 // This can be useful for performance-critical applications where the
 // algorithm is known in advance.
 //
+// This function uses strict base64url encoding without padding (RFC 4648 §5)
+// for decoding the signature and payload. It does not auto-detect other
+// base64 variants. If your JWS uses non-standard encoding (e.g. padded
+// base64url), use jws.Verify() instead, which auto-detects the encoding.
+//
 // Since this function avoids doing many checks that jws.Verify would perform,
 // you must ensure to perform the necessary checks including ensuring that algorithm is safe to use for your payload yourself.
 func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error) {
@@ -683,10 +688,17 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 		return nil, err
 	}
 
-	signature, err := base64.Decode(encodedSig)
+	// Decode signature into pooled buffer (strict base64url, no padding per RFC 7515)
+	sigLen := base64.DecodedStrictLen(len(encodedSig))
+	sigBuf := pool.ByteSlice().GetCapacity(sigLen)
+	sigBuf = sigBuf[:sigLen]
+	sigN, err := base64.DecodeStrict(sigBuf, encodedSig)
 	if err != nil {
+		pool.ByteSlice().Put(sigBuf)
 		return nil, makeVerifyError("failed to decode signature: %w", err)
 	}
+	sigBuf = sigBuf[:sigN]
+	defer pool.ByteSlice().Put(sigBuf)
 
 	// Instead of appending, copy the data from hdr/payload
 	lvb := len(hdr) + 1 + len(payload)
@@ -702,13 +714,16 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	if err != nil {
 		return nil, makeVerifyError("failed to create verifier for %s: %w", algstr, err)
 	}
-	if err := verifier.Verify(key, verifyBuf, signature); err != nil {
+	if err := verifier.Verify(key, verifyBuf, sigBuf); err != nil {
 		return nil, verifyError{verificationError{fmt.Errorf("signature verification failed for %s: %w", algstr, err)}}
 	}
 
-	decoded, err := base64.Decode(payload)
+	// Decode payload (strict base64url, no padding per RFC 7515)
+	payloadLen := base64.DecodedStrictLen(len(payload))
+	decodedPayload := make([]byte, payloadLen)
+	payloadN, err := base64.DecodeStrict(decodedPayload, payload)
 	if err != nil {
 		return nil, makeVerifyError("failed to decode payload: %w", err)
 	}
-	return decoded, nil
+	return decodedPayload[:payloadN], nil
 }

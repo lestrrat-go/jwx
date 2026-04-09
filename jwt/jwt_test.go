@@ -5,8 +5,10 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -121,6 +123,86 @@ func TestToken_Parse(t *testing.T) {
 		require.True(t, errors.Is(err, jws.VerifyError()), `err should be a verify error`)
 		require.True(t, errors.Is(err, jws.VerificationError()), `err should be a verification error`)
 	})
+}
+
+func TestStrictBase64Encoding(t *testing.T) {
+	t.Parallel()
+
+	alg := jwa.HS256()
+	key := []byte("supersecret-key-for-testing-only")
+
+	tok := jwt.New()
+	tok.Set(jwt.IssuerKey, "test")
+	tok.Set(jwt.ExpirationKey, time.Now().Add(time.Hour).Unix())
+
+	signed, err := jwt.Sign(tok, jwt.WithKey(alg, key))
+	require.NoError(t, err, `jwt.Sign should succeed`)
+
+	// Standard parse should work (fast path)
+	t.Run("strict parse succeeds", func(t *testing.T) {
+		t.Parallel()
+		_, err := jwt.Parse(signed, jwt.WithKey(alg, key))
+		require.NoError(t, err, `jwt.Parse should succeed with strict base64`)
+	})
+
+	// WithStrictBase64Encoding(false) should fall through to the standard path
+	// and still succeed with normally-encoded tokens.
+	t.Run("lenient parse succeeds with standard encoding", func(t *testing.T) {
+		t.Parallel()
+		parsed, err := jwt.Parse(signed, jwt.WithKey(alg, key), jwt.WithStrictBase64Encoding(false))
+		require.NoError(t, err, `jwt.Parse should succeed with lenient mode on standard input`)
+		iss, ok := parsed.Issuer()
+		require.True(t, ok, `issuer should be present`)
+		require.Equal(t, "test", iss, `issuer claim should match`)
+	})
+
+	// WithStrictBase64Encoding(true) should be equivalent to the default
+	t.Run("explicit strict parse succeeds", func(t *testing.T) {
+		t.Parallel()
+		parsed, err := jwt.Parse(signed, jwt.WithKey(alg, key), jwt.WithStrictBase64Encoding(true))
+		require.NoError(t, err, `jwt.Parse should succeed with explicit strict mode`)
+		iss, ok := parsed.Issuer()
+		require.True(t, ok, `issuer should be present`)
+		require.Equal(t, "test", iss, `issuer claim should match`)
+	})
+
+	// Build a compact JWS with padded base64url payload (non-standard but seen in the wild).
+	parts := strings.SplitN(string(signed), ".", 3)
+	require.Len(t, parts, 3, `signed JWT should have 3 parts`)
+
+	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
+	require.NoError(t, err, `base64 decode should succeed`)
+	paddedPayload := base64.URLEncoding.EncodeToString(payloadBytes)
+
+	// Keep original header (unpadded), re-compute HMAC over padded signing input
+	signingInput := parts[0] + "." + paddedPayload
+	hmacSig := computeHMAC(t, []byte(signingInput), key)
+	paddedCompact := []byte(signingInput + "." + base64.RawURLEncoding.EncodeToString(hmacSig))
+
+	// When verification is on, the fast path uses strict base64 (DecodeStrict)
+	// which rejects padded encoding.
+	t.Run("padded payload fails with verify", func(t *testing.T) {
+		t.Parallel()
+		_, err := jwt.Parse(paddedCompact, jwt.WithKey(alg, key))
+		require.Error(t, err, `jwt.Parse should fail: padded payload not decodable with strict base64`)
+	})
+
+	// Lenient mode with no verification: auto-detection handles padded base64.
+	t.Run("padded payload succeeds lenient no-verify", func(t *testing.T) {
+		t.Parallel()
+		parsed, err := jwt.Parse(paddedCompact, jwt.WithVerify(false), jwt.WithStrictBase64Encoding(false))
+		require.NoError(t, err, `jwt.Parse should succeed with lenient base64 and no verification`)
+		iss, ok := parsed.Issuer()
+		require.True(t, ok, `issuer should be present`)
+		require.Equal(t, "test", iss, `issuer claim should match`)
+	})
+}
+
+func computeHMAC(t *testing.T, data, key []byte) []byte {
+	t.Helper()
+	mac := hmac.New(sha256.New, key)
+	mac.Write(data)
+	return mac.Sum(nil)
 }
 
 func TestJWTParseVerify(t *testing.T) {
