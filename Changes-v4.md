@@ -80,6 +80,22 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 ## JWT
 
+* `jwt.Parse()` now only accepts JWS compact serialization format. It no longer attempts
+  to auto-detect and parse raw JSON JWTs, JWE-wrapped JWTs, or JWS JSON serialization.
+  Use `jwt.ParseInsecure()` for unsigned JSON payloads.
+
+* `jwt.Parse()` with a single `jwt.WithKey(alg, key)` option now takes a fast path that
+  bypasses format detection, option conversion, and the nested decode loop, going directly
+  to `jws.VerifyCompactFast()`. This reduces allocations and improves parse+verify throughput.
+
+* `jws.VerifyCompactFast()` now uses strict base64url decoding (RFC 7515, no padding)
+  instead of auto-detecting the encoding variant. This eliminates per-decode scanning
+  overhead and allows signature buffer pooling.
+
+* Added `jwt.WithStrictBase64Encoding(bool)` option (default: true). Set to false to
+  fall back to auto-detecting base64 encoding for compatibility with non-conformant
+  providers. When false, the fast path is bypassed.
+
 * `(jwt.Token).Claims()` returns `iter.Seq2[string, any]` for range-over-func iteration:
 
   ```go

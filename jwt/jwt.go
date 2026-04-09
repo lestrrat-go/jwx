@@ -110,9 +110,9 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 }
 
 // Parse parses the JWT token payload and creates a new `jwt.Token` object.
-// The token must be encoded in JWS compact format, or a raw JSON form of JWT
-// without any signatures.
+// The token must be encoded in JWS compact serialization format.
 //
+// If you need to parse raw JSON JWTs without signatures, use `jwt.ParseInsecure`.
 // If you need JWE support on top of JWS, you will need to rollout your
 // own workaround.
 //
@@ -199,11 +199,19 @@ type parseCtx struct {
 	pedantic           bool
 	skipVerification   bool
 	validate           bool
+	lenientBase64      bool // when true, skip VerifyCompactFast to use lenient base64 decoding
 	withKeyCount       int
 	withKey            *withKey // this is used to detect if we have a WithKey option
 }
 
 func parseBytes(data []byte, options ...ParseOption) (Token, error) {
+	// Fast path: single WithKey with SignatureAlgorithm, no suboptions,
+	// and only simple options (WithValidate, WithToken, ValidateOptions).
+	var fctx fastParseCtx
+	if tryFastPath(&fctx, options) {
+		return parseCompactFast(bytes.TrimSpace(data), &fctx)
+	}
+
 	var ctx parseCtx
 
 	// Validation is turned on by default. You need to specify
@@ -258,6 +266,10 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 		case identStrictStringClaims{}:
 			v := option.MustGet[bool](o)
 			ctx.strictStringClaims = &v
+		case identStrictBase64Encoding{}:
+			if !option.MustGet[bool](o) {
+				ctx.lenientBase64 = true
+			}
 		}
 	}
 
@@ -297,7 +309,7 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 		return nil, _JwsVerifySkipped, nil
 	}
 
-	if lvo == 1 && ctx.withKeyCount == 1 {
+	if lvo == 1 && ctx.withKeyCount == 1 && !ctx.lenientBase64 {
 		wk := ctx.withKey
 		alg, ok := wk.alg.(jwa.SignatureAlgorithm)
 		if ok && len(wk.options) == 0 {

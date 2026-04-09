@@ -683,10 +683,17 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 		return nil, err
 	}
 
-	signature, err := base64.Decode(encodedSig)
+	// Decode signature into pooled buffer (strict base64url, no padding per RFC 7515)
+	sigLen := base64.DecodedStrictLen(len(encodedSig))
+	sigBuf := pool.ByteSlice().GetCapacity(sigLen)
+	sigBuf = sigBuf[:sigLen]
+	sigN, err := base64.DecodeStrict(sigBuf, encodedSig)
 	if err != nil {
+		pool.ByteSlice().Put(sigBuf)
 		return nil, fmt.Errorf("jwt.verifyFast: failed to decode signature: %w", err)
 	}
+	sigBuf = sigBuf[:sigN]
+	defer pool.ByteSlice().Put(sigBuf)
 
 	// Instead of appending, copy the data from hdr/payload
 	lvb := len(hdr) + 1 + len(payload)
@@ -702,13 +709,16 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	if err != nil {
 		return nil, makeVerifyError("jwt.VerifyCompact: failed to create verifier for %s: %w", algstr, err)
 	}
-	if err := verifier.Verify(key, verifyBuf, signature); err != nil {
+	if err := verifier.Verify(key, verifyBuf, sigBuf); err != nil {
 		return nil, verifyError{verificationError{fmt.Errorf("jwt.VerifyCompact: signature verification failed for %s: %w", algstr, err)}}
 	}
 
-	decoded, err := base64.Decode(payload)
+	// Decode payload (strict base64url, no padding per RFC 7515)
+	payloadLen := base64.DecodedStrictLen(len(payload))
+	decodedPayload := make([]byte, payloadLen)
+	payloadN, err := base64.DecodeStrict(decodedPayload, payload)
 	if err != nil {
 		return nil, makeVerifyError("jwt.VerifyCompact: failed to decode payload: %w", err)
 	}
-	return decoded, nil
+	return decodedPayload[:payloadN], nil
 }
