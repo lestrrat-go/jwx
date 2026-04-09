@@ -1,0 +1,29 @@
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
+
+go_library(
+    name = "jwxcodegen_lib",
+    srcs = [
+        "genheaders.go",
+        "genjwa.go",
+        "genjwk.go",
+        "genjwt.go",
+        "genoptions.go",
+        "genreadfile.go",
+        "main.go",
+    ],
+    importpath = "github.com/lestrrat-go/jwx/v4/internal/jwxcodegen/cmd/jwxcodegen",
+    visibility = ["//visibility:private"],
+    deps = [
+        "//internal/jwxcodegen",
+        "@com_github_goccy_go_json//:go_default_library",
+        "@com_github_goccy_go_yaml//:go_default_library",
+        "@com_github_lestrrat_go_codegen//:go_default_library",
+        "@com_github_lestrrat_go_xstrings//:go_default_library",
+    ],
+)
+
+go_binary(
+    name = "jwxcodegen",
+    embed = [":jwxcodegen_lib"],
+    visibility = ["//:__subpackages__"],
+)
