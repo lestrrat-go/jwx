@@ -557,37 +557,110 @@ func (h *akpPublicKey) UnmarshalJSON(buf []byte) error {
 
 func (h *akpPublicKey) MarshalJSON() ([]byte, error) {
 	pairs := getFieldPairList()
-	pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: jwa.AKP()})
+	{
+		v, err := json.Marshal(jwa.AKP())
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyTypeKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: v})
+	}
 	h.mu.RLock()
 	if h.algorithm != nil {
-		pairs = append(pairs, fieldPair{Name: AlgorithmKey, Value: *(h.algorithm)})
+		{
+			v, err := json.Marshal(*(h.algorithm))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, AlgorithmKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: AlgorithmKey, Value: v})
+		}
 	}
 	if h.keyID != nil {
-		pairs = append(pairs, fieldPair{Name: KeyIDKey, Value: *(h.keyID)})
+		{
+			v, err := json.Marshal(*(h.keyID))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyIDKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: KeyIDKey, Value: v})
+		}
 	}
 	if h.keyOps != nil {
-		pairs = append(pairs, fieldPair{Name: KeyOpsKey, Value: *(h.keyOps)})
+		{
+			v, err := json.Marshal(*(h.keyOps))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyOpsKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: KeyOpsKey, Value: v})
+		}
 	}
 	if h.keyUsage != nil {
-		pairs = append(pairs, fieldPair{Name: KeyUsageKey, Value: *(h.keyUsage)})
+		{
+			v, err := json.Marshal(*(h.keyUsage))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyUsageKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: KeyUsageKey, Value: v})
+		}
 	}
 	if h.pub != nil {
-		pairs = append(pairs, fieldPair{Name: AKPPubKey, Value: h.pub})
+		{
+			v, err := json.Marshal(base64.EncodeToString(h.pub))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, AKPPubKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: AKPPubKey, Value: v})
+		}
 	}
 	if h.x509CertChain != nil {
-		pairs = append(pairs, fieldPair{Name: X509CertChainKey, Value: h.x509CertChain})
+		{
+			v, err := json.Marshal(h.x509CertChain)
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertChainKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: X509CertChainKey, Value: v})
+		}
 	}
 	if h.x509CertThumbprint != nil {
-		pairs = append(pairs, fieldPair{Name: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
+		{
+			v, err := json.Marshal(*(h.x509CertThumbprint))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertThumbprintKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: X509CertThumbprintKey, Value: v})
+		}
 	}
 	if h.x509CertThumbprintS256 != nil {
-		pairs = append(pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
+		{
+			v, err := json.Marshal(*(h.x509CertThumbprintS256))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertThumbprintS256Key, err)
+			}
+			pairs = append(pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: v})
+		}
 	}
 	if h.x509URL != nil {
-		pairs = append(pairs, fieldPair{Name: X509URLKey, Value: *(h.x509URL)})
+		{
+			v, err := json.Marshal(*(h.x509URL))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509URLKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: X509URLKey, Value: v})
+		}
 	}
 	for k, v := range h.privateParams {
-		pairs = append(pairs, fieldPair{Name: k, Value: v})
+		switch bv := v.(type) {
+		case []byte:
+			encoded, err := json.Marshal(base64.EncodeToString(bv))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, k, err)
+			}
+			pairs = append(pairs, fieldPair{Name: k, Value: encoded})
+		default:
+			encoded, err := json.Marshal(v)
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, k, err)
+			}
+			pairs = append(pairs, fieldPair{Name: k, Value: encoded})
+		}
 	}
 	h.mu.RUnlock()
 
@@ -599,17 +672,11 @@ func (h *akpPublicKey) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteByte(',')
 		}
-		fmt.Fprintf(buf, `%q:`, p.Name)
-		switch v := p.Value.(type) {
-		case []byte:
-			fmt.Fprintf(buf, `%q`, base64.EncodeToString(v))
-		default:
-			valBytes, err := json.Marshal(v)
-			if err != nil {
-				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, p.Name, err)
-			}
-			buf.Write(valBytes)
-		}
+		buf.WriteByte('"')
+		buf.WriteString(p.Name)
+		buf.WriteByte('"')
+		buf.WriteByte(':')
+		buf.Write(p.Value.([]byte))
 	}
 	buf.WriteByte('}')
 	putFieldPairList(pairs)
@@ -1286,43 +1353,128 @@ func (h *akpPrivateKey) UnmarshalJSON(buf []byte) (retErr error) {
 
 func (h *akpPrivateKey) MarshalJSON() ([]byte, error) {
 	pairs := getFieldPairList()
-	pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: jwa.AKP()})
+	{
+		v, err := json.Marshal(jwa.AKP())
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyTypeKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: v})
+	}
 	h.mu.RLock()
 	if h.algorithm != nil {
-		pairs = append(pairs, fieldPair{Name: AlgorithmKey, Value: *(h.algorithm)})
+		{
+			v, err := json.Marshal(*(h.algorithm))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, AlgorithmKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: AlgorithmKey, Value: v})
+		}
 	}
 	if h.keyID != nil {
-		pairs = append(pairs, fieldPair{Name: KeyIDKey, Value: *(h.keyID)})
+		{
+			v, err := json.Marshal(*(h.keyID))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyIDKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: KeyIDKey, Value: v})
+		}
 	}
 	if h.keyOps != nil {
-		pairs = append(pairs, fieldPair{Name: KeyOpsKey, Value: *(h.keyOps)})
+		{
+			v, err := json.Marshal(*(h.keyOps))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyOpsKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: KeyOpsKey, Value: v})
+		}
 	}
 	if h.keyUsage != nil {
-		pairs = append(pairs, fieldPair{Name: KeyUsageKey, Value: *(h.keyUsage)})
+		{
+			v, err := json.Marshal(*(h.keyUsage))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyUsageKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: KeyUsageKey, Value: v})
+		}
 	}
 	if h.priv != nil {
-		pairs = append(pairs, fieldPair{Name: AKPPrivKey, Value: h.priv})
+		{
+			v, err := json.Marshal(base64.EncodeToString(h.priv))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, AKPPrivKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: AKPPrivKey, Value: v})
+		}
 	}
 	if h.pub != nil {
-		pairs = append(pairs, fieldPair{Name: AKPPubKey, Value: h.pub})
+		{
+			v, err := json.Marshal(base64.EncodeToString(h.pub))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, AKPPubKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: AKPPubKey, Value: v})
+		}
 	}
 	if h.x509CertChain != nil {
-		pairs = append(pairs, fieldPair{Name: X509CertChainKey, Value: h.x509CertChain})
+		{
+			v, err := json.Marshal(h.x509CertChain)
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertChainKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: X509CertChainKey, Value: v})
+		}
 	}
 	if h.x509CertThumbprint != nil {
-		pairs = append(pairs, fieldPair{Name: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
+		{
+			v, err := json.Marshal(*(h.x509CertThumbprint))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertThumbprintKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: X509CertThumbprintKey, Value: v})
+		}
 	}
 	if h.x509CertThumbprintS256 != nil {
-		pairs = append(pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
+		{
+			v, err := json.Marshal(*(h.x509CertThumbprintS256))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertThumbprintS256Key, err)
+			}
+			pairs = append(pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: v})
+		}
 	}
 	if h.x509URL != nil {
-		pairs = append(pairs, fieldPair{Name: X509URLKey, Value: *(h.x509URL)})
+		{
+			v, err := json.Marshal(*(h.x509URL))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509URLKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: X509URLKey, Value: v})
+		}
 	}
 	if h.z != nil {
-		pairs = append(pairs, fieldPair{Name: AKPZKey, Value: h.z})
+		{
+			v, err := json.Marshal(base64.EncodeToString(h.z))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, AKPZKey, err)
+			}
+			pairs = append(pairs, fieldPair{Name: AKPZKey, Value: v})
+		}
 	}
 	for k, v := range h.privateParams {
-		pairs = append(pairs, fieldPair{Name: k, Value: v})
+		switch bv := v.(type) {
+		case []byte:
+			encoded, err := json.Marshal(base64.EncodeToString(bv))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, k, err)
+			}
+			pairs = append(pairs, fieldPair{Name: k, Value: encoded})
+		default:
+			encoded, err := json.Marshal(v)
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, k, err)
+			}
+			pairs = append(pairs, fieldPair{Name: k, Value: encoded})
+		}
 	}
 	h.mu.RUnlock()
 
@@ -1334,17 +1486,11 @@ func (h *akpPrivateKey) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteByte(',')
 		}
-		fmt.Fprintf(buf, `%q:`, p.Name)
-		switch v := p.Value.(type) {
-		case []byte:
-			fmt.Fprintf(buf, `%q`, base64.EncodeToString(v))
-		default:
-			valBytes, err := json.Marshal(v)
-			if err != nil {
-				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, p.Name, err)
-			}
-			buf.Write(valBytes)
-		}
+		buf.WriteByte('"')
+		buf.WriteString(p.Name)
+		buf.WriteByte('"')
+		buf.WriteByte(':')
+		buf.Write(p.Value.([]byte))
 	}
 	buf.WriteByte('}')
 	putFieldPairList(pairs)
