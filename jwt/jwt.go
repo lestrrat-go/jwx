@@ -110,9 +110,9 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 }
 
 // Parse parses the JWT token payload and creates a new `jwt.Token` object.
-// The token must be encoded in JWS compact serialization format.
+// The token must be encoded in JWS compact format, or a raw JSON form of JWT
+// without any signatures.
 //
-// If you need to parse raw JSON JWTs without signatures, use `jwt.ParseInsecure`.
 // If you need JWE support on top of JWS, you will need to rollout your
 // own workaround.
 //
