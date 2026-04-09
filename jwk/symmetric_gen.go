@@ -44,9 +44,7 @@ var _ SymmetricKey = &symmetricKey{}
 var _ Key = &symmetricKey{}
 
 func newSymmetricKey() *symmetricKey {
-	return &symmetricKey{
-		privateParams: make(map[string]any),
-	}
+	return &symmetricKey{}
 }
 
 func (h *symmetricKey) KeyType() jwa.KeyType {
@@ -414,7 +412,7 @@ func (dst *symmetricKey) cloneFrom(src *symmetricKey) {
 			dst.privateParams[k] = v
 		}
 	} else {
-		dst.privateParams = make(map[string]any)
+		dst.privateParams = nil
 	}
 }
 

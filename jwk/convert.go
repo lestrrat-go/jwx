@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"github.com/lestrrat-go/jwx/v4/internal/ecutil"
+	"github.com/lestrrat-go/jwx/v4/jwa"
 )
 
 // # Converting between Raw Keys and `jwk.Key`s
@@ -168,7 +169,21 @@ func (f KeyExportFunc) Export(key Key, hint any) (any, error) {
 	return f(key, hint)
 }
 
+// Pre-computed normalized KeyKind values for built-in key types.
+// These avoid strings.ToUpper allocations in the export dispatch hot path.
+var (
+	normalizedRSA KeyKind
+	normalizedEC  KeyKind
+	normalizedOKP KeyKind
+	normalizedOCT KeyKind
+)
+
 func init() {
+	normalizedRSA = KeyKind(jwa.RSA().String()).normalize()
+	normalizedEC = KeyKind(jwa.EC().String()).normalize()
+	normalizedOKP = KeyKind(jwa.OKP().String()).normalize()
+	normalizedOCT = KeyKind(jwa.OctetSeq().String()).normalize()
+
 	RegisterKeyImporter(importRSAPrivateKey)
 	RegisterKeyImporter(importRSAPrivateKeyPtr)
 	RegisterKeyImporter(importRSAPublicKey)
@@ -184,6 +199,25 @@ func init() {
 	RegisterKeyImporter(importECDHPublicKey)
 	RegisterKeyImporter(importECDHPublicKeyPtr)
 	RegisterKeyImporter(importSymmetricKey)
+}
+
+// normalizedKeyKindForType returns the pre-computed normalized KeyKind
+// for built-in key types, avoiding strings.ToUpper allocation.
+func normalizedKeyKindForType(kty jwa.KeyType) KeyKind {
+	switch kty {
+	case jwa.RSA():
+		return normalizedRSA
+	case jwa.EC():
+		return normalizedEC
+	case jwa.OKP():
+		return normalizedOKP
+	case jwa.OctetSeq():
+		return normalizedOCT
+	case jwa.AKP():
+		return normalizedAKP
+	default:
+		return KeyKind(kty.String()).normalize()
+	}
 }
 
 // Typed importer functions. Each accepts the concrete type directly,
@@ -394,10 +428,10 @@ func doExport(key Key, hint any) (any, error) {
 // hold muKeyExporters.RLock.
 func findExporters(key Key) []KeyExporter {
 	if ki, ok := key.(KeyKinder); ok {
-		ident := ki.KeyKind().normalize()
+		ident := ki.KeyKind()
 		if exporters, ok := keyExporters[ident]; ok {
 			return exporters
 		}
 	}
-	return keyExporters[KeyKind(key.KeyType().String()).normalize()]
+	return keyExporters[normalizedKeyKindForType(key.KeyType())]
 }
