@@ -687,42 +687,90 @@ func generateKeyUnmarshalJSON(o *codegen.Output, kt *KeyType, obj *codegen.Objec
 }
 
 func generateKeyMarshalJSON(o *codegen.Output, kt *KeyType, obj *codegen.Object, structName string) {
+	// Helper to emit pre-marshal of a value into a fieldPair with []byte Value.
+	// This matches v3's makePairs() pattern: marshal each value eagerly so the
+	// assembly loop is pure byte concatenation with no reflection or type switches.
+	appendMarshaledPair := func(keyExpr, valueExpr string) {
+		o.L("{")
+		o.L("v, err := json.Marshal(%s)", valueExpr)
+		o.L("if err != nil {")
+		o.L("return nil, fmt.Errorf(`failed to marshal field %%q: %%w`, %s, err)", keyExpr)
+		o.L("}")
+		o.L("pairs = append(pairs, fieldPair{Name: %s, Value: v})", keyExpr)
+		o.L("}")
+	}
+
+	appendBase64Pair := func(keyExpr, valueExpr string) {
+		o.L("{")
+		o.L("v, err := json.Marshal(base64.EncodeToString(%s))", valueExpr)
+		o.L("if err != nil {")
+		o.L("return nil, fmt.Errorf(`failed to marshal field %%q: %%w`, %s, err)", keyExpr)
+		o.L("}")
+		o.L("pairs = append(pairs, fieldPair{Name: %s, Value: v})", keyExpr)
+		o.L("}")
+	}
+
 	o.LL("func (h *%s) MarshalJSON() ([]byte, error) {", structName)
 	o.L("pairs := getFieldPairList()")
-	o.L("pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: %s})", kt.KeyType)
+
+	// Pre-marshal the key type (always present)
+	appendMarshaledPair("KeyTypeKey", kt.KeyType)
+
 	o.L("h.mu.RLock()")
 	for _, f := range obj.Fields() {
 		keyName := keyConstantName(f, kt.Prefix)
 		o.L("if h.%s != nil {", f.Name(false))
+
+		// Determine the value expression (dereference pointer-stored fields)
+		var valExpr string
 		if jwxcodegen.FieldStorageTypeIsIndirect(f) {
-			o.L("pairs = append(pairs, fieldPair{Name: %s, Value: *(h.%s)})", keyName, f.Name(false))
+			valExpr = fmt.Sprintf("*(h.%s)", f.Name(false))
 		} else {
-			o.L("pairs = append(pairs, fieldPair{Name: %s, Value: h.%s})", keyName, f.Name(false))
+			valExpr = fmt.Sprintf("h.%s", f.Name(false))
+		}
+
+		// []byte fields need base64 encoding before JSON marshal
+		if f.Type() == "[]byte" {
+			appendBase64Pair(keyName, valExpr)
+		} else {
+			appendMarshaledPair(keyName, valExpr)
 		}
 		o.L("}")
 	}
+
+	// Private params: type-switch for []byte vs other
 	o.L("for k, v := range h.privateParams {")
-	o.L("pairs = append(pairs, fieldPair{Name: k, Value: v})")
+	o.L("switch bv := v.(type) {")
+	o.L("case []byte:")
+	o.L("encoded, err := json.Marshal(base64.EncodeToString(bv))")
+	o.L("if err != nil {")
+	o.L("return nil, fmt.Errorf(`failed to marshal field %%q: %%w`, k, err)")
+	o.L("}")
+	o.L("pairs = append(pairs, fieldPair{Name: k, Value: encoded})")
+	o.L("default:")
+	o.L("encoded, err := json.Marshal(v)")
+	o.L("if err != nil {")
+	o.L("return nil, fmt.Errorf(`failed to marshal field %%q: %%w`, k, err)")
+	o.L("}")
+	o.L("pairs = append(pairs, fieldPair{Name: k, Value: encoded})")
+	o.L("}")
 	o.L("}")
 	o.L("h.mu.RUnlock()")
 
+	// Sort and assemble: values are already []byte, so just concatenate
 	o.LL("slices.SortFunc(pairs, fieldPairLess)")
 	o.L("buf := pool.BytesBuffer().Get()")
 	o.L("defer pool.BytesBuffer().Put(buf)")
 	o.L("buf.WriteByte('{')")
 	o.L("for i, p := range pairs {")
 	o.L("if i > 0 { buf.WriteByte(',') }")
-	o.L("fmt.Fprintf(buf, `%%q:`, p.Name)")
-	o.L("switch v := p.Value.(type) {")
-	o.L("case []byte:")
-	o.L("fmt.Fprintf(buf, `%%q`, base64.EncodeToString(v))")
-	o.L("default:")
-	o.L("valBytes, err := json.Marshal(v)")
-	o.L("if err != nil {")
-	o.L("return nil, fmt.Errorf(`failed to encode value for field %%s: %%w`, p.Name, err)")
-	o.L("}")
-	o.L("buf.Write(valBytes)")
-	o.L("}")
+	// Direct buffer writes for key name (known-safe ASCII, no need for fmt.Fprintf)
+	o.L("buf.WriteByte('\"')")
+	o.L("buf.WriteString(p.Name)")
+	o.L("buf.WriteByte('\"')")
+	o.L("buf.WriteByte(':')")
+	// Value is pre-marshaled []byte
+	o.L("buf.Write(p.Value.([]byte))")
 	o.L("}")
 	o.L("buf.WriteByte('}')")
 	o.L("putFieldPairList(pairs)")

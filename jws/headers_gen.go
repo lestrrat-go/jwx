@@ -678,78 +678,91 @@ type fieldPair struct {
 	Value any
 }
 
+type fieldPairList struct {
+	pairs []fieldPair
+}
+
 var fieldPairPool = sync.Pool{
 	New: func() any {
-		return make([]fieldPair, 0, 16)
+		return &fieldPairList{pairs: make([]fieldPair, 0, 16)}
 	},
 }
 
-func getFieldPairList() []fieldPair {
+func getFieldPairList() *fieldPairList {
 	//nolint:forcetypeassert
-	return fieldPairPool.Get().([]fieldPair)
+	return fieldPairPool.Get().(*fieldPairList)
 }
 
-func putFieldPairList(list []fieldPair) {
-	list = list[:0]
-	fieldPairPool.Put(list) //nolint:staticcheck
+func putFieldPairList(l *fieldPairList) {
+	l.pairs = l.pairs[:0]
+	fieldPairPool.Put(l)
 }
 
 func fieldPairLess(a, b fieldPair) int {
 	return cmp.Compare(a.Name, b.Name)
 }
 
+func writeQuotedKey(buf *bytes.Buffer, key string) {
+	buf.WriteByte('"')
+	buf.WriteString(key)
+	buf.WriteString(`":`)
+}
+
 func (h *stdHeaders) MarshalJSON() ([]byte, error) {
-	pairs := getFieldPairList()
+	l := getFieldPairList()
+	defer putFieldPairList(l)
 	h.mu.RLock()
 	if h.algorithm != nil {
-		pairs = append(pairs, fieldPair{Name: AlgorithmKey, Value: *(h.algorithm)})
+		l.pairs = append(l.pairs, fieldPair{Name: AlgorithmKey, Value: *(h.algorithm)})
 	}
 	if h.contentType != nil {
-		pairs = append(pairs, fieldPair{Name: ContentTypeKey, Value: *(h.contentType)})
+		l.pairs = append(l.pairs, fieldPair{Name: ContentTypeKey, Value: *(h.contentType)})
 	}
 	if h.critical != nil {
-		pairs = append(pairs, fieldPair{Name: CriticalKey, Value: h.critical})
+		l.pairs = append(l.pairs, fieldPair{Name: CriticalKey, Value: h.critical})
 	}
 	if h.jwk != nil {
-		pairs = append(pairs, fieldPair{Name: JWKKey, Value: h.jwk})
+		l.pairs = append(l.pairs, fieldPair{Name: JWKKey, Value: h.jwk})
 	}
 	if h.jwkSetURL != nil {
-		pairs = append(pairs, fieldPair{Name: JWKSetURLKey, Value: *(h.jwkSetURL)})
+		l.pairs = append(l.pairs, fieldPair{Name: JWKSetURLKey, Value: *(h.jwkSetURL)})
 	}
 	if h.keyID != nil {
-		pairs = append(pairs, fieldPair{Name: KeyIDKey, Value: *(h.keyID)})
+		l.pairs = append(l.pairs, fieldPair{Name: KeyIDKey, Value: *(h.keyID)})
 	}
 	if h.typ != nil {
-		pairs = append(pairs, fieldPair{Name: TypeKey, Value: *(h.typ)})
+		l.pairs = append(l.pairs, fieldPair{Name: TypeKey, Value: *(h.typ)})
 	}
 	if h.x509CertChain != nil {
-		pairs = append(pairs, fieldPair{Name: X509CertChainKey, Value: h.x509CertChain})
+		l.pairs = append(l.pairs, fieldPair{Name: X509CertChainKey, Value: h.x509CertChain})
 	}
 	if h.x509CertThumbprint != nil {
-		pairs = append(pairs, fieldPair{Name: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
+		l.pairs = append(l.pairs, fieldPair{Name: X509CertThumbprintKey, Value: *(h.x509CertThumbprint)})
 	}
 	if h.x509CertThumbprintS256 != nil {
-		pairs = append(pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
+		l.pairs = append(l.pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: *(h.x509CertThumbprintS256)})
 	}
 	if h.x509URL != nil {
-		pairs = append(pairs, fieldPair{Name: X509URLKey, Value: *(h.x509URL)})
+		l.pairs = append(l.pairs, fieldPair{Name: X509URLKey, Value: *(h.x509URL)})
 	}
 	for k, v := range h.privateParams {
-		pairs = append(pairs, fieldPair{Name: k, Value: v})
+		l.pairs = append(l.pairs, fieldPair{Name: k, Value: v})
 	}
 	h.mu.RUnlock()
-	slices.SortFunc(pairs, fieldPairLess)
+	slices.SortFunc(l.pairs, fieldPairLess)
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
 	buf.WriteByte('{')
-	for i, p := range pairs {
+	for i, p := range l.pairs {
 		if i > 0 {
 			buf.WriteByte(',')
 		}
-		fmt.Fprintf(buf, `%q:`, p.Name)
+		writeQuotedKey(buf, p.Name)
 		switch v := p.Value.(type) {
 		case []byte:
-			fmt.Fprintf(buf, `%q`, base64.EncodeToString(v))
+			buf.WriteByte('"')
+			buf.WriteString(base64.EncodeToString(v))
+			buf.WriteByte('"')
 		default:
 			valBytes, err := json.Marshal(v)
 			if err != nil {
@@ -759,8 +772,5 @@ func (h *stdHeaders) MarshalJSON() ([]byte, error) {
 		}
 	}
 	buf.WriteByte('}')
-	putFieldPairList(pairs)
-	ret := make([]byte, buf.Len())
-	copy(ret, buf.Bytes())
-	return ret, nil
+	return bytes.Clone(buf.Bytes()), nil
 }
