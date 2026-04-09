@@ -16,7 +16,7 @@ type mockHPKEPublicKey struct {
 	err       error
 }
 
-func (m *mockHPKEPublicKey) EncryptHPKE(_ []byte, alg, calg string) ([]byte, []byte, error) {
+func (m *mockHPKEPublicKey) EncryptHPKE(_ []byte, _, _ string) ([]byte, []byte, error) {
 	if m.err != nil {
 		return nil, nil, m.err
 	}
@@ -29,7 +29,7 @@ type mockHPKEPrivateKey struct {
 	err error
 }
 
-func (m *mockHPKEPrivateKey) DecryptHPKE(_ []byte, alg, calg string, enc []byte) ([]byte, error) {
+func (m *mockHPKEPrivateKey) DecryptHPKE(_ []byte, _, _ string, _ []byte) ([]byte, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
