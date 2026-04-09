@@ -51,9 +51,7 @@ var _ ECDSAPublicKey = &ecdsaPublicKey{}
 var _ Key = &ecdsaPublicKey{}
 
 func newECDSAPublicKey() *ecdsaPublicKey {
-	return &ecdsaPublicKey{
-		privateParams: make(map[string]any),
-	}
+	return &ecdsaPublicKey{}
 }
 
 func (h *ecdsaPublicKey) KeyType() jwa.KeyType {
@@ -489,7 +487,7 @@ func (dst *ecdsaPublicKey) cloneFrom(src *ecdsaPublicKey) {
 			dst.privateParams[k] = v
 		}
 	} else {
-		dst.privateParams = make(map[string]any)
+		dst.privateParams = nil
 	}
 }
 
@@ -864,9 +862,7 @@ var _ ECDSAPrivateKey = &ecdsaPrivateKey{}
 var _ Key = &ecdsaPrivateKey{}
 
 func newECDSAPrivateKey() *ecdsaPrivateKey {
-	return &ecdsaPrivateKey{
-		privateParams: make(map[string]any),
-	}
+	return &ecdsaPrivateKey{}
 }
 
 func (h *ecdsaPrivateKey) KeyType() jwa.KeyType {
@@ -1336,7 +1332,7 @@ func (dst *ecdsaPrivateKey) cloneFrom(src *ecdsaPrivateKey) {
 			dst.privateParams[k] = v
 		}
 	} else {
-		dst.privateParams = make(map[string]any)
+		dst.privateParams = nil
 	}
 }
 

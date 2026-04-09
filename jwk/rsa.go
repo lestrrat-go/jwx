@@ -119,12 +119,19 @@ var rsaConvertibleKeys = []reflect.Type{
 	reflect.TypeFor[RSAPublicKey](),
 }
 
-func rsaJWKToRaw(key Key, _ any) (any, error) {
-	extracted, err := extractEmbeddedKey(key, rsaConvertibleKeys)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to extract embedded key: %w`, err)
+func rsaJWKToRaw(keyif Key, _ any) (any, error) {
+	// Fast path: built-in concrete types need no reflection
+	switch keyif.(type) {
+	case *rsaPrivateKey, *rsaPublicKey:
+		// already a concrete type, skip extractEmbeddedKey
+	default:
+		extracted, err := extractEmbeddedKey(keyif, rsaConvertibleKeys)
+		if err != nil {
+			return nil, fmt.Errorf(`failed to extract embedded key: %w`, err)
+		}
+		keyif = extracted
 	}
-	switch key := extracted.(type) {
+	switch key := keyif.(type) {
 	case RSAPrivateKey:
 		var od, oq, op, on, oe []byte
 		var odp, odq, oqi []byte

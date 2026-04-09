@@ -43,11 +43,17 @@ func init() {
 	RegisterKeyExporter(KeyKind(jwa.AKP().String()), KeyExportFunc(akpJWKToRaw))
 }
 
+var normalizedAKP KeyKind
+
+func init() {
+	normalizedAKP = KeyKind(jwa.AKP().String()).normalize()
+}
+
 func akpKeyKind(algfn func() (jwa.KeyAlgorithm, bool)) KeyKind {
 	if alg, ok := algfn(); ok {
-		return KeyKind(jwa.AKP().String() + ":" + alg.String())
+		return KeyKind(jwa.AKP().String() + ":" + alg.String()).normalize()
 	}
-	return KeyKind(jwa.AKP().String())
+	return normalizedAKP
 }
 
 func (k *akpPublicKey) KeyKind() KeyKind  { return akpKeyKind(k.Algorithm) }

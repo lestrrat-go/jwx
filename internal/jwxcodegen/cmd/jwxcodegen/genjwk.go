@@ -280,9 +280,7 @@ func generateKeyStruct(o *codegen.Output, obj *codegen.Object, ifName, structNam
 	o.L(`var _ Key = &%s{}`, structName)
 
 	o.LL("func new%s() *%s {", ifName, structName)
-	o.L("return &%s{", structName)
-	o.L("privateParams: make(map[string]any),")
-	o.L("}")
+	o.L("return &%s{}", structName)
 	o.L("}")
 }
 
@@ -527,7 +525,7 @@ func generateKeyCloneAndCtx(o *codegen.Output, obj *codegen.Object, ifName, stru
 	o.L("dst.privateParams[k] = v")
 	o.L("}")
 	o.L("} else {")
-	o.L("dst.privateParams = make(map[string]any)")
+	o.L("dst.privateParams = nil")
 	o.L("}")
 	o.L("}")
 

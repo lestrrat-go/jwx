@@ -53,9 +53,7 @@ var _ RSAPublicKey = &rsaPublicKey{}
 var _ Key = &rsaPublicKey{}
 
 func newRSAPublicKey() *rsaPublicKey {
-	return &rsaPublicKey{
-		privateParams: make(map[string]any),
-	}
+	return &rsaPublicKey{}
 }
 
 func (h *rsaPublicKey) KeyType() jwa.KeyType {
@@ -461,7 +459,7 @@ func (dst *rsaPublicKey) cloneFrom(src *rsaPublicKey) {
 			dst.privateParams[k] = v
 		}
 	} else {
-		dst.privateParams = make(map[string]any)
+		dst.privateParams = nil
 	}
 }
 
@@ -822,9 +820,7 @@ var _ RSAPrivateKey = &rsaPrivateKey{}
 var _ Key = &rsaPrivateKey{}
 
 func newRSAPrivateKey() *rsaPrivateKey {
-	return &rsaPrivateKey{
-		privateParams: make(map[string]any),
-	}
+	return &rsaPrivateKey{}
 }
 
 func (h *rsaPrivateKey) KeyType() jwa.KeyType {
@@ -1434,7 +1430,7 @@ func (dst *rsaPrivateKey) cloneFrom(src *rsaPrivateKey) {
 			dst.privateParams[k] = v
 		}
 	} else {
-		dst.privateParams = make(map[string]any)
+		dst.privateParams = nil
 	}
 }
 

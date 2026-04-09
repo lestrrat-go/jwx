@@ -30,13 +30,20 @@ var symmetricConvertibleKeys = []reflect.Type{
 	reflect.TypeFor[SymmetricKey](),
 }
 
-func octetSeqToRaw(key Key, _ any) (any, error) {
-	extracted, err := extractEmbeddedKey(key, symmetricConvertibleKeys)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to extract embedded key: %w`, err)
+func octetSeqToRaw(keyif Key, _ any) (any, error) {
+	// Fast path: built-in concrete types need no reflection
+	switch keyif.(type) {
+	case *symmetricKey:
+		// already a concrete type, skip extractEmbeddedKey
+	default:
+		extracted, err := extractEmbeddedKey(keyif, symmetricConvertibleKeys)
+		if err != nil {
+			return nil, fmt.Errorf(`failed to extract embedded key: %w`, err)
+		}
+		keyif = extracted
 	}
 
-	switch key := extracted.(type) {
+	switch key := keyif.(type) {
 	case SymmetricKey:
 		var ooctets []byte
 		locker, ok := key.(rlocker)
