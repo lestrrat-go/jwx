@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/lestrrat-go/jwx/v4/internal/ecutil"
@@ -24,17 +25,28 @@ var keyImporters = make(map[reflect.Type]KeyImporter)
 
 // KeyKind identifies a key for exporter dispatch. Built-in key types
 // use the key type string (e.g. "RSA", "EC", "OKP", "oct"). Keys that
-// implement KeyKinder can return a more specific identity
+// implement [KeyKinder] can return a more specific identity
 // (e.g. "OKP:Ed448") to select a curve-specific exporter.
+//
+// KeyKind values are compared case-insensitively: both registration
+// and lookup normalize to uppercase, so "OKP:Ed448" and "okp:ed448"
+// resolve to the same entry.
+//
+// See [RegisterKeyExporter] for details on how KeyKind values are used
+// during export dispatch and how to register exporters for custom key types.
 type KeyKind string
 
+// normalize returns the uppercase form of the KeyKind for case-insensitive
+// map operations.
+func (k KeyKind) normalize() KeyKind {
+	return KeyKind(strings.ToUpper(string(k)))
+}
+
 // KeyKinder is implemented by keys that need exporter dispatch
-// beyond just their key type. For example, OKP keys return
-// "OKP:<curve>" so that curve-specific exporters can be registered
-// by external modules.
+// beyond just their key type.
 //
-// Keys that do not implement this interface are dispatched by
-// KeyType().String() alone.
+// See [KeyKind] and [RegisterKeyExporter] for details on how the
+// returned value is used during export.
 type KeyKinder interface {
 	KeyKind() KeyKind
 }
@@ -65,23 +77,49 @@ func RegisterKeyImporterI(from any, conv KeyImporter) {
 	keyImporters[reflect.TypeOf(from)] = conv
 }
 
-// RegisterKeyExporter registers a KeyExporter for the given key identity.
-// When `jwk.Export()` is called, the library first tries exporters registered
-// for the key's specific identity (via [KeyKinder]), then falls back to
-// exporters registered for the key type alone.
+// RegisterKeyExporter registers a [KeyExporter] for the given [KeyKind] identity.
 //
-// For most key types, pass `KeyKind(kty.String())` (e.g. `KeyKind("RSA")`).
-// For curve-specific exporters, use a compound identity like `KeyKind("OKP:Ed448")`.
+// When [Export] is called, the library resolves exporters in two steps:
+//
+//  1. If the key implements [KeyKinder], its KeyKind() value is used to look up
+//     exporters registered for that specific identity (e.g. "OKP:Ed448").
+//  2. If no exporter is found (or the key does not implement KeyKinder), the
+//     library falls back to exporters registered for the key type string alone
+//     (i.e. KeyKind(key.KeyType().String()), e.g. "OKP").
+//
+// This two-level dispatch allows extension modules to register exporters for
+// specific curves or algorithms without interfering with built-in exporters.
+//
+// For most key types, pass KeyKind(kty.String()) as the identity:
+//
+//	// Handles all RSA keys.
+//	jwk.RegisterKeyExporter(jwk.KeyKind("RSA"), myRSAExporter)
+//
+// For curve- or algorithm-specific exporters, use a compound identity that
+// matches the value returned by the key's KeyKind() method:
+//
+//	// Handles only OKP keys whose curve is Ed448.
+//	// Built-in OKP keys return "OKP:<curve>" from KeyKind().
+//	jwk.RegisterKeyExporter(jwk.KeyKind("OKP:Ed448"), myEd448Exporter)
+//
+// The identity is normalized to uppercase before storage, so registration
+// is case-insensitive: KeyKind("OKP:Ed448") and KeyKind("okp:ed448") refer
+// to the same entry.
+//
+// Multiple exporters can be registered for the same identity. They are tried
+// in reverse registration order (last registered is tried first). An exporter
+// can return [ContinueError] to decline a key and let the next exporter try.
 func RegisterKeyExporter(ident KeyKind, conv KeyExporter) {
 	muKeyExporters.Lock()
 	defer muKeyExporters.Unlock()
-	convs, ok := keyExporters[ident]
+	norm := ident.normalize()
+	convs, ok := keyExporters[norm]
 	if !ok {
 		convs = []KeyExporter{conv}
 	} else {
 		convs = append([]KeyExporter{conv}, convs...)
 	}
-	keyExporters[ident] = convs
+	keyExporters[norm] = convs
 }
 
 // KeyImporter is used to convert from a raw key to a `jwk.Key`. mneumonic: from the PoV of the `jwk.Key`,
@@ -356,10 +394,10 @@ func doExport(key Key, hint any) (any, error) {
 // hold muKeyExporters.RLock.
 func findExporters(key Key) []KeyExporter {
 	if ki, ok := key.(KeyKinder); ok {
-		ident := ki.KeyKind()
+		ident := ki.KeyKind().normalize()
 		if exporters, ok := keyExporters[ident]; ok {
 			return exporters
 		}
 	}
-	return keyExporters[KeyKind(key.KeyType().String())]
+	return keyExporters[KeyKind(key.KeyType().String()).normalize()]
 }
