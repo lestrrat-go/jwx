@@ -205,11 +205,11 @@ type parseCtx struct {
 }
 
 func parseBytes(data []byte, options ...ParseOption) (Token, error) {
-	// Fast path: single WithKey with SignatureAlgorithm, no suboptions,
-	// and only simple options (WithValidate, WithToken, ValidateOptions).
+	// Fast path: exactly one WithKey option, data looks like compact JWS.
+	data = bytes.TrimSpace(data)
 	var fctx fastParseCtx
-	if tryFastPath(&fctx, options) {
-		return parseCompactFast(bytes.TrimSpace(data), &fctx)
+	if tryFastPath(&fctx, data, options) {
+		return parseCompactFast(data, &fctx)
 	}
 
 	var ctx parseCtx
@@ -290,7 +290,6 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 		ctx.verifyOpts = converted
 	}
 
-	data = bytes.TrimSpace(data)
 	return parse(&ctx, data)
 }
 
