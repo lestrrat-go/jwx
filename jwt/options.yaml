@@ -299,3 +299,15 @@ options:
       This option can be passed to `jwt.Settings()` to change the default
       globally, or to `jwt.ParseReader()` / `jwt.ParseFS()` for a per-call
       override.
+  - ident: StrictBase64Encoding
+    interface: ParseOption
+    argument_type: bool
+    comment: |
+      WithStrictBase64Encoding controls whether base64 decoding during
+      JWT parsing uses strict base64url encoding (RFC 4648 §5, no padding)
+      or auto-detects the encoding variant.
+
+      By default this is true: the parser uses base64.RawURLEncoding directly,
+      which is faster and matches RFC 7515. Set to false to enable auto-detection
+      for compatibility with non-conformant providers that may use padded or
+      standard base64 encoding.
