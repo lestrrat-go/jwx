@@ -662,6 +662,11 @@ func Settings(options ...GlobalOption) {
 // This can be useful for performance-critical applications where the
 // algorithm is known in advance.
 //
+// This function uses strict base64url encoding without padding (RFC 4648 §5)
+// for decoding the signature and payload. It does not auto-detect other
+// base64 variants. If your JWS uses non-standard encoding (e.g. padded
+// base64url), use jws.Verify() instead, which auto-detects the encoding.
+//
 // Since this function avoids doing many checks that jws.Verify would perform,
 // you must ensure to perform the necessary checks including ensuring that algorithm is safe to use for your payload yourself.
 func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error) {
