@@ -28,9 +28,9 @@ func BenchmarkJWTParse(b *testing.B) {
 	tok.Set(jwt.IssuerKey, "bench")
 
 	for _, tc := range []struct {
-		name   string
-		alg    jwa.KeyAlgorithm
-		signKey any
+		name      string
+		alg       jwa.KeyAlgorithm
+		signKey   any
 		verifyKey any
 	}{
 		{"RS256", jwa.RS256(), rsaKey, rsaPub},
