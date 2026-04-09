@@ -461,11 +461,114 @@ X448 variants (HPKE-5-KE, HPKE-6-KE) are not built in because Go's standard libr
 Encrypt and decrypt with HPKE using the same `jwe.Encrypt` / `jwe.Decrypt` API as any other algorithm. Pass an `*ecdh.PublicKey` or `*ecdsa.PublicKey` for encryption, and the corresponding private key for decryption. `jwk.Key` values are also accepted.
 
 <!-- INCLUDE(examples/jwe_hpke_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "crypto/ecdh"
+  "crypto/rand"
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwe"
+)
+
+func Example_jwe_hpke() {
+  // HPKE (Hybrid Public Key Encryption) combines KEM, KDF, and AEAD
+  // in a single operation. jwx v4 supports six built-in ciphersuites
+  // based on draft-ietf-jose-hpke-encrypt.
+  //
+  // HPKE-0-KE through HPKE-4-KE and HPKE-7-KE are available via
+  // jwa.HPKE_0_KE(), jwa.HPKE_1_KE(), etc.
+  //
+  // The API is identical to any other JWE key encryption algorithm.
+  // Pass an *ecdh.PublicKey for encryption, *ecdh.PrivateKey for
+  // decryption. *ecdsa.PublicKey / *ecdsa.PrivateKey also work for
+  // the NIST curve variants.
+
+  const payload = "Hello, HPKE!"
+
+  // HPKE-0-KE uses DHKEM(P-256), HKDF-SHA256, AES-128-GCM
+  priv, err := ecdh.P256().GenerateKey(rand.Reader)
+  if err != nil {
+    fmt.Printf("failed to generate key: %s\n", err)
+    return
+  }
+
+  encrypted, err := jwe.Encrypt([]byte(payload),
+    jwe.WithKey(jwa.HPKE_0_KE(), priv.PublicKey()),
+    jwe.WithContentEncryption(jwa.A256GCM()),
+  )
+  if err != nil {
+    fmt.Printf("failed to encrypt: %s\n", err)
+    return
+  }
+
+  decrypted, err := jwe.Decrypt(encrypted,
+    jwe.WithKey(jwa.HPKE_0_KE(), priv),
+  )
+  if err != nil {
+    fmt.Printf("failed to decrypt: %s\n", err)
+    return
+  }
+  fmt.Printf("%s\n", decrypted)
+  // OUTPUT:
+  // Hello, HPKE!
+}
+```
+source: [examples/jwe_hpke_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_hpke_example_test.go)
 <!-- END INCLUDE -->
 
 For X25519-based HPKE (HPKE-3-KE, HPKE-4-KE):
 
 <!-- INCLUDE(examples/jwe_hpke_x25519_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "crypto/ecdh"
+  "crypto/rand"
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwe"
+)
+
+func Example_jwe_hpke_x25519() {
+  // HPKE-3-KE and HPKE-4-KE use DHKEM(X25519).
+  // HPKE-3-KE pairs it with HKDF-SHA256 and AES-128-GCM.
+  // HPKE-4-KE pairs it with HKDF-SHA256 and ChaCha20Poly1305.
+
+  const payload = "Hello, X25519 HPKE!"
+
+  priv, err := ecdh.X25519().GenerateKey(rand.Reader)
+  if err != nil {
+    fmt.Printf("failed to generate key: %s\n", err)
+    return
+  }
+
+  encrypted, err := jwe.Encrypt([]byte(payload),
+    jwe.WithKey(jwa.HPKE_4_KE(), priv.PublicKey()),
+    jwe.WithContentEncryption(jwa.A256GCM()),
+  )
+  if err != nil {
+    fmt.Printf("failed to encrypt: %s\n", err)
+    return
+  }
+
+  decrypted, err := jwe.Decrypt(encrypted,
+    jwe.WithKey(jwa.HPKE_4_KE(), priv),
+  )
+  if err != nil {
+    fmt.Printf("failed to decrypt: %s\n", err)
+    return
+  }
+  fmt.Printf("%s\n", decrypted)
+  // OUTPUT:
+  // Hello, X25519 HPKE!
+}
+```
+source: [examples/jwe_hpke_x25519_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_hpke_x25519_example_test.go)
 <!-- END INCLUDE -->
 
 HPKE stores the encapsulated key in the `"ek"` JWE header field. When parsing an HPKE message, this field is accessible via `headers.EncapsulatedKey()`.
@@ -475,6 +578,68 @@ HPKE stores the encapsulated key in the `"ek"` JWE header field. When parsing an
 X25519 keys work with the standard ECDH-ES family of algorithms (`ECDH-ES`, `ECDH-ES+A128KW`, `ECDH-ES+A192KW`, `ECDH-ES+A256KW`) the same way NIST curves do. X25519 keys are represented in JWK as OKP keys with `crv=X25519`.
 
 <!-- INCLUDE(examples/jwe_ecdh_es_x25519_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "crypto/ecdh"
+  "crypto/rand"
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v4/jwa"
+  "github.com/lestrrat-go/jwx/v4/jwe"
+  "github.com/lestrrat-go/jwx/v4/jwk"
+)
+
+func Example_jwe_ecdh_es_x25519() {
+  // X25519 keys work with the standard ECDH-ES family of algorithms
+  // (ECDH-ES, ECDH-ES+A128KW, ECDH-ES+A192KW, ECDH-ES+A256KW) the
+  // same way NIST curves do.
+  //
+  // Use *ecdh.PublicKey / *ecdh.PrivateKey from crypto/ecdh with the
+  // X25519 curve. JWK keys are also accepted.
+
+  const payload = "Hello, X25519 ECDH-ES!"
+
+  priv, err := ecdh.X25519().GenerateKey(rand.Reader)
+  if err != nil {
+    fmt.Printf("failed to generate key: %s\n", err)
+    return
+  }
+
+  // Encrypt with ECDH-ES+A256KW
+  encrypted, err := jwe.Encrypt([]byte(payload),
+    jwe.WithKey(jwa.ECDH_ES_A256KW(), priv.PublicKey()),
+    jwe.WithContentEncryption(jwa.A256GCM()),
+  )
+  if err != nil {
+    fmt.Printf("failed to encrypt: %s\n", err)
+    return
+  }
+
+  decrypted, err := jwe.Decrypt(encrypted,
+    jwe.WithKey(jwa.ECDH_ES_A256KW(), priv),
+  )
+  if err != nil {
+    fmt.Printf("failed to decrypt: %s\n", err)
+    return
+  }
+  fmt.Printf("%s\n", decrypted)
+
+  // X25519 keys are represented as OKP keys with crv=X25519 in JWK
+  privJWK, err := jwk.Import[jwk.Key](priv)
+  if err != nil {
+    fmt.Printf("failed to import key: %s\n", err)
+    return
+  }
+  fmt.Printf("kty=%s\n", privJWK.KeyType())
+
+  // OUTPUT:
+  // Hello, X25519 ECDH-ES!
+  // kty=OKP
+}
+```
+source: [examples/jwe_ecdh_es_x25519_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_ecdh_es_x25519_example_test.go)
 <!-- END INCLUDE -->
 
 For X448, import [`github.com/jwx-go/x448/v4`](https://github.com/jwx-go/x448) — see [Extension Modules](10-extensions.md#x448).
