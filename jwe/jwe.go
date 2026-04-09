@@ -134,7 +134,7 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 
 	hdr := b.headers
 	if hdr == nil {
-		hdr = NewHeaders()
+		hdr = r.Headers()
 	}
 
 	if val, ok := hdr.AgreementPartyUInfo(); ok {
@@ -146,10 +146,7 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 	}
 
 	// Create the encrypter using the new jwebb pattern
-	enc, err := newEncrypter(b.alg, calg, b.key, rawKey, apu, apv)
-	if err != nil {
-		return nil, fmt.Errorf(`jwe.Encrypt: recipientBuilder: failed to create encrypter: %w`, err)
-	}
+	enc := newEncrypter(b.alg, calg, b.key, rawKey, apu, apv)
 
 	_ = r.SetHeaders(hdr)
 
@@ -919,6 +916,13 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		return nil, fmt.Errorf(`failed to encrypt payload: %w`, err)
 	}
 
+	// Fast path for compact serialization: assemble directly from
+	// pre-encoded headers and raw fields, avoiding the full Message
+	// construction and redundant header re-encoding that Compact() does.
+	if ec.format == fmtCompact {
+		return compactSerialize(aad, recipients[0].EncryptedKey(), iv, ciphertext, tag), nil
+	}
+
 	msg := msgPool.Get()
 	defer msgPool.Put(msg)
 
@@ -939,8 +943,6 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 	}
 
 	switch ec.format {
-	case fmtCompact:
-		return Compact(msg)
 	case fmtJSON:
 		return json.Marshal(msg)
 	case fmtJSONPretty:

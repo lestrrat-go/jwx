@@ -478,7 +478,10 @@ func generateHeaders(obj *codegen.Object) error {
 	o.L("if i > 0 {")
 	o.L("buf.WriteByte(tokens.Comma)")
 	o.L("}")
-	o.L(`fmt.Fprintf(buf, "%%q: %%s", pair.Name, pair.Value)`)
+	o.L(`buf.WriteByte('"')`)
+	o.L(`buf.WriteString(pair.Name)`)
+	o.L("buf.WriteString(`\": `)")
+	o.L(`buf.Write(pair.Value.([]byte))`)
 	o.L("}")
 	o.L("buf.WriteByte(tokens.CloseCurlyBracket)")
 	o.L("ret := make([]byte, buf.Len())")
@@ -492,7 +495,7 @@ func generateHeaders(obj *codegen.Object) error {
 	for _, f := range obj.Fields() {
 		o.L("h.%s = nil", f.Name(false))
 	}
-	o.L("h.privateParams = map[string]any{}")
+	o.L("clear(h.privateParams)")
 	o.L("h.mu.Unlock()")
 	o.L("}")
 

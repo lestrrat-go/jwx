@@ -962,7 +962,10 @@ func (h *stdHeaders) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteByte(tokens.Comma)
 		}
-		fmt.Fprintf(buf, "%q: %s", pair.Name, pair.Value)
+		buf.WriteByte('"')
+		buf.WriteString(pair.Name)
+		buf.WriteString(`": `)
+		buf.Write(pair.Value.([]byte))
 	}
 	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
@@ -989,6 +992,6 @@ func (h *stdHeaders) clear() {
 	h.x509CertThumbprint = nil
 	h.x509CertThumbprintS256 = nil
 	h.x509URL = nil
-	h.privateParams = map[string]any{}
+	clear(h.privateParams)
 	h.mu.Unlock()
 }

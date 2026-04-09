@@ -8,7 +8,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v3/jwa"
-	"github.com/lestrrat-go/jwx/v3/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/v3/jwe/jwebb"
 )
@@ -24,7 +23,6 @@ type encrypter struct {
 	keyalg jwa.KeyEncryptionAlgorithm
 	pubkey any
 	rawKey any
-	cipher content_crypt.Cipher
 }
 
 // newEncrypter creates a new Encrypter instance with all required parameters.
@@ -34,13 +32,7 @@ type encrypter struct {
 // *rsa.PublicKey, instead of jwk.Key)
 //
 // You should consider this object immutable once created.
-func newEncrypter(keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryptionAlgorithm, pubkey any, rawKey any, apu, apv []byte) (*encrypter, error) {
-	ctalgStr := ctalg.String()
-	cipher, err := jwebb.CreateContentCipher(ctalgStr)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to create content cipher: %w`, err)
-	}
-
+func newEncrypter(keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryptionAlgorithm, pubkey any, rawKey any, apu, apv []byte) *encrypter {
 	return &encrypter{
 		apu:    apu,
 		apv:    apv,
@@ -48,8 +40,7 @@ func newEncrypter(keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryption
 		keyalg: keyalg,
 		pubkey: pubkey,
 		rawKey: rawKey,
-		cipher: cipher,
-	}, nil
+	}
 }
 
 func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
