@@ -2,6 +2,8 @@
 
 These are changes that are incompatible with the v3.x.x version.
 
+For a step-by-step migration guide with before/after code examples, see [MIGRATION.md](MIGRATION.md). A machine-readable migration map for AI coding agents and automated tooling is available at [migrate/v3-to-v4.yaml](migrate/v3-to-v4.yaml).
+
 # Detailed list of changes
 
 ## Module
