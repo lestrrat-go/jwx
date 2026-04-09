@@ -168,6 +168,7 @@ type identNumericDateParsePrecision struct{}
 type identPedantic struct{}
 type identResetValidators struct{}
 type identSignOption struct{}
+type identStrictBase64Encoding struct{}
 type identStrictStringClaims struct{}
 type identToken struct{}
 type identTruncation struct{}
@@ -249,6 +250,10 @@ func (identResetValidators) String() string {
 
 func (identSignOption) String() string {
 	return "WithSignOption"
+}
+
+func (identStrictBase64Encoding) String() string {
+	return "WithStrictBase64Encoding"
 }
 
 func (identStrictStringClaims) String() string {
@@ -444,6 +449,18 @@ func WithResetValidators(v bool) ValidateOption {
 // need to use this.
 func WithSignOption(v jws.SignOption) SignOption {
 	return &signOption{option.New(identSignOption{}, v)}
+}
+
+// WithStrictBase64Encoding controls whether base64 decoding during
+// JWT parsing uses strict base64url encoding (RFC 4648 §5, no padding)
+// or auto-detects the encoding variant.
+//
+// By default this is true: the parser uses base64.RawURLEncoding directly,
+// which is faster and matches RFC 7515. Set to false to enable auto-detection
+// for compatibility with non-conformant providers that may use padded or
+// standard base64 encoding.
+func WithStrictBase64Encoding(v bool) ParseOption {
+	return &parseOption{option.New(identStrictBase64Encoding{}, v)}
 }
 
 // WithStrictStringClaims controls whether JSON null values for string

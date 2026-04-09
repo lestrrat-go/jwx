@@ -137,3 +137,20 @@ func Decode(src []byte) ([]byte, error) {
 func DecodeString(src string) ([]byte, error) {
 	return getDecoder().Decode([]byte(src))
 }
+
+// DecodeStrict decodes base64url-encoded data (RFC 7515 / RFC 4648 §5, no padding)
+// directly using base64.RawURLEncoding. It writes into the provided dst buffer
+// and returns the number of bytes written.
+//
+// Unlike Decode, this function does not auto-detect the encoding variant,
+// does not acquire any mutex, and does not allocate. The caller must ensure
+// dst is large enough (use DecodedStrictLen).
+func DecodeStrict(dst, src []byte) (int, error) {
+	return base64.RawURLEncoding.Decode(dst, src)
+}
+
+// DecodedStrictLen returns the maximum decoded length for a base64url-encoded
+// input of length n (no padding).
+func DecodedStrictLen(n int) int {
+	return base64.RawURLEncoding.DecodedLen(n)
+}
