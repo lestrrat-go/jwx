@@ -30,10 +30,12 @@ func WithJSON(options ...WithJSONSuboption) SignVerifyParseOption {
 }
 
 type withKey struct {
-	alg       jwa.KeyAlgorithm
-	key       any
-	protected Headers
-	public    Headers
+	alg             jwa.KeyAlgorithm
+	key             any
+	protected       Headers
+	public          Headers
+	cachedHdrJSON   []byte // precomputed header JSON when no custom headers and no kid
+	keyPrevalidated bool   // true if algorithm-key validation was done at construction time
 }
 
 // Protected returns the protected headers. If w.protected is nil and v is
@@ -109,13 +111,37 @@ func WithKey(alg jwa.KeyAlgorithm, key any, options ...WithKeySuboption) SignVer
 		}
 	}
 
+	wk := &withKey{
+		alg:       alg,
+		key:       key,
+		protected: protected,
+		public:    public,
+	}
+
+	// Precompute header JSON and validate algorithm-key compatibility
+	// at construction time so we can skip this work on every Sign() call.
+	if salg, ok := alg.(jwa.SignatureAlgorithm); ok {
+		if validateAlgorithmForKey(salg, key) == nil {
+			wk.keyPrevalidated = true
+		}
+
+		// Cache header JSON when there are no custom headers and the key
+		// won't inject a kid (only jwk.Key with a non-empty kid does that).
+		if protected == nil && public == nil {
+			needsKid := false
+			if jwkKey, ok := key.(jwk.Key); ok {
+				if kid, ok := jwkKey.KeyID(); ok && kid != "" {
+					needsKid = true
+				}
+			}
+			if !needsKid {
+				wk.cachedHdrJSON = buildAlgHeaderJSON(salg.String())
+			}
+		}
+	}
+
 	return &signVerifyOption{
-		option.New(identKey{}, &withKey{
-			alg:       alg,
-			key:       key,
-			protected: protected,
-			public:    public,
-		}),
+		option.New(identKey{}, wk),
 	}
 }
 

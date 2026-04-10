@@ -73,8 +73,10 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 				return makeSignError(`"none" (jwa.NoSignature) cannot be used with jws.WithKey`)
 			}
 
-			if err := validateAlgorithmForKey(alg, data.key); err != nil {
-				return makeSignError(`%w`, err)
+			if !data.keyPrevalidated {
+				if err := validateAlgorithmForKey(alg, data.key); err != nil {
+					return makeSignError(`%w`, err)
+				}
 			}
 
 			sb := signatureBuilderPool.Get()
@@ -83,6 +85,7 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			sb.key = data.key
 			sb.public = data.public
 			sb.signer, _ = SignerFor(alg)
+			sb.cachedHdrJSON = data.cachedHdrJSON
 
 			sc.sigbuilders = append(sc.sigbuilders, sb)
 		case identDetachedPayload{}:
