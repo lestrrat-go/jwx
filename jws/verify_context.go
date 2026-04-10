@@ -178,6 +178,7 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 
 		verifyBuf = verifyBuf[:0]
 		verifyBuf = jwsbb.SignBuffer(verifyBuf, rawHeaders, msg.payload, vc.encoder, msg.b64)
+		keysAttempted := 0
 		for i, kp := range vc.keyProviders {
 			var sink algKeySink
 			if err := kp.FetchKeys(vc.ctx, &sink, sig, msg); err != nil {
@@ -187,6 +188,7 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 			for _, pair := range sink.list {
 				alg := pair.alg
 				key := pair.key
+				keysAttempted++
 
 				if err := vc.tryKey(verifyBuf, alg, key, msg, sig); err != nil {
 					errs = append(errs, makeVerifyError(`failed to verify signature #%d with key %T: %w`, idx+1, key, err))
@@ -196,7 +198,11 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 				return msg.payload, nil
 			}
 		}
-		errs = append(errs, makeVerifyError(`signature #%d could not be verified with any of the keys`, idx+1))
+		if keysAttempted == 0 {
+			errs = append(errs, makeVerifyError(`signature #%d: no matching keys were provided by any key provider`, idx+1))
+		} else {
+			errs = append(errs, makeVerifyError(`signature #%d: tried %d key(s) but none verified successfully`, idx+1, keysAttempted))
+		}
 	}
 	return nil, makeVerifyError(`could not verify message using any of the signatures or keys: %w`, errors.Join(errs...))
 }

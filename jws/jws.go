@@ -528,6 +528,11 @@ func RegisterCustomField(name string, object any) {
 	registry.Register(name, object)
 }
 
+// curver is implemented by jwk.Key types that carry curve information.
+type curver interface {
+	Crv() (jwa.EllipticCurveAlgorithm, bool)
+}
+
 // Helpers for signature verification
 var muAlgorithmMaps sync.RWMutex
 var keyTypeToAlgorithms = make(map[jwa.KeyType][]jwa.SignatureAlgorithm)
@@ -589,9 +594,6 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 	switch key := key.(type) {
 	case jwk.Key:
 		kty = key.KeyType()
-		type curver interface {
-			Crv() (jwa.EllipticCurveAlgorithm, bool)
-		}
 		if ck, ok := key.(curver); ok {
 			crv, hasCrv = ck.Crv()
 		}
@@ -630,9 +632,6 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 			return nil, fmt.Errorf(`unknown key type %T`, key)
 		}
 		kty = imported.KeyType()
-		type curver interface {
-			Crv() (jwa.EllipticCurveAlgorithm, bool)
-		}
 		if ck, ok := imported.(curver); ok {
 			crv, hasCrv = ck.Crv()
 		}
