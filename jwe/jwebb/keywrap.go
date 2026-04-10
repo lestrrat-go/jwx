@@ -18,27 +18,24 @@ func Wrap(kek cipher.Block, cek []byte) ([]byte, error) {
 	}
 
 	n := len(cek) / tokens.KeywrapChunkLen
-	r := make([][]byte, n)
 
-	for i := range n {
-		r[i] = make([]byte, tokens.KeywrapChunkLen)
-		copy(r[i], cek[i*tokens.KeywrapChunkLen:])
-	}
+	// Single flat buffer for register values instead of [][]byte
+	rBuf := make([]byte, n*tokens.KeywrapChunkLen)
+	copy(rBuf, cek)
 
 	buffer := pool.ByteSlice().GetCapacity(tokens.KeywrapChunkLen * 2)
 	defer pool.ByteSlice().Put(buffer)
-	// the byte slice has the capacity, but len is 0
 	buffer = buffer[:tokens.KeywrapChunkLen*2]
 
 	tBytes := pool.ByteSlice().GetCapacity(tokens.KeywrapChunkLen)
 	defer pool.ByteSlice().Put(tBytes)
-	// the byte slice has the capacity, but len is 0
 	tBytes = tBytes[:tokens.KeywrapChunkLen]
 
 	copy(buffer, keywrapDefaultIV)
 
 	for t := range tokens.KeywrapRounds * n {
-		copy(buffer[tokens.KeywrapChunkLen:], r[t%n])
+		idx := (t % n) * tokens.KeywrapChunkLen
+		copy(buffer[tokens.KeywrapChunkLen:], rBuf[idx:idx+tokens.KeywrapChunkLen])
 
 		kek.Encrypt(buffer, buffer)
 
@@ -47,14 +44,12 @@ func Wrap(kek cipher.Block, cek []byte) ([]byte, error) {
 		for i := range tokens.KeywrapChunkLen {
 			buffer[i] = buffer[i] ^ tBytes[i]
 		}
-		copy(r[t%n], buffer[tokens.KeywrapChunkLen:])
+		copy(rBuf[idx:idx+tokens.KeywrapChunkLen], buffer[tokens.KeywrapChunkLen:])
 	}
 
 	out := make([]byte, (n+1)*tokens.KeywrapChunkLen)
 	copy(out, buffer[:tokens.KeywrapChunkLen])
-	for i := range r {
-		copy(out[(i+1)*tokens.KeywrapBlockSize:], r[i])
-	}
+	copy(out[tokens.KeywrapChunkLen:], rBuf)
 
 	return out, nil
 }
@@ -65,21 +60,17 @@ func Unwrap(block cipher.Block, ciphertxt []byte) ([]byte, error) {
 	}
 
 	n := (len(ciphertxt) / tokens.KeywrapChunkLen) - 1
-	r := make([][]byte, n)
 
-	for i := range r {
-		r[i] = make([]byte, tokens.KeywrapChunkLen)
-		copy(r[i], ciphertxt[(i+1)*tokens.KeywrapChunkLen:])
-	}
+	// Single flat buffer for register values instead of [][]byte
+	rBuf := make([]byte, n*tokens.KeywrapChunkLen)
+	copy(rBuf, ciphertxt[tokens.KeywrapChunkLen:])
 
 	buffer := pool.ByteSlice().GetCapacity(tokens.KeywrapChunkLen * 2)
 	defer pool.ByteSlice().Put(buffer)
-	// the byte slice has the capacity, but len is 0
 	buffer = buffer[:tokens.KeywrapChunkLen*2]
 
 	tBytes := pool.ByteSlice().GetCapacity(tokens.KeywrapChunkLen)
 	defer pool.ByteSlice().Put(tBytes)
-	// the byte slice has the capacity, but len is 0
 	tBytes = tBytes[:tokens.KeywrapChunkLen]
 
 	copy(buffer[:tokens.KeywrapChunkLen], ciphertxt[:tokens.KeywrapChunkLen])
@@ -90,11 +81,12 @@ func Unwrap(block cipher.Block, ciphertxt []byte) ([]byte, error) {
 		for i := range tokens.KeywrapChunkLen {
 			buffer[i] = buffer[i] ^ tBytes[i]
 		}
-		copy(buffer[tokens.KeywrapChunkLen:], r[t%n])
+		idx := (t % n) * tokens.KeywrapChunkLen
+		copy(buffer[tokens.KeywrapChunkLen:], rBuf[idx:idx+tokens.KeywrapChunkLen])
 
 		block.Decrypt(buffer, buffer)
 
-		copy(r[t%n], buffer[tokens.KeywrapChunkLen:])
+		copy(rBuf[idx:idx+tokens.KeywrapChunkLen], buffer[tokens.KeywrapChunkLen:])
 	}
 
 	if subtle.ConstantTimeCompare(buffer[:tokens.KeywrapChunkLen], keywrapDefaultIV) == 0 {
@@ -102,9 +94,7 @@ func Unwrap(block cipher.Block, ciphertxt []byte) ([]byte, error) {
 	}
 
 	out := make([]byte, n*tokens.KeywrapChunkLen)
-	for i := range r {
-		copy(out[i*tokens.KeywrapChunkLen:], r[i])
-	}
+	copy(out, rBuf)
 
 	return out, nil
 }

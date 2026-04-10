@@ -139,7 +139,9 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 
 	hdr := b.headers
 	if hdr == nil {
-		hdr = NewHeaders()
+		hdr = r.Headers()
+	} else {
+		_ = r.SetHeaders(hdr)
 	}
 
 	if val, ok := hdr.AgreementPartyUInfo(); ok {
@@ -149,10 +151,6 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 	if val, ok := hdr.AgreementPartyVInfo(); ok {
 		apv = val
 	}
-
-	enc := newEncrypter(b.alg, calg, resolvedKey, apu, apv)
-
-	_ = r.SetHeaders(hdr)
 
 	// Populate headers with stuff that we automatically set.
 	// Use setNoLock when possible since the header is either freshly
@@ -179,7 +177,7 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 
 	// Handle the encrypted key
 	var rawCEK []byte
-	enckey, err := enc.EncryptKey(cek)
+	enckey, err := encryptKey(cek, b.alg, calg, resolvedKey, apu, apv)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to encrypt key: %w`, err)
 	}
@@ -544,6 +542,7 @@ type encryptContext struct {
 	format      int
 	builders    []*recipientBuilder
 	protected   Headers
+	builderBuf  [1]recipientBuilder // inline storage for common single-recipient case
 }
 
 var encryptContextPool = pool.New(allocEncryptContext, freeEncryptContext)
@@ -562,6 +561,7 @@ func freeEncryptContext(ec *encryptContext) *encryptContext {
 	ec.format = fmtCompact
 	ec.builders = ec.builders[:0]
 	ec.protected = nil
+	ec.builderBuf[0] = recipientBuilder{}
 	return ec
 }
 
@@ -579,11 +579,16 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 			if jwebb.IsDirectCEK(v.String()) {
 				useRawCEK = true
 			}
-			ec.builders = append(ec.builders, &recipientBuilder{
-				alg:     v,
-				key:     wk.key,
-				headers: wk.headers,
-			})
+			var rb *recipientBuilder
+			if len(ec.builders) == 0 {
+				rb = &ec.builderBuf[0]
+			} else {
+				rb = &recipientBuilder{}
+			}
+			rb.alg = v
+			rb.key = wk.key
+			rb.headers = wk.headers
+			ec.builders = append(ec.builders, rb)
 		case identContentEncryptionAlgorithm{}:
 			ec.calg = option.MustGet[jwa.ContentEncryptionAlgorithm](opt)
 		case identCompress{}:
@@ -771,8 +776,11 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		}
 
 		// when we're using compact format, we can safely merge per-recipient
-		// headers into the protected header in-place (we own it from pool)
-		if err := recipients[0].Headers().Copy(protected); err != nil {
+		// headers into the protected header in-place (we own it from pool).
+		// Fast path: both are *stdHeaders owned exclusively, skip Keys/Field/Set overhead.
+		if src, ok := recipients[0].Headers().(*stdHeaders); ok {
+			src.mergeIntoNoLock(protected)
+		} else if err := recipients[0].Headers().Copy(protected); err != nil {
 			return nil, fmt.Errorf(`failed to merge protected headers for compact serialization: %w`, err)
 		}
 	} else {

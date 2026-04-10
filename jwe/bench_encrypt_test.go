@@ -50,6 +50,12 @@ func BenchmarkEncryptKey(b *testing.B) {
 			enc:  jwa.A256GCM(),
 			key:  symKey,
 		},
+		{
+			name: "DIRECT",
+			alg:  jwa.DIRECT(),
+			enc:  jwa.A256GCM(),
+			key:  symKey,
+		},
 	}
 
 	for _, tc := range testcases {
@@ -108,6 +114,13 @@ func BenchmarkDecryptKey(b *testing.B) {
 		{
 			name:   "A256KW",
 			alg:    jwa.A256KW(),
+			enc:    jwa.A256GCM(),
+			encKey: symKey,
+			decKey: symKey,
+		},
+		{
+			name:   "DIRECT",
+			alg:    jwa.DIRECT(),
 			enc:    jwa.A256GCM(),
 			encKey: symKey,
 			decKey: symKey,
