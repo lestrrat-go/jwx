@@ -25,6 +25,7 @@ func ContentEncryptionIsSupported(alg string) bool {
 // CreateContentCipher creates a content encryption cipher for the given algorithm string
 func CreateContentCipher(alg string) (content_crypt.Cipher, error) {
 	if v, ok := contentCipherCache.Load(alg); ok {
+		//nolint:forcetypeassert
 		return v.(content_crypt.Cipher), nil
 	}
 

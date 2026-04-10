@@ -30,6 +30,7 @@ func (c Generic) Decrypt(cek, iv, ciphertext, tag, aad []byte) ([]byte, error) {
 func NewGeneric(alg jwa.ContentEncryptionAlgorithm) (*Generic, error) {
 	key := alg.String()
 	if v, ok := genericCache.Load(key); ok {
+		//nolint:forcetypeassert
 		return v.(*Generic), nil
 	}
 

@@ -32,6 +32,7 @@ func SetEncoder(enc Encoder) {
 }
 
 func getEncoder() Encoder {
+	//nolint:forcetypeassert
 	return atomicEncoder.Load().(Encoder)
 }
 
@@ -44,6 +45,7 @@ func SetDecoder(dec Decoder) {
 }
 
 func getDecoder() Decoder {
+	//nolint:forcetypeassert
 	return atomicDecoder.Load().(Decoder)
 }
 
