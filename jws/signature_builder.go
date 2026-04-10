@@ -12,6 +12,17 @@ import (
 	"github.com/lestrrat-go/jwx/v4/jws/jwsbb"
 )
 
+// buildAlgHeaderJSON constructs the JSON for a protected header containing
+// only the "alg" field. This is used by the precomputed header fast path.
+func buildAlgHeaderJSON(alg string) []byte {
+	// Construct {"alg":"<alg>"} without going through json.Marshal
+	buf := make([]byte, 0, 9+len(alg))
+	buf = append(buf, `{"alg":"`...)
+	buf = append(buf, alg...)
+	buf = append(buf, `"}`...)
+	return buf
+}
+
 var signatureBuilderPool = pool.New[*signatureBuilder](allocSignatureBuilder, freeSignatureBuilder)
 
 // signatureBuilder is a transient object that is used to build
@@ -29,11 +40,13 @@ var signatureBuilderPool = pool.New[*signatureBuilder](allocSignatureBuilder, fr
 // This object does NOT take care of any synchronization, because it is
 // meant to be used in a single-threaded context.
 type signatureBuilder struct {
-	alg       jwa.SignatureAlgorithm
-	signer    Signer
-	key       any
-	protected Headers
-	public    Headers
+	alg             jwa.SignatureAlgorithm
+	signer          Signer
+	key             any
+	protected       Headers
+	public          Headers
+	cachedHdrJSON   []byte // precomputed header JSON when no custom headers
+	keyPrevalidated bool   // true if algorithm-key validation was done at WithKey time
 }
 
 func allocSignatureBuilder() *signatureBuilder {
@@ -46,32 +59,58 @@ func freeSignatureBuilder(sb *signatureBuilder) *signatureBuilder {
 	sb.key = nil
 	sb.protected = nil
 	sb.public = nil
+	sb.cachedHdrJSON = nil
+	sb.keyPrevalidated = false
 	return sb
 }
 
 // buildResult holds the output of signatureBuilder.Build. In addition to
-// the Signature object, it retains the raw JSON-encoded header bytes so
-// callers (such as the compact serialization fast path) can avoid
-// re-marshaling the protected headers.
+// the Signature object, it retains the raw JSON-encoded header bytes and
+// the signing input buffer so callers (such as the compact serialization
+// fast path) can avoid re-marshaling and re-encoding.
 type buildResult struct {
-	sig    Signature
-	hdrbuf []byte
+	sig      Signature
+	hdrbuf   []byte // raw JSON-encoded protected header
+	combined []byte // signing input: base64(hdr).base64(payload)
+	b64      bool   // whether payload was base64-encoded
 }
 
-func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*buildResult, error) {
+func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (buildResult, error) {
+	var br buildResult
+
+	// Fast path: when header JSON is precomputed (no custom headers, no kid)
+	// and we're producing compact serialization, skip NewHeaders(), Set(),
+	// and MarshalJSON() entirely. The JSON serialization path needs
+	// br.sig.protected to be populated, so we can't use this shortcut there.
+	if sb.cachedHdrJSON != nil && sc.format == fmtCompact {
+		hdrbuf := sb.cachedHdrJSON
+		combined := jwsbb.SignBuffer(nil, hdrbuf, payload, sc.encoder, true)
+
+		signature, err := sb.signer.Sign(sb.key, combined)
+		if err != nil {
+			return br, fmt.Errorf(`failed to sign payload: %w`, err)
+		}
+
+		br.hdrbuf = hdrbuf
+		br.combined = combined
+		br.sig.signature = signature
+		br.b64 = true
+		return br, nil
+	}
+
 	protected := sb.protected
 	if protected == nil {
 		protected = NewHeaders()
 	}
 
 	if err := protected.Set(AlgorithmKey, sb.alg); err != nil {
-		return nil, makeSignError(`failed to set "alg" header: %w`, err)
+		return br, makeSignError(`failed to set "alg" header: %w`, err)
 	}
 
 	if key, ok := sb.key.(jwk.Key); ok {
 		if kid, ok := key.KeyID(); ok && kid != "" {
 			if err := protected.Set(KeyIDKey, kid); err != nil {
-				return nil, makeSignError(`failed to set "kid" header: %w`, err)
+				return br, makeSignError(`failed to set "kid" header: %w`, err)
 			}
 		}
 	}
@@ -83,36 +122,37 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*buildResult
 		var err error
 		hdrs, err = mergeHeaders(sb.public, protected)
 		if err != nil {
-			return nil, makeSignError(`failed to merge headers: %w`, err)
+			return br, makeSignError(`failed to merge headers: %w`, err)
 		}
 	}
 
 	// raw, json format headers
 	hdrbuf, err := json.Marshal(hdrs)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to marshal headers: %w`, err)
+		return br, fmt.Errorf(`failed to marshal headers: %w`, err)
 	}
 
 	// check if we need to base64 encode the payload
 	b64 := getB64Value(hdrs)
 	if !b64 && !sc.detached {
 		if bytes.IndexByte(payload, tokens.Period) != -1 {
-			return nil, fmt.Errorf(`payload must not contain a "."`)
+			return br, fmt.Errorf(`payload must not contain a "."`)
 		}
 	}
 
 	combined := jwsbb.SignBuffer(nil, hdrbuf, payload, sc.encoder, b64)
 
-	var br buildResult
 	br.sig.protected = protected
 	br.sig.headers = sb.public
 	br.hdrbuf = hdrbuf
+	br.combined = combined
+	br.b64 = b64
 
 	signature, err := sb.signer.Sign(sb.key, combined)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to sign payload: %w`, err)
+		return br, fmt.Errorf(`failed to sign payload: %w`, err)
 	}
 	br.sig.signature = signature
 
-	return &br, nil
+	return br, nil
 }
