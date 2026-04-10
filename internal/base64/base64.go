@@ -19,21 +19,26 @@ type Encoder interface {
 	AppendEncode([]byte, []byte) []byte
 }
 
+// encoderHolder and decoderHolder are fixed concrete types so that
+// atomic.Value.Store never sees a type change (which would panic).
+type encoderHolder struct{ enc Encoder }
+type decoderHolder struct{ dec Decoder }
+
 var atomicEncoder atomic.Value
 var atomicDecoder atomic.Value
 
 func init() {
-	atomicEncoder.Store(Encoder(base64.RawURLEncoding))
-	atomicDecoder.Store(Decoder(defaultDecoder{}))
+	atomicEncoder.Store(encoderHolder{base64.RawURLEncoding})
+	atomicDecoder.Store(decoderHolder{defaultDecoder{}})
 }
 
 func SetEncoder(enc Encoder) {
-	atomicEncoder.Store(enc)
+	atomicEncoder.Store(encoderHolder{enc})
 }
 
 func getEncoder() Encoder {
 	//nolint:forcetypeassert
-	return atomicEncoder.Load().(Encoder)
+	return atomicEncoder.Load().(encoderHolder).enc
 }
 
 func DefaultEncoder() Encoder {
@@ -41,12 +46,12 @@ func DefaultEncoder() Encoder {
 }
 
 func SetDecoder(dec Decoder) {
-	atomicDecoder.Store(dec)
+	atomicDecoder.Store(decoderHolder{dec})
 }
 
 func getDecoder() Decoder {
 	//nolint:forcetypeassert
-	return atomicDecoder.Load().(Decoder)
+	return atomicDecoder.Load().(decoderHolder).dec
 }
 
 func Encode(src []byte) []byte {
