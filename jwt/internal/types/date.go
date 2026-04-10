@@ -175,6 +175,27 @@ func (n *NumericDate) MarshalJSON() ([]byte, error) {
 }
 
 func (n *NumericDate) UnmarshalJSON(data []byte) error {
+	// Fast path: integer timestamps are the overwhelmingly common case in JWTs.
+	// Parse them directly without going through json.Unmarshal → any → float64 → fmt.Sprintf → parseNumericString.
+	if len(data) > 0 && data[0] >= '0' && data[0] <= '9' {
+		// Check if it's a pure integer (no decimal point, no 'e' notation)
+		isInt := true
+		for _, b := range data {
+			if b < '0' || b > '9' {
+				isInt = false
+				break
+			}
+		}
+		if isInt {
+			v, err := strconv.ParseInt(string(data), 10, 64)
+			if err == nil {
+				n.Time = time.Unix(v, 0).UTC()
+				return nil
+			}
+		}
+	}
+
+	// Slow path: handles floats, strings, negative numbers, etc.
 	var v any
 	if err := json.Unmarshal(data, &v); err != nil {
 		return fmt.Errorf(`failed to unmarshal date: %w`, err)

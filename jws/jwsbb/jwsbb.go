@@ -54,53 +54,59 @@ const (
 	edDSAEd25519 = "Ed25519"
 )
 
-// JWS to dsig algorithm mapping
-var jwsToDsigAlgorithm = map[string]string{
-	// HMAC algorithms
-	hs256: dsig.HMACWithSHA256,
-	hs384: dsig.HMACWithSHA384,
-	hs512: dsig.HMACWithSHA512,
+// dsigAlgorithmDB maps JWS algorithm names to dsig algorithm names.
+// Uses sync.Map for lock-free reads of stable entries (registered at init time).
+var dsigAlgorithmDB sync.Map // map[string]string
 
-	// RSA PKCS#1 v1.5 algorithms
-	rs256: dsig.RSAPKCS1v15WithSHA256,
-	rs384: dsig.RSAPKCS1v15WithSHA384,
-	rs512: dsig.RSAPKCS1v15WithSHA512,
+func init() {
+	// Register built-in JWS-to-dsig algorithm mappings
+	for jwsAlg, dsigAlg := range map[string]string{
+		// HMAC algorithms
+		hs256: dsig.HMACWithSHA256,
+		hs384: dsig.HMACWithSHA384,
+		hs512: dsig.HMACWithSHA512,
 
-	// RSA PSS algorithms
-	ps256: dsig.RSAPSSWithSHA256,
-	ps384: dsig.RSAPSSWithSHA384,
-	ps512: dsig.RSAPSSWithSHA512,
+		// RSA PKCS#1 v1.5 algorithms
+		rs256: dsig.RSAPKCS1v15WithSHA256,
+		rs384: dsig.RSAPKCS1v15WithSHA384,
+		rs512: dsig.RSAPKCS1v15WithSHA512,
 
-	// ECDSA algorithms
-	es256: dsig.ECDSAWithP256AndSHA256,
-	es384: dsig.ECDSAWithP384AndSHA384,
-	es512: dsig.ECDSAWithP521AndSHA512,
-	// Note: ES256K requires external dependency and is handled separately
+		// RSA PSS algorithms
+		ps256: dsig.RSAPSSWithSHA256,
+		ps384: dsig.RSAPSSWithSHA384,
+		ps512: dsig.RSAPSSWithSHA512,
 
-	// EdDSA algorithm
-	edDSA: dsig.EdDSA,
+		// ECDSA algorithms
+		es256: dsig.ECDSAWithP256AndSHA256,
+		es384: dsig.ECDSAWithP384AndSHA384,
+		es512: dsig.ECDSAWithP521AndSHA512,
+		// Note: ES256K requires external dependency and is handled separately
 
-	// Fully-specified EdDSA algorithms (RFC 9864)
-	edDSAEd25519: dsig.EdDSA,
+		// EdDSA algorithm
+		edDSA: dsig.EdDSA,
+
+		// Fully-specified EdDSA algorithms (RFC 9864)
+		edDSAEd25519: dsig.EdDSA,
+	} {
+		dsigAlgorithmDB.Store(jwsAlg, dsigAlg)
+	}
 }
 
 // RegisterDsigAlgorithm registers a mapping from a JWS algorithm name
 // to a dsig algorithm name. This allows extension modules to add support
 // for new algorithms that use the default signer/verifier dispatch.
 func RegisterDsigAlgorithm(jwsAlg, dsigAlg string) {
-	muDsigAlgorithm.Lock()
-	defer muDsigAlgorithm.Unlock()
-	jwsToDsigAlgorithm[jwsAlg] = dsigAlg
+	dsigAlgorithmDB.Store(jwsAlg, dsigAlg)
 }
-
-var muDsigAlgorithm sync.RWMutex
 
 // getDsigAlgorithm returns the dsig algorithm name for a JWS algorithm
 func getDsigAlgorithm(jwsAlg string) (string, bool) {
-	muDsigAlgorithm.RLock()
-	defer muDsigAlgorithm.RUnlock()
-	dsigAlg, ok := jwsToDsigAlgorithm[jwsAlg]
-	return dsigAlg, ok
+	v, ok := dsigAlgorithmDB.Load(jwsAlg)
+	if !ok {
+		return "", false
+	}
+	//nolint:forcetypeassert
+	return v.(string), true // always stored as string
 }
 
 // validateEdDSACurve enforces that fully-specified EdDSA algorithms (RFC 9864)
