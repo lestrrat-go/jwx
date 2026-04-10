@@ -24,8 +24,14 @@ jobs:
           make tidy
       - run: |
           make test
-      - run: |
+      - name: Bazel tidy (bzlmod)
+        if: github.event.pull_request.base.ref != 'develop/v2'
+        run: |
           bazel mod tidy
+      - name: Bazel tidy (WORKSPACE)
+        if: github.event.pull_request.base.ref == 'develop/v2'
+        run: |
+          bazel run //:gazelle-update-repos
       - run: |
           bazel build //...
       - run: |
