@@ -2,6 +2,7 @@ package jws
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
@@ -116,6 +117,8 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			if err := option.Value(&sc.encoder); err != nil {
 				return makeSignError(`failed to retrieve base64-encoder option value: %w`, err)
 			}
+		default:
+			return makeSignError(`invalid jws.SignOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
 	}
 	return nil

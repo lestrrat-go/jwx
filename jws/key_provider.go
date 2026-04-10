@@ -76,7 +76,7 @@ type KeySink interface {
 }
 
 type algKeyPair struct {
-	alg jwa.KeyAlgorithm
+	alg jwa.SignatureAlgorithm
 	key any
 }
 
@@ -187,7 +187,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 
 		// if multipleKeysPerKeyID is true, we attempt all keys whose key ID matches
 		// the wantedKey
-		ok = false
+		found := false
 		for i := range kp.set.Len() {
 			key, _ := kp.set.Key(i)
 			if kid, ok := key.KeyID(); !ok || kid != wantedKid {
@@ -197,10 +197,10 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 			if err := kp.selectKey(sink, key, sig, msg); err != nil {
 				continue
 			}
-			ok = true
+			found = true
 			// continue processing so that we try all keys with the same key ID
 		}
-		if !ok {
+		if !found {
 			return fmt.Errorf(`failed to find key with key ID %q in key set`, wantedKid)
 		}
 		return nil
@@ -266,19 +266,22 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 	}
 
 	hdrAlg, ok := sig.ProtectedHeaders().Algorithm()
-	if ok {
-		for _, alg := range algs {
-			// if we have an "alg" field in the JWS, we can only proceed if
-			// the inferred algorithm matches
-			if hdrAlg != alg {
-				continue
-			}
-
-			sink.Key(alg, key)
-			break
-		}
+	if !ok {
+		// No algorithm in the JWS header. The jku provider requires both
+		// kid and alg to match, so we don't send any keys without alg.
+		return nil
 	}
-	return nil
+
+	for _, alg := range algs {
+		if hdrAlg != alg {
+			continue
+		}
+
+		sink.Key(alg, key)
+		return nil
+	}
+
+	return fmt.Errorf(`algorithm %q in JWS header does not match any algorithm for key type %s from jku`, hdrAlg, key.KeyType())
 }
 
 // KeyProviderFunc is a type of KeyProvider that is implemented by
