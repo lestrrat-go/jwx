@@ -2,10 +2,32 @@
 
 This guide covers all breaking changes between `github.com/lestrrat-go/jwx/v3` and `github.com/lestrrat-go/jwx/v4`.
 
-For AI coding agents: install [`github.com/jwx-go/jwxmigrate`](https://github.com/jwx-go/jwxmigrate) for machine-readable migration rules and automated checking:
+The [`jwxmigrate`](https://github.com/jwx-go/jwxmigrate) tool can apply mechanical fixes automatically and report issues that require manual review:
 
     go install github.com/jwx-go/jwxmigrate@latest
-    jwxmigrate check ./...
+
+    # Apply all mechanical fixes in-place (import rewrites, renames, etc.)
+    jwxmigrate --fix ./...
+
+    # Then check what remains (items needing manual judgment)
+    jwxmigrate ./...
+
+The recommended workflow is to run `--fix` first, then address the remaining findings.
+
+Additional options:
+
+    # JSON output (for CI pipelines / AI coding agents)
+    jwxmigrate --format json
+
+    # Only show mechanically fixable items
+    jwxmigrate --mechanical
+
+    # Check a specific rule
+    jwxmigrate --rule import-v3-to-v4
+
+Exit codes: 0 = migration complete, 1 = v3 patterns remain, 2 = error.
+
+Text output labels each finding as `(auto)` or `(manual)`, with migration notes and before/after examples. JSON output adds precise source locations (`line`, `col`, `end_line`, `end_col`) for programmatic use.
 
 ## Prerequisites
 
