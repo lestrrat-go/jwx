@@ -30,6 +30,12 @@ func (h *stdHeaders) Copy(dst Headers) error {
 	return nil
 }
 
+// copyNoLock copies all fields from h to dst without acquiring any mutexes.
+// Both h and dst must be exclusively owned by the caller (not shared).
+func (h *stdHeaders) copyNoLock(dst *stdHeaders) {
+	dst.cloneFrom(h)
+}
+
 func (h *stdHeaders) Merge(h2 Headers) (Headers, error) {
 	h3 := NewHeaders()
 

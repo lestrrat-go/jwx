@@ -49,7 +49,16 @@ func freeSignatureBuilder(sb *signatureBuilder) *signatureBuilder {
 	return sb
 }
 
-func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, error) {
+// buildResult holds the output of signatureBuilder.Build. In addition to
+// the Signature object, it retains the raw JSON-encoded header bytes so
+// callers (such as the compact serialization fast path) can avoid
+// re-marshaling the protected headers.
+type buildResult struct {
+	sig    Signature
+	hdrbuf []byte
+}
+
+func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*buildResult, error) {
 	protected := sb.protected
 	if protected == nil {
 		protected = NewHeaders()
@@ -67,9 +76,15 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, 
 		}
 	}
 
-	hdrs, err := mergeHeaders(sb.public, protected)
-	if err != nil {
-		return nil, makeSignError(`failed to merge headers: %w`, err)
+	// When there are no public (unprotected) headers, skip the merge
+	// to avoid allocating a third Headers object just to copy into.
+	hdrs := protected
+	if sb.public != nil {
+		var err error
+		hdrs, err = mergeHeaders(sb.public, protected)
+		if err != nil {
+			return nil, makeSignError(`failed to merge headers: %w`, err)
+		}
 	}
 
 	// raw, json format headers
@@ -88,15 +103,16 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, 
 
 	combined := jwsbb.SignBuffer(nil, hdrbuf, payload, sc.encoder, b64)
 
-	var sig Signature
-	sig.protected = protected
-	sig.headers = sb.public
+	var br buildResult
+	br.sig.protected = protected
+	br.sig.headers = sb.public
+	br.hdrbuf = hdrbuf
 
 	signature, err := sb.signer.Sign(sb.key, combined)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to sign payload: %w`, err)
 	}
-	sig.signature = signature
+	br.sig.signature = signature
 
-	return &sig, nil
+	return &br, nil
 }
