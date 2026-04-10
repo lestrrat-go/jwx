@@ -52,7 +52,8 @@ func signFast(t Token, alg jwa.SignatureAlgorithm, key any) ([]byte, error) {
 		return nil, fmt.Errorf(`jwt.signFast: failed to marshal token payload: %w`, err)
 	}
 
-	combined := jwsbb.SignBuffer(nil, hdr, payload, base64.DefaultEncoder(), true)
+	encoder := base64.DefaultEncoder()
+	combined := jwsbb.SignBuffer(nil, hdr, payload, encoder, true)
 	signer, err := jws.SignerFor(alg)
 	if err != nil {
 		return nil, fmt.Errorf(`jwt.signFast: failed to get signer for %s: %w`, alg, err)
@@ -63,9 +64,8 @@ func signFast(t Token, alg jwa.SignatureAlgorithm, key any) ([]byte, error) {
 		return nil, fmt.Errorf(`jwt.signFast: failed to sign payload with %s: %w`, alg, err)
 	}
 
-	serialized, err := jwsbb.JoinCompact(nil, hdr, payload, signature, base64.DefaultEncoder(), true)
-	if err != nil {
-		return nil, fmt.Errorf("jwt.signFast: failed to join compact: %w", err)
-	}
+	// Reuse the combined buffer (base64(hdr).base64(payload)) and append .base64(sig)
+	// instead of re-encoding hdr and payload from scratch via JoinCompact
+	serialized := jwsbb.AppendSignature(combined, signature, encoder)
 	return serialized, nil
 }

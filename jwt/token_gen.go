@@ -648,7 +648,9 @@ func (t *stdToken) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteByte(',')
 		}
-		fmt.Fprintf(buf, `%q:`, pair.Name)
+		buf.WriteByte('"')
+		buf.WriteString(pair.Name)
+		buf.WriteString(`":`)
 		if pair.Name == AudienceKey {
 			if aud, ok := pair.Value.(types.StringList); ok {
 				audBytes, err := json.MarshalAudience(aud, t.options.IsEnabled(FlattenAudience))
