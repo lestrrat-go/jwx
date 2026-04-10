@@ -33,20 +33,15 @@ func (f VerifierFunc) Verify(key any, payload, signature []byte) error {
 	return f(key, payload, signature)
 }
 
-var muVerifierDB sync.RWMutex
-var verifierDB = make(map[jwa.SignatureAlgorithm]Verifier)
+var verifierDB sync.Map // map[jwa.SignatureAlgorithm]Verifier
 
 // VerifierFor returns a Verifier for the given signature algorithm.
 //
 // If a custom Verifier has been registered for the algorithm, it is returned.
 // Otherwise, a default verifier that delegates to jwsbb.Verify is returned.
 func VerifierFor(alg jwa.SignatureAlgorithm) (Verifier, error) {
-	muVerifierDB.RLock()
-	v, ok := verifierDB[alg]
-	muVerifierDB.RUnlock()
-
-	if ok {
-		return v, nil
+	if v, ok := verifierDB.Load(alg); ok {
+		return v.(Verifier), nil
 	}
 
 	return defaultVerifier{alg: alg}, nil
@@ -58,9 +53,7 @@ func VerifierFor(alg jwa.SignatureAlgorithm) (Verifier, error) {
 // the algorithm in this module's algorithm database.
 func RegisterVerifier(alg jwa.SignatureAlgorithm, v Verifier) error {
 	jwa.RegisterSignatureAlgorithm(alg)
-	muVerifierDB.Lock()
-	verifierDB[alg] = v
-	muVerifierDB.Unlock()
+	verifierDB.Store(alg, v)
 	return nil
 }
 
@@ -73,7 +66,5 @@ func RegisterVerifier(alg jwa.SignatureAlgorithm, v Verifier) error {
 // Therefore, in order to completely remove the algorithm, you must
 // call jwa.UnregisterSignatureAlgorithm yourself.
 func UnregisterVerifier(alg jwa.SignatureAlgorithm) {
-	muVerifierDB.Lock()
-	delete(verifierDB, alg)
-	muVerifierDB.Unlock()
+	verifierDB.Delete(alg)
 }

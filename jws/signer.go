@@ -25,8 +25,7 @@ func (f SignerFunc) Sign(key any, payload []byte) ([]byte, error) {
 	return f(key, payload)
 }
 
-var muSignerDB sync.RWMutex
-var signerDB = make(map[jwa.SignatureAlgorithm]Signer)
+var signerDB sync.Map // map[jwa.SignatureAlgorithm]Signer
 
 func init() {
 	// register the signers using jwsbb. These will be used by default.
@@ -46,12 +45,8 @@ func init() {
 // If a custom Signer has been registered for the algorithm, it is returned.
 // Otherwise, a default signer that delegates to jwsbb.Sign is returned.
 func SignerFor(alg jwa.SignatureAlgorithm) (Signer, error) {
-	muSignerDB.RLock()
-	signer, ok := signerDB[alg]
-	muSignerDB.RUnlock()
-
-	if ok {
-		return signer, nil
+	if v, ok := signerDB.Load(alg); ok {
+		return v.(Signer), nil
 	}
 
 	return defaultSigner{alg: alg}, nil
@@ -67,9 +62,7 @@ func SignerFor(alg jwa.SignatureAlgorithm) (Signer, error) {
 // UnregisterSigner.
 func RegisterSigner(alg jwa.SignatureAlgorithm, s Signer) error {
 	jwa.RegisterSignatureAlgorithm(alg)
-	muSignerDB.Lock()
-	signerDB[alg] = s
-	muSignerDB.Unlock()
+	signerDB.Store(alg, s)
 	return nil
 }
 
@@ -82,9 +75,7 @@ func RegisterSigner(alg jwa.SignatureAlgorithm, s Signer) error {
 // Therefore, in order to completely remove the algorithm, you must
 // call jwa.UnregisterSignatureAlgorithm yourself.
 func UnregisterSigner(alg jwa.SignatureAlgorithm) {
-	muSignerDB.Lock()
-	delete(signerDB, alg)
-	muSignerDB.Unlock()
+	signerDB.Delete(alg)
 }
 
 type noneSigner struct{}

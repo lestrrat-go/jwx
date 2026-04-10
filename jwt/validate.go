@@ -51,6 +51,13 @@ func timeClaim(t Token, clock Clock, c string) time.Time {
 // See the various `WithXXX` functions for optional parameters
 // that can control the behavior of this method.
 func Validate(t Token, options ...ValidateOption) error {
+	// Fast path: no options means default validation (iat, exp, nbf)
+	// with no skew, default truncation, and time.Now as clock.
+	// This avoids context allocation, validator struct creation, and option iteration.
+	if len(options) == 0 {
+		return validateDefault(t)
+	}
+
 	ctx := context.Background()
 	trunc := getDefaultTruncation()
 
@@ -137,6 +144,37 @@ func Validate(t Token, options ...ValidateOption) error {
 	for _, v := range validators {
 		if err := v.Validate(ctx, t); err != nil {
 			return validateErrorf(`validation failed: %w`, err)
+		}
+	}
+
+	return nil
+}
+
+// validateDefault is the fast path for Validate with no options.
+// It inlines the default iat/exp/nbf checks without allocating
+// context values, validator structs, or iterating through options.
+func validateDefault(t Token) error {
+	trunc := getDefaultTruncation()
+	now := time.Now().Truncate(trunc)
+
+	// exp: expiration must be after now
+	if tv, ok := t.Expiration(); ok {
+		if !now.Before(tv.Truncate(trunc)) {
+			return validateErrorf(`validation failed: %w`, newTokenExpiredError(tv.Truncate(trunc), now, 0))
+		}
+	}
+
+	// iat: issued-at must not be in the future
+	if tv, ok := t.IssuedAt(); ok {
+		if now.Before(tv.Truncate(trunc)) {
+			return validateErrorf(`validation failed: %w`, newInvalidIssuedAtError(tv.Truncate(trunc), now, 0))
+		}
+	}
+
+	// nbf: not-before must not be in the future
+	if tv, ok := t.NotBefore(); ok {
+		if now.Before(tv.Truncate(trunc)) {
+			return validateErrorf(`validation failed: %w`, newTokenNotYetValidError(tv.Truncate(trunc), now, 0))
 		}
 	}
 

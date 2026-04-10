@@ -51,9 +51,11 @@ func SignBuffer(buf, hdr, payload []byte, encoder base64.Encoder, encodePayload 
 //
 // Returns the complete compact JWS in the format: base64(header).base64(payload).base64(signature)
 func AppendSignature(buf, signature []byte, encoder base64.Encoder) []byte {
-	l := len(buf) + len(signature) + 1
+	l := len(buf) + encoder.EncodedLen(len(signature)) + 1
 	if cap(buf) < l {
-		buf = make([]byte, 0, l)
+		newbuf := make([]byte, len(buf), l)
+		copy(newbuf, buf)
+		buf = newbuf
 	}
 	buf = append(buf, tokens.Period)
 	buf = encoder.AppendEncode(buf, signature)
