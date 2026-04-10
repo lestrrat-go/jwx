@@ -176,7 +176,7 @@ This module implements the following specifications:
 | [jwa](https://github.com/lestrrat-go/jwx/tree/v4/jwa) | [RFC 7518](https://tools.ietf.org/html/rfc7518) (JSON Web Algorithms) |
 | [jwk](https://github.com/lestrrat-go/jwx/tree/v4/jwk) | [RFC 7517](https://tools.ietf.org/html/rfc7517) (JSON Web Key), [RFC 7638](https://tools.ietf.org/html/rfc7638) (JWK Thumbprint), [RFC 8037](https://tools.ietf.org/html/rfc8037) (CFRG Curves) |
 | [jws](https://github.com/lestrrat-go/jwx/tree/v4/jws) | [RFC 7515](https://tools.ietf.org/html/rfc7515) (JSON Web Signature), [RFC 7797](https://tools.ietf.org/html/rfc7797) (Unencoded Payload) |
-| [jwe](https://github.com/lestrrat-go/jwx/tree/v4/jwe) | [RFC 7516](https://tools.ietf.org/html/rfc7516) (JSON Web Encryption) |
+| [jwe](https://github.com/lestrrat-go/jwx/tree/v4/jwe) | [RFC 7516](https://tools.ietf.org/html/rfc7516) (JSON Web Encryption), [draft-ietf-jose-hpke-encrypt](https://datatracker.ietf.org/doc/draft-ietf-jose-hpke-encrypt/) (HPKE) |
 | [jwt](https://github.com/lestrrat-go/jwx/tree/v4/jwt) | [RFC 7519](https://tools.ietf.org/html/rfc7519) (JSON Web Token) |
 
 Additionally supported via the main module or [extension modules](docs/10-extensions.md):
@@ -185,7 +185,7 @@ Additionally supported via the main module or [extension modules](docs/10-extens
 |---------------|---------|
 | [FIPS 203](https://csrc.nist.gov/pubs/fips/203/final) (ML-KEM) | JWE key encapsulation: ML-KEM-768, ML-KEM-1024, hybrid variants |
 | [FIPS 204](https://csrc.nist.gov/pubs/fips/204/final) (ML-DSA) | JWS signatures via [`github.com/jwx-go/mldsa`](https://github.com/jwx-go/mldsa) |
-| [draft-ietf-jose-hpke-encrypt](https://datatracker.ietf.org/doc/draft-ietf-jose-hpke-encrypt/) | JWE HPKE key encryption (draft; API not yet stable) |
+
 
 ## History
 
