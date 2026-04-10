@@ -1,0 +1,29 @@
+# Companion modules for github.com/lestrrat-go/jwx/v4
+# Used by /jwx-companion-bulk skill to apply bulk operations.
+
+modules:
+  - name: asmbase64
+    repo: git@github.com:jwx-go/asmbase64.git
+    branch: develop/v4
+  - name: benchmarks
+    repo: git@github.com:jwx-go/benchmarks.git
+    branch: main
+    runtests: false
+  - name: ed448
+    repo: git@github.com:jwx-go/ed448.git
+    branch: v4
+  - name: es256k
+    repo: git@github.com:jwx-go/es256k.git
+    branch: develop/v4
+  - name: examples
+    repo: git@github.com:jwx-go/examples.git
+    branch: develop/v4
+  - name: jwkcache
+    repo: git@github.com:jwx-go/jwkcache.git
+    branch: develop/v4
+  - name: mldsa
+    repo: git@github.com:jwx-go/mldsa.git
+    branch: develop/v4
+  - name: x448
+    repo: git@github.com:jwx-go/x448.git
+    branch: develop/v4
