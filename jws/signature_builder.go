@@ -40,12 +40,12 @@ var signatureBuilderPool = pool.New[*signatureBuilder](allocSignatureBuilder, fr
 // This object does NOT take care of any synchronization, because it is
 // meant to be used in a single-threaded context.
 type signatureBuilder struct {
-	alg            jwa.SignatureAlgorithm
-	signer         Signer
-	key            any
-	protected      Headers
-	public         Headers
-	cachedHdrJSON  []byte // precomputed header JSON when no custom headers
+	alg             jwa.SignatureAlgorithm
+	signer          Signer
+	key             any
+	protected       Headers
+	public          Headers
+	cachedHdrJSON   []byte // precomputed header JSON when no custom headers
 	keyPrevalidated bool   // true if algorithm-key validation was done at WithKey time
 }
 
