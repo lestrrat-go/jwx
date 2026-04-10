@@ -26,6 +26,7 @@
 package jws
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/ecdh"
 	"crypto/ecdsa"
@@ -158,8 +159,8 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 
 	// For compact single-signature (the overwhelmingly common case),
 	// bypass Message construction and Compact() entirely.
-	// Build() already has the raw header bytes and signature, so we
-	// can use jwsbb.JoinCompact directly.
+	// Build() returns the signing input buffer (base64(hdr).base64(payload))
+	// so we can append the signature directly without re-encoding.
 	if sc.format == fmtCompact {
 		sb := sc.sigbuilders[0]
 		if sc.validateKey {
@@ -168,23 +169,23 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 			}
 		}
 
-		// Build() needs the actual payload to sign (which may differ from
-		// the Sign() parameter when detached payloads are used).
 		br, err := sb.Build(sc, sc.payload)
 		if err != nil {
 			return nil, makeSignError(`failed to build signature: %w`, err)
 		}
 
-		// For the compact output, include payload only when not detached.
-		outputPayload := sc.payload
 		if sc.detached {
-			outputPayload = nil
+			// Detached: output is base64(hdr)..base64(sig) (empty payload segment).
+			// The combined buffer is base64(hdr).base64(payload), so slice
+			// up to and including the period to get base64(hdr). and append
+			// the signature after that.
+			idx := bytes.IndexByte(br.combined, '.')
+			result := jwsbb.AppendSignature(br.combined[:idx+1], br.sig.signature, sc.encoder)
+			return result, nil
 		}
 
-		result, err := jwsbb.JoinCompact(nil, br.hdrbuf, outputPayload, br.sig.signature, sc.encoder, getB64Value(br.sig.protected))
-		if err != nil {
-			return nil, makeSignError(`failed to serialize compact: %w`, err)
-		}
+		// Non-detached: append .base64(sig) to the existing signing buffer.
+		result := jwsbb.AppendSignature(br.combined, br.sig.signature, sc.encoder)
 		return result, nil
 	}
 
