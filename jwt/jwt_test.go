@@ -698,6 +698,35 @@ func TestSignTyp(t *testing.T) {
 		require.Equal(t, `JWT`, v, `"typ" header parameter should be set to JWT`)
 	})
 
+	// jwt.Sign has two code paths: a fast path (single WithKey option)
+	// that hardcodes headers, and a serializer path (2+ options) that
+	// populates headers via setTypeOrCty. Verify both paths produce
+	// identical protected headers so any divergence is caught generically.
+	t.Run(`fast path and serializer path produce identical headers`, func(t *testing.T) {
+		t.Parallel()
+		t1 := jwt.New()
+
+		fast, err := jwt.Sign(t1, jwt.WithKey(jwa.RS256(), key))
+		require.NoError(t, err)
+		fastHdrs, err := getJWTHeaders(fast)
+		require.NoError(t, err)
+
+		slow, err := jwt.Sign(t1, jwt.WithKey(jwa.RS256(), key), jwt.WithBase64Encoder(base64.RawURLEncoding))
+		require.NoError(t, err)
+		slowHdrs, err := getJWTHeaders(slow)
+		require.NoError(t, err)
+
+		// Compare every field the fast path sets.
+		// If a new auto-populated header is added to the fast path
+		// but not the serializer path (or vice versa), this will catch it.
+		for _, field := range []string{"alg", "typ"} {
+			fv, fok := fastHdrs.Field(field)
+			sv, sok := slowHdrs.Field(field)
+			require.Equal(t, fok, sok, `presence of %q should match between fast and slow paths`, field)
+			require.Equal(t, fv, sv, `value of %q should match between fast and slow paths`, field)
+		}
+	})
+
 	t.Run(`"typ" header parameter should be customizable by WithHeaders`, func(t *testing.T) {
 		t.Parallel()
 		t1 := jwt.New()
