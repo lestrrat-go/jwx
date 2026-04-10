@@ -1,11 +1,10 @@
-name: merge dependabot
+name: dependabot tidy
 on: 
   pull_request_target:
     types: [labeled]
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
   merge:
@@ -44,10 +43,6 @@ jobs:
           else
             echo "No changes to commit"
           fi
-          gh pr review --approve "$PR_URL"
-          gh pr merge --auto --squash "$PR_URL"
         env:
-          PR_URL: ${{github.event.pull_request.html_url}}
           PR_HEAD_REF: ${{github.event.pull_request.head.ref}}
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
-          GH_TOKEN: ${{secrets.GITHUB_TOKEN}}
