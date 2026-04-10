@@ -103,7 +103,7 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			sc.sigbuilders = append(sc.sigbuilders, sb)
 		case identDetachedPayload{}:
 			if sc.payload != nil {
-				return makeSignError(`payload must be nil when jws.WithDetachedPayload() is specified`)
+				return makeSignError(`the first argument to jws.Sign() must be nil when jws.WithDetachedPayload() is used`)
 			}
 			if err := option.Value(&sc.payload); err != nil {
 				return makeSignError(`failed to retrieve detached payload option value: %w`, err)

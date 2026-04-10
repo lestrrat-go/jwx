@@ -109,110 +109,127 @@ type keySetProvider struct {
 	multipleKeysPerKeyID bool // true if we should attempt to match multiple keys per key ID. if false we assume that only one key exists for a given key ID
 }
 
-func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _ *Message) error {
+// selectKey examines a single key and, if it is suitable for the given
+// signature, adds one or more (algorithm, key) pairs to the sink.
+// It returns true if at least one pair was added, false if the key was
+// filtered out (e.g. wrong usage, no matching algorithm).
+func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _ *Message) (bool, error) {
 	if usage, ok := key.KeyUsage(); ok {
 		// it's okay if use: "". we'll assume it's "sig"
 		if usage != "" && usage != jwk.ForSignature.String() {
-			return nil
+			return false, nil
 		}
 	}
 
 	if v, ok := key.Algorithm(); ok {
 		salg, ok := jwa.LookupSignatureAlgorithm(v.String())
 		if !ok {
-			return fmt.Errorf(`invalid signature algorithm %q`, v)
+			return false, fmt.Errorf(`invalid signature algorithm %q`, v)
 		}
 
 		sink.Key(salg, key)
-		return nil
+		return true, nil
 	}
 
-	if kp.inferAlgorithm {
-		algs, err := AlgorithmsForKey(key)
-		if err != nil {
-			return fmt.Errorf(`failed to get a list of signature methods for key type %s: %w`, key.KeyType(), err)
-		}
+	if !kp.inferAlgorithm {
+		return false, nil
+	}
 
-		// bail out if the JWT has a `alg` field, and it doesn't match
-		if tokAlg, ok := sig.ProtectedHeaders().Algorithm(); ok {
-			for _, alg := range algs {
-				if tokAlg == alg {
-					sink.Key(alg, key)
-					return nil
-				}
-			}
-			return fmt.Errorf(`algorithm in the message does not match any of the inferred algorithms`)
-		}
+	algs, err := AlgorithmsForKey(key)
+	if err != nil {
+		return false, fmt.Errorf(`failed to get a list of signature methods for key type %s: %w`, key.KeyType(), err)
+	}
 
-		// Yes, you get to try them all!!!!!!!
+	// bail out if the JWT has a `alg` field, and it doesn't match
+	if tokAlg, ok := sig.ProtectedHeaders().Algorithm(); ok {
 		for _, alg := range algs {
-			sink.Key(alg, key)
+			if tokAlg == alg {
+				sink.Key(alg, key)
+				return true, nil
+			}
 		}
-		return nil
+		return false, fmt.Errorf(`algorithm in the message does not match any of the inferred algorithms`)
 	}
-	return nil
+
+	// Yes, you get to try them all!!!!!!!
+	for _, alg := range algs {
+		sink.Key(alg, key)
+	}
+	return len(algs) > 0, nil
 }
 
 func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signature, msg *Message) error {
 	if kp.requireKid {
 		wantedKid, ok := sig.ProtectedHeaders().KeyID()
 		if !ok {
-			// If the kid is NOT specified... kp.useDefault needs to be true, and the
-			// JWKs must have exactly one key in it
-			if !kp.useDefault {
-				return fmt.Errorf(`failed to find matching key: no key ID ("kid") specified in token`)
-			} else if kp.useDefault && kp.set.Len() > 1 {
-				return fmt.Errorf(`failed to find matching key: no key ID ("kid") specified in token but multiple keys available in key set`)
-			}
-
-			// if we got here, then useDefault == true AND there is exactly
-			// one key in the set.
-			key, ok := kp.set.Key(0)
-			if !ok {
-				return fmt.Errorf(`failed to get key at index 0 (empty JWKS?)`)
-			}
-			return kp.selectKey(sink, key, sig, msg)
+			return kp.fetchDefaultKey(sink, sig, msg)
 		}
+		return kp.fetchKeysByKid(sink, sig, msg, wantedKid)
+	}
+	return kp.fetchAllKeys(sink, sig, msg)
+}
 
-		// Otherwise we better be able to look up the key.
-		// <= v2.0.3 backwards compatible case: only match a single key
-		// whose key ID matches `wantedKid`
-		if !kp.multipleKeysPerKeyID {
-			key, ok := kp.set.LookupKeyID(wantedKid)
-			if !ok {
-				return fmt.Errorf(`failed to find key with key ID %q in key set`, wantedKid)
-			}
-			return kp.selectKey(sink, key, sig, msg)
-		}
-
-		// if multipleKeysPerKeyID is true, we attempt all keys whose key ID matches
-		// the wantedKey
-		found := false
-		for i := range kp.set.Len() {
-			key, _ := kp.set.Key(i)
-			if kid, ok := key.KeyID(); !ok || kid != wantedKid {
-				continue
-			}
-
-			if err := kp.selectKey(sink, key, sig, msg); err != nil {
-				continue
-			}
-			found = true
-			// continue processing so that we try all keys with the same key ID
-		}
-		if !found {
-			return fmt.Errorf(`failed to find key with key ID %q in key set`, wantedKid)
-		}
-		return nil
+// fetchDefaultKey handles the case where kid is required but the token
+// has no kid field. It uses the sole key in the set when useDefault is true.
+func (kp *keySetProvider) fetchDefaultKey(sink KeySink, sig *Signature, msg *Message) error {
+	if !kp.useDefault {
+		return fmt.Errorf(`failed to find matching key: no key ID ("kid") specified in token`)
+	}
+	if kp.set.Len() > 1 {
+		return fmt.Errorf(`failed to find matching key: no key ID ("kid") specified in token but multiple keys available in key set`)
 	}
 
-	// Otherwise just try all keys
+	key, ok := kp.set.Key(0)
+	if !ok {
+		return fmt.Errorf(`failed to get key at index 0 (empty JWKS?)`)
+	}
+	_, err := kp.selectKey(sink, key, sig, msg)
+	return err
+}
+
+// fetchKeysByKid looks up keys by their key ID and adds matching ones to the sink.
+func (kp *keySetProvider) fetchKeysByKid(sink KeySink, sig *Signature, msg *Message, wantedKid string) error {
+	// <= v2.0.3 backwards compatible case: only match a single key
+	// whose key ID matches `wantedKid`
+	if !kp.multipleKeysPerKeyID {
+		key, ok := kp.set.LookupKeyID(wantedKid)
+		if !ok {
+			return fmt.Errorf(`failed to find key with key ID %q in key set`, wantedKid)
+		}
+		_, err := kp.selectKey(sink, key, sig, msg)
+		return err
+	}
+
+	// multipleKeysPerKeyID: attempt all keys whose key ID matches
+	found := false
+	for i := range kp.set.Len() {
+		key, _ := kp.set.Key(i)
+		if kid, ok := key.KeyID(); !ok || kid != wantedKid {
+			continue
+		}
+
+		added, err := kp.selectKey(sink, key, sig, msg)
+		if err != nil {
+			continue
+		}
+		if added {
+			found = true
+		}
+	}
+	if !found {
+		return fmt.Errorf(`failed to find key with key ID %q in key set`, wantedKid)
+	}
+	return nil
+}
+
+// fetchAllKeys iterates all keys in the set and adds suitable ones to the sink.
+func (kp *keySetProvider) fetchAllKeys(sink KeySink, sig *Signature, msg *Message) error {
 	for i := range kp.set.Len() {
 		key, ok := kp.set.Key(i)
 		if !ok {
 			return fmt.Errorf(`failed to get key at index %d`, i)
 		}
-		if err := kp.selectKey(sink, key, sig, msg); err != nil {
+		if _, err := kp.selectKey(sink, key, sig, msg); err != nil {
 			continue
 		}
 	}
