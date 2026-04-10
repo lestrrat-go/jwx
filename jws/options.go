@@ -38,7 +38,10 @@ type withKey struct {
 	public    Headers
 }
 
-// Protected exists as an escape hatch to modify the header values after the fact
+// Protected returns the protected headers. If w.protected is nil and v is
+// non-nil, v is stored as the protected headers before returning. This allows
+// callers to provide a default Headers that is used only when none was
+// explicitly configured via WithProtectedHeaders.
 func (w *withKey) Protected(v Headers) Headers {
 	if w.protected == nil && v != nil {
 		w.protected = v
@@ -221,7 +224,10 @@ type withInsecureNoSignature struct {
 	protected Headers
 }
 
-// Protected exists as an escape hatch to modify the header values after the fact
+// Protected returns the protected headers. If w.protected is nil and v is
+// non-nil, v is stored as the protected headers before returning. This allows
+// callers to provide a default Headers that is used only when none was
+// explicitly configured via WithProtectedHeaders.
 func (w *withInsecureNoSignature) Protected(v Headers) Headers {
 	if w.protected == nil && v != nil {
 		w.protected = v

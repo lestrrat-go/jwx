@@ -185,11 +185,7 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 			}
 
 			for _, pair := range sink.list {
-				// alg is converted here because pair.alg is of type jwa.KeyAlgorithm.
-				// this may seem ugly, but we're trying to avoid declaring separate
-				// structs for `alg jwa.KeyEncryptionAlgorithm` and `alg jwa.SignatureAlgorithm`
-				//nolint:forcetypeassert
-				alg := pair.alg.(jwa.SignatureAlgorithm)
+				alg := pair.alg
 				key := pair.key
 
 				if err := vc.tryKey(verifyBuf, alg, key, msg, sig); err != nil {
@@ -208,7 +204,7 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, key any, msg *Message, sig *Signature) error {
 	if vc.validateKey {
 		if err := validateKeyBeforeUse(key); err != nil {
-			return fmt.Errorf(`failed to validate key before signing: %w`, err)
+			return fmt.Errorf(`failed to validate key before verification: %w`, err)
 		}
 	}
 

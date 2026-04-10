@@ -757,10 +757,10 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 
 	algstr := alg.String()
 
-	// Split the serialized JWT into its components
+	// Split the serialized JWS into its components
 	hdr, payload, encodedSig, err := jwsbb.SplitCompact(compact)
 	if err != nil {
-		return nil, fmt.Errorf("jwt.verifyFast: failed to split compact: %w", err)
+		return nil, makeVerifyError("failed to split compact: %w", err)
 	}
 
 	// Validate the "crit" header per RFC 7515 Section 4.1.11
@@ -771,7 +771,7 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 
 	signature, err := base64.Decode(encodedSig)
 	if err != nil {
-		return nil, fmt.Errorf("jwt.verifyFast: failed to decode signature: %w", err)
+		return nil, makeVerifyError("failed to decode signature: %w", err)
 	}
 
 	// Instead of appending, copy the data from hdr/payload
@@ -786,21 +786,21 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// Verify the signature
 	if verifier2, err := VerifierFor(alg); err == nil {
 		if err := verifier2.Verify(key, verifyBuf, signature); err != nil {
-			return nil, verifyError{verificationError{fmt.Errorf("jwt.VerifyCompact: signature verification failed for %s: %w", algstr, err)}}
+			return nil, verifyError{verificationError{fmt.Errorf("signature verification failed for %s: %w", algstr, err)}}
 		}
 	} else {
 		legacyVerifier, err := NewVerifier(alg)
 		if err != nil {
-			return nil, makeVerifyError("jwt.VerifyCompact: failed to create verifier for %s: %w", algstr, err)
+			return nil, makeVerifyError("failed to create verifier for %s: %w", algstr, err)
 		}
 		if err := legacyVerifier.Verify(verifyBuf, signature, key); err != nil {
-			return nil, verifyError{verificationError{fmt.Errorf("jwt.VerifyCompact: signature verification failed for %s: %w", algstr, err)}}
+			return nil, verifyError{verificationError{fmt.Errorf("signature verification failed for %s: %w", algstr, err)}}
 		}
 	}
 
 	decoded, err := base64.Decode(payload)
 	if err != nil {
-		return nil, makeVerifyError("jwt.VerifyCompact: failed to decode payload: %w", err)
+		return nil, makeVerifyError("failed to decode payload: %w", err)
 	}
 	return decoded, nil
 }
