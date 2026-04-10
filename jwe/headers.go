@@ -54,6 +54,73 @@ func (h *stdHeaders) Merge(h2 Headers) (Headers, error) {
 	return h3, nil
 }
 
+// mergeIntoNoLock copies non-nil fields from h into dst without acquiring
+// any mutexes. Both h and dst must be exclusively owned by the caller.
+// Unlike cloneFrom, this only overwrites fields that are set in h,
+// leaving existing values in dst untouched.
+func (h *stdHeaders) mergeIntoNoLock(dst *stdHeaders) {
+	if h.agreementPartyUInfo != nil {
+		dst.agreementPartyUInfo = h.agreementPartyUInfo
+	}
+	if h.agreementPartyVInfo != nil {
+		dst.agreementPartyVInfo = h.agreementPartyVInfo
+	}
+	if h.algorithm != nil {
+		dst.algorithm = h.algorithm
+	}
+	if h.compression != nil {
+		dst.compression = h.compression
+	}
+	if h.contentEncryption != nil {
+		dst.contentEncryption = h.contentEncryption
+	}
+	if h.contentType != nil {
+		dst.contentType = h.contentType
+	}
+	if h.critical != nil {
+		dst.critical = h.critical
+	}
+	if h.encapsulatedKey != nil {
+		dst.encapsulatedKey = h.encapsulatedKey
+	}
+	if h.ephemeralPublicKey != nil {
+		dst.ephemeralPublicKey = h.ephemeralPublicKey
+	}
+	if h.jwk != nil {
+		dst.jwk = h.jwk
+	}
+	if h.jwkSetURL != nil {
+		dst.jwkSetURL = h.jwkSetURL
+	}
+	if h.keyID != nil {
+		dst.keyID = h.keyID
+	}
+	if h.pskID != nil {
+		dst.pskID = h.pskID
+	}
+	if h.typ != nil {
+		dst.typ = h.typ
+	}
+	if h.x509CertChain != nil {
+		dst.x509CertChain = h.x509CertChain
+	}
+	if h.x509CertThumbprint != nil {
+		dst.x509CertThumbprint = h.x509CertThumbprint
+	}
+	if h.x509CertThumbprintS256 != nil {
+		dst.x509CertThumbprintS256 = h.x509CertThumbprintS256
+	}
+	if h.x509URL != nil {
+		dst.x509URL = h.x509URL
+	}
+	for k, v := range h.privateParams {
+		if dst.privateParams == nil {
+			dst.privateParams = make(map[string]any)
+		}
+		dst.privateParams[k] = v
+	}
+}
+
 func (h *stdHeaders) Encode() ([]byte, error) {
 	buf, err := json.Marshal(h)
 	if err != nil {

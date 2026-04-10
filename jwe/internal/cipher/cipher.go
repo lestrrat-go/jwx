@@ -95,16 +95,17 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertxt, ta
 		return nil, nil, nil, fmt.Errorf(`failed to fetch AEAD: %w`, err)
 	}
 
-	// Seal may panic (argh!), so protect ourselves from that
+	// CBC+HMAC's Seal may panic (buffer size limits, auth tag errors),
+	// so we must recover. GCM's Seal from the stdlib does not panic
+	// with valid inputs, but we protect uniformly for safety.
 	defer func() {
 		if e := recover(); e != nil {
-			switch e := e.(type) {
+			switch v := e.(type) {
 			case error:
-				err = e
+				err = fmt.Errorf(`failed to encrypt: %w`, v)
 			default:
-				err = fmt.Errorf("%s", e)
+				err = fmt.Errorf("failed to encrypt: %s", v)
 			}
-			err = fmt.Errorf(`failed to encrypt: %w`, err)
 		}
 	}()
 
@@ -124,10 +125,6 @@ func (c AesContentCipher) Encrypt(cek, plaintext, aad []byte) (iv, ciphertxt, ta
 	combined := aead.Seal(nil, iv, plaintext, aad)
 	tagoffset := len(combined) - c.TagSize()
 
-	if tagoffset < 0 {
-		panic(fmt.Sprintf("tag offset is less than 0 (combined len = %d, tagsize = %d)", len(combined), c.TagSize()))
-	}
-
 	ciphertxt = combined[:tagoffset:tagoffset]
 	tag = combined[tagoffset:]
 
@@ -140,17 +137,15 @@ func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintex
 		return nil, fmt.Errorf(`failed to fetch AEAD data: %w`, err)
 	}
 
-	// Open may panic (argh!), so protect ourselves from that
+	// CBC+HMAC's Open may panic (buffer size limits), so we must recover.
 	defer func() {
 		if e := recover(); e != nil {
-			switch e := e.(type) {
+			switch v := e.(type) {
 			case error:
-				err = e
+				err = fmt.Errorf(`failed to decrypt: %w`, v)
 			default:
-				err = fmt.Errorf(`%s`, e)
+				err = fmt.Errorf("failed to decrypt: %s", v)
 			}
-			err = fmt.Errorf(`failed to decrypt: %w`, err)
-			return
 		}
 	}()
 
@@ -158,11 +153,9 @@ func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintex
 	copy(combined, ciphertxt)
 	copy(combined[len(ciphertxt):], tag)
 
-	buf, aeaderr := aead.Open(nil, iv, combined, aad)
-	if aeaderr != nil {
-		err = fmt.Errorf(`aead.Open failed: %w`, aeaderr)
-		return
+	plaintext, err = aead.Open(nil, iv, combined, aad)
+	if err != nil {
+		return nil, fmt.Errorf(`aead.Open failed: %w`, err)
 	}
-	plaintext = buf
-	return
+	return plaintext, nil
 }
