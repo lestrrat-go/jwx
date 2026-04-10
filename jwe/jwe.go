@@ -97,7 +97,7 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 
 		hdr := b.headers
 		if hdr == nil {
-			hdr = NewHeaders()
+			hdr = r.Headers()
 		}
 
 		_ = r.SetHeaders(hdr)
@@ -461,15 +461,23 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 		return nil, fmt.Errorf(`jwe.Decrypt: failed to find "alg" header in either protected or per-recipient headers`)
 	}
 
-	// Merge protected and per-recipient headers for algorithm-specific param extraction
-	h2, err := protectedHeaders.Clone()
-	if err != nil {
-		return nil, fmt.Errorf(`jwe.Decrypt: failed to copy headers (1): %w`, err)
-	}
-
-	h2, err = h2.Merge(recipient.Headers())
-	if err != nil {
-		return nil, fmt.Errorf(`jwe.Decrypt: failed to merge headers: %w`, err)
+	// Merge protected and per-recipient headers for algorithm-specific param extraction.
+	// When recipient headers are empty (common in compact format), skip the
+	// expensive Clone+Merge and use protected headers directly.
+	var h2 Headers
+	recipientHdrs := recipient.Headers()
+	if iz, ok := recipientHdrs.(isZeroer); ok && iz.isZero() {
+		h2 = protectedHeaders
+	} else {
+		var err error
+		h2, err = protectedHeaders.Clone()
+		if err != nil {
+			return nil, fmt.Errorf(`jwe.Decrypt: failed to copy headers (1): %w`, err)
+		}
+		h2, err = h2.Merge(recipientHdrs)
+		if err != nil {
+			return nil, fmt.Errorf(`jwe.Decrypt: failed to merge headers: %w`, err)
+		}
 	}
 
 	// Create content cipher (needed by RSA-1.5 for key size, and for content decryption)
@@ -745,13 +753,10 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		}
 
 		// when we're using compact format, we can safely merge per-recipient
-		// headers into the protected header, if any
-		h, err := protected.Merge(recipients[0].Headers())
-		if err != nil {
+		// headers into the protected header in-place (we own it from pool)
+		if err := recipients[0].Headers().Copy(protected); err != nil {
 			return nil, fmt.Errorf(`failed to merge protected headers for compact serialization: %w`, err)
 		}
-		protected = h
-		// per-recipient headers, if any, will be ignored in compact format
 	} else {
 		// If it got here, it's JSON (could be pretty mode, too).
 		if lbuilders == 1 {
