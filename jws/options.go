@@ -45,6 +45,9 @@ type withKey struct {
 func (w *withKey) Protected(v Headers) Headers {
 	if w.protected == nil && v != nil {
 		w.protected = v
+		// Invalidate the precomputed header JSON because the caller
+		// will likely modify the headers (e.g., jwt sets "typ").
+		w.cachedHdrJSON = nil
 	}
 	return w.protected
 }
