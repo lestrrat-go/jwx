@@ -105,7 +105,8 @@ func getDsigAlgorithm(jwsAlg string) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	return v.(string), true
+	//nolint:forcetypeassert
+	return v.(string), true // always stored as string
 }
 
 // validateEdDSACurve enforces that fully-specified EdDSA algorithms (RFC 9864)

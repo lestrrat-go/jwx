@@ -46,7 +46,8 @@ func init() {
 // Otherwise, a default signer that delegates to jwsbb.Sign is returned.
 func SignerFor(alg jwa.SignatureAlgorithm) (Signer, error) {
 	if v, ok := signerDB.Load(alg); ok {
-		return v.(Signer), nil
+		//nolint:forcetypeassert
+		return v.(Signer), nil // always stored as Signer
 	}
 
 	return defaultSigner{alg: alg}, nil

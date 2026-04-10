@@ -41,7 +41,8 @@ var verifierDB sync.Map // map[jwa.SignatureAlgorithm]Verifier
 // Otherwise, a default verifier that delegates to jwsbb.Verify is returned.
 func VerifierFor(alg jwa.SignatureAlgorithm) (Verifier, error) {
 	if v, ok := verifierDB.Load(alg); ok {
-		return v.(Verifier), nil
+		//nolint:forcetypeassert
+		return v.(Verifier), nil // always stored as Verifier
 	}
 
 	return defaultVerifier{alg: alg}, nil

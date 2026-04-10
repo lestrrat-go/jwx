@@ -28,7 +28,7 @@ func tryFastPath(ctx *fastParseCtx, data []byte, options []ParseOption) bool {
 	}
 
 	// First option must be WithKey
-	var keyIdx int = -1
+	keyIdx := -1
 	var skipValidate bool
 	for i, opt := range options {
 		switch opt.Ident() {
@@ -37,8 +37,6 @@ func tryFastPath(ctx *fastParseCtx, data []byte, options []ParseOption) bool {
 		case identValidate{}:
 			if !option.MustGet[bool](opt) {
 				skipValidate = true
-			} else {
-				// WithValidate(true) is the default, just ignore
 			}
 		default:
 			return false
