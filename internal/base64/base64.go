@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
-	"sync"
+	"sync/atomic"
 )
 
 type Decoder interface {
@@ -19,21 +19,20 @@ type Encoder interface {
 	AppendEncode([]byte, []byte) []byte
 }
 
-var muEncoder sync.RWMutex
-var encoder Encoder = base64.RawURLEncoding
-var muDecoder sync.RWMutex
-var decoder Decoder = defaultDecoder{}
+var atomicEncoder atomic.Value
+var atomicDecoder atomic.Value
+
+func init() {
+	atomicEncoder.Store(Encoder(base64.RawURLEncoding))
+	atomicDecoder.Store(Decoder(defaultDecoder{}))
+}
 
 func SetEncoder(enc Encoder) {
-	muEncoder.Lock()
-	defer muEncoder.Unlock()
-	encoder = enc
+	atomicEncoder.Store(enc)
 }
 
 func getEncoder() Encoder {
-	muEncoder.RLock()
-	defer muEncoder.RUnlock()
-	return encoder
+	return atomicEncoder.Load().(Encoder)
 }
 
 func DefaultEncoder() Encoder {
@@ -41,15 +40,11 @@ func DefaultEncoder() Encoder {
 }
 
 func SetDecoder(dec Decoder) {
-	muDecoder.Lock()
-	defer muDecoder.Unlock()
-	decoder = dec
+	atomicDecoder.Store(dec)
 }
 
 func getDecoder() Decoder {
-	muDecoder.RLock()
-	defer muDecoder.RUnlock()
-	return decoder
+	return atomicDecoder.Load().(Decoder)
 }
 
 func Encode(src []byte) []byte {
