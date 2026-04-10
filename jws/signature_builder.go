@@ -78,7 +78,7 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*buildResult
 
 	// When there are no public (unprotected) headers, skip the merge
 	// to avoid allocating a third Headers object just to copy into.
-	hdrs := Headers(protected)
+	hdrs := protected
 	if sb.public != nil {
 		var err error
 		hdrs, err = mergeHeaders(sb.public, protected)

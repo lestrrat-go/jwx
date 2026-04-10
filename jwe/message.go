@@ -542,4 +542,3 @@ func Compact(m *Message, _ ...CompactOption) ([]byte, error) {
 	result := bytes.Clone(buf.Bytes())
 	return result, nil
 }
-
