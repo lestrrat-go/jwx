@@ -114,12 +114,12 @@ func (sc *signContext) PopulateMessage(m *Message) error {
 			}
 		}
 
-		sig, err := sb.Build(sc, m.payload)
+		br, err := sb.Build(sc, m.payload)
 		if err != nil {
 			return fmt.Errorf(`failed to build signature %d: %w`, i, err)
 		}
 
-		m.signatures = append(m.signatures, sig)
+		m.signatures = append(m.signatures, &br.sig)
 	}
 
 	return nil

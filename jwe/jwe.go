@@ -154,14 +154,26 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 
 	_ = r.SetHeaders(hdr)
 
-	// Populate headers with stuff that we automatically set
-	if err := hdr.Set(AlgorithmKey, b.alg); err != nil {
-		return nil, fmt.Errorf(`failed to set header: %w`, err)
-	}
-
-	if keyID != "" {
-		if err := hdr.Set(KeyIDKey, keyID); err != nil {
+	// Populate headers with stuff that we automatically set.
+	// Use setNoLock when possible since the header is either freshly
+	// created or owned exclusively by this builder.
+	if sh, ok := hdr.(*stdHeaders); ok {
+		if err := sh.setNoLock(AlgorithmKey, b.alg); err != nil {
 			return nil, fmt.Errorf(`failed to set header: %w`, err)
+		}
+		if keyID != "" {
+			if err := sh.setNoLock(KeyIDKey, keyID); err != nil {
+				return nil, fmt.Errorf(`failed to set header: %w`, err)
+			}
+		}
+	} else {
+		if err := hdr.Set(AlgorithmKey, b.alg); err != nil {
+			return nil, fmt.Errorf(`failed to set header: %w`, err)
+		}
+		if keyID != "" {
+			if err := hdr.Set(KeyIDKey, keyID); err != nil {
+				return nil, fmt.Errorf(`failed to set header: %w`, err)
+			}
 		}
 	}
 
@@ -675,12 +687,18 @@ func freeRecipientSlice(rs []Recipient) []Recipient {
 }
 
 func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, error) {
-	// Get protected headers from pool and copy contents from context
-	protected := headerPool.Get()
+	// Get protected headers from pool and copy contents from context.
+	// We use the concrete *stdHeaders type to enable lock-free field
+	// access since pool-obtained headers are not shared.
+	protected, _ := headerPool.Get().(*stdHeaders)
 	if userSupplied := ec.protected; userSupplied != nil {
 		ec.protected = nil // Clear from context
-		if err := userSupplied.Copy(protected); err != nil {
-			return nil, fmt.Errorf(`failed to copy protected headers: %w`, err)
+		if src, ok := userSupplied.(*stdHeaders); ok {
+			src.copyNoLock(protected)
+		} else {
+			if err := userSupplied.Copy(protected); err != nil {
+				return nil, fmt.Errorf(`failed to copy protected headers: %w`, err)
+			}
 		}
 	}
 
@@ -728,7 +746,7 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		}
 	}
 
-	if err := protected.Set(ContentEncryptionKey, ec.calg); err != nil {
+	if err := protected.setNoLock(ContentEncryptionKey, ec.calg); err != nil {
 		return nil, fmt.Errorf(`failed to set "enc" in protected header: %w`, err)
 	}
 
@@ -737,7 +755,7 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		if err != nil {
 			return nil, fmt.Errorf(`failed to compress payload before encryption: %w`, err)
 		}
-		if err := protected.Set(CompressionKey, ec.compression); err != nil {
+		if err := protected.setNoLock(CompressionKey, ec.compression); err != nil {
 			return nil, fmt.Errorf(`failed to set "zip" in protected header: %w`, err)
 		}
 	}
@@ -764,11 +782,11 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 			// In this mode, we should merge per-recipient headers into the protected header,
 			// but we also need to make sure that the "header" field is reset so that
 			// it does not contain the same fields as the protected header.
-			h, err := protected.Merge(recipients[0].Headers())
+			merged, err := protected.Merge(recipients[0].Headers())
 			if err != nil {
 				return nil, fmt.Errorf(`failed to merge protected headers for flattenend JSON format: %w`, err)
 			}
-			protected = h
+			protected, _ = merged.(*stdHeaders)
 
 			if err := recipients[0].SetHeaders(NewHeaders()); err != nil {
 				return nil, fmt.Errorf(`failed to clear per-recipient headers after merging: %w`, err)
@@ -784,6 +802,14 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 	iv, ciphertext, tag, err := contentcrypt.Encrypt(cek, payload, aad)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to encrypt payload: %w`, err)
+	}
+
+	// For compact format, bypass Message construction entirely.
+	// The protected header is already fully merged (per-recipient headers
+	// were copied into protected above), so we can build the compact
+	// serialization directly from the raw parts.
+	if ec.format == fmtCompact {
+		return jwebb.JoinCompact(base64.DefaultEncoder(), aad, recipients[0].EncryptedKey(), iv, ciphertext, tag), nil
 	}
 
 	msg := msgPool.Get()
@@ -806,8 +832,6 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 	}
 
 	switch ec.format {
-	case fmtCompact:
-		return Compact(msg)
 	case fmtJSON:
 		return json.Marshal(msg)
 	case fmtJSONPretty:

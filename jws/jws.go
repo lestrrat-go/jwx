@@ -156,8 +156,39 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		return nil, makeSignError(`cannot have multiple signers (keys) specified for compact serialization. Use only one jws.WithKey()`)
 	}
 
-	// Create a Message object with all the bits and bobs, and we'll
-	// serialize it in the end
+	// For compact single-signature (the overwhelmingly common case),
+	// bypass Message construction and Compact() entirely.
+	// Build() already has the raw header bytes and signature, so we
+	// can use jwsbb.JoinCompact directly.
+	if sc.format == fmtCompact {
+		sb := sc.sigbuilders[0]
+		if sc.validateKey {
+			if err := validateKeyBeforeUse(sb.key); err != nil {
+				return nil, makeSignError(`failed to validate key for signature: %w`, err)
+			}
+		}
+
+		// Build() needs the actual payload to sign (which may differ from
+		// the Sign() parameter when detached payloads are used).
+		br, err := sb.Build(sc, sc.payload)
+		if err != nil {
+			return nil, makeSignError(`failed to build signature: %w`, err)
+		}
+
+		// For the compact output, include payload only when not detached.
+		outputPayload := sc.payload
+		if sc.detached {
+			outputPayload = nil
+		}
+
+		result, err := jwsbb.JoinCompact(nil, br.hdrbuf, outputPayload, br.sig.signature, sc.encoder, getB64Value(br.sig.protected))
+		if err != nil {
+			return nil, makeSignError(`failed to serialize compact: %w`, err)
+		}
+		return result, nil
+	}
+
+	// JSON serialization path - needs full Message construction
 	var result Message
 
 	if err := sc.PopulateMessage(&result); err != nil {
@@ -168,19 +199,6 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		return json.Marshal(result)
 	case fmtJSONPretty:
 		return json.MarshalIndent(result, "", "  ")
-	case fmtCompact:
-		// Take the only signature object, and convert it into a Compact
-		// serialization format
-		var compactOpts []CompactOption
-		if sc.detached {
-			compactOpts = append(compactOpts, WithDetached(true))
-		}
-		for _, option := range options {
-			if copt, ok := option.(CompactOption); ok {
-				compactOpts = append(compactOpts, copt)
-			}
-		}
-		return Compact(&result, compactOpts...)
 	default:
 		return nil, makeSignError(`invalid serialization format`)
 	}
