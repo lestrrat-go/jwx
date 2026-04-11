@@ -33,15 +33,15 @@ If instructions are ambiguous, ask the user before proceeding.
 
 For each module in the (filtered) list:
 
-1. If `$PROJECT/.companions/<name>/` does not exist:
+1. If `$PROJECT/.companions/repo/<name>/` does not exist:
    ```
    cd $PROJECT
-   git clone <repo> .companions/<name>
+   git clone <repo> .companions/repo/<name>
    ```
 
 2. If it already exists, update it:
    ```
-   cd $PROJECT/.companions/<name>
+   cd $PROJECT/.companions/repo/<name>
    git fetch origin
    ```
 
@@ -49,7 +49,7 @@ For each module in the (filtered) list:
    - If `branch` is set in the config, use that.
    - Otherwise, read `origin/HEAD`:
      ```
-     cd $PROJECT/.companions/<name>
+     cd $PROJECT/.companions/repo/<name>
      git symbolic-ref refs/remotes/origin/HEAD
      ```
      This returns e.g. `refs/remotes/origin/develop/v4` — strip the prefix.
@@ -60,11 +60,11 @@ For each module in the (filtered) list:
 
 4. Checkout the default branch:
    ```
-   cd $PROJECT/.companions/<name>
+   cd $PROJECT/.companions/repo/<name>
    git checkout <default-branch>
    ```
    ```
-   cd $PROJECT/.companions/<name>
+   cd $PROJECT/.companions/repo/<name>
    git pull --ff-only
    ```
 
@@ -101,18 +101,18 @@ When unsure, ask the user: "Same mechanical change per module, or independent wo
 1. Pick first module from list (or `--ref-module` if specified).
 2. Create a feature branch from the module's default branch:
    ```
-   cd $PROJECT/.companions/<name>
+   cd $PROJECT/.companions/repo/<name>
    git checkout -b <branch-name> <default-branch>
    ```
    Use ordinary branch naming: `<category>-<short-description>` (e.g. `chore-bump-jwx-dep`).
 3. Apply instructions to this module.
 4. Verify (if module has `go.mod`):
    ```
-   cd $PROJECT/.companions/<name>
+   cd $PROJECT/.companions/repo/<name>
    go build ./...
    ```
    ```
-   cd $PROJECT/.companions/<name>
+   cd $PROJECT/.companions/repo/<name>
    golangci-lint run ./...
    ```
 5. Record exactly what changed: files modified/added/deleted, nature of change.
@@ -128,7 +128,7 @@ When unsure, ask the user: "Same mechanical change per module, or independent wo
 
 1. Spawn one Agent per module, all in a single parallel block.
 2. Each agent receives:
-   - Module path: `$PROJECT/.companions/<name>`
+   - Module path: `$PROJECT/.companions/repo/<name>`
    - Default branch name
    - The instructions
    - Directions to: create a feature branch, do the work, verify, commit.
@@ -141,7 +141,7 @@ For each module where changes were made and verification passed:
 
 1. Stage relevant files:
    ```
-   cd $PROJECT/.companions/<name>
+   cd $PROJECT/.companions/repo/<name>
    git add <files>
    ```
 2. Commit following standard commit message rules.
@@ -152,12 +152,12 @@ For each module where changes were committed:
 
 1. Push the feature branch:
    ```
-   cd $PROJECT/.companions/<name>
+   cd $PROJECT/.companions/repo/<name>
    git push -u origin <branch-name>
    ```
 2. Create PR:
    ```
-   cd $PROJECT/.companions/<name>
+   cd $PROJECT/.companions/repo/<name>
    gh pr create --title "<title>" --body "<body>"
    ```
    Target the module's default branch.
@@ -218,7 +218,7 @@ When replicating changes across modules, adapt these patterns:
 - ALWAYS run pre-flight on ALL modules before modifying ANY.
 - ALWAYS verify `go build ./...` and `golangci-lint run ./...` before committing (for modules with go.mod).
 - ALWAYS report per-module results even on partial failure.
-- ALWAYS `cd` into `$PROJECT/.companions/<name>` before running ANY command (git, go, golangci-lint, etc.) for that module. Using `--git-dir`/`--work-tree` does NOT work — the parent jwx repo's git context leaks through.
+- ALWAYS `cd` into `$PROJECT/.companions/repo/<name>` before running ANY command (git, go, golangci-lint, etc.) for that module. Using `--git-dir`/`--work-tree` does NOT work — the parent jwx repo's git context leaks through.
 - NEVER use `git -C`.
 - NEVER use compound commands (`&&`, `||`, `;`) in Bash calls.
 - PRs are OFF by default. Only push/create PRs when `--pr` is specified.

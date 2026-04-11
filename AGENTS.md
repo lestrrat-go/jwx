@@ -244,6 +244,7 @@ Read linked doc BEFORE working in that area. No exceptions.
 | Working with errors, error handling patterns | `.claude/docs/error-formatting.md` |
 | Code generation, options pattern, extension points, JSON/base64 backends | `.claude/docs/internals.md` |
 | Extension modules (ES256K, Ed448, ML-DSA, X448, asmbase64, jwkcache) | `docs/10-extensions.md` |
+| Companion modules, CI templates, `/jwx-companion-bulk` | `.claude/docs/companions.md` |
 
 ## Cache Maintenance
 
@@ -259,3 +260,4 @@ These docs cache repository state. Still read source before modifying code.
 | `.claude/docs/dependencies.md` | New internal imports between packages, new external dependencies |
 | `.claude/docs/error-formatting.md` | New sentinel errors, changes to error wrapping patterns |
 | `.claude/docs/internals.md` | Changes to generators, options YAML schema, registration points, multi-module layout |
+| `.claude/docs/companions.md` | Changes to companion module tooling, templates, `companions.yaml`, or `.companions/` layout |

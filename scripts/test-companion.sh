@@ -38,7 +38,7 @@ else
 	filter="$1"
 fi
 
-WORKDIR="$JWX_ROOT/.companions"
+WORKDIR="$JWX_ROOT/.companions/repo"
 mkdir -p "$WORKDIR"
 
 failures=0
