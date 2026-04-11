@@ -59,30 +59,57 @@ full documentation.
 Templates in `.companions/templates/` use `{{placeholder}}` syntax for per-module
 values. All placeholder values come from `companions.yaml`.
 
-### Available Placeholders
+### Placeholders
 
 | Placeholder | Source | Example |
 |-------------|--------|---------|
 | `{{name}}` | `modules[].name` | `ed448` |
 | `{{branch}}` | `modules[].branch` | `develop/v4` |
 
-### Rendering
+### Template Manifest (`.companions/templates.yaml`)
 
-`scripts/companion-render-template.py` renders a template for a single module:
+Maps template filenames to destination paths and declares scope:
 
-```bash
-python3 scripts/companion-render-template.py .companions/templates/dependabot.yml ed448
+```yaml
+templates:
+  lint.yml:
+    dest: .github/workflows/lint.yml
+    skip: [benchmarks]          # all modules except listed
+  bench-ci.yml:
+    dest: .github/workflows/ci.yml
+    only: [benchmarks]          # only listed modules
+  dependabot.yml:
+    dest: .github/dependabot.yml  # no skip/only = all modules
 ```
 
-Reads `companions.yaml`, substitutes placeholders, writes to stdout.
+Scope rules:
+- `skip: [list]` — applies to all modules except listed
+- `only: [list]` — applies only to listed modules
+- Neither — applies to all modules
+- `skip` and `only` are mutually exclusive
+
+### Rendering (`scripts/companion-render-template.py`)
+
+```bash
+# Render template for a module (checks scope, substitutes placeholders)
+python3 scripts/companion-render-template.py .companions/templates/lint.yml ed448
+
+# Get destination path for a template
+python3 scripts/companion-render-template.py --dest .companions/templates/lint.yml ed448
+```
+
+- Reads `companions.yaml` + `.companions/templates.yaml`
+- If template is out of scope for the module, exits 0 with no stdout (prints
+  `SKIP: ...` to stderr)
+- `--dest` prints the destination path instead of rendering
 
 ### Workflow
 
 To standardize a file across companion modules:
 
 1. Edit the template in `.companions/templates/`.
-2. Use `/jwx-companion-bulk` to render and sync across modules.
-3. The bulk skill calls the render script per module, then commits the output.
+2. Register it in `.companions/templates.yaml` with `dest` and optional scope.
+3. Use `/jwx-companion-bulk` to render and sync across modules.
 
 ## companions.yaml Schema
 
