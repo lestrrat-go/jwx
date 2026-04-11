@@ -23,21 +23,14 @@ If you are using v0, v1, or v2, you are strongly encouraged to migrate to v4.
 
 # Features
 
-* Complete coverage of JWA/JWE/JWK/JWS/JWT, not just JWT+minimum tool set.
-  * Supports JWS messages with multiple signatures, both compact and JSON serialization
-  * Supports JWS with detached payload
-  * Supports JWS with unencoded payload (RFC 7797)
-  * Supports JWE messages with multiple recipients, both compact and JSON serialization
-  * Most operations work with either JWK or raw keys (e.g. `*rsa.PrivateKey`, `*ecdsa.PrivateKey`, etc).
-* Opinionated, but very uniform API. Everything is symmetric and follows a standard convention
-  * `jws.Parse` / `Verify` / `Sign`
-  * `jwe.Parse` / `Encrypt` / `Decrypt`
-  * Arguments are organized as explicit required parameters and optional `WithXXXX()` style options.
-* Post-quantum cryptography support (ML-KEM, ML-DSA, HPKE)
-* Extension module architecture for opt-in features. See [Extension Modules](docs/10-extensions.md).
-* Extra utilities
-  * [`jwkcache`](https://github.com/jwx-go/jwkcache) extension to always keep a JWKS up-to-date
-  * [bazel](https://bazel.build)-ready
+| Feature | Description |
+|---------|-------------|
+| **Complete JWA/JWE/JWK/JWS/JWT coverage** | Not just JWT + minimum tool set. Supports JWS messages with multiple signatures (compact and JSON serialization), JWS with detached payload, JWS with unencoded payload (RFC 7797), JWE messages with multiple recipients (compact and JSON serialization). Most operations work with either JWK or raw keys (e.g. `*rsa.PrivateKey`, `*ecdsa.PrivateKey`). |
+| **Opinionated, uniform API** | Everything is symmetric and follows a standard convention: `jws.Parse`/`Verify`/`Sign`, `jwe.Parse`/`Encrypt`/`Decrypt`. Arguments are organized as explicit required parameters and optional `WithXXXX()` style options. |
+| **Post-quantum cryptography** | Supports ML-KEM, ML-DSA, and HPKE. |
+| **Extension module architecture** | Opt-in features via extension modules. See [Extension Modules](docs/10-extensions.md). |
+| **JWK Caching** | [`jwkcache`](https://github.com/jwx-go/jwkcache) extension to always keep a JWKS up-to-date. |
+| **Bazel Support** | [Bazel](https://bazel.build)-ready. |
 
 # SYNOPSIS
 
