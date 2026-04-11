@@ -11,7 +11,7 @@ modules:
     runtests: false
   - name: ed448
     repo: git@github.com:jwx-go/ed448.git
-    branch: v4
+    branch: develop/v4
   - name: es256k
     repo: git@github.com:jwx-go/es256k.git
     branch: develop/v4
