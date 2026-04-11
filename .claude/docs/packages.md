@@ -9,8 +9,9 @@ Module: `github.com/lestrrat-go/jwx/v4` — flat layout, no physical `v3/` direc
 Format detection and global JSON decoder settings.
 
 - **GuessFormat(payload []byte) FormatKind** — heuristic detection of JWE/JWS/JWK/JWKS/JWT
-- **DecoderSettings(options ...JSONOption)** — configure global JSON decoder
-- Key types: `FormatKind` (InvalidFormat, UnknownFormat, JWE, JWS, JWK, JWKS, JWT)
+- **Settings(options ...GlobalOption)** — configure global settings (e.g., `WithUseNumber`)
+- **WithUseNumber(v bool) GlobalOption** — decode JSON numbers as `json.Number` instead of `float64`
+- Key types: `FormatKind` (InvalidFormat, UnknownFormat, JWE, JWS, JWK, JWKS, JWT), `GlobalOption`
 - Files: `jwx.go`, `format.go`, `options.go`
 
 ## jwa/

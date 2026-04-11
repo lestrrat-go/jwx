@@ -12,7 +12,7 @@ v3 maintained a build-tag abstraction (`internal/json/`) to switch between `enco
 - Single `json.go` imports `encoding/json/v2` and `encoding/json/jsontext`.
 - Type aliases: `Decoder = jsontext.Decoder`, `Encoder = jsontext.Encoder`, `RawMessage = jsontext.Value`.
 - Removed: `Delim`, `Number`, `Marshaler`, `Unmarshaler` type aliases.
-- Removed: `DecoderSettings()`, `UseNumber()`, global `useNumber` atomic.
+- Replaced: `DecoderSettings()` → `SetUseNumber()`/`GetUseNumber()` (global atomic bool).
 - Added: `MarshalEncode()`, `UnmarshalDecode()` wrappers.
 - Helper functions (`AssignNextBytesToken`, `ReadNextStringToken`, etc.) adapted to use `jsontext.Decoder` API (`ReadToken()`, `PeekKind()`) instead of `json.Decoder` API (`Token()`, `Decode()`).
 
@@ -37,9 +37,9 @@ MarshalJSON templates changed:
 
 | Removed | Replacement |
 |---------|-------------|
-| `jwx.DecoderSettings()` | None needed; json/v2 preserves numeric precision natively |
-| `jwx.WithUseNumber()` | None needed |
-| `json.Number` type | `float64` (default) or `string` via json/v2 options |
+| `jwx.DecoderSettings()` | `jwx.Settings()` |
+| `jwx.WithUseNumber()` | `jwx.WithUseNumber()` (same name, works with `jwx.Settings`) |
+| `json.Number` type | `encoding/json.Number` (available when `jwx.WithUseNumber(true)` is set) |
 | `json.Delim` type | `jsontext.Kind` constants (`'{'`, `'}'`, etc.) |
 | `jwx_goccy` build tag | Removed entirely |
 
@@ -55,7 +55,8 @@ v4 will ship when json/v2 graduates to default in a future Go release.
 // v3
 jwx.DecoderSettings(jwx.WithUseNumber(true))
 
-// v4 — remove entirely, json/v2 handles numeric precision natively
+// v4
+jwx.Settings(jwx.WithUseNumber(true))
 ```
 
 ```go
@@ -63,9 +64,9 @@ jwx.DecoderSettings(jwx.WithUseNumber(true))
 var n json.Number
 token.Get("custom-num", &n)
 
-// v4
-var f float64
-token.Get("custom-num", &f)
-// or use the new generic accessor:
+// v4 (with UseNumber enabled)
+n, err := jwt.Get[json.Number](token, "custom-num")
+
+// v4 (without UseNumber — default)
 f, err := jwt.Get[float64](token, "custom-num")
 ```

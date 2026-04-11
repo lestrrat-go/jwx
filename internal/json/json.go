@@ -6,9 +6,23 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 )
+
+var globalUseNumber atomic.Bool
+
+// SetUseNumber controls whether JSON numbers in private/custom fields
+// should be decoded as json.Number instead of float64.
+func SetUseNumber(v bool) {
+	globalUseNumber.Store(v)
+}
+
+// GetUseNumber returns the current UseNumber setting.
+func GetUseNumber() bool {
+	return globalUseNumber.Load()
+}
 
 type (
 	Decoder    = jsontext.Decoder
