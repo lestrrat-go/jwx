@@ -30,6 +30,7 @@ jobs:
             ~/go/pkg/mod
             ~/.cache/go-build
             ~/.cache/bazel
+            ~/.cache/bazelisk
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
