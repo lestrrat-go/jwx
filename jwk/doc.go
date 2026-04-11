@@ -57,7 +57,7 @@
 // KeyParser, KeyImporter, and KeyExporter instances.
 //
 //	func init() {
-//	  jwk.RegiserProbeField(reflect.StructField{Name: "SomeHint", Type: reflect.TypeOf(""), Tag: `json:"some_hint"`})
+//	  jwk.RegisterProbeField[string]("SomeHint", "some_hint")
 //	  jwk.RegisterKeyParser(&MyKeyParser{})
 //	  jwk.RegisterKeyImporter(&MyKeyImporter{})
 //	  jwk.RegisterKeyExporter(&MyKeyExporter{})
@@ -113,25 +113,19 @@
 // in your JWK to further specify what kind of key it is. In that case, you
 // would need to probe more.
 //
-// Normally you can only change how an object is unmarshaled by specifying
-// JSON tags when defining a struct, but we use `reflect` package capabilities
-// to create an object dynamically, which is shared among all parsing operations.
+// To add a new field to be probed, call `RegisterProbeField` with the
+// Go name for the field, and the JSON key to extract. For example, the
+// code below would register a field named "MyHint" of type string,
+// extracted from the "my_hint" JSON key:
 //
-// To add a new field to be probed, you need to register a new `reflect.StructField`
-// object that has all of the information. For example, the code below would
-// register a field named "MyHint" that is of type string, and has a JSON tag
-// of "my_hint".
+//	jwk.RegisterProbeField[string]("MyHint", "my_hint")
 //
-//	jwk.RegisterProbeField(reflect.StructField{Name: "MyHint", Type: reflect.TypeOf(""), Tag: `json:"my_hint"`})
-//
-// The value of this field can be retrieved by calling `Get()` method on the
+// The value of this field can be retrieved by calling `Field()` method on the
 // KeyProbe object (from the `KeyParser`'s `ParseKey()` method discussed later)
 //
-//	var myhint string
-//	_ = probe.Get("MyHint", &myhint)
+//	myhint, ok := probe.Field("MyHint")
 //
-//	var kty string
-//	_ = probe.Get("Kty", &kty)
+//	kty, ok := probe.Field("Kty")
 //
 // This mechanism allows you to be flexible when trying to determine the key type
 // to instantiate.
@@ -153,8 +147,8 @@
 // as a hint to determine what kind of key to instantiate. An example
 // pseudocode may look like this:
 //
-//	var kty string
-//	_ = probe.Get("Kty", &kty)
+//	ktyV, ok := probe.Field("Kty")
+//	kty := ktyV.(string)
 //	switch kty {
 //	case "RSA":
 //	  // create an RSA key
@@ -171,20 +165,21 @@
 // Putting it all together, the boiler plate for registering a new parser may look like this:
 //
 //	   func init() {
-//	     jwk.RegisterFieldProbe(reflect.StructField{Name: "MyHint", Type: reflect.TypeOf(""), Tag: `json:"my_hint"`})
+//	     jwk.RegisterProbeField[string]("MyHint", "my_hint")
 //	     jwk.RegisterParser(&MyKeyParser{})
 //	   }
 //
 //	   type MyKeyParser struct { ... }
-//	   func(*MyKeyParser) ParseKey(rawProbe *KeyProbe, unmarshaler KeyUnmarshaler, data []byte) (jwk.Key, error) {
+//	   func(*MyKeyParser) ParseKey(probe *KeyProbe, unmarshaler KeyUnmarshaler, data []byte) (jwk.Key, error) {
 //	     // Create concrete type
-//	     var hint string
-//	     if err := probe.Get("MyHint", &hint); err != nil {
+//	     hintV, ok := probe.Field("MyHint")
+//	     if !ok {
 //	        // if it doesn't have the `my_hint` field, it probably means
 //	        // it's not for us, so we return ContinueParseError so that
 //	        // the next parser can pick it up
 //	        return nil, jwk.ContinueParseError()
 //	     }
+//	     hint := hintV.(string)
 //
 //	     // Use hint to determine concrete key type
 //	     var key jwk.Key

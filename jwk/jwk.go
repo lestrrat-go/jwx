@@ -38,18 +38,10 @@ func bigIntToBytes(n *big.Int) ([]byte, error) {
 const maxPEMKeys = 1000
 
 func init() {
-	if err := RegisterProbeField(reflect.StructField{
-		Name: "Kty",
-		Type: reflect.TypeFor[string](),
-		Tag:  `json:"kty"`,
-	}); err != nil {
+	if err := RegisterProbeField[string]("Kty", "kty"); err != nil {
 		panic(fmt.Errorf("failed to register mandatory probe for 'kty' field: %w", err))
 	}
-	if err := RegisterProbeField(reflect.StructField{
-		Name: "D",
-		Type: reflect.TypeFor[json.RawMessage](),
-		Tag:  `json:"d,omitempty"`,
-	}); err != nil {
+	if err := RegisterProbeField[json.RawMessage]("D", "d"); err != nil {
 		panic(fmt.Errorf("failed to register mandatory probe for 'd' field: %w", err))
 	}
 }
