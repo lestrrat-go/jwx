@@ -46,4 +46,4 @@ go.work.sum
 scripts/.jwxcodegen
 
 # Companion module checkouts (test-companion.sh, /jwx-companion-bulk skill)
-.companions/
+.companions/repo/
