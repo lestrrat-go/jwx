@@ -19,6 +19,7 @@ go_library(
     visibility = ["//visibility:public"],
     deps = [
         "//internal/base64",
+        "//internal/json",
         "//internal/tokens",
         "@com_github_lestrrat_go_option_v3//:option",
     ],
@@ -37,6 +38,7 @@ go_test(
         "//jwk",
         "//jwk/ecdsa",
         "//jws",
+        "//jwt",
         "@com_github_stretchr_testify//require",
     ],
 )
