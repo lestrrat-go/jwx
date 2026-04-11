@@ -45,5 +45,5 @@ go.work.sum
 # Cached codegen binary
 scripts/.jwxcodegen
 
-# Companion module clones (managed by /jwx-companion-bulk skill)
+# Companion module checkouts (test-companion.sh, /jwx-companion-bulk skill)
 .companions/
