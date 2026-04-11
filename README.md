@@ -19,8 +19,6 @@ go get github.com/lestrrat-go/jwx/v4
 
 If you are migrating from `github.com/lestrrat-go/jwx/v3`, see [`MIGRATION.md`](MIGRATION.md) for a step-by-step guide with before/after code examples. For a complete list of breaking changes and new features, see [`Changes-v4.md`](Changes-v4.md).
 
-If you are using v0, v1, or v2, you are strongly encouraged to migrate to v4.
-
 # Features
 
 | Feature | Description |
