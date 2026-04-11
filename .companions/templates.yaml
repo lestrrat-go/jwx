@@ -17,3 +17,9 @@ templates:
   ci.yml:
     dest: .github/workflows/ci.yml
     skip: [benchmarks]
+  assign-issue.yml:
+    dest: .github/workflows/assign-issue.yml
+  assign-pr.yml:
+    dest: .github/workflows/assign-pr.yml
+  auto-assign-pr.yml:
+    dest: .github/auto-assign-pr.yml
