@@ -16,11 +16,7 @@ import (
 func init() {
 	// Register probe field for "priv" so the parser can distinguish
 	// AKP public keys from AKP private keys (which use "priv" instead of "d").
-	if err := RegisterProbeField(reflect.StructField{
-		Name: "Priv",
-		Type: reflect.TypeFor[json.RawMessage](),
-		Tag:  `json:"priv,omitempty"`,
-	}); err != nil {
+	if err := RegisterProbeField[json.RawMessage]("Priv", "priv"); err != nil {
 		panic(fmt.Errorf("jwk/akp: failed to register probe for 'priv' field: %w", err))
 	}
 

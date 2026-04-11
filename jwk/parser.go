@@ -1,8 +1,9 @@
 package jwk
 
 import (
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"fmt"
-	"reflect"
 	"sync"
 
 	"github.com/lestrrat-go/jwx/v4/internal/json"
@@ -126,80 +127,123 @@ func (ku *keyUnmarshaler) UnmarshalKey(data []byte, key any) error {
 	return nil
 }
 
-// keyProber is the object that starts the probing. When Probe() is called,
-// it creates (possibly from a cached value) an object that is used to
-// hold hint values.
-type keyProber struct {
-	mu     sync.RWMutex
-	pool   *sync.Pool
-	fields map[string]reflect.StructField
-	typ    reflect.Type
+// probeFieldDef describes how to extract a single field from raw JSON.
+type probeFieldDef struct {
+	jsonKey  string
+	index    int
+	readFrom func(*jsontext.Decoder) (any, error)
 }
 
-func (kp *keyProber) AddField(field reflect.StructField) error {
+// keyProber is the object that starts the probing. When Probe() is called,
+// it streams through the JSON payload and only extracts the registered
+// fields, skipping everything else.
+type keyProber struct {
+	mu       sync.RWMutex
+	fields   []probeFieldDef
+	names    map[string]int            // Go name -> index
+	jsonKeys map[string]*probeFieldDef // json key -> def
+	pool     *sync.Pool
+}
+
+func (kp *keyProber) addField(name string, def probeFieldDef) error {
 	kp.mu.Lock()
 	defer kp.mu.Unlock()
 
-	if _, ok := kp.fields[field.Name]; ok {
-		return fmt.Errorf(`field name %s is already registered`, field.Name)
+	if _, ok := kp.names[name]; ok {
+		return fmt.Errorf(`field name %s is already registered`, name)
 	}
-	kp.fields[field.Name] = field
-	kp.makeStructType()
 
-	// Update pool (note: the logic is the same, but we need to recreate it
-	// so that we don't accidentally use old stored values)
+	def.index = len(kp.fields)
+	kp.fields = append(kp.fields, def)
+	kp.names[name] = def.index
+
+	// Rebuild jsonKeys lookup
+	kp.jsonKeys = make(map[string]*probeFieldDef, len(kp.fields))
+	for i := range kp.fields {
+		kp.jsonKeys[kp.fields[i].jsonKey] = &kp.fields[i]
+	}
+
+	// Rebuild pool for new slice size
+	n := len(kp.fields)
 	kp.pool = &sync.Pool{
-		New: kp.makeStruct,
+		New: func() any { return make([]any, n) },
 	}
 	return nil
 }
 
-func (kp *keyProber) makeStructType() {
-	// DOES NOT LOCK
-	fields := make([]reflect.StructField, 0, len(kp.fields))
-	for _, f := range kp.fields {
-		fields = append(fields, f)
-	}
-	kp.typ = reflect.StructOf(fields)
+// probeTarget implements json.UnmarshalerFrom to use the pooled decoder
+// from json.Unmarshal, avoiding the overhead of creating a standalone decoder.
+type probeTarget struct {
+	kp      *keyProber
+	results []any
 }
 
-func (kp *keyProber) makeStruct() any {
-	return reflect.New(kp.typ)
+func (pt *probeTarget) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
+	// Consume opening '{'
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return err
+	}
+	if tok.Kind() != '{' {
+		return fmt.Errorf(`probe: expected object, got %s`, tok.Kind())
+	}
+
+	remaining := len(pt.kp.fields)
+	for dec.PeekKind() != '}' {
+		// Read key
+		tok, err = dec.ReadToken()
+		if err != nil {
+			return err
+		}
+		key := tok.String()
+
+		def, ok := pt.kp.jsonKeys[key]
+		if !ok || remaining <= 0 {
+			if err := dec.SkipValue(); err != nil {
+				return err
+			}
+			continue
+		}
+
+		v, err := def.readFrom(dec)
+		if err != nil {
+			return err
+		}
+		pt.results[def.index] = v
+		remaining--
+	}
+
+	// Consume closing '}'
+	if _, err := dec.ReadToken(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (kp *keyProber) Probe(data []byte) (*KeyProbe, error) {
 	kp.mu.RLock()
 	defer kp.mu.RUnlock()
 
-	// if the field list unchanged, so is the pool object, so effectively
-	// we should be using the cached version
-	v := kp.pool.Get()
-	if v == nil {
-		return nil, fmt.Errorf(`probe: failed to get object from pool`)
-	}
-	rv, ok := v.(reflect.Value)
-	if !ok {
-		return nil, fmt.Errorf(`probe: value returned from pool as of type %T, expected reflect.Value`, v)
+	results := kp.pool.Get().([]any)
+	clear(results)
+
+	pt := probeTarget{kp: kp, results: results}
+	if err := jsonv2.Unmarshal(data, &pt, jsontext.AllowDuplicateNames(true)); err != nil {
+		return nil, fmt.Errorf(`probe: %w`, err)
 	}
 
-	if err := json.Unmarshal(data, rv.Interface()); err != nil {
-		return nil, fmt.Errorf(`probe: failed to unmarshal data: %w`, err)
-	}
-
-	return &KeyProbe{data: rv}, nil
+	return &KeyProbe{results: results, names: kp.names}, nil
 }
 
 // KeyProbe is the object that carries the hints when parsing a key.
 // The exact list of fields can vary depending on the types of key
 // that are registered.
 //
-// Use `Get()` to access the value of a field.
-//
-// The underlying data stored in a KeyProbe is recycled each
-// time a value is parsed, therefore you are not allowed to hold
-// onto this object after ParseKey() is done.
+// Use `Field()` to access the value of a field.
 type KeyProbe struct {
-	data reflect.Value
+	results []any
+	names   map[string]int // shared reference, not copied
 }
 
 // Field returns the value of the field with the given `name`,
@@ -207,42 +251,82 @@ type KeyProbe struct {
 // The field type is determined by the type registered through
 // `jwk.RegisterProbeField()`.
 func (kp *KeyProbe) Field(name string) (any, bool) {
-	f := kp.data.Elem().FieldByName(name)
-	if !f.IsValid() {
+	idx, ok := kp.names[name]
+	if !ok {
 		return nil, false
 	}
-
-	return f.Interface(), true
+	v := kp.results[idx]
+	return v, v != nil
 }
 
-// We don't really need the object, we need to know its type
 var keyProbe = &keyProber{
-	fields: make(map[string]reflect.StructField),
+	names: make(map[string]int),
+}
+
+// readString reads a JSON string token directly from the decoder.
+func readString(dec *jsontext.Decoder) (any, error) {
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return nil, err
+	}
+	return tok.String(), nil
+}
+
+// readRawValue reads a raw JSON value from the decoder, copying the bytes
+// so the result outlives the decoder's buffer.
+func readRawValue(dec *jsontext.Decoder) (any, error) {
+	val, err := dec.ReadValue()
+	if err != nil {
+		return nil, err
+	}
+	return json.RawMessage(append([]byte{}, val...)), nil
+}
+
+// readGeneric reads a value by reading the raw JSON and unmarshaling it.
+func readGeneric[T any](dec *jsontext.Decoder) (any, error) {
+	val, err := dec.ReadValue()
+	if err != nil {
+		return nil, err
+	}
+	var v T
+	if err := json.Unmarshal(val, &v); err != nil {
+		return nil, err
+	}
+	return v, nil
 }
 
 // RegisterProbeField adds a new field to be probed during the initial
-// phase of parsing. This is done by partially parsing the JSON payload,
-// and we do this by calling `json.Unmarshal` using a dynamic type that
-// can possibly be modified during runtime. This function is used to
-// add a new field to this dynamic type.
+// phase of parsing. This is done by streaming through the JSON payload
+// and extracting only the registered fields, skipping everything else.
 //
-// Note that the `Name` field for the given `reflect.StructField` must start
-// with an upper case alphabet, such that it is treated as an exported field.
-// So for example, if you want to probe the "my_hint" field, you should specify
-// the field name as "MyHint" or similar.
+// The `name` parameter is used to identify the field when calling
+// `KeyProbe.Field()`. The `jsonKey` parameter is the JSON field name
+// to extract from the payload.
 //
-// Also the field name must be unique. If you believe that your field name may
+// The field name must be unique. If you believe that your field name may
 // collide with other packages that may want to add their own probes,
-// it is the responsibility of the caller
-// to ensure that the field name is unique (possibly by prefixing the field
-// name with a unique string). It is important to note that the field name
-// need not be the same as the JSON field name. For example, your field name
-// could be "MyPkg_MyHint", while the actual JSON field name could be "my_hint".
+// it is the responsibility of the caller to ensure that the field name
+// is unique (possibly by prefixing the field name with a unique string).
+// It is important to note that the field name need not be the same as the
+// JSON field name. For example, your field name could be "MyPkg_MyHint",
+// while the actual JSON field name could be "my_hint".
 //
 // If the field name is not unique, an error is returned.
-func RegisterProbeField(p reflect.StructField) error {
-	// locking is done inside keyProbe
-	return keyProbe.AddField(p)
+func RegisterProbeField[T any](name, jsonKey string) error {
+	var readFn func(*jsontext.Decoder) (any, error)
+	switch any((*T)(nil)).(type) {
+	case *string:
+		readFn = readString
+	case *json.RawMessage:
+		readFn = readRawValue
+	default:
+		readFn = readGeneric[T]
+	}
+
+	return keyProbe.addField(name, probeFieldDef{
+		jsonKey:  jsonKey,
+		readFrom: readFn,
+	})
 }
 
 // KeyUnmarshaler is a thin wrapper around json.Unmarshal. It behaves almost
