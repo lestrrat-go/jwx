@@ -19,9 +19,10 @@ import (
 const (
 	AKPPrivKey = "priv"
 	AKPPubKey  = "pub"
-	AKPZKey    = "z"
 )
 
+// AKPPublicKey represents the public portion of an Algorithm Key Pair (AKP) JWK,
+// used by post-quantum algorithms such as ML-KEM (FIPS 203) and ML-DSA (FIPS 204).
 type AKPPublicKey interface {
 	Key
 	Pub() ([]byte, bool)
@@ -721,11 +722,31 @@ func (h *akpPublicKey) Keys() []string {
 	return keys
 }
 
+// AKPPrivateKey represents the private portion of an Algorithm Key Pair (AKP) JWK,
+// used by post-quantum algorithms such as ML-KEM (FIPS 203) and ML-DSA (FIPS 204).
+//
+// INTEROPERABILITY WARNING: ML-KEM PRIVATE KEY ROUND-TRIP LIMITATION
+//
+// FIPS 203 defines the ML-KEM private key seed as 64 bytes in the "d || z" form,
+// where d (32 bytes) generates the key pair and z (32 bytes) is the implicit
+// rejection seed used during decapsulation. However, draft-ietf-jose-pqc-kem
+// (https://datatracker.ietf.org/doc/draft-ietf-jose-pqc-kem/) mandates that
+// the "priv" field contain only d (32 bytes). Go's crypto/mlkem
+// package requires the full 64-byte seed to reconstruct a decapsulation key.
+//
+// Because the draft limits "priv" to 32 bytes, the z component is lost when a
+// private key is exported to JWK. Re-importing will produce a decapsulation key
+// with a randomly generated z. This key is functionally equivalent for all normal
+// operations — z only affects implicit rejection (the fake shared secret returned
+// for tampered ciphertexts) and does not change decapsulation of valid ciphertexts.
+//
+// This means JWK round-trips do NOT preserve bitwise key identity. If the draft
+// is revised to accommodate the full 64-byte seed, this limitation will be
+// resolved.
 type AKPPrivateKey interface {
 	Key
 	Priv() ([]byte, bool)
 	Pub() ([]byte, bool)
-	Z() ([]byte, bool)
 }
 
 type akpPrivateKey struct {
@@ -739,7 +760,6 @@ type akpPrivateKey struct {
 	x509CertThumbprint     *string     // https://tools.ietf.org/html/rfc7515#section-4.1.7
 	x509CertThumbprintS256 *string     // https://tools.ietf.org/html/rfc7515#section-4.1.8
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
-	z                      []byte
 	privateParams          map[string]any
 	mu                     sync.RWMutex
 	dc                     json.DecodeCtx
@@ -858,15 +878,6 @@ func (h *akpPrivateKey) X509URL() (string, bool) {
 	return "", false
 }
 
-func (h *akpPrivateKey) Z() ([]byte, bool) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	if h.z != nil {
-		return h.z, true
-	}
-	return nil, false
-}
-
 func (h *akpPrivateKey) Has(name string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
@@ -893,8 +904,6 @@ func (h *akpPrivateKey) Has(name string) bool {
 		return h.x509CertThumbprintS256 != nil
 	case X509URLKey:
 		return h.x509URL != nil
-	case AKPZKey:
-		return h.z != nil
 	default:
 		_, ok := h.privateParams[name]
 		return ok
@@ -957,11 +966,6 @@ func (h *akpPrivateKey) Field(name string) (any, bool) {
 			return nil, false
 		}
 		return *(h.x509URL), true
-	case AKPZKey:
-		if h.z == nil {
-			return nil, false
-		}
-		return h.z, true
 	default:
 		v, ok := h.privateParams[name]
 		return v, ok
@@ -1064,17 +1068,6 @@ func (h *akpPrivateKey) setNoLock(name string, value any) error {
 			return nil
 		}
 		return fmt.Errorf(`invalid value for %s key: %T`, X509URLKey, value)
-	case AKPZKey:
-		if v, ok := value.([]byte); ok {
-			if v == nil {
-				h.z = nil
-			} else {
-				h.z = make([]byte, len(v))
-				copy(h.z, v)
-			}
-			return nil
-		}
-		return fmt.Errorf(`invalid value for %s key: %T`, AKPZKey, value)
 	default:
 		if h.privateParams == nil {
 			h.privateParams = map[string]any{}
@@ -1108,8 +1101,6 @@ func (k *akpPrivateKey) Remove(key string) error {
 		k.x509CertThumbprintS256 = nil
 	case X509URLKey:
 		k.x509URL = nil
-	case AKPZKey:
-		k.z = nil
 	default:
 		delete(k.privateParams, key)
 	}
@@ -1178,11 +1169,6 @@ func (dst *akpPrivateKey) cloneFrom(src *akpPrivateKey) {
 	} else {
 		dst.x509URL = nil
 	}
-	if src.z != nil {
-		dst.z = slices.Clone(src.z)
-	} else {
-		dst.z = nil
-	}
 	if len(src.privateParams) > 0 {
 		dst.privateParams = make(map[string]any, len(src.privateParams))
 		for k, v := range src.privateParams {
@@ -1224,15 +1210,12 @@ func (h *akpPrivateKey) UnmarshalJSON(buf []byte) (retErr error) {
 	h.x509CertThumbprint = nil
 	h.x509CertThumbprintS256 = nil
 	h.x509URL = nil
-	h.z = nil
 	defer func() {
 		if retErr != nil {
 			clear(h.priv)
 			h.priv = nil
 			clear(h.pub)
 			h.pub = nil
-			clear(h.z)
-			h.z = nil
 		}
 	}()
 	dec := json.NewDecoder(bytes.NewReader(buf))
@@ -1306,10 +1289,6 @@ func (h *akpPrivateKey) UnmarshalJSON(buf []byte) (retErr error) {
 		case X509URLKey:
 			if err := json.AssignNextStringToken(&h.x509URL, dec, h.dc); err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, X509URLKey, err)
-			}
-		case AKPZKey:
-			if err := json.AssignNextBytesToken(&h.z, dec); err != nil {
-				return fmt.Errorf(`failed to decode value for key %s: %w`, AKPZKey, err)
 			}
 		default:
 			fieldName := tok.String()
@@ -1447,15 +1426,6 @@ func (h *akpPrivateKey) MarshalJSON() ([]byte, error) {
 			pairs = append(pairs, fieldPair{Name: X509URLKey, Value: v})
 		}
 	}
-	if h.z != nil {
-		{
-			v, err := json.Marshal(base64.EncodeToString(h.z))
-			if err != nil {
-				return nil, fmt.Errorf(`failed to marshal field %q: %w`, AKPZKey, err)
-			}
-			pairs = append(pairs, fieldPair{Name: AKPZKey, Value: v})
-		}
-	}
 	for k, v := range h.privateParams {
 		switch bv := v.(type) {
 		case []byte:
@@ -1498,7 +1468,7 @@ func (h *akpPrivateKey) MarshalJSON() ([]byte, error) {
 func (h *akpPrivateKey) Keys() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	keys := make([]string, 0, 11+len(h.privateParams))
+	keys := make([]string, 0, 10+len(h.privateParams))
 	keys = append(keys, KeyTypeKey)
 	if h.algorithm != nil {
 		keys = append(keys, AlgorithmKey)
@@ -1530,9 +1500,6 @@ func (h *akpPrivateKey) Keys() []string {
 	if h.x509URL != nil {
 		keys = append(keys, X509URLKey)
 	}
-	if h.z != nil {
-		keys = append(keys, AKPZKey)
-	}
 	for k := range h.privateParams {
 		keys = append(keys, k)
 	}
@@ -1542,7 +1509,7 @@ func (h *akpPrivateKey) Keys() []string {
 var akpStandardFields KeyFilter
 
 func init() {
-	akpStandardFields = NewFieldNameFilter(KeyTypeKey, KeyUsageKey, KeyOpsKey, AlgorithmKey, KeyIDKey, X509URLKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, AKPPubKey, AKPPrivKey, AKPZKey)
+	akpStandardFields = NewFieldNameFilter(KeyTypeKey, KeyUsageKey, KeyOpsKey, AlgorithmKey, KeyIDKey, X509URLKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, AKPPubKey, AKPPrivKey)
 }
 
 // AKPStandardFieldsFilter returns a KeyFilter that filters out standard AKP fields.
