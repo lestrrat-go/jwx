@@ -3,7 +3,7 @@
 ## Overview
 
 Extension modules under `github.com/jwx-go/*` (asmbase64, ed448, es256k, examples,
-jwkcache, mldsa, x448, benchmarks) are managed as "companion modules." They live in
+jwkcache, jwxmigrate, mldsa, x448, benchmarks) are managed as "companion modules." They live in
 separate repos but share CI workflows, dependabot config, and development tooling.
 
 ## Directory Layout
