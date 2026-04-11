@@ -1,4 +1,4 @@
-.PHONY: generate realclean cover viewcover test lint check_diffs imports tidy jwx fuzz fuzz-jwt fuzz-jws fuzz-jwe fuzz-jwk
+.PHONY: generate realclean cover viewcover test lint check_diffs imports tidy jwx fuzz fuzz-jwt fuzz-jws fuzz-jwe fuzz-jwk companion-test
 
 export GOEXPERIMENT := jsonv2
 
@@ -66,6 +66,9 @@ fuzz-jwk:
 	go test ./jwk/ -run "^$$" -fuzz "^FuzzParseKey$$" -fuzztime $(FUZZTIME)
 	go test ./jwk/ -run "^$$" -fuzz "^FuzzParse$$" -fuzztime $(FUZZTIME)
 	go test ./jwk/ -run "^$$" -fuzz FuzzParseKeyRoundtrip -fuzztime $(FUZZTIME)
+
+companion-test:
+	./scripts/test-companion.sh $(or $(MODULES),all)
 
 jwx:
 	@./scripts/install-jwx.sh
