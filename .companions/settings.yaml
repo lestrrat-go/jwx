@@ -1,0 +1,50 @@
+# Repository settings applied to all companion repos.
+#
+# Usage:
+#   python3 scripts/companion-apply-settings.py --dry-run   # preview
+#   python3 scripts/companion-apply-settings.py              # apply all
+#   python3 scripts/companion-apply-settings.py --modules=ed448
+
+# gh repo edit settings — keys mirror flag names (without --)
+defaults:
+  delete-branch-on-merge: true
+  enable-merge-commit: true
+  enable-squash-merge: true
+  enable-rebase-merge: false
+  enable-auto-merge: false
+  enable-issues: true
+  enable-wiki: true
+  enable-projects: true
+  enable-discussions: true
+
+overrides:
+  benchmarks:
+    enable-issues: false
+    enable-wiki: false
+    enable-discussions: false
+
+# Repository rulesets — applied via GitHub API.
+# Each entry becomes a ruleset. The branch pattern uses {{branch}} from
+# companions.yaml. Existing rulesets with the same name are replaced.
+rulesets:
+  - name: default-branch-protection
+    target: branch
+    enforcement: active
+    bypass_actors:
+      - actor_id: 49281  # lestrrat
+        actor_type: User
+        bypass_mode: always
+    conditions:
+      ref_name:
+        include: ["refs/heads/{{branch}}"]
+        exclude: []
+    rules:
+      - type: pull_request
+        parameters:
+          dismiss_stale_reviews_on_push: true
+          require_code_owner_review: false
+          require_last_push_approval: false
+          required_approving_review_count: 1
+          required_review_thread_resolution: false
+      - type: required_linear_history
+      - type: non_fast_forward

@@ -15,6 +15,7 @@ companions.yaml          # Module registry (tracked in git)
     asmbase64/
     ed448/
     ...
+  settings.yaml          # Repository settings (merge strategies, wiki, etc.)
   templates/             # Standardized workflow templates (tracked in git)
     ci.yml
     lint.yml
@@ -110,6 +111,33 @@ To standardize a file across companion modules:
 1. Edit the template in `.companions/templates/`.
 2. Register it in `.companions/templates.yaml` with `dest` and optional scope.
 3. Use `/jwx-companion-bulk` to render and sync across modules.
+
+## Repository Settings
+
+GitHub repository settings (merge strategies, wiki, issues, etc.) are managed
+declaratively via `.companions/settings.yaml` and applied with `gh repo edit`.
+
+### Settings file (`.companions/settings.yaml`)
+
+```yaml
+defaults:
+  delete-branch-on-merge: true
+  enable-squash-merge: true
+  # ... keys mirror gh repo edit flags (without --)
+
+overrides:
+  benchmarks:
+    enable-issues: false
+    # ... merged on top of defaults for this module
+```
+
+### Applying settings (`scripts/companion-apply-settings.py`)
+
+```bash
+python3 scripts/companion-apply-settings.py --dry-run            # preview commands
+python3 scripts/companion-apply-settings.py                       # apply to all
+python3 scripts/companion-apply-settings.py --modules=ed448,x448  # apply to specific
+```
 
 ## companions.yaml Schema
 
