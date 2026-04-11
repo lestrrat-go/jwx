@@ -212,9 +212,9 @@ func akpJWKToRaw(key Key, _ any) (any, error) {
 			return nil, fmt.Errorf(`missing "alg" field`)
 		}
 
-		// Reconstruct the 64-byte seed: d || z
-		// z is not stored in the JWK (the draft only defines 32-byte priv),
-		// so we generate a fresh random z for implicit rejection.
+		// Reconstruct the 64-byte seed (d || z). The JWK only stores d
+		// (the draft defines 32-byte priv), so generate a fresh random z
+		// for implicit rejection.
 		seed := make([]byte, 64)
 		copy(seed[:32], priv)
 		if _, err := rand.Read(seed[32:]); err != nil {
