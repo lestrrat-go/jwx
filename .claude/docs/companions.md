@@ -54,14 +54,35 @@ full documentation.
 /jwx-companion-bulk bump jwx dependency to latest --modules=ed448,x448
 ```
 
-## Template Workflow
+## Template System
 
-To standardize a workflow file across companion modules:
+Templates in `.companions/templates/` use `{{placeholder}}` syntax for per-module
+values. All placeholder values come from `companions.yaml`.
 
-1. Edit the template in `.companions/templates/` (e.g. `ci.yml`).
-2. Use `/jwx-companion-bulk` to sync it across modules.
-3. Templates may contain placeholders that get adapted per module (branch patterns,
-   module-specific paths). The skill handles adaptation automatically.
+### Available Placeholders
+
+| Placeholder | Source | Example |
+|-------------|--------|---------|
+| `{{name}}` | `modules[].name` | `ed448` |
+| `{{branch}}` | `modules[].branch` | `develop/v4` |
+
+### Rendering
+
+`scripts/companion-render-template.py` renders a template for a single module:
+
+```bash
+python3 scripts/companion-render-template.py .companions/templates/dependabot.yml ed448
+```
+
+Reads `companions.yaml`, substitutes placeholders, writes to stdout.
+
+### Workflow
+
+To standardize a file across companion modules:
+
+1. Edit the template in `.companions/templates/`.
+2. Use `/jwx-companion-bulk` to render and sync across modules.
+3. The bulk skill calls the render script per module, then commits the output.
 
 ## companions.yaml Schema
 
