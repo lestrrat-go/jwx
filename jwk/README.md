@@ -1,105 +1,22 @@
 # JWK [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v4/jwk.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk)
 
-Package jwk implements JWK as described in [RFC7517](https://tools.ietf.org/html/rfc7517).
-If you are looking to use JWT wit JWKs, look no further than [github.com/lestrrat-go/jwx](../jwt).
-
-* Parse and work with RSA/EC/Symmetric/OKP JWK types
-  * Convert to and from JSON
-  * Convert to and from raw key types (e.g. *rsa.PrivateKey)
-* Ability to keep a JWKS fresh using *jwk.AutoRefresh
+Package jwk implements JWK as described in [RFC 7517](https://tools.ietf.org/html/rfc7517).
 
 ## Supported key types:
 
-| kty | Curve                   | Go Key Type                                   |
-|:----|:------------------------|:----------------------------------------------|
-| RSA | N/A                     | rsa.PrivateKey / rsa.PublicKey (2)            |
-| EC  | P-256<br>P-384<br>P-521<br>secp256k1 (1) | ecdsa.PrivateKey / ecdsa.PublicKey (2)        |
-| oct | N/A                     | []byte                                        |
-| OKP | Ed25519 (1)             | ed25519.PrivateKey / ed25519.PublicKey (2)    |
-|     | X25519 (1)              | (jwx/)x25519.PrivateKey / x25519.PublicKey (2)|
+| kty | Curve | Go Key Type |
+|:----|:------|:------------|
+| RSA | N/A | `rsa.PrivateKey` / `rsa.PublicKey` (*) |
+| EC  | P-256, P-384, P-521 | `ecdsa.PrivateKey` / `ecdsa.PublicKey` (*) |
+| oct | N/A | `[]byte` |
+| OKP | Ed25519, X25519, X448 | `ed25519.PrivateKey` / `ed25519.PublicKey`, `x25519.PrivateKey` / `x25519.PublicKey` (*) |
+| AKP | ML-KEM-768, ML-KEM-1024 | `mlkem.EncapsulationKey` / `mlkem.DecapsulationKey` (*) |
 
-* Note 1: Experimental
-* Note 2: Either value or pointers accepted (e.g. rsa.PrivateKey or *rsa.PrivateKey)
+(*) Either value or pointers accepted (e.g. `rsa.PrivateKey` or `*rsa.PrivateKey`)
 
-# Documentation
+Additional key types available via [extension modules](../docs/10-extensions.md): secp256k1 (ES256K), Ed448, ML-DSA.
 
-Please read the [API reference](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk), or
-the how-to style documentation on how to use JWK can be found in the [docs directory](../docs/04-jwk.md).
-
-# Auto-Refresh a key during a long-running process
-
-<!-- INCLUDE(examples/jwk_cache_example_test.go) -->
-```go
-package examples_test
-
-import (
-  "context"
-  "fmt"
-  "time"
-
-  "github.com/lestrrat-go/httprc/v3"
-
-  "github.com/jwx-go/jwkcache/v4"
-)
-
-func Example_jwk_cache() {
-  ctx, cancel := context.WithCancel(context.Background())
-  defer cancel()
-
-  const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
-
-  // First, set up the `jwkcache.Cache` object. You need to pass it a
-  // `context.Context` object to control the lifecycle of the background fetching goroutine.
-  c, err := jwkcache.NewCache(ctx, httprc.NewClient())
-  if err != nil {
-    fmt.Printf("failed to create cache: %s\n", err)
-    return
-  }
-
-  // Tell the cache that we only want to refresh this JWKS periodically.
-  if err := c.Register(ctx, googleCerts); err != nil {
-    fmt.Printf("failed to register google JWKS: %s\n", err)
-    return
-  }
-
-  // Pretend that this is your program's main loop
-MAIN:
-  for {
-    select {
-    case <-ctx.Done():
-      break MAIN
-    default:
-    }
-    keyset, err := c.Lookup(ctx, googleCerts)
-    if err != nil {
-      fmt.Printf("failed to fetch google JWKS: %s\n", err)
-      return
-    }
-    _ = keyset
-    // The returned `keyset` will always be "reasonably" new.
-    //
-    // By "reasonably" we mean that we cannot guarantee that the keys will be refreshed
-    // immediately after it has been rotated in the remote source. But it should be close\
-    // enough, and should you need to forcefully refresh the token using the `(jwkcache.Cache).Refresh()` method.
-    //
-    // If refetching the keyset fails, a cached version will be returned from the previous
-    // successful sync
-
-    // Do interesting stuff with the keyset... but here, we just
-    // sleep for a bit
-    time.Sleep(time.Second)
-
-    // Because we're a dummy program, we just cancel the loop now.
-    // If this were a real program, you presumably loop forever
-    cancel()
-  }
-  // OUTPUT:
-}
-```
-source: [examples/jwk_cache_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_cache_example_test.go)
-<!-- END INCLUDE -->
-
-Parse and use a JWK key:
+## Parse and use a JWK key
 
 <!-- INCLUDE(examples/jwk_example_test.go) -->
 ```go
@@ -208,4 +125,77 @@ func Example_jwk_marshal_json() {
 }
 ```
 source: [examples/jwk_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_example_test.go)
+<!-- END INCLUDE -->
+
+# Auto-refresh a key during a long-running process
+
+<!-- INCLUDE(examples/jwk_cache_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "context"
+  "fmt"
+  "time"
+
+  "github.com/lestrrat-go/httprc/v3"
+
+  "github.com/jwx-go/jwkcache/v4"
+)
+
+func Example_jwk_cache() {
+  ctx, cancel := context.WithCancel(context.Background())
+  defer cancel()
+
+  const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
+
+  // First, set up the `jwkcache.Cache` object. You need to pass it a
+  // `context.Context` object to control the lifecycle of the background fetching goroutine.
+  c, err := jwkcache.NewCache(ctx, httprc.NewClient())
+  if err != nil {
+    fmt.Printf("failed to create cache: %s\n", err)
+    return
+  }
+
+  // Tell the cache that we only want to refresh this JWKS periodically.
+  if err := c.Register(ctx, googleCerts); err != nil {
+    fmt.Printf("failed to register google JWKS: %s\n", err)
+    return
+  }
+
+  // Pretend that this is your program's main loop
+MAIN:
+  for {
+    select {
+    case <-ctx.Done():
+      break MAIN
+    default:
+    }
+    keyset, err := c.Lookup(ctx, googleCerts)
+    if err != nil {
+      fmt.Printf("failed to fetch google JWKS: %s\n", err)
+      return
+    }
+    _ = keyset
+    // The returned `keyset` will always be "reasonably" new.
+    //
+    // By "reasonably" we mean that we cannot guarantee that the keys will be refreshed
+    // immediately after it has been rotated in the remote source. But it should be close\
+    // enough, and should you need to forcefully refresh the token using the `(jwkcache.Cache).Refresh()` method.
+    //
+    // If refetching the keyset fails, a cached version will be returned from the previous
+    // successful sync
+
+    // Do interesting stuff with the keyset... but here, we just
+    // sleep for a bit
+    time.Sleep(time.Second)
+
+    // Because we're a dummy program, we just cancel the loop now.
+    // If this were a real program, you presumably loop forever
+    cancel()
+  }
+  // OUTPUT:
+}
+```
+source: [examples/jwk_cache_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_cache_example_test.go)
 <!-- END INCLUDE -->
