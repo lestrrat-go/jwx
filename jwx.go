@@ -30,7 +30,6 @@ import (
 // Settings configures global settings for the jwx package.
 func Settings(options ...GlobalOption) {
 	for _, opt := range options {
-		//nolint:forcetypeassert
 		switch opt.Ident() {
 		case identUseNumber{}:
 			json.SetUseNumber(option.MustGet[bool](opt))
