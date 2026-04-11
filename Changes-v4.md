@@ -63,6 +63,17 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 * `jwk.Cache` has been removed from the main module. Use `github.com/jwx-go/jwkcache/v4`
   instead.
 
+* `jwk.RegisterProbeField()` is now generic: `jwk.RegisterProbeField[T any](name, jsonKey string)`.
+  This replaces the previous `reflect.StructField`-based API:
+
+  ```go
+  // v3
+  jwk.RegisterProbeField(reflect.StructField{Name: "MyHint", Type: reflect.TypeOf(""), Tag: `json:"my_hint"`})
+
+  // v4
+  jwk.RegisterProbeField[string]("MyHint", "my_hint")
+  ```
+
 * ML-KEM key type (`jwk.AKP`) has been added for post-quantum key encapsulation
   (FIPS 203). This supports ML-KEM-768 and ML-KEM-1024.
 
