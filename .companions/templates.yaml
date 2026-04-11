@@ -1,0 +1,18 @@
+# Template manifest: maps template filenames to destination paths
+# and declares which modules each template applies to.
+#
+# Scope rules:
+#   skip: [list]  — applies to all modules except listed
+#   only: [list]  — applies only to listed modules
+#   (neither)     — applies to all modules
+#   skip and only are mutually exclusive.
+
+templates:
+  dependabot.yml:
+    dest: .github/dependabot.yml
+  lint.yml:
+    dest: .github/workflows/lint.yml
+    skip: [benchmarks]
+  ci.yml:
+    dest: .github/workflows/ci.yml
+    skip: [benchmarks]
