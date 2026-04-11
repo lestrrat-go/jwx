@@ -109,6 +109,8 @@ GOWORK
 		results+=("FAIL $name")
 	fi
 
+	rm -f go.work go.work.sum
+
 	popd > /dev/null
 done < <(parse_modules)
 
