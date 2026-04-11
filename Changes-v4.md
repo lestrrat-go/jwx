@@ -44,6 +44,10 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 * Internal JSON handling now uses `encoding/json/v2`.
 
+* `jwx.DecoderSettings()` has been renamed to `jwx.Settings()` to match the
+  sub-package convention. `jwx.Settings(jwx.WithUseNumber(true))` preserves
+  JSON numbers as `json.Number` in private/custom fields.
+
 * `github.com/lestrrat-go/blackmagic` has been removed. Reflection-based conversions
   have been replaced with generics.
 

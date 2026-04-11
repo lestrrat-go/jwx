@@ -50,7 +50,7 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `jws.Verifier2` | `jws.Verifier` | Interface renamed |
 | `jws.RegisterSigner(alg, any)` | `jws.RegisterSigner(alg, Signer)` | Typed parameter |
 | `jws.RegisterVerifier(alg, any)` | `jws.RegisterVerifier(alg, Verifier)` | Typed parameter |
-| `jwx.DecoderSettings(...)` | _(removed)_ | json/v2 handles this |
+| `jwx.DecoderSettings(jwx.WithUseNumber(true))` | `jwx.Settings(jwx.WithUseNumber(true))` | API renamed |
 | `-tags=jwx_goccy` | _(removed)_ | json/v2 is the only backend |
 | `-tags=jwx_es256k` | `github.com/jwx-go/es256k/v4` | Extension module |
 | `-tags=jwx_asmbase64` | `github.com/jwx-go/asmbase64/v4` | Extension module |
@@ -320,7 +320,7 @@ These changes cannot be mechanically transformed and need human judgment:
 
 2. **Complex cache configurations**: If you used `WithHttprcResourceOption`, `WithConstantInterval`, or other httprc-specific options with jwk.Cache, review the jwkcache extension module's API for equivalents.
 
-3. **`json.Number` usage**: If you stored custom numeric fields and relied on `json.Number` type preservation via `jwx.WithUseNumber(true)`, your code needs to handle `float64` instead, or use a custom decoder.
+3. **`json.Number` usage**: If you relied on `json.Number` type preservation via `jwx.WithUseNumber(true)`, use `jwx.Settings(jwx.WithUseNumber(true))` instead. The API was renamed from `DecoderSettings` to `Settings` to match the sub-package convention.
 
 4. **Code that catches specific error messages**: If you matched on error message strings from the crypto layer (e.g., during JWS signing), those errors may now occur earlier (at `WithKey()` time) due to algorithm-key validation.
 

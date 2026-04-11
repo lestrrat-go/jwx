@@ -21,3 +21,19 @@
 //
 // FAQ style documentation can be found in the repository (https://github.com/lestrrat-go/jwx/tree/develop/v3/docs)
 package jwx
+
+import (
+	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/option/v3"
+)
+
+// Settings configures global settings for the jwx package.
+func Settings(options ...GlobalOption) {
+	for _, opt := range options {
+		//nolint:forcetypeassert
+		switch opt.Ident() {
+		case identUseNumber{}:
+			json.SetUseNumber(option.MustGet[bool](opt))
+		}
+	}
+}

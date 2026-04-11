@@ -2,6 +2,7 @@ package jwe
 
 import (
 	"crypto/ecdsa"
+	stdjson "encoding/json"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
@@ -81,8 +82,17 @@ func decryptKeyPBES2(recipientKey []byte, alg string, key any, headers Headers, 
 	if !ok {
 		return nil, fmt.Errorf(`jwe: decrypt key: missing %q field for PBES2`, CountKey)
 	}
-	countFlt, ok := countV.(float64)
-	if !ok {
+	var countFlt float64
+	switch v := countV.(type) {
+	case float64:
+		countFlt = v
+	case stdjson.Number:
+		var err error
+		countFlt, err = v.Float64()
+		if err != nil {
+			return nil, fmt.Errorf(`jwe: decrypt key: %q field is not a valid number: %w`, CountKey, err)
+		}
+	default:
 		return nil, fmt.Errorf(`jwe: decrypt key: %q field is not a number`, CountKey)
 	}
 

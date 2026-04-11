@@ -7,6 +7,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
+	stdjson "encoding/json"
 	"fmt"
 	"testing"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/lestrrat-go/jwx/v4/jwk"
 	ourecdsa "github.com/lestrrat-go/jwx/v4/jwk/ecdsa"
 	"github.com/lestrrat-go/jwx/v4/jws"
+	"github.com/lestrrat-go/jwx/v4/jwt"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,8 +32,106 @@ func TestShowBuildInfo(t *testing.T) {
 	}
 }
 
-// TestDecoderSetting was removed in v4: DecoderSettings/WithUseNumber no longer exist.
-// json/v2 preserves numeric precision natively.
+// DO NOT MAKE THIS TEST PARALLEL. This test uses features with global side effects.
+func TestUseNumber(t *testing.T) {
+	const src = `{"iss":"github.com/lestrrat-go/jwx","bignum":9223372036854775807,"nested":{"num":42},"list":[1,2,3]}`
+
+	t.Run("Default (float64)", func(t *testing.T) {
+		tok, err := jwt.Parse([]byte(src), jwt.WithVerify(false))
+		require.NoError(t, err, `jwt.Parse should succeed`)
+
+		_, err = jwt.Get[float64](tok, "bignum")
+		require.NoError(t, err, `jwt.Get[float64] should succeed`)
+	})
+	t.Run("UseNumber (json.Number)", func(t *testing.T) {
+		jwx.Settings(jwx.WithUseNumber(true))
+		defer jwx.Settings(jwx.WithUseNumber(false))
+
+		tok, err := jwt.Parse([]byte(src), jwt.WithVerify(false))
+		require.NoError(t, err, `jwt.Parse should succeed`)
+
+		num, err := jwt.Get[stdjson.Number](tok, "bignum")
+		require.NoError(t, err, `jwt.Get[json.Number] should succeed`)
+		require.Equal(t, "9223372036854775807", num.String(), `number string should be exact`)
+
+		i64, err := num.Int64()
+		require.NoError(t, err, `Int64() should succeed`)
+		require.Equal(t, int64(9223372036854775807), i64, `Int64 value should be exact`)
+	})
+	t.Run("UseNumber Get[float64] fails", func(t *testing.T) {
+		jwx.Settings(jwx.WithUseNumber(true))
+		defer jwx.Settings(jwx.WithUseNumber(false))
+
+		tok, err := jwt.Parse([]byte(src), jwt.WithVerify(false))
+		require.NoError(t, err, `jwt.Parse should succeed`)
+
+		// When UseNumber is on, values are json.Number, not float64.
+		// jwt.Get[float64] should fail, jwt.Get[json.Number] should succeed.
+		_, err = jwt.Get[float64](tok, "bignum")
+		require.Error(t, err, `jwt.Get[float64] should fail with UseNumber`)
+
+		num, err := jwt.Get[stdjson.Number](tok, "bignum")
+		require.NoError(t, err, `jwt.Get[json.Number] should succeed`)
+		require.Equal(t, "9223372036854775807", num.String())
+	})
+	t.Run("UseNumber nested object", func(t *testing.T) {
+		jwx.Settings(jwx.WithUseNumber(true))
+		defer jwx.Settings(jwx.WithUseNumber(false))
+
+		tok, err := jwt.Parse([]byte(src), jwt.WithVerify(false))
+		require.NoError(t, err, `jwt.Parse should succeed`)
+
+		m, err := jwt.Get[map[string]any](tok, "nested")
+		require.NoError(t, err, `jwt.Get[map[string]any] should succeed`)
+		num, ok := m["num"].(stdjson.Number)
+		require.True(t, ok, `nested.num should be json.Number, got %T`, m["num"])
+		require.Equal(t, "42", num.String())
+	})
+	t.Run("UseNumber array", func(t *testing.T) {
+		jwx.Settings(jwx.WithUseNumber(true))
+		defer jwx.Settings(jwx.WithUseNumber(false))
+
+		tok, err := jwt.Parse([]byte(src), jwt.WithVerify(false))
+		require.NoError(t, err, `jwt.Parse should succeed`)
+
+		list, err := jwt.Get[[]any](tok, "list")
+		require.NoError(t, err, `jwt.Get[[]any] should succeed`)
+		require.Len(t, list, 3)
+		for i, expected := range []string{"1", "2", "3"} {
+			num, ok := list[i].(stdjson.Number)
+			require.True(t, ok, `list[%d] should be json.Number, got %T`, i, list[i])
+			require.Equal(t, expected, num.String())
+		}
+	})
+	t.Run("JWK private fields", func(t *testing.T) {
+		jwx.Settings(jwx.WithUseNumber(true))
+		defer jwx.Settings(jwx.WithUseNumber(false))
+
+		const jwkSrc = `{"kty":"oct","k":"c2VjcmV0","x-custom-num":12345}`
+		key, err := jwk.ParseKey[jwk.Key]([]byte(jwkSrc))
+		require.NoError(t, err, `jwk.ParseKey should succeed`)
+
+		num, err := jwk.Get[stdjson.Number](key, "x-custom-num")
+		require.NoError(t, err, `jwk.Get[json.Number] should succeed`)
+		require.Equal(t, "12345", num.String())
+	})
+	t.Run("PBES2 roundtrip with UseNumber", func(t *testing.T) {
+		jwx.Settings(jwx.WithUseNumber(true))
+		defer jwx.Settings(jwx.WithUseNumber(false))
+
+		key, err := jwk.Import[jwk.Key]([]byte("secure-key"))
+		require.NoError(t, err, `jwk.Import should succeed`)
+
+		encrypted, err := jwe.Encrypt(
+			[]byte("test-payload"),
+			jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+		)
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+		_, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.NoError(t, err, `jwe.Decrypt should succeed`)
+	})
+}
 
 // Test compatibility against `jose` tool
 func TestJoseCompatibility(t *testing.T) {

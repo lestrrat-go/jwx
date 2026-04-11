@@ -1,6 +1,9 @@
 package json
 
 import (
+	stdjson "encoding/json"
+	"encoding/json/jsontext"
+	jsonv2 "encoding/json/v2"
 	"fmt"
 	"reflect"
 	"sync"
@@ -60,6 +63,23 @@ func (dec *TypedDecoder[T]) Decode(data []byte) (any, error) {
 	}
 	return v, nil
 }
+
+// useNumberUnmarshalers is a pre-built json/v2 option that intercepts
+// unmarshalling of JSON numbers into any, producing json.Number instead
+// of float64.
+var useNumberUnmarshalers = jsonv2.WithUnmarshalers(
+	jsonv2.UnmarshalFromFunc(func(dec *jsontext.Decoder, val *any) error {
+		if dec.PeekKind() != '0' {
+			return jsonv2.SkipFunc
+		}
+		raw, err := dec.ReadValue()
+		if err != nil {
+			return err
+		}
+		*val = stdjson.Number(raw.String())
+		return nil
+	}),
+)
 
 type Registry struct {
 	mu   *sync.RWMutex
@@ -135,8 +155,14 @@ func (r *Registry) Decode(name string, raw RawMessage) (any, error) {
 	}
 
 	var decoded any
-	if err := Unmarshal([]byte(raw), &decoded); err != nil {
-		return nil, fmt.Errorf(`failed to decode field %s: %w`, name, err)
+	if GetUseNumber() {
+		if err := jsonv2.Unmarshal([]byte(raw), &decoded, useNumberUnmarshalers); err != nil {
+			return nil, fmt.Errorf(`failed to decode field %s: %w`, name, err)
+		}
+	} else {
+		if err := Unmarshal([]byte(raw), &decoded); err != nil {
+			return nil, fmt.Errorf(`failed to decode field %s: %w`, name, err)
+		}
 	}
 	return decoded, nil
 }
