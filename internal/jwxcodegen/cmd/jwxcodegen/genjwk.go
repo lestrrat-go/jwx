@@ -252,7 +252,11 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 }
 
 func generateKeyInterface(o *codegen.Output, kt *KeyType, obj *codegen.Object, ifName string) {
-	o.LL("type %s interface {", ifName)
+	if jwxcodegen.WriteComment(o, obj.Comment()) {
+		o.L("type %s interface {", ifName)
+	} else {
+		o.LL("type %s interface {", ifName)
+	}
 	o.L("Key")
 	for _, f := range obj.Fields() {
 		if f.Bool(`is_std`) {

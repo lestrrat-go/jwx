@@ -84,11 +84,9 @@ func (k *akpPrivateKey) Import(rawKeyIf any) error {
 
 	switch rawKey := rawKeyIf.(type) {
 	case *mlkem.DecapsulationKey768:
-		seed := rawKey.Bytes() // 64-byte d || z
+		seed := rawKey.Bytes() // 64-byte d || z; only d is stored
 		k.priv = make([]byte, 32)
-		copy(k.priv, seed[:32]) // d
-		k.z = make([]byte, 32)
-		copy(k.z, seed[32:]) // z
+		copy(k.priv, seed[:32])
 		k.pub = rawKey.EncapsulationKey().Bytes()
 		alg, _ := jwa.KeyAlgorithmFrom("ML-KEM-768")
 		k.algorithm = &alg
@@ -96,8 +94,6 @@ func (k *akpPrivateKey) Import(rawKeyIf any) error {
 		seed := rawKey.Bytes()
 		k.priv = make([]byte, 32)
 		copy(k.priv, seed[:32])
-		k.z = make([]byte, 32)
-		copy(k.z, seed[32:])
 		k.pub = rawKey.EncapsulationKey().Bytes()
 		alg, _ := jwa.KeyAlgorithmFrom("ML-KEM-1024")
 		k.algorithm = &alg
@@ -111,7 +107,7 @@ func makeAKPPublicKey(src Key) (Key, error) {
 	newKey := newAKPPublicKey()
 	for _, k := range src.Keys() {
 		switch k {
-		case AKPPrivKey, AKPZKey:
+		case AKPPrivKey:
 			continue
 		default:
 			v, ok := src.Field(k)
@@ -216,18 +212,13 @@ func akpJWKToRaw(key Key, _ any) (any, error) {
 			return nil, fmt.Errorf(`missing "alg" field`)
 		}
 
-		// Reconstruct the 64-byte seed: d || z
-		// If z is absent, generate a fresh random z
-		z, hasZ := key.Z()
-
+		// Reconstruct the 64-byte seed (d || z). The JWK only stores d
+		// (the draft defines 32-byte priv), so generate a fresh random z
+		// for implicit rejection.
 		seed := make([]byte, 64)
 		copy(seed[:32], priv)
-		if hasZ && len(z) == 32 {
-			copy(seed[32:], z)
-		} else {
-			if _, err := rand.Read(seed[32:]); err != nil {
-				return nil, fmt.Errorf(`failed to generate random z: %w`, err)
-			}
+		if _, err := rand.Read(seed[32:]); err != nil {
+			return nil, fmt.Errorf(`failed to generate random z: %w`, err)
 		}
 
 		switch alg.String() {

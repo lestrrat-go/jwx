@@ -50,17 +50,12 @@ func TestAKPKey(t *testing.T) {
 		require.True(t, ok)
 		require.Len(t, privBytes, 32, "priv should be 32 bytes (d component)")
 
-		z, ok := priv.Z()
-		require.True(t, ok)
-		require.Len(t, z, 32, "z should be 32 bytes")
-
-		// Verify d || z matches the original seed
+		// Verify d matches the original seed's first 32 bytes
 		seed := dk.Bytes()
 		require.Equal(t, seed[:32], privBytes, "priv should match d")
-		require.Equal(t, seed[32:], z, "z should match z")
 	})
 
-	t.Run("Export ML-KEM-768 DecapsulationKey round-trip", func(t *testing.T) {
+	t.Run("Export ML-KEM-768 DecapsulationKey", func(t *testing.T) {
 		dk, err := mlkem.GenerateKey768()
 		require.NoError(t, err)
 
@@ -68,12 +63,12 @@ func TestAKPKey(t *testing.T) {
 		key, err := jwk.Import[jwk.Key](dk)
 		require.NoError(t, err)
 
-		// Export
+		// Export — z is randomly generated, so the seed will differ,
+		// but the encapsulation key (derived from d alone) must match.
 		exported, err := jwk.Export[*mlkem.DecapsulationKey768](key)
 		require.NoError(t, err)
 
-		// Verify same seed
-		require.Equal(t, dk.Bytes(), exported.Bytes())
+		require.Equal(t, dk.EncapsulationKey().Bytes(), exported.EncapsulationKey().Bytes())
 	})
 
 	t.Run("Export ML-KEM-768 EncapsulationKey round-trip", func(t *testing.T) {
@@ -93,7 +88,7 @@ func TestAKPKey(t *testing.T) {
 		require.Equal(t, ek.Bytes(), exported.Bytes())
 	})
 
-	t.Run("JSON round-trip with z field", func(t *testing.T) {
+	t.Run("JSON round-trip", func(t *testing.T) {
 		dk, err := mlkem.GenerateKey768()
 		require.NoError(t, err)
 
@@ -104,13 +99,13 @@ func TestAKPKey(t *testing.T) {
 		buf, err := json.Marshal(key)
 		require.NoError(t, err)
 
-		// Verify JSON structure
+		// Verify JSON structure — no z field
 		var m map[string]any
 		require.NoError(t, json.Unmarshal(buf, &m))
 		require.Equal(t, "AKP", m["kty"])
 		require.Contains(t, m, "pub")
 		require.Contains(t, m, "priv")
-		require.Contains(t, m, "z")
+		require.NotContains(t, m, "z")
 		require.Contains(t, m, "alg")
 		require.Equal(t, "ML-KEM-768", m["alg"])
 
@@ -118,39 +113,9 @@ func TestAKPKey(t *testing.T) {
 		parsed, err := jwk.ParseKey[jwk.Key](buf)
 		require.NoError(t, err)
 
-		// Export and verify same key
+		// Export and verify encapsulation key matches (d is preserved)
 		exported, err := jwk.Export[*mlkem.DecapsulationKey768](parsed)
 		require.NoError(t, err)
-		require.Equal(t, dk.Bytes(), exported.Bytes())
-	})
-
-	t.Run("JSON round-trip without z field (interop)", func(t *testing.T) {
-		dk, err := mlkem.GenerateKey768()
-		require.NoError(t, err)
-
-		key, err := jwk.Import[jwk.Key](dk)
-		require.NoError(t, err)
-
-		// Marshal
-		buf, err := json.Marshal(key)
-		require.NoError(t, err)
-
-		// Remove the z field to simulate a JWK from another implementation
-		var m map[string]any
-		require.NoError(t, json.Unmarshal(buf, &m))
-		delete(m, "z")
-		buf, err = json.Marshal(m)
-		require.NoError(t, err)
-
-		// Parse back — should succeed, generating fresh z
-		parsed, err := jwk.ParseKey[jwk.Key](buf)
-		require.NoError(t, err)
-
-		// Export — should produce a valid DecapsulationKey (with random z)
-		exported, err := jwk.Export[*mlkem.DecapsulationKey768](parsed)
-		require.NoError(t, err)
-
-		// The encapsulation key should still match (ek depends only on d, not z)
 		require.Equal(t, dk.EncapsulationKey().Bytes(), exported.EncapsulationKey().Bytes())
 	})
 
@@ -164,9 +129,8 @@ func TestAKPKey(t *testing.T) {
 		pubKey, err := privKey.PublicKey()
 		require.NoError(t, err)
 
-		// Public key should not have priv or z
+		// Public key should not have priv
 		require.False(t, pubKey.Has("priv"))
-		require.False(t, pubKey.Has("z"))
 		require.True(t, pubKey.Has("pub"))
 
 		// Should export as EncapsulationKey
@@ -188,7 +152,7 @@ func TestAKPKey(t *testing.T) {
 
 		exported, err := jwk.Export[*mlkem.DecapsulationKey1024](key)
 		require.NoError(t, err)
-		require.Equal(t, dk.Bytes(), exported.Bytes())
+		require.Equal(t, dk.EncapsulationKey().Bytes(), exported.EncapsulationKey().Bytes())
 	})
 
 	t.Run("Validate", func(t *testing.T) {
