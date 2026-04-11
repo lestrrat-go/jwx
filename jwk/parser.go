@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/pool"
 	"github.com/lestrrat-go/jwx/v4/jwa"
 )
 
@@ -142,7 +143,7 @@ type keyProber struct {
 	fields   []probeFieldDef
 	names    map[string]int            // Go name -> index
 	jsonKeys map[string]*probeFieldDef // json key -> def
-	pool     *sync.Pool
+	pool     *pool.Pool[[]any]
 }
 
 func (kp *keyProber) addField(name string, def probeFieldDef) error {
@@ -165,9 +166,10 @@ func (kp *keyProber) addField(name string, def probeFieldDef) error {
 
 	// Rebuild pool for new slice size
 	n := len(kp.fields)
-	kp.pool = &sync.Pool{
-		New: func() any { return make([]any, n) },
-	}
+	kp.pool = pool.New(
+		func() []any { return make([]any, n) },
+		func(s []any) []any { clear(s); return s },
+	)
 	return nil
 }
 
@@ -225,8 +227,7 @@ func (kp *keyProber) Probe(data []byte) (*KeyProbe, error) {
 	kp.mu.RLock()
 	defer kp.mu.RUnlock()
 
-	results := kp.pool.Get().([]any)
-	clear(results)
+	results := kp.pool.Get()
 
 	pt := probeTarget{kp: kp, results: results}
 	if err := jsonv2.Unmarshal(data, &pt, jsontext.AllowDuplicateNames(true)); err != nil {
