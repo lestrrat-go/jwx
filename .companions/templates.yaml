@@ -10,6 +10,7 @@
 templates:
   dependabot.yml:
     dest: .github/dependabot.yml
+    skip: [benchmarks]
   lint.yml:
     dest: .github/workflows/lint.yml
     skip: [benchmarks]
