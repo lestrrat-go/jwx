@@ -78,8 +78,12 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   jwk.RegisterProbeField[string]("MyHint", "my_hint")
   ```
 
-* ML-KEM key type (`jwk.AKP`) has been added for post-quantum key encapsulation
-  (FIPS 203). This supports ML-KEM-768 and ML-KEM-1024.
+* The `jwk.AKP` key type (Algorithm Key Pair, RFC 9802) has been added.
+  This is a generic key type for post-quantum algorithms and is used by both
+  ML-DSA (signature) and ML-KEM (key encapsulation) support.
+
+* ML-KEM (FIPS 203) key type support has been added via `jwk.AKP`, covering
+  ML-KEM-768 and ML-KEM-1024.
 
 * `jwk.Set` now supports range-over-func iteration:
 
