@@ -31,8 +31,13 @@ rulesets:
     target: branch
     enforcement: active
     bypass_actors:
-      - actor_id: 49281  # lestrrat
-        actor_type: User
+      # GitHub rulesets do not support bypass by individual user. The valid
+      # actor_types are OrganizationAdmin, RepositoryRole, Team, Integration,
+      # and DeployKey. OrganizationAdmin (actor_id 1) grants bypass to jwx-go
+      # org owners. Prior revisions used `actor_type: User` which the API
+      # silently ignored (current_user_can_bypass: never).
+      - actor_id: 1
+        actor_type: OrganizationAdmin
         bypass_mode: always
     conditions:
       ref_name:
