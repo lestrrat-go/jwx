@@ -59,11 +59,29 @@ def build_flags(settings):
 
 
 def render_ruleset(ruleset_template, module):
-    """Deep-copy a ruleset template and substitute placeholders."""
-    raw = json.dumps(ruleset_template)
+    """Deep-copy a ruleset template and substitute placeholders.
+
+    Strips meta fields (skip, only) that control applicability but are not
+    part of the GitHub ruleset schema.
+    """
+    stripped = {k: v for k, v in ruleset_template.items() if k not in ("skip", "only")}
+    raw = json.dumps(stripped)
     raw = raw.replace("{{name}}", module["name"])
     raw = raw.replace("{{branch}}", module.get("branch", "main"))
     return json.loads(raw)
+
+
+def ruleset_applies(ruleset_template, module_name):
+    """Check scope rules. Returns True if the ruleset applies to this module."""
+    skip = ruleset_template.get("skip")
+    only = ruleset_template.get("only")
+    if skip and only:
+        raise ValueError(f"ruleset '{ruleset_template.get('name')}' has both skip and only")
+    if skip is not None and module_name in skip:
+        return False
+    if only is not None and module_name not in only:
+        return False
+    return True
 
 
 def get_existing_rulesets(slug):
@@ -185,6 +203,9 @@ def main():
         if ruleset_templates:
             existing = {} if dry_run else get_existing_rulesets(slug)
             for tmpl in ruleset_templates:
+                if not ruleset_applies(tmpl, name):
+                    results.append((name, "SKIP", f"ruleset '{tmpl.get('name')}' out of scope"))
+                    continue
                 rendered = render_ruleset(tmpl, module)
                 status, note = apply_ruleset(slug, rendered, existing, dry_run)
                 results.append((name, status, note))

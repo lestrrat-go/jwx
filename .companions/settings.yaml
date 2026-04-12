@@ -26,6 +26,10 @@ overrides:
 # Repository rulesets — applied via GitHub API.
 # Each entry becomes a ruleset. The branch pattern uses {{branch}} from
 # companions.yaml. Existing rulesets with the same name are replaced.
+#
+# Scope fields (applied-settings script only, stripped before API call):
+#   skip: [list]  — applies to all modules except listed
+#   only: [list]  — applies only to listed modules
 rulesets:
   - name: default-branch-protection
     target: branch
@@ -42,6 +46,32 @@ rulesets:
     conditions:
       ref_name:
         include: ["refs/heads/{{branch}}"]
+        exclude: []
+    rules:
+      - type: pull_request
+        parameters:
+          dismiss_stale_reviews_on_push: true
+          require_code_owner_review: false
+          require_last_push_approval: false
+          required_approving_review_count: 1
+          required_review_thread_resolution: false
+      - type: required_linear_history
+      - type: non_fast_forward
+
+  # Release branch protection: v* branches receive tags only and must never
+  # be committed to directly. Applied to every module except benchmarks,
+  # which uses `main` and has no v* branches.
+  - name: release-branch-protection
+    skip: [benchmarks]
+    target: branch
+    enforcement: active
+    bypass_actors:
+      - actor_id: 1
+        actor_type: OrganizationAdmin
+        bypass_mode: always
+    conditions:
+      ref_name:
+        include: ["refs/heads/v*"]
         exclude: []
     rules:
       - type: pull_request
