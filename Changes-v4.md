@@ -15,12 +15,18 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   are now provided by extension/accompanying modules under `github.com/jwx-go/*/v4`.
   Users opt in by importing the modules they need:
 
+  - `github.com/jwx-go/asmbase64/v4` — assembly-optimized base64 backend (was `jwx_asmbase64` build tag)
+  - `github.com/jwx-go/ed448/v4` — EdDSA with Ed448 curve (was `jwa.EdDSAEd448()` / `jwa.Ed448()` in the main module)
   - `github.com/jwx-go/es256k/v4` — ES256K/secp256k1 support (was `jwx_es256k` build tag)
-  - `github.com/jwx-go/jwkcache/v4` — JWK Set caching via HTTP (was `jwk.Cache` in the main module)
-  - `github.com/jwx-go/mldsa/v4` — ML-DSA signature support (new)
   - `github.com/jwx-go/examples/v4` — examples (was `examples/` directory in the main repo)
+  - `github.com/jwx-go/jwkcache/v4` — JWK Set caching via HTTP (was `jwk.Cache` in the main module)
+  - `github.com/jwx-go/mldsa/v4` — ML-DSA signature support (new, FIPS 204)
+  - `github.com/jwx-go/x448/v4` — X448 ECDH-ES key agreement and HPKE with DHKEM(X448) (new)
 
-  Build-tag gating (`jwx_goccy`, `jwx_es256k`) is no longer supported.
+  In addition, `github.com/jwx-go/jwxmigrate` provides a CLI tool that applies
+  mechanical v3→v4 code fixes and reports issues requiring manual review.
+
+  Build-tag gating (`jwx_goccy`, `jwx_es256k`, `jwx_asmbase64`) is no longer supported.
 
 * `ReadFile()` has been removed from all packages. Use `ParseFS(fs.FS, path, ...options)`
   instead, which accepts an `fs.FS` and a path within that filesystem.
