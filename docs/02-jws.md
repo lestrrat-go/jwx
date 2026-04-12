@@ -736,7 +736,6 @@ Optional signature algorithms are provided as separate extension modules under [
 Per specification JWS should be using URL base64 encoding with no padding when generating (and by nature of the process when verifying as well) signatures. However, some systems do not necessarily adhere to the standards ([there have been reports that AWS ALB is one such system, generating User Claims JWT with padding](https://github.com/lestrrat-go/jwx/discussions/1324))
 
 In these situations, you will need to specify the base64 encoder to your `jws.Sign` and `jws.Verify` calls.
-Please note that this feature is available on v3 onwards only.
 
 <!-- INCLUDE(examples/jws_sign_with_custom_base64_example_test.go) -->
 ```go

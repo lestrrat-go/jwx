@@ -1364,7 +1364,7 @@ source: [examples/jwt_serialize_jwe_jws_example_test.go](https://github.com/jwx-
 
 When you marshal `jwt.Token` into JSON, by default the `aud` field is serialized as an array of strings. This field may take either a single string or array form, but apparently there are parsers that do not understand the array form.
 
-The examples below should both be valid, but apparently there are systems that do not understand the former ([AWS Cognito has been reported to be one such system](https://github.com/lestrrat-go/jwx/tree/v3/issues/368)).
+The examples below should both be valid, but apparently there are systems that do not understand the former ([AWS Cognito has been reported to be one such system](https://github.com/lestrrat-go/jwx/issues/368)).
 
 ```
 {
@@ -1578,7 +1578,7 @@ For pre-defined fields, `Set()` will return an error when the value cannot be co
 
 Per specification JWT should be using URL base64 encoding with no padding when generating (and by nature of the process when verifying as well) signatures. However, some systems do not necessarily adhere to the standards ([there have been reports that AWS ALB is one such system, generating User Claims JWT with padding](https://github.com/lestrrat-go/jwx/discussions/1324))
 
-In these situations, you will need to specify the base64 encoder to your `jwt.Sign` and `jwt.Parse` calls. Please note that this feature is available on v3 onwards only.
+In these situations, you will need to specify the base64 encoder to your `jwt.Sign` and `jwt.Parse` calls.
 
 <!-- INCLUDE(examples/jwt_sign_with_custom_base64_example_test.go) -->
 ```go

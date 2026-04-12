@@ -9,7 +9,6 @@ Arrows show import direction: `A → B` means A imports B.
 ```
 Application Layer
   cmd/jwx → jwt, jws, jwe, jwk, jwa
-  examples → jwt, jws, jwe, jwk, jwa
 
 Composition Layer
   jwt → jws, jwe, jwk, jwa, transform, internal/{json}
@@ -30,7 +29,7 @@ Core Layer
 Leaf Packages (no internal deps)
   jwa → internal/tokens
   cert → internal/{base64,tokens}
-  transform → (stdlib + blackmagic)
+  transform → (stdlib only)
   internal/{base64,json,ecutil,pool,tokens,jwxio}
 ```
 
@@ -40,10 +39,10 @@ Leaf Packages (no internal deps)
 |---------|-----------------|
 | `jwa` | internal/tokens |
 | `cert` | internal/{base64,tokens} |
-| `transform` | (none — external only: blackmagic) |
+| `transform` | (none — stdlib only) |
 | `jwk` | jwa, cert, transform |
 | `jwk/ecdsa` | jwa |
-| `jwk/jwkbb` | (external only: blackmagic) |
+| `jwk/jwkbb` | (stdlib only) |
 | `jws` | jwa, jwk, cert |
 | `jwe` | jwa, jwk, cert, transform |
 | `jwt` | jwa, jws, jwe, jwk, transform |
@@ -53,13 +52,7 @@ Leaf Packages (no internal deps)
 
 | Dependency | Used by | Purpose |
 |------------|---------|---------|
-| `lestrrat-go/httprc/v3` | jwk | HTTP resource caching for JWKS |
-| `lestrrat-go/blackmagic` | jwk, jws, jwe, transform | Type reflection/assertion |
-| `lestrrat-go/option/v2` | all packages | Functional options pattern |
-| `goccy/go-json` | internal/json | Optional fast JSON (build tag) |
-| `segmentio/asm` | internal/base64 | Optional fast base64 (build tag) |
-| `decred/secp256k1` | jwk (direct); jwa, jws (via build tag) | ES256K support (build tag) |
+| `lestrrat-go/dsig` | jws/jwsbb | Digital signature primitives (HMAC, RSA, ECDSA, EdDSA) |
+| `lestrrat-go/option/v3` | all packages | Functional options pattern |
 | `valyala/fastjson` | jws/jwsbb | Fast JSON header parsing |
 | `golang.org/x/crypto` | jwe | Extended crypto (PBKDF2, etc.) |
-| `lestrrat-go/dsig` | jws/jwsbb | Digital signature primitives (HMAC, RSA, ECDSA, EdDSA) |
-| `lestrrat-go/dsig-secp256k1` | jws/jwsbb | ES256K/secp256k1 signature support (build tag) |

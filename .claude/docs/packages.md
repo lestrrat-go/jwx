@@ -22,7 +22,7 @@ Algorithm identifiers per RFC 7518. Registry pattern with thread-safe lookup.
 - **KeyAlgorithmFrom(v any) (KeyAlgorithm, error)** — convert string/typed algorithm to union interface
 - Per-type API: `New{Type}()`, `Lookup{Type}(name) (T, bool)`, `Register{Type}()`, `Unregister{Type}()`, `{Type}s() []T`
 - Constructor functions: `ES256()`, `RS256()`, `A128GCM()`, `P256()`, `Ed25519()`, etc.
-- Files: `jwa.go`, `secp2561k.go` + generated `*_gen.go`
+- Files: `jwa.go` + generated `*_gen.go`
 - Imports: internal/tokens
 
 ## jwk/

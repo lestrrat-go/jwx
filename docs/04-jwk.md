@@ -528,7 +528,7 @@ source: [examples/jwk_import_example_test.go](https://github.com/jwx-go/examples
 
 To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Fetch)
 
-If you are going to be using this key repeatedly in a long running process, consider using [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Cache) or [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#CachedSet) described elsewhere in this document.
+If you are going to be using this key repeatedly in a long running process, consider using [`jwkcache.Cache`](https://pkg.go.dev/github.com/jwx-go/jwkcache/v4#Cache) or [`jwkcache.CachedSet`](https://pkg.go.dev/github.com/jwx-go/jwkcache/v4#CachedSet) from the [`github.com/jwx-go/jwkcache/v4`](https://github.com/jwx-go/jwkcache) extension module, described elsewhere in this document.
 
 By default, `jwk.Fetch()` uses an HTTP client that blocks HTTPS-to-HTTP redirect downgrades and limits redirect chains to 5 hops. This prevents the most common SSRF vector where an attacker-controlled JWKS URL redirects to an internal HTTP service.
 
@@ -607,7 +607,7 @@ Normally, you should be able to simply fetch the JWK using [`jwk.Fetch()`](https
 but keys are usually routinely expired and rotated due to security reasons.
 In such cases you would need to refetch the JWK periodically, which is a pain.
 
-`github.com/lestrrat-go/jwx/v4/jwk` provides the [`jwk.Cache`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Cache) and [`jwk.CachedSet`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#CachedSet) to do this for you.
+The [`github.com/jwx-go/jwkcache/v4`](https://github.com/jwx-go/jwkcache) extension module provides [`jwkcache.Cache`](https://pkg.go.dev/github.com/jwx-go/jwkcache/v4#Cache) and [`jwkcache.CachedSet`](https://pkg.go.dev/github.com/jwx-go/jwkcache/v4#CachedSet) to do this for you.
 
 <!-- INCLUDE(examples/jwk_cache_example_test.go) -->
 ```go
@@ -759,7 +759,7 @@ source: [examples/jwk_cached_set_example_test.go](https://github.com/jwx-go/exam
 
 If you are fetching JWK Sets from a possibly untrusted source such as the URL in the `jku` field of a JWS message,
 you may have to perform some sort of whitelist checking. You can provide a `jwk.Whitelist` object to either
-`jwk.Fetch()` or `(*jwk.Cache).Register()` methods to specify the use of a whitelist.
+`jwk.Fetch()` or `(*jwkcache.Cache).Register()` methods to specify the use of a whitelist.
 
 Currently the package provides `jwk.MapWhitelist` and `jwk.RegexpWhitelist` types for simpler cases,
 as well as `jwk.InsecureWhitelist` for when you explicitly want to allow all URLs.
