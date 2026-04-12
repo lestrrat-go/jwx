@@ -27,6 +27,9 @@ modules:
   - name: mldsa
     repo: git@github.com:jwx-go/mldsa.git
     branch: develop/v4
+  - name: reddy-pqchpke
+    repo: git@github.com:jwx-go/reddy-pqchpke.git
+    branch: develop/v4
   - name: x448
     repo: git@github.com:jwx-go/x448.git
     branch: develop/v4

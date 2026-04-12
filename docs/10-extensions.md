@@ -15,6 +15,7 @@ In v4, optional features are provided as standalone modules under [`github.com/j
 | Module | Capability | Key Package |
 |:-------|:-----------|:------------|
 | [`github.com/jwx-go/x448/v4`](https://github.com/jwx-go/x448) | X448 ECDH-ES, HPKE with DHKEM(X448) | [`github.com/cloudflare/circl/dh/x448`](https://pkg.go.dev/github.com/cloudflare/circl/dh/x448) |
+| [`github.com/jwx-go/reddy-pqchpke/v4`](https://github.com/jwx-go/reddy-pqchpke) | Hybrid PQ HPKE (HPKE-10-KE, HPKE-11-KE) per draft-reddy-cose-jose-pqc-hybrid-hpke — **experimental, pre-WG-adoption** | [`github.com/cloudflare/circl/kem/xwing`](https://pkg.go.dev/github.com/cloudflare/circl/kem/xwing) |
 
 * [ML-DSA (Post-Quantum Signatures)](#ml-dsa-post-quantum-signatures)
   * [Signing and Verifying](#signing-and-verifying)
