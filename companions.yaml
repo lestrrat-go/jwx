@@ -12,7 +12,6 @@ modules:
   - name: compsig
     repo: git@github.com:jwx-go/compsig.git
     branch: develop/v4
-    runtests: false   # remote does not exist yet; test-companion.sh would wipe the local checkout
   - name: ed448
     repo: git@github.com:jwx-go/ed448.git
     branch: develop/v4
