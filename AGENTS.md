@@ -15,7 +15,7 @@ The rest of this document focuses on developing the jwx library itself.
 
 ## Go Version
 
-This project requires **Go 1.25.0** or later. Check `go.mod` for the exact version.
+This project requires **Go 1.26.0** or later. Check `go.mod` for the exact version.
 
 ## Module Path vs Physical Layout
 
@@ -118,10 +118,6 @@ No `go.work` file is committed. When working across modules (including examples 
 # Run all tests
 make test
 
-# Run tests with specific build tags
-make test-goccy       # Use goccy/go-json
-make test-alltags     # All optional features
-
 # Run short/smoke tests
 make smoke
 
@@ -166,20 +162,24 @@ Tests are run via `./scripts/test.sh` which iterates over:
 
 ## Error Handling
 
-Sentinel errors are exposed via functions. Use `errors.Is()`:
+JWT error types are struct types. Use zero-value structs with `errors.Is()`, or `errors.AsType[T]()` for structured fields:
 
 ```go
-if errors.Is(err, jwt.TokenExpiredError()) { ... }
+if errors.Is(err, jwt.TokenExpiredError{}) { ... }
+
+if expErr, ok := errors.AsType[jwt.TokenExpiredError](err); ok {
+    log.Printf("expired at %s", expErr.Expiration)
+}
 ```
 
-| Package | Function | Meaning |
-|---------|----------|---------|
-| `jwt` | `TokenExpiredError()` | `exp` claim not satisfied |
-| `jwt` | `TokenNotYetValidError()` | `nbf` claim not satisfied |
-| `jwt` | `InvalidIssuerError()` | `iss` claim not satisfied |
-| `jwt` | `InvalidAudienceError()` | `aud` claim not satisfied |
-| `jwt` | `ValidateError()` | Generic validation failure |
-| `jwt` | `ParseError()` | Parse failed |
+| Package | Type / Function | Meaning |
+|---------|----------------|---------|
+| `jwt` | `TokenExpiredError{}` | `exp` claim not satisfied |
+| `jwt` | `TokenNotYetValidError{}` | `nbf` claim not satisfied |
+| `jwt` | `InvalidIssuerError{}` | `iss` claim not satisfied |
+| `jwt` | `InvalidAudienceError{}` | `aud` claim not satisfied |
+| `jwt` | `ValidationError{}` | Generic validation failure |
+| `jwt` | `ParseError{}` | Parse failed |
 | `jws` | `VerificationError()` | Signature verification failed |
 | `jwe` | `DecryptError()` | Decryption failed |
 
@@ -189,11 +189,7 @@ Use `github.com/stretchr/testify/require` for assertions (not `assert`).
 
 ## Build Tags
 
-| Tag | Effect |
-|-----|--------|
-| `jwx_goccy` | Use `goccy/go-json` instead of `encoding/json` |
-
-Optional features (signature algorithms, backend replacements) are provided as extension modules under [`github.com/jwx-go`](https://github.com/jwx-go). See [Extension Modules](docs/10-extensions.md) for the full list.
+No build tags in v4. Optional features (signature algorithms, backend replacements) are provided as extension modules under [`github.com/jwx-go`](https://github.com/jwx-go). See [Extension Modules](docs/10-extensions.md) for the full list.
 
 ## Quick Reference: Common Modifications
 

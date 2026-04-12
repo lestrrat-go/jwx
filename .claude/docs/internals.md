@@ -8,15 +8,18 @@ All `*_gen.go` files are generated. NEVER edit directly.
 
 ### Generator → Output Mapping
 
-| Generator | Input | Output |
-|-----------|-------|--------|
-| `tools/cmd/genoptions/` | `{pkg}/options.yaml` | `{pkg}/options_gen.go` |
-| `tools/cmd/genjwt/` | `tools/cmd/genjwt/objects.yml` | `jwt/*_gen.go` |
-| `tools/cmd/genheaders/` | `tools/cmd/genheaders/jws-objects.yml` | `jws/headers_gen.go` |
-| `tools/cmd/genheaders/` | `tools/cmd/genheaders/jwe-objects.yml` | `jwe/headers_gen.go` |
-| `tools/cmd/genjwk/` | `tools/cmd/genjwk/objects.yml` | `jwk/*_gen.go` |
-| `tools/cmd/genjwa/` | `tools/cmd/genjwa/objects.yml` | `jwa/*_gen.go` |
-| `tools/cmd/genreadfile/` | (none) | `{pkg}/io.go` ReadFile helpers |
+All generators live in a unified binary at `internal/jwxcodegen/cmd/jwxcodegen/`,
+invoked via subcommand through `scripts/jwxcodegen.sh`.
+
+| Generator | Subcommand | Input | Output |
+|-----------|------------|-------|--------|
+| `genoptions` | `generate-options` | `{pkg}/options.yaml` | `{pkg}/options_gen.go` |
+| `genjwt` | `generate-jwt` | `jwt/objects.yml` | `jwt/*_gen.go` |
+| `genheaders` | `generate-headers` | `jws/objects.yml` | `jws/headers_gen.go` |
+| `genheaders` | `generate-headers` | `jwe/objects.yml` | `jwe/headers_gen.go` |
+| `genjwk` | `generate-jwk` | `jwk/objects.yml` | `jwk/*_gen.go` |
+| `genjwa` | `generate-jwa` | `jwa/objects.yml` | `jwa/*_gen.go` |
+| `genreadfile` | `generate-readfile` | (none) | ReadFile helpers |
 
 ### Commands
 
@@ -67,11 +70,9 @@ Manual option functions in `{pkg}/options.go` supplement generated ones.
 
 ## JSON Backend
 
-Pluggable via build tag `jwx_goccy`:
-- Default: `encoding/json`
-- Optional: `goccy/go-json` (faster)
+Uses `encoding/json/v2` exclusively (no build-tag switching).
 
-Internal `internal/json` package abstracts the choice. Custom field registry (`json.Registry`) enables type-safe deserialization of extension fields.
+Internal `internal/json` package provides the abstraction. Custom field registry (`json.Registry`) enables type-safe deserialization of extension fields.
 
 ## Base64 Backend
 
@@ -85,10 +86,9 @@ Internal `internal/base64` package abstracts the choice.
 | Module | Path | Purpose |
 |--------|------|---------|
 | Main | `./go.mod` | Core library |
-| Examples | `./examples/go.mod` | Usage examples (has `replace` directive) |
 | CLI | `./cmd/jwx/go.mod` | Command-line tool |
-| Perf Bench | `./bench/performance/go.mod` | Performance benchmarks |
-| Comparison | `./bench/comparison/go.mod` | Library comparison |
-| Generators | `./tools/cmd/*/go.mod` | Code generators |
+| Generators | `./internal/jwxcodegen/go.mod` | Code generators |
 
-No `go.work` file. Nested modules use `replace` directives for local development.
+Examples and benchmarks are external companion repos (`github.com/jwx-go/examples`, `github.com/jwx-go/benchmarks`), locally available via `go.work` when checked out.
+
+No `go.work` file is committed. Nested modules use `replace` directives for local development.

@@ -5,9 +5,7 @@
 ## Running Tests
 
 ```bash
-make test              # All tests, stdlib JSON, race detector
-make test-goccy        # With goccy/go-json
-make test-alltags      # All optional features
+make test              # All tests, race detector
 make smoke             # Short/smoke tests only
 make cover             # Coverage report
 make lint              # golangci-lint
@@ -15,16 +13,14 @@ make lint              # golangci-lint
 
 ## Test Script
 
-`tools/test.sh` iterates over these modules:
+`scripts/test.sh` iterates over these modules:
 - `.` (main)
-- `./examples`
-- `./bench/performance`
 - `./cmd/jwx`
 
 All run with `-race` flag. Coverage excludes `internal/jose`, `internal/jwxtest`, `internal/cmd`.
 
 Environment variables:
-- `TESTOPTS` — extra `go test` flags (e.g., `-tags jwx_goccy`)
+- `TESTOPTS` — extra `go test` flags (e.g., `-run TestFoo`)
 - `MODE` — `cover` (add coverage), `short` (add `-short`)
 
 ## Package Test Conventions
@@ -40,11 +36,7 @@ Environment variables:
 
 ## Build Tags for Tests
 
-| Tag | Effect |
-|-----|--------|
-| `jwx_goccy` | Use goccy/go-json |
-
-Other optional features (signature algorithms, base64 backend) are now activated via side-effect imports of [extension modules](../docs/10-extensions.md), not build tags.
+No build tags in v4. Optional features (signature algorithms, base64 backend) are activated via side-effect imports of [extension modules](../docs/10-extensions.md).
 
 ## Fuzz Tests
 
