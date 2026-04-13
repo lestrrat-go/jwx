@@ -424,23 +424,31 @@ func generateTokenKeys(o *codegen.Output, obj *codegen.Object) {
 }
 
 func generateTokenClaims(o *codegen.Output, obj *codegen.Object) {
-	// Generate Claims() iter.Seq2[string, any] method
+	// Generate Claims() iter.Seq2[string, any] method.
+	// Snapshots claims under the read lock and releases it before yielding,
+	// so callers can safely access other token methods inside the yield closure
+	// without deadlocking on the token's RWMutex.
 	o.LL("func (t *%s) Claims() iter.Seq2[string, any] {", obj.Name(false))
 	o.L("return func(yield func(string, any) bool) {")
+	o.L("type claimKV struct { k string; v any }")
 	o.L("t.mu.RLock()")
-	o.L("defer t.mu.RUnlock()")
+	o.L("snapshot := make([]claimKV, 0, %d+len(t.privateClaims))", len(obj.Fields()))
 	for _, f := range obj.Fields() {
 		keyName := f.Name(true) + "Key"
 		o.L("if t.%s != nil {", f.Name(false))
 		if jwxcodegen.FieldStorageTypeIsIndirect(f) {
-			o.L("if !yield(%s, *(t.%s)) { return }", keyName, f.Name(false))
+			o.L("snapshot = append(snapshot, claimKV{%s, *(t.%s)})", keyName, f.Name(false))
 		} else {
-			o.L("if !yield(%s, t.%s) { return }", keyName, f.Name(false))
+			o.L("snapshot = append(snapshot, claimKV{%s, t.%s})", keyName, f.Name(false))
 		}
 		o.L("}")
 	}
 	o.L("for k, v := range t.privateClaims {")
-	o.L("if !yield(k, v) { return }")
+	o.L("snapshot = append(snapshot, claimKV{k, v})")
+	o.L("}")
+	o.L("t.mu.RUnlock()")
+	o.L("for _, p := range snapshot {")
+	o.L("if !yield(p.k, p.v) { return }")
 	o.L("}")
 	o.L("}")
 	o.L("}")

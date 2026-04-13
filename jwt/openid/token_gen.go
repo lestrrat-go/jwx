@@ -1186,140 +1186,96 @@ func (t *stdToken) Keys() []string {
 
 func (t *stdToken) Claims() iter.Seq2[string, any] {
 	return func(yield func(string, any) bool) {
+		type claimKV struct {
+			k string
+			v any
+		}
 		t.mu.RLock()
-		defer t.mu.RUnlock()
+		snapshot := make([]claimKV, 0, 26+len(t.privateClaims))
 		if t.address != nil {
-			if !yield(AddressKey, t.address) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{AddressKey, t.address})
 		}
 		if t.audience != nil {
-			if !yield(AudienceKey, t.audience) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{AudienceKey, t.audience})
 		}
 		if t.birthdate != nil {
-			if !yield(BirthdateKey, t.birthdate) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{BirthdateKey, t.birthdate})
 		}
 		if t.email != nil {
-			if !yield(EmailKey, *(t.email)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{EmailKey, *(t.email)})
 		}
 		if t.emailVerified != nil {
-			if !yield(EmailVerifiedKey, *(t.emailVerified)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{EmailVerifiedKey, *(t.emailVerified)})
 		}
 		if t.expiration != nil {
-			if !yield(ExpirationKey, *(t.expiration)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{ExpirationKey, *(t.expiration)})
 		}
 		if t.familyName != nil {
-			if !yield(FamilyNameKey, *(t.familyName)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{FamilyNameKey, *(t.familyName)})
 		}
 		if t.gender != nil {
-			if !yield(GenderKey, *(t.gender)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{GenderKey, *(t.gender)})
 		}
 		if t.givenName != nil {
-			if !yield(GivenNameKey, *(t.givenName)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{GivenNameKey, *(t.givenName)})
 		}
 		if t.issuedAt != nil {
-			if !yield(IssuedAtKey, *(t.issuedAt)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{IssuedAtKey, *(t.issuedAt)})
 		}
 		if t.issuer != nil {
-			if !yield(IssuerKey, *(t.issuer)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{IssuerKey, *(t.issuer)})
 		}
 		if t.jwtID != nil {
-			if !yield(JwtIDKey, *(t.jwtID)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{JwtIDKey, *(t.jwtID)})
 		}
 		if t.locale != nil {
-			if !yield(LocaleKey, *(t.locale)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{LocaleKey, *(t.locale)})
 		}
 		if t.middleName != nil {
-			if !yield(MiddleNameKey, *(t.middleName)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{MiddleNameKey, *(t.middleName)})
 		}
 		if t.name != nil {
-			if !yield(NameKey, *(t.name)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{NameKey, *(t.name)})
 		}
 		if t.nickname != nil {
-			if !yield(NicknameKey, *(t.nickname)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{NicknameKey, *(t.nickname)})
 		}
 		if t.notBefore != nil {
-			if !yield(NotBeforeKey, *(t.notBefore)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{NotBeforeKey, *(t.notBefore)})
 		}
 		if t.phoneNumber != nil {
-			if !yield(PhoneNumberKey, *(t.phoneNumber)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{PhoneNumberKey, *(t.phoneNumber)})
 		}
 		if t.phoneNumberVerified != nil {
-			if !yield(PhoneNumberVerifiedKey, *(t.phoneNumberVerified)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{PhoneNumberVerifiedKey, *(t.phoneNumberVerified)})
 		}
 		if t.picture != nil {
-			if !yield(PictureKey, *(t.picture)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{PictureKey, *(t.picture)})
 		}
 		if t.preferredUsername != nil {
-			if !yield(PreferredUsernameKey, *(t.preferredUsername)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{PreferredUsernameKey, *(t.preferredUsername)})
 		}
 		if t.profile != nil {
-			if !yield(ProfileKey, *(t.profile)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{ProfileKey, *(t.profile)})
 		}
 		if t.subject != nil {
-			if !yield(SubjectKey, *(t.subject)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{SubjectKey, *(t.subject)})
 		}
 		if t.updatedAt != nil {
-			if !yield(UpdatedAtKey, *(t.updatedAt)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{UpdatedAtKey, *(t.updatedAt)})
 		}
 		if t.website != nil {
-			if !yield(WebsiteKey, *(t.website)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{WebsiteKey, *(t.website)})
 		}
 		if t.zoneinfo != nil {
-			if !yield(ZoneinfoKey, *(t.zoneinfo)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{ZoneinfoKey, *(t.zoneinfo)})
 		}
 		for k, v := range t.privateClaims {
-			if !yield(k, v) {
+			snapshot = append(snapshot, claimKV{k, v})
+		}
+		t.mu.RUnlock()
+		for _, p := range snapshot {
+			if !yield(p.k, p.v) {
 				return
 			}
 		}

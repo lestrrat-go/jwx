@@ -11,6 +11,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestClaimsNestedAccess(t *testing.T) {
+	t.Parallel()
+	tok := jwt.New()
+	require.NoError(t, tok.Set(jwt.IssuerKey, "https://example.com"))
+	require.NoError(t, tok.Set(jwt.SubjectKey, "alice"))
+	require.NoError(t, tok.Set("custom", "value"))
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		for k := range tok.Claims() {
+			// Calls that acquire the token's lock from within the yield
+			// closure must not deadlock — Claims() must release the lock
+			// before yielding.
+			_, _ = tok.Field(k)
+			_ = tok.Has(k)
+			require.NoError(t, tok.Set("mutated", k))
+		}
+	}()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("Claims() iteration deadlocked on nested token access")
+	}
+}
+
 const (
 	tokenTime = 233431200
 )
