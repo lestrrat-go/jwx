@@ -20,10 +20,16 @@ var muKeyUsageName sync.RWMutex
 //
 // Furthermore, the check against registered values can be completely turned off
 // by setting the global option `jwk.WithStrictKeyUsage(false)`.
-func RegisterKeyUsage(v string) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterKeyUsage(v string) error {
 	muKeyUsageName.Lock()
 	defer muKeyUsageName.Unlock()
 	keyUsageNames[v] = struct{}{}
+	return nil
 }
 
 func UnregisterKeyUsage(v string) {
@@ -34,8 +40,12 @@ func UnregisterKeyUsage(v string) {
 
 func init() {
 	strictKeyUsage.Store(true)
-	RegisterKeyUsage("sig")
-	RegisterKeyUsage("enc")
+	if err := RegisterKeyUsage("sig"); err != nil {
+		panic(fmt.Sprintf("jwk: failed to register builtin KeyUsage: %s", err))
+	}
+	if err := RegisterKeyUsage("enc"); err != nil {
+		panic(fmt.Sprintf("jwk: failed to register builtin KeyUsage: %s", err))
+	}
 }
 
 func isValidUsage(v string) bool {

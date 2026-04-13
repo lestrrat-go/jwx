@@ -29,7 +29,9 @@ func init() {
 	algorithms[4] = NewContentEncryptionAlgorithm(tokens.A256CBC_HS512)
 	algorithms[5] = NewContentEncryptionAlgorithm(tokens.A256GCM)
 
-	RegisterContentEncryptionAlgorithm(algorithms...)
+	if err := RegisterContentEncryptionAlgorithm(algorithms...); err != nil {
+		panic(fmt.Sprintf("jwa: failed to register builtin ContentEncryptionAlgorithm: %s", err))
+	}
 }
 
 // A128CBC_HS256 returns an object representing A128CBC-HS256. Using this value specifies that the content should be encrypted using AES-CBC + HMAC-SHA256 (128).
@@ -114,13 +116,20 @@ func LookupContentEncryptionAlgorithm(name string) (ContentEncryptionAlgorithm, 
 
 // RegisterContentEncryptionAlgorithm registers a new ContentEncryptionAlgorithm. The signature value must be immutable
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
-func RegisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm) {
+//
+// The error return is reserved for future validation (duplicate detection,
+// identifier rules, freeze-point enforcement, etc). The current implementation
+// always returns nil, but callers — especially extension modules calling this
+// from init() — must check the return value and panic on failure to stay
+// forward-compatible.
+func RegisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm) error {
 	muAllContentEncryptionAlgorithm.Lock()
 	for _, alg := range algorithms {
 		allContentEncryptionAlgorithm[alg.String()] = alg
 	}
 	muAllContentEncryptionAlgorithm.Unlock()
 	rebuildContentEncryptionAlgorithm()
+	return nil
 }
 
 // UnregisterContentEncryptionAlgorithm unregisters a ContentEncryptionAlgorithm from its known database.

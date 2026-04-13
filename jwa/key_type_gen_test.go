@@ -126,7 +126,7 @@ func TestKeyTypeCustomAlgorithm(t *testing.T) {
 		jwa.UnregisterKeyType(customAlgorithm)
 	})
 	t.Run(`with custom algorithm registered`, func(t *testing.T) {
-		jwa.RegisterKeyType(customAlgorithm)
+		require.NoError(t, jwa.RegisterKeyType(customAlgorithm))
 		t.Run(`Lookup the object`, func(t *testing.T) {
 			t.Parallel()
 			v, ok := jwa.LookupKeyType(customAlgorithmValue)

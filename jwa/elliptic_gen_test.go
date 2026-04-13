@@ -148,7 +148,7 @@ func TestEllipticCurveAlgorithmCustomAlgorithm(t *testing.T) {
 		jwa.UnregisterEllipticCurveAlgorithm(customAlgorithm)
 	})
 	t.Run(`with custom algorithm registered`, func(t *testing.T) {
-		jwa.RegisterEllipticCurveAlgorithm(customAlgorithm)
+		require.NoError(t, jwa.RegisterEllipticCurveAlgorithm(customAlgorithm))
 		t.Run(`Lookup the object`, func(t *testing.T) {
 			t.Parallel()
 			v, ok := jwa.LookupEllipticCurveAlgorithm(customAlgorithmValue)

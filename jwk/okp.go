@@ -136,10 +136,16 @@ var muOKPRawKeyImporters sync.RWMutex
 var okpRawKeyImporters []OKPRawKeyImporter
 
 // RegisterOKPRawKeyImporter registers a function that can import raw keys as OKP keys.
-func RegisterOKPRawKeyImporter(fn OKPRawKeyImporter) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterOKPRawKeyImporter(fn OKPRawKeyImporter) error {
 	muOKPRawKeyImporters.Lock()
 	defer muOKPRawKeyImporters.Unlock()
 	okpRawKeyImporters = append(okpRawKeyImporters, fn)
+	return nil
 }
 
 func buildOKPPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte) (any, error) {

@@ -597,8 +597,14 @@ type CustomDecodeFunc[T any] = json.CustomDecodeFunc[T]
 // and you try to roundtrip from an object to JSON, and then back to an object.
 // To avoid this, it's always better to use a custom type
 // that wraps your desired type and implement MarshalJSON and UnmarshalJSON.
-func RegisterCustomField[T any](name string) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterCustomField[T any](name string) error {
 	json.RegisterTyped[T](fieldRegistry, name)
+	return nil
 }
 
 // RegisterCustomDecoder registers a private field with a custom decoder
@@ -614,8 +620,14 @@ func RegisterCustomField[T any](name string) {
 //	  }
 //	  return time.Parse(time.RFC1123, s)
 //	}))
-func RegisterCustomDecoder[T any](name string, dec CustomDecodeFunc[T]) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterCustomDecoder[T any](name string, dec CustomDecodeFunc[T]) error {
 	json.RegisterCustomDecoder[T](fieldRegistry, name, dec)
+	return nil
 }
 
 // UnregisterCustomField removes the registration for a custom field.

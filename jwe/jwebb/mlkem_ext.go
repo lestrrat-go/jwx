@@ -71,20 +71,32 @@ var (
 // algorithm. After registration, IsMLKEM returns true for this identifier,
 // causing the JWE encrypt/decrypt dispatch to route it through the
 // ML-KEM path.
-func RegisterMLKEMAlgorithm(alg string) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterMLKEMAlgorithm(alg string) error {
 	muMLKEMAlgs.Lock()
 	defer muMLKEMAlgs.Unlock()
 	mlkemAlgSet[alg] = struct{}{}
+	return nil
 }
 
 // RegisterMLKEMDirectAlgorithm registers an algorithm identifier as a
 // direct (non-key-wrapping) ML-KEM algorithm. Direct algorithms use the
 // derived shared secret as the CEK. Implementations should also call
 // RegisterMLKEMAlgorithm for the same identifier.
-func RegisterMLKEMDirectAlgorithm(alg string) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterMLKEMDirectAlgorithm(alg string) error {
 	muMLKEMAlgs.Lock()
 	defer muMLKEMAlgs.Unlock()
 	mlkemDirectAlgSet[alg] = struct{}{}
+	return nil
 }
 
 func isRegisteredMLKEM(alg string) bool {

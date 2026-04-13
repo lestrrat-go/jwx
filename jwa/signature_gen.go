@@ -37,7 +37,9 @@ func init() {
 	algorithms[13] = NewSignatureAlgorithm("RS384")
 	algorithms[14] = NewSignatureAlgorithm("RS512")
 
-	RegisterSignatureAlgorithm(algorithms...)
+	if err := RegisterSignatureAlgorithm(algorithms...); err != nil {
+		panic(fmt.Sprintf("jwa: failed to register builtin SignatureAlgorithm: %s", err))
+	}
 }
 
 // ES256 returns an object representing ECDSA signature algorithm using P-256 curve and SHA-256.
@@ -176,13 +178,20 @@ func LookupSignatureAlgorithm(name string) (SignatureAlgorithm, bool) {
 
 // RegisterSignatureAlgorithm registers a new SignatureAlgorithm. The signature value must be immutable
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
-func RegisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
+//
+// The error return is reserved for future validation (duplicate detection,
+// identifier rules, freeze-point enforcement, etc). The current implementation
+// always returns nil, but callers — especially extension modules calling this
+// from init() — must check the return value and panic on failure to stay
+// forward-compatible.
+func RegisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) error {
 	muAllSignatureAlgorithm.Lock()
 	for _, alg := range algorithms {
 		allSignatureAlgorithm[alg.String()] = alg
 	}
 	muAllSignatureAlgorithm.Unlock()
 	rebuildSignatureAlgorithm()
+	return nil
 }
 
 // UnregisterSignatureAlgorithm unregisters a SignatureAlgorithm from its known database.

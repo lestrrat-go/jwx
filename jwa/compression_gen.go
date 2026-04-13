@@ -24,7 +24,9 @@ func init() {
 	algorithms[0] = NewCompressionAlgorithm("DEF")
 	algorithms[1] = NewCompressionAlgorithm("")
 
-	RegisterCompressionAlgorithm(algorithms...)
+	if err := RegisterCompressionAlgorithm(algorithms...); err != nil {
+		panic(fmt.Sprintf("jwa: failed to register builtin CompressionAlgorithm: %s", err))
+	}
 }
 
 // Deflate returns an object representing the "DEF" content compression algorithm value. Using this value specifies that the content should be compressed using DEFLATE (RFC 1951).
@@ -89,13 +91,20 @@ func LookupCompressionAlgorithm(name string) (CompressionAlgorithm, bool) {
 
 // RegisterCompressionAlgorithm registers a new CompressionAlgorithm. The signature value must be immutable
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
-func RegisterCompressionAlgorithm(algorithms ...CompressionAlgorithm) {
+//
+// The error return is reserved for future validation (duplicate detection,
+// identifier rules, freeze-point enforcement, etc). The current implementation
+// always returns nil, but callers — especially extension modules calling this
+// from init() — must check the return value and panic on failure to stay
+// forward-compatible.
+func RegisterCompressionAlgorithm(algorithms ...CompressionAlgorithm) error {
 	muAllCompressionAlgorithm.Lock()
 	for _, alg := range algorithms {
 		allCompressionAlgorithm[alg.String()] = alg
 	}
 	muAllCompressionAlgorithm.Unlock()
 	rebuildCompressionAlgorithm()
+	return nil
 }
 
 // UnregisterCompressionAlgorithm unregisters a CompressionAlgorithm from its known database.

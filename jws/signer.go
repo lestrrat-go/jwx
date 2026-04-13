@@ -61,8 +61,16 @@ func SignerFor(alg jwa.SignatureAlgorithm) (Signer, error) {
 // If you want to completely remove an algorithm, you must call
 // jwa.UnregisterSignatureAlgorithm yourself after calling
 // UnregisterSigner.
+//
+// The error return is reserved for future validation (duplicate detection,
+// identifier rules, freeze-point enforcement, etc). The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
 func RegisterSigner(alg jwa.SignatureAlgorithm, s Signer) error {
-	jwa.RegisterSignatureAlgorithm(alg)
+	if err := jwa.RegisterSignatureAlgorithm(alg); err != nil {
+		return fmt.Errorf(`jws.RegisterSigner: failed to register signature algorithm: %w`, err)
+	}
 	signerDB.Store(alg, s)
 	return nil
 }

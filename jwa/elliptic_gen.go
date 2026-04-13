@@ -28,7 +28,9 @@ func init() {
 	algorithms[4] = NewEllipticCurveAlgorithm("X25519")
 	algorithms[5] = NewEllipticCurveAlgorithm("X448")
 
-	RegisterEllipticCurveAlgorithm(algorithms...)
+	if err := RegisterEllipticCurveAlgorithm(algorithms...); err != nil {
+		panic(fmt.Sprintf("jwa: failed to register builtin EllipticCurveAlgorithm: %s", err))
+	}
 }
 
 // Ed25519 returns an object representing Ed25519 algorithm for EdDSA operations.
@@ -120,13 +122,20 @@ func LookupEllipticCurveAlgorithm(name string) (EllipticCurveAlgorithm, bool) {
 
 // RegisterEllipticCurveAlgorithm registers a new EllipticCurveAlgorithm. The signature value must be immutable
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
-func RegisterEllipticCurveAlgorithm(algorithms ...EllipticCurveAlgorithm) {
+//
+// The error return is reserved for future validation (duplicate detection,
+// identifier rules, freeze-point enforcement, etc). The current implementation
+// always returns nil, but callers — especially extension modules calling this
+// from init() — must check the return value and panic on failure to stay
+// forward-compatible.
+func RegisterEllipticCurveAlgorithm(algorithms ...EllipticCurveAlgorithm) error {
 	muAllEllipticCurveAlgorithm.Lock()
 	for _, alg := range algorithms {
 		allEllipticCurveAlgorithm[alg.String()] = alg
 	}
 	muAllEllipticCurveAlgorithm.Unlock()
 	rebuildEllipticCurveAlgorithm()
+	return nil
 }
 
 // UnregisterEllipticCurveAlgorithm unregisters a EllipticCurveAlgorithm from its known database.

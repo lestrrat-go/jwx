@@ -22,14 +22,20 @@ func init() {
 
 // RegisterCurve registers a jwa.EllipticCurveAlgorithm constant and its
 // corresponding elliptic.Curve object. Users do not need to call this unless
-// they are registering a new ECDSA key type
-func RegisterCurve(alg jwa.EllipticCurveAlgorithm, crv elliptic.Curve) {
+// they are registering a new ECDSA key type.
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterCurve(alg jwa.EllipticCurveAlgorithm, crv elliptic.Curve) error {
 	muCurves.Lock()
 	defer muCurves.Unlock()
 
 	algToCurveMap[alg] = crv
 	curveToAlgMap[crv] = alg
 	rebuildCurves()
+	return nil
 }
 
 func rebuildCurves() {

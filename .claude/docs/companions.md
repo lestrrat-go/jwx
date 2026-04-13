@@ -6,6 +6,14 @@ Extension modules under `github.com/jwx-go/*` (asmbase64, compsig, ed448, es256k
 jwkcache, jwxmigrate, mlkem, mldsa, reddy-pqchpke, x448, benchmarks) are managed as "companion modules." They live in
 separate repos but share CI workflows, dependabot config, and development tooling.
 
+## House style: `init()` and Register\* failures
+
+Companion modules that register algorithms, signers, verifiers, or key
+handlers do so from `init()`, and **must panic** if any `Register*` call
+returns an error. See `.claude/docs/internals.md` (Register\* API
+convention) for the full rule and rationale. This applies uniformly
+across every companion — do not demote to `log.Printf` + continue.
+
 ## Directory Layout
 
 ```

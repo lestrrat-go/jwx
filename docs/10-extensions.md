@@ -2,6 +2,8 @@
 
 In v4, optional features are provided as standalone modules under [`github.com/jwx-go`](https://github.com/jwx-go). Each module registers itself automatically via `init()` — just import the module for its side effects.
 
+> **Note**: Extension modules register their algorithms from `init()` and **panic** if registration fails. This is intentional: a failed registration means the extension is unusable, and panicking at import time surfaces the problem immediately rather than at a later, confusing call site. See each module's package godoc for details.
+
 ### Signature Algorithms
 
 | Module | Algorithm | Key Package |

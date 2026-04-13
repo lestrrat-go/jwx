@@ -158,9 +158,11 @@ var x509DecoderList = []X509Decoder{}
 type identDefaultX509Decoder struct{}
 
 func init() {
-	RegisterX509Decoder(identDefaultX509Decoder{}, X509DecodeFunc(func(block *pem.Block) (any, error) {
+	if err := RegisterX509Decoder(identDefaultX509Decoder{}, X509DecodeFunc(func(block *pem.Block) (any, error) {
 		return jwkbb.DecodeX509(block)
-	}))
+	})); err != nil {
+		panic(fmt.Sprintf("jwk: failed to register default X509 decoder: %s", err))
+	}
 }
 
 // RegisterX509Decoder registers a new X509Decoder that can decode PEM encoded ASN.1 DER format.
@@ -168,7 +170,12 @@ func init() {
 // as a map key to identify the decoder.
 //
 // This function is experimental, and may change in the future.
-func RegisterX509Decoder(ident any, decoder X509Decoder) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterX509Decoder(ident any, decoder X509Decoder) error {
 	if decoder == nil {
 		panic(`jwk.RegisterX509Decoder: decoder cannot be nil`)
 	}
@@ -176,11 +183,12 @@ func RegisterX509Decoder(ident any, decoder X509Decoder) {
 	muX509Decoders.Lock()
 	defer muX509Decoders.Unlock()
 	if _, ok := x509Decoders[ident]; ok {
-		return // already registered
+		return nil // already registered
 	}
 
 	x509Decoders[ident] = len(x509DecoderList)
 	x509DecoderList = append(x509DecoderList, decoder)
+	return nil
 }
 
 // UnregisterX509Decoder unregisters the X509Decoder identified by the given identifier.

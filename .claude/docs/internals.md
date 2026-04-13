@@ -68,6 +68,43 @@ Manual option functions in `{pkg}/options.go` supplement generated ones.
 | Custom signers | `jws.RegisterSigner()` | jws |
 | Custom verifiers | `jws.RegisterVerifier()` | jws |
 
+### Register\* API convention (v4)
+
+All `Register*` functions **must return `error`**, even if the current
+implementation has no failure path. This reserves the ability to codify
+error modes (duplicate detection, identifier validation, freeze-point
+enforcement, etc.) in the future without another API break.
+
+When adding a new `Register*` function or touching an existing one:
+
+- Signature must be `func Register...(...) error`. Do not drop the
+  return in the name of "it can't fail today."
+- Unused error returns in callers must not be silently dropped — see
+  the companion-module rule below.
+
+### Companion modules: panic on Register\* failure
+
+Companion modules under `github.com/jwx-go/*` register their algorithms
+from `init()`. The house style is:
+
+```go
+func init() {
+    if err := jws.RegisterSigner(alg, mySigner{}); err != nil {
+        panic(fmt.Sprintf("jwx-go/<mod>: failed to register signer: %s", err))
+    }
+}
+```
+
+Rationale: `init()` runs once at import time. A registration failure
+means the extension is unusable, and every subsequent call that relies
+on it would fail in a confusing way far from the real cause. Crashing
+at import surfaces the problem immediately and loudly.
+
+This is intentional and uniform across all companion modules — do not
+demote these to `log.Printf` + continue. Package godoc on companion
+modules should mention that importing the package can panic if jwx
+rejects the registration.
+
 ## JSON Backend
 
 Uses `encoding/json/v2` exclusively (no build-tag switching).

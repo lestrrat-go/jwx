@@ -75,7 +75,7 @@ func TestCompressionAlgorithmCustomAlgorithm(t *testing.T) {
 		jwa.UnregisterCompressionAlgorithm(customAlgorithm)
 	})
 	t.Run(`with custom algorithm registered`, func(t *testing.T) {
-		jwa.RegisterCompressionAlgorithm(customAlgorithm)
+		require.NoError(t, jwa.RegisterCompressionAlgorithm(customAlgorithm))
 		t.Run(`Lookup the object`, func(t *testing.T) {
 			t.Parallel()
 			v, ok := jwa.LookupCompressionAlgorithm(customAlgorithmValue)

@@ -182,7 +182,9 @@ func generateAlgInit(o *codegen.Output, t Algorithm) {
 		o.R(")")
 	}
 
-	o.LL("Register%s(algorithms...)", t.Name)
+	o.LL("if err := Register%s(algorithms...); err != nil {", t.Name)
+	o.L("panic(fmt.Sprintf(%q, err))", fmt.Sprintf("jwa: failed to register builtin %s: %%s", t.Name))
+	o.L("}")
 	o.L("}") // end init
 }
 
@@ -304,13 +306,20 @@ func generateAlgRegistration(o *codegen.Output, t Algorithm) {
 
 	o.LL("// Register%[1]s registers a new %[1]s. The signature value must be immutable", t.Name)
 	o.L("// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.")
-	o.L("func Register%[1]s(algorithms ...%[1]s) {", t.Name)
+	o.L("//")
+	o.L("// The error return is reserved for future validation (duplicate detection,")
+	o.L("// identifier rules, freeze-point enforcement, etc). The current implementation")
+	o.L("// always returns nil, but callers — especially extension modules calling this")
+	o.L("// from init() — must check the return value and panic on failure to stay")
+	o.L("// forward-compatible.")
+	o.L("func Register%[1]s(algorithms ...%[1]s) error {", t.Name)
 	o.L("muAll%[1]s.Lock()", t.Name)
 	o.L("for _, alg := range algorithms {")
 	o.L("all%[1]s[alg.String()] = alg", t.Name)
 	o.L("}")
 	o.L("muAll%[1]s.Unlock()", t.Name)
 	o.L("rebuild%[1]s()", t.Name)
+	o.L("return nil")
 	o.L("}")
 
 	o.LL("// Unregister%[1]s unregisters a %[1]s from its known database.", t.Name)
@@ -520,7 +529,7 @@ func generateAlgTestCustomAlgorithm(o *codegen.Output, t Algorithm) {
 	o.L("jwa.Unregister%[1]s(customAlgorithm)", t.Name)
 	o.L("})")
 	o.L("t.Run(`with custom algorithm registered`, func(t *testing.T) {")
-	o.L("jwa.Register%[1]s(customAlgorithm)", t.Name)
+	o.L("require.NoError(t, jwa.Register%[1]s(customAlgorithm))", t.Name)
 	o.L("t.Run(`Lookup the object`, func(t *testing.T) {")
 	o.L("t.Parallel()")
 	o.L("v, ok := jwa.Lookup%[1]s(customAlgorithmValue)", t.Name)

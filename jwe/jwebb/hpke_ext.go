@@ -75,17 +75,25 @@ func init() {
 		tokens.HPKE_4_KE,
 		tokens.HPKE_7_KE,
 	} {
-		RegisterHPKEAlgorithm(alg)
+		if err := RegisterHPKEAlgorithm(alg); err != nil {
+			panic(fmt.Sprintf("jwebb: failed to register builtin HPKE algorithm: %s", err))
+		}
 	}
 }
 
 // RegisterHPKEAlgorithm registers an algorithm identifier as an HPKE
 // algorithm. After registration, IsHPKE returns true for this identifier,
 // causing the JWE encrypt/decrypt dispatch to route it through the HPKE path.
-func RegisterHPKEAlgorithm(alg string) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterHPKEAlgorithm(alg string) error {
 	muHPKEAlgs.Lock()
 	defer muHPKEAlgs.Unlock()
 	hpkeAlgSet[alg] = struct{}{}
+	return nil
 }
 
 func unregisterHPKEAlgorithm(alg string) {

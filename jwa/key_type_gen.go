@@ -27,7 +27,9 @@ func init() {
 	algorithms[3] = NewKeyType("oct")
 	algorithms[4] = NewKeyType("RSA")
 
-	RegisterKeyType(algorithms...)
+	if err := RegisterKeyType(algorithms...); err != nil {
+		panic(fmt.Sprintf("jwa: failed to register builtin KeyType: %s", err))
+	}
 }
 
 // AKP returns an object representing AKP. Algorithm Key Pair (post-quantum KEM/signature keys)
@@ -114,13 +116,20 @@ func LookupKeyType(name string) (KeyType, bool) {
 
 // RegisterKeyType registers a new KeyType. The signature value must be immutable
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
-func RegisterKeyType(algorithms ...KeyType) {
+//
+// The error return is reserved for future validation (duplicate detection,
+// identifier rules, freeze-point enforcement, etc). The current implementation
+// always returns nil, but callers — especially extension modules calling this
+// from init() — must check the return value and panic on failure to stay
+// forward-compatible.
+func RegisterKeyType(algorithms ...KeyType) error {
 	muAllKeyType.Lock()
 	for _, alg := range algorithms {
 		allKeyType[alg.String()] = alg
 	}
 	muAllKeyType.Unlock()
 	rebuildKeyType()
+	return nil
 }
 
 // UnregisterKeyType unregisters a KeyType from its known database.

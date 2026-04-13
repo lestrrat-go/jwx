@@ -47,10 +47,16 @@ var keyParsers = []KeyParser{KeyParseFunc(defaultParseKey)}
 // RegisterKeyParser adds a new KeyParser. Parsers are called in FILO order.
 // That is, the last parser to be registered is called first. There is no
 // check for duplicate entries.
-func RegisterKeyParser(kp KeyParser) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterKeyParser(kp KeyParser) error {
 	muKeyParser.Lock()
 	defer muKeyParser.Unlock()
 	keyParsers = append(keyParsers, kp)
+	return nil
 }
 
 func defaultParseKey(probe *KeyProbe, unmarshaler KeyUnmarshaler, data []byte) (Key, error) {

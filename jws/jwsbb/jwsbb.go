@@ -95,8 +95,14 @@ func init() {
 // RegisterDsigAlgorithm registers a mapping from a JWS algorithm name
 // to a dsig algorithm name. This allows extension modules to add support
 // for new algorithms that use the default signer/verifier dispatch.
-func RegisterDsigAlgorithm(jwsAlg, dsigAlg string) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterDsigAlgorithm(jwsAlg, dsigAlg string) error {
 	dsigAlgorithmDB.Store(jwsAlg, dsigAlg)
+	return nil
 }
 
 // getDsigAlgorithm returns the dsig algorithm name for a JWS algorithm
