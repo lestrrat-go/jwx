@@ -15,7 +15,7 @@ go_library(
         "filter.go",
         "interface.go",
         "interface_gen.go",
-        "io.go",
+        "io_gen.go",
         "jwk.go",
         "key_ops.go",
         "okp.go",

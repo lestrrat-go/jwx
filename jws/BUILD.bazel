@@ -9,7 +9,7 @@ go_library(
         "headers.go",
         "headers_gen.go",
         "interface.go",
-        "io.go",
+        "io_gen.go",
         "jws.go",
         "key_provider.go",
         "message.go",
