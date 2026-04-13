@@ -481,45 +481,39 @@ func (t *stdToken) Keys() []string {
 
 func (t *stdToken) Claims() iter.Seq2[string, any] {
 	return func(yield func(string, any) bool) {
+		type claimKV struct {
+			k string
+			v any
+		}
 		t.mu.RLock()
-		defer t.mu.RUnlock()
+		snapshot := make([]claimKV, 0, 7+len(t.privateClaims))
 		if t.audience != nil {
-			if !yield(AudienceKey, t.audience) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{AudienceKey, t.audience})
 		}
 		if t.expiration != nil {
-			if !yield(ExpirationKey, *(t.expiration)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{ExpirationKey, *(t.expiration)})
 		}
 		if t.issuedAt != nil {
-			if !yield(IssuedAtKey, *(t.issuedAt)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{IssuedAtKey, *(t.issuedAt)})
 		}
 		if t.issuer != nil {
-			if !yield(IssuerKey, *(t.issuer)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{IssuerKey, *(t.issuer)})
 		}
 		if t.jwtID != nil {
-			if !yield(JwtIDKey, *(t.jwtID)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{JwtIDKey, *(t.jwtID)})
 		}
 		if t.notBefore != nil {
-			if !yield(NotBeforeKey, *(t.notBefore)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{NotBeforeKey, *(t.notBefore)})
 		}
 		if t.subject != nil {
-			if !yield(SubjectKey, *(t.subject)) {
-				return
-			}
+			snapshot = append(snapshot, claimKV{SubjectKey, *(t.subject)})
 		}
 		for k, v := range t.privateClaims {
-			if !yield(k, v) {
+			snapshot = append(snapshot, claimKV{k, v})
+		}
+		t.mu.RUnlock()
+		for _, p := range snapshot {
+			if !yield(p.k, p.v) {
 				return
 			}
 		}
