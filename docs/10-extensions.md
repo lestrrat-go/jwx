@@ -453,6 +453,12 @@ func Example_jws_sign_es256k() {
 ```
 source: [examples/jws_sign_es256k_example_test.go](https://github.com/jwx-go/examples/blob/main/jws_sign_es256k_example_test.go)
 
+## Signature malleability (low-S)
+
+ES256K signatures produced and accepted by this module do **not** enforce low-S canonicalization. The underlying `crypto/ecdsa` implementation may emit either of the two mathematically valid `(r, s)` / `(r, n-s)` pairs, and verification accepts both. This matches every other ECDSA algorithm in `jwx` (ES256, ES384, ES512) and is appropriate for JWS, where signatures are bound to a specific payload and are not used as unique identifiers.
+
+If you are bridging JWS-signed material into a system that treats ECDSA signatures as unique identifiers (e.g. Bitcoin-style transaction hashes, or signature-equality caches), you are responsible for applying low-S normalization yourself. Do not assume two verifiable ES256K signatures over the same payload are byte-equal.
+
 ---
 
 # X448
