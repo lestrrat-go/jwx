@@ -3,7 +3,7 @@ module github.com/lestrrat-go/jwx/v4
 go 1.26.0
 
 require (
-	github.com/lestrrat-go/dsig v1.1.0
+	github.com/lestrrat-go/dsig v1.3.0
 	github.com/lestrrat-go/option/v3 v3.0.0-alpha1
 	github.com/stretchr/testify v1.11.1
 	github.com/valyala/fastjson v1.6.10

@@ -20,7 +20,31 @@ import (
 // rr is an io.Reader that provides randomness for signing. If rr is nil, it defaults to rand.Reader.
 // Not all algorithms require this parameter, but it is included for consistency.
 // 99% of the time, you can pass nil for rr, and it will work fine.
+//
+// Deprecated in spirit: in the next major release of jwx (v5), the
+// signature of Sign will change to match [SignWithOpts], i.e. it will
+// accept an additional [crypto.SignerOpts] parameter immediately before
+// rr. Callers that need to pass per-call options today should use
+// [SignWithOpts]; callers that do not can keep using Sign and migrate
+// when v5 ships by threading a nil opts argument through at the call
+// site.
 func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
+	return SignWithOpts(key, alg, payload, nil, rr)
+}
+
+// SignWithOpts is like [Sign] but threads an optional
+// [crypto.SignerOpts] through to the underlying dsig signer. The
+// canonical use case is composite ML-DSA signatures, where a per-call
+// domain-separation context (`*mldsa.Options`) must reach
+// `filippo.io/mldsa` via the `dsig.SignerWithOpts` interface
+// implemented by `github.com/jwx-go/mldsa/v4`. For built-in families
+// (HMAC, RSA, ECDSA, EdDSA) the opts argument is ignored.
+//
+// This function exists as a transitional API. In the next major release
+// of jwx (v5) it will be removed and its signature will become the
+// canonical shape of [Sign]. Code that uses SignWithOpts today will
+// need a mechanical rename to Sign (and nothing else) when v5 ships.
+func SignWithOpts(key any, alg string, payload []byte, opts crypto.SignerOpts, rr io.Reader) ([]byte, error) {
 	dsigAlg, ok := getDsigAlgorithm(alg)
 	if !ok {
 		// For custom algorithms registered with dsig, JWS name = dsig name
@@ -30,7 +54,7 @@ func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
 	// Get dsig algorithm info to determine key conversion strategy
 	dsigInfo, ok := dsig.GetAlgorithmInfo(dsigAlg)
 	if !ok {
-		return nil, fmt.Errorf(`jwsbb.Sign: dsig algorithm %q not registered`, dsigAlg)
+		return nil, fmt.Errorf(`jwsbb.SignWithOpts: dsig algorithm %q not registered`, dsigAlg)
 	}
 
 	switch dsigInfo.Family {
@@ -43,9 +67,9 @@ func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
 	case dsig.EdDSAFamily:
 		return dispatchEdDSASign(key, alg, dsigAlg, payload, rr)
 	case dsig.Custom:
-		return dsig.Sign(key, dsigAlg, payload, rr)
+		return dsig.SignWithOpts(key, dsigAlg, payload, opts, rr)
 	default:
-		return nil, fmt.Errorf(`jwsbb.Sign: unsupported dsig algorithm family %q`, dsigInfo.Family)
+		return nil, fmt.Errorf(`jwsbb.SignWithOpts: unsupported dsig algorithm family %q`, dsigInfo.Family)
 	}
 }
 
