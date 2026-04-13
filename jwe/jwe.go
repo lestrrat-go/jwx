@@ -739,10 +739,14 @@ func freeHeaders(h Headers) Headers {
 var recipientPool = pool.New(NewRecipient, freeRecipient)
 
 func freeRecipient(r Recipient) Recipient {
+	// Return the recipient's headers to headerPool and install a fresh
+	// instance so the next recipientPool.Get() never hands out a
+	// pointer the caller may still hold a reference to. This is safe
+	// because WithPerRecipientHeaders clones the caller-supplied
+	// Headers, so anything we receive here is already library-owned.
 	if h := r.Headers(); h != nil {
-		if c, ok := h.(interface{ clear() }); ok {
-			c.clear()
-		}
+		headerPool.Put(h)
+		_ = r.SetHeaders(headerPool.Get())
 	}
 
 	if sr, ok := r.(*stdRecipient); ok {

@@ -73,7 +73,16 @@ func (*withKeySuboption) withKeySuboption() {}
 
 // WithPerRecipientHeaders is used to pass header values for each recipient.
 // Note that these headers are by definition _unprotected_.
+//
+// The supplied Headers is cloned before being stored in the option, so the
+// caller retains exclusive ownership of the original instance and the
+// library never mutates or pools it.
 func WithPerRecipientHeaders(hdr Headers) WithKeySuboption {
+	if hdr != nil {
+		if cloned, err := hdr.Clone(); err == nil {
+			hdr = cloned
+		}
+	}
 	return &withKeySuboption{option.New(identPerRecipientHeaders{}, hdr)}
 }
 
