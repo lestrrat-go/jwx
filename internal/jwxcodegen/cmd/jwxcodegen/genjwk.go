@@ -719,6 +719,7 @@ func generateKeyMarshalJSON(o *codegen.Output, kt *KeyType, obj *codegen.Object,
 	appendMarshaledPair("KeyTypeKey", kt.KeyType)
 
 	o.L("h.mu.RLock()")
+	o.L("defer h.mu.RUnlock()")
 	for _, f := range obj.Fields() {
 		keyName := keyConstantName(f, kt.Prefix)
 		o.L("if h.%s != nil {", f.Name(false))
@@ -757,7 +758,6 @@ func generateKeyMarshalJSON(o *codegen.Output, kt *KeyType, obj *codegen.Object,
 	o.L("pairs = append(pairs, fieldPair{Name: k, Value: encoded})")
 	o.L("}")
 	o.L("}")
-	o.L("h.mu.RUnlock()")
 
 	// Sort and assemble: values are already []byte, so just concatenate
 	o.LL("slices.SortFunc(pairs, fieldPairLess)")

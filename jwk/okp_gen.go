@@ -605,6 +605,7 @@ func (h *okpPublicKey) MarshalJSON() ([]byte, error) {
 		pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: v})
 	}
 	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm != nil {
 		{
 			v, err := json.Marshal(*(h.algorithm))
@@ -711,7 +712,6 @@ func (h *okpPublicKey) MarshalJSON() ([]byte, error) {
 			pairs = append(pairs, fieldPair{Name: k, Value: encoded})
 		}
 	}
-	h.mu.RUnlock()
 
 	slices.SortFunc(pairs, fieldPairLess)
 	buf := pool.BytesBuffer().Get()
@@ -1410,6 +1410,7 @@ func (h *okpPrivateKey) MarshalJSON() ([]byte, error) {
 		pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: v})
 	}
 	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm != nil {
 		{
 			v, err := json.Marshal(*(h.algorithm))
@@ -1525,7 +1526,6 @@ func (h *okpPrivateKey) MarshalJSON() ([]byte, error) {
 			pairs = append(pairs, fieldPair{Name: k, Value: encoded})
 		}
 	}
-	h.mu.RUnlock()
 
 	slices.SortFunc(pairs, fieldPairLess)
 	buf := pool.BytesBuffer().Get()
