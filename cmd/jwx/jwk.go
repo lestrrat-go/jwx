@@ -164,7 +164,9 @@ func makeJwkGenerateCmd() *cli.Command {
 			rawkey = v
 		case jwa.OctetSeq():
 			octets := make([]byte, c.Int("keysize"))
-			io.ReadFull(rand.Reader, octets)
+			if _, err := io.ReadFull(rand.Reader, octets); err != nil {
+				return fmt.Errorf(`failed to generate octet seq key: %w`, err)
+			}
 
 			rawkey = octets
 		case jwa.OKP():
