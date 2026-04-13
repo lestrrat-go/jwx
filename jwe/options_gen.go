@@ -159,6 +159,7 @@ type identCEK struct{}
 type identCompress struct{}
 type identContentEncryptionAlgorithm struct{}
 type identContext struct{}
+type identCritValidation struct{}
 type identFS struct{}
 type identKey struct{}
 type identKeyProvider struct{}
@@ -195,6 +196,10 @@ func (identContentEncryptionAlgorithm) String() string {
 
 func (identContext) String() string {
 	return "WithContext"
+}
+
+func (identCritValidation) String() string {
+	return "WithCritValidation"
 }
 
 func (identFS) String() string {
@@ -303,6 +308,39 @@ func WithContentEncryption(v jwa.ContentEncryptionAlgorithm) EncryptOption {
 // If not provided, context.Background() will be used.
 func WithContext(v context.Context) DecryptOption {
 	return &decryptOption{option.New(identContext{}, v)}
+}
+
+// WithCritValidation enables RFC 7516 Section 4.1.13 (via RFC 7515
+// Section 4.1.11) validation of the "crit" (Critical) header parameter
+// during decryption. The default is false, matching the behavior of
+// v3.0.13 and earlier (the "crit" header is silently ignored).
+//
+// When enabled, jwe.Decrypt() will reject any JWE whose protected
+// header lists "crit" entries that the recipient has not declared
+// support for via jwe.WithCritExtension(). It will also reject
+// structurally invalid "crit" lists: empty arrays, duplicate names,
+// empty extension names, names of standard JOSE/JWE header parameters,
+// and names that do not appear as header parameters in the protected
+// header.
+//
+// Per RFC 7516 Section 4.1.13 (referencing RFC 7515 Section 4.1.11),
+// recipients MUST reject a JWE whose "crit" list names extensions
+// they do not understand. Enabling this option together with one or
+// more jwe.WithCritExtension() calls is the only way to satisfy that
+// requirement with this library.
+//
+// IMPORTANT: enabling this option makes the library check that every
+// "crit" entry has been declared via jwe.WithCritExtension(), but the
+// library cannot perform the actual extension-specific processing on
+// your behalf. After jwe.Decrypt() returns successfully, your code
+// MUST read each declared extension header and apply whatever check
+// or side effect the extension semantics demand. If you declare an
+// extension and then forget to act on its value, you have defeated
+// the protection the producer was trying to obtain by marking that
+// extension critical. See the documentation on jwe.WithCritExtension
+// for details.
+func WithCritValidation(v bool) DecryptOption {
+	return &decryptOption{option.New(identCritValidation{}, v)}
 }
 
 // WithFS specifies the source `fs.FS` object to read the file from.

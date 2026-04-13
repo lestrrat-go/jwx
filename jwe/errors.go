@@ -49,8 +49,8 @@ func DecryptError() error {
 	return errDefaultDecryptError
 }
 
-func makeDecryptError(prefix string, f string, args ...any) error {
-	return decryptError{fmt.Errorf(prefix+": "+f, args...)}
+func makeDecryptError(f string, args ...any) error {
+	return decryptError{fmt.Errorf("jwe.Decrypt: "+f, args...)}
 }
 
 type recipientError struct {
