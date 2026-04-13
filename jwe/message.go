@@ -421,29 +421,36 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		m.authenticatedData = v
 	}
 
-	if src := proxy.CipherText; len(src) > 0 {
-		v, err := base64.DecodeString(src)
-		if err != nil {
-			return fmt.Errorf(`failed to decode "ciphertext": %w`, err)
-		}
-		m.cipherText = v
+	// RFC 7516 §7.2: "ciphertext", "iv", and "tag" MUST be present and
+	// non-empty for any AEAD-protected JWE. Reject missing/empty values
+	// here so that a zero-length authentication tag cannot reach the
+	// AEAD verification code path.
+	if len(proxy.CipherText) == 0 {
+		return fmt.Errorf(`missing or empty "ciphertext" field`)
 	}
+	ctbuf, err := base64.DecodeString(proxy.CipherText)
+	if err != nil {
+		return fmt.Errorf(`failed to decode "ciphertext": %w`, err)
+	}
+	m.cipherText = ctbuf
 
-	if src := proxy.InitializationVector; len(src) > 0 {
-		v, err := base64.DecodeString(src)
-		if err != nil {
-			return fmt.Errorf(`failed to decode "iv": %w`, err)
-		}
-		m.initializationVector = v
+	if len(proxy.InitializationVector) == 0 {
+		return fmt.Errorf(`missing or empty "iv" field`)
 	}
+	ivbuf, err := base64.DecodeString(proxy.InitializationVector)
+	if err != nil {
+		return fmt.Errorf(`failed to decode "iv": %w`, err)
+	}
+	m.initializationVector = ivbuf
 
-	if src := proxy.Tag; len(src) > 0 {
-		v, err := base64.DecodeString(src)
-		if err != nil {
-			return fmt.Errorf(`failed to decode "tag": %w`, err)
-		}
-		m.tag = v
+	if len(proxy.Tag) == 0 {
+		return fmt.Errorf(`missing or empty "tag" field`)
 	}
+	tagbuf, err := base64.DecodeString(proxy.Tag)
+	if err != nil {
+		return fmt.Errorf(`failed to decode "tag": %w`, err)
+	}
+	m.tag = tagbuf
 
 	m.protectedHeaders = h
 	if m.storeProtectedHeaders {
