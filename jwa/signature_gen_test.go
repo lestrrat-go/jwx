@@ -345,7 +345,7 @@ func TestSignatureAlgorithmCustomAlgorithm(t *testing.T) {
 			jwa.UnregisterSignatureAlgorithm(customAlgorithm)
 		})
 		t.Run(`with custom algorithm registered`, func(t *testing.T) {
-			jwa.RegisterSignatureAlgorithm(customAlgorithm)
+			require.NoError(t, jwa.RegisterSignatureAlgorithm(customAlgorithm))
 			t.Run(`Lookup the object`, func(t *testing.T) {
 				t.Parallel()
 				v, ok := jwa.LookupSignatureAlgorithm(customAlgorithmValue)

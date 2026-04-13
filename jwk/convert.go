@@ -63,19 +63,31 @@ var muKeyExporters sync.RWMutex
 //
 // When `jwk.Import()` is called, the library will look up the appropriate importer
 // for the given raw key type (via `reflect`) and execute it.
-func RegisterKeyImporter[T any](fn func(T) (Key, error)) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterKeyImporter[T any](fn func(T) (Key, error)) error {
 	muKeyImporters.Lock()
 	defer muKeyImporters.Unlock()
 	keyImporters[reflect.TypeFor[T]()] = &keyImportAdapter[T]{fn: fn}
+	return nil
 }
 
 // RegisterKeyImporterI registers a KeyImporter interface for the given raw key type.
 // This is the interface-based variant for cases where a full KeyImporter implementation
 // is needed instead of a simple function.
-func RegisterKeyImporterI(from any, conv KeyImporter) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterKeyImporterI(from any, conv KeyImporter) error {
 	muKeyImporters.Lock()
 	defer muKeyImporters.Unlock()
 	keyImporters[reflect.TypeOf(from)] = conv
+	return nil
 }
 
 // RegisterKeyExporter registers a [KeyExporter] for the given [KeyKind] identity.
@@ -110,7 +122,12 @@ func RegisterKeyImporterI(from any, conv KeyImporter) {
 // Multiple exporters can be registered for the same identity. They are tried
 // in reverse registration order (last registered is tried first). An exporter
 // can return [ContinueError] to decline a key and let the next exporter try.
-func RegisterKeyExporter(ident KeyKind, conv KeyExporter) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterKeyExporter(ident KeyKind, conv KeyExporter) error {
 	muKeyExporters.Lock()
 	defer muKeyExporters.Unlock()
 	norm := ident.normalize()
@@ -121,6 +138,7 @@ func RegisterKeyExporter(ident KeyKind, conv KeyExporter) {
 		convs = append([]KeyExporter{conv}, convs...)
 	}
 	keyExporters[norm] = convs
+	return nil
 }
 
 // KeyImporter is used to convert from a raw key to a `jwk.Key`. mneumonic: from the PoV of the `jwk.Key`,
@@ -184,21 +202,31 @@ func init() {
 	normalizedOKP = KeyKind(jwa.OKP().String()).normalize()
 	normalizedOCT = KeyKind(jwa.OctetSeq().String()).normalize()
 
-	RegisterKeyImporter(importRSAPrivateKey)
-	RegisterKeyImporter(importRSAPrivateKeyPtr)
-	RegisterKeyImporter(importRSAPublicKey)
-	RegisterKeyImporter(importRSAPublicKeyPtr)
-	RegisterKeyImporter(importECDSAPrivateKey)
-	RegisterKeyImporter(importECDSAPrivateKeyPtr)
-	RegisterKeyImporter(importECDSAPublicKey)
-	RegisterKeyImporter(importECDSAPublicKeyPtr)
-	RegisterKeyImporter(importEd25519PrivateKey)
-	RegisterKeyImporter(importECDHPrivateKey)
-	RegisterKeyImporter(importECDHPrivateKeyPtr)
-	RegisterKeyImporter(importEd25519PublicKey)
-	RegisterKeyImporter(importECDHPublicKey)
-	RegisterKeyImporter(importECDHPublicKeyPtr)
-	RegisterKeyImporter(importSymmetricKey)
+	panicOnRegistrationError(RegisterKeyImporter(importRSAPrivateKey))
+	panicOnRegistrationError(RegisterKeyImporter(importRSAPrivateKeyPtr))
+	panicOnRegistrationError(RegisterKeyImporter(importRSAPublicKey))
+	panicOnRegistrationError(RegisterKeyImporter(importRSAPublicKeyPtr))
+	panicOnRegistrationError(RegisterKeyImporter(importECDSAPrivateKey))
+	panicOnRegistrationError(RegisterKeyImporter(importECDSAPrivateKeyPtr))
+	panicOnRegistrationError(RegisterKeyImporter(importECDSAPublicKey))
+	panicOnRegistrationError(RegisterKeyImporter(importECDSAPublicKeyPtr))
+	panicOnRegistrationError(RegisterKeyImporter(importEd25519PrivateKey))
+	panicOnRegistrationError(RegisterKeyImporter(importECDHPrivateKey))
+	panicOnRegistrationError(RegisterKeyImporter(importECDHPrivateKeyPtr))
+	panicOnRegistrationError(RegisterKeyImporter(importEd25519PublicKey))
+	panicOnRegistrationError(RegisterKeyImporter(importECDHPublicKey))
+	panicOnRegistrationError(RegisterKeyImporter(importECDHPublicKeyPtr))
+	panicOnRegistrationError(RegisterKeyImporter(importSymmetricKey))
+}
+
+// panicOnRegistrationError converts a non-nil error returned by a Register*
+// call during jwk's own init() into a panic. Registration cannot actually
+// fail today, but the API reserves the error return for future validation
+// and this helper keeps builtin bootstrap honest if that ever changes.
+func panicOnRegistrationError(err error) {
+	if err != nil {
+		panic(fmt.Sprintf("jwk: failed to register builtin: %s", err))
+	}
 }
 
 // normalizedKeyKindForType returns the pre-computed normalized KeyKind

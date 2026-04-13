@@ -48,7 +48,9 @@ func init() {
 	algorithms[23] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_384)
 	algorithms[24] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_512)
 
-	RegisterKeyEncryptionAlgorithm(algorithms...)
+	if err := RegisterKeyEncryptionAlgorithm(algorithms...); err != nil {
+		panic(fmt.Sprintf("jwa: failed to register builtin KeyEncryptionAlgorithm: %s", err))
+	}
 }
 
 // A128GCMKW returns an object representing AES-GCM key wrap (128) key encryption algorithm.
@@ -237,13 +239,20 @@ func LookupKeyEncryptionAlgorithm(name string) (KeyEncryptionAlgorithm, bool) {
 
 // RegisterKeyEncryptionAlgorithm registers a new KeyEncryptionAlgorithm. The signature value must be immutable
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
-func RegisterKeyEncryptionAlgorithm(algorithms ...KeyEncryptionAlgorithm) {
+//
+// The error return is reserved for future validation (duplicate detection,
+// identifier rules, freeze-point enforcement, etc). The current implementation
+// always returns nil, but callers — especially extension modules calling this
+// from init() — must check the return value and panic on failure to stay
+// forward-compatible.
+func RegisterKeyEncryptionAlgorithm(algorithms ...KeyEncryptionAlgorithm) error {
 	muAllKeyEncryptionAlgorithm.Lock()
 	for _, alg := range algorithms {
 		allKeyEncryptionAlgorithm[alg.String()] = alg
 	}
 	muAllKeyEncryptionAlgorithm.Unlock()
 	rebuildKeyEncryptionAlgorithm()
+	return nil
 }
 
 // UnregisterKeyEncryptionAlgorithm unregisters a KeyEncryptionAlgorithm from its known database.

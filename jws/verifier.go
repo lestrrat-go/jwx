@@ -1,6 +1,7 @@
 package jws
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/lestrrat-go/jwx/v4/jwa"
@@ -49,8 +50,16 @@ func VerifierFor(alg jwa.SignatureAlgorithm) (Verifier, error) {
 //
 // This function also calls jwa.RegisterSignatureAlgorithm to register
 // the algorithm in this module's algorithm database.
+//
+// The error return is reserved for future validation (duplicate detection,
+// identifier rules, freeze-point enforcement, etc). The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
 func RegisterVerifier(alg jwa.SignatureAlgorithm, v Verifier) error {
-	jwa.RegisterSignatureAlgorithm(alg)
+	if err := jwa.RegisterSignatureAlgorithm(alg); err != nil {
+		return fmt.Errorf(`jws.RegisterVerifier: failed to register signature algorithm: %w`, err)
+	}
 	verifierDB.Store(alg, v)
 	return nil
 }

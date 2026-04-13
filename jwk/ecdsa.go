@@ -16,11 +16,11 @@ import (
 )
 
 func init() {
-	ourecdsa.RegisterCurve(jwa.P256(), elliptic.P256())
-	ourecdsa.RegisterCurve(jwa.P384(), elliptic.P384())
-	ourecdsa.RegisterCurve(jwa.P521(), elliptic.P521())
+	panicOnRegistrationError(ourecdsa.RegisterCurve(jwa.P256(), elliptic.P256()))
+	panicOnRegistrationError(ourecdsa.RegisterCurve(jwa.P384(), elliptic.P384()))
+	panicOnRegistrationError(ourecdsa.RegisterCurve(jwa.P521(), elliptic.P521()))
 
-	RegisterKeyExporter(KeyKind(jwa.EC().String()), KeyExportFunc(ecdsaJWKToRaw))
+	panicOnRegistrationError(RegisterKeyExporter(KeyKind(jwa.EC().String()), KeyExportFunc(ecdsaJWKToRaw)))
 }
 
 func (k *ecdsaPublicKey) Import(rawKey *ecdsa.PublicKey) error {

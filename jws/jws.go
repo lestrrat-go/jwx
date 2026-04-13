@@ -448,8 +448,14 @@ type CustomDecodeFunc[T any] = json.CustomDecodeFunc[T]
 //
 // For more fine-tuned control over the decoding process,
 // use RegisterCustomDecoder instead.
-func RegisterCustomField[T any](name string) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterCustomField[T any](name string) error {
 	json.RegisterTyped[T](registry, name)
+	return nil
 }
 
 // RegisterCustomDecoder registers a private field with a custom decoder
@@ -462,8 +468,14 @@ func RegisterCustomField[T any](name string) {
 //	  }
 //	  return time.Parse(time.RFC1123, s)
 //	}))
-func RegisterCustomDecoder[T any](name string, dec CustomDecodeFunc[T]) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterCustomDecoder[T any](name string, dec CustomDecodeFunc[T]) error {
 	json.RegisterCustomDecoder[T](registry, name, dec)
+	return nil
 }
 
 // UnregisterCustomField removes the registration for a custom field.
@@ -477,26 +489,44 @@ var keyTypeToAlgorithms = make(map[jwa.KeyType][]jwa.SignatureAlgorithm)
 var curveToAlgorithms = make(map[jwa.EllipticCurveAlgorithm][]jwa.SignatureAlgorithm)
 
 func init() {
-	RegisterAlgorithmForKeyType(jwa.OKP(), jwa.EdDSA())
-	RegisterAlgorithmForCurve(jwa.Ed25519(), jwa.EdDSAEd25519())
+	mustRegisterAlgorithmForKeyType(jwa.OKP(), jwa.EdDSA())
+	mustRegisterAlgorithmForCurve(jwa.Ed25519(), jwa.EdDSAEd25519())
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()} {
-		RegisterAlgorithmForKeyType(jwa.OctetSeq(), alg)
+		mustRegisterAlgorithmForKeyType(jwa.OctetSeq(), alg)
 	}
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()} {
-		RegisterAlgorithmForKeyType(jwa.RSA(), alg)
+		mustRegisterAlgorithmForKeyType(jwa.RSA(), alg)
 	}
 	for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()} {
-		RegisterAlgorithmForKeyType(jwa.EC(), alg)
+		mustRegisterAlgorithmForKeyType(jwa.EC(), alg)
+	}
+}
+
+func mustRegisterAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) {
+	if err := RegisterAlgorithmForKeyType(kty, alg); err != nil {
+		panic(fmt.Sprintf("jws: failed to register builtin algorithm for key type: %s", err))
+	}
+}
+
+func mustRegisterAlgorithmForCurve(crv jwa.EllipticCurveAlgorithm, alg jwa.SignatureAlgorithm) {
+	if err := RegisterAlgorithmForCurve(crv, alg); err != nil {
+		panic(fmt.Sprintf("jws: failed to register builtin algorithm for curve: %s", err))
 	}
 }
 
 // RegisterAlgorithmForKeyType registers an additional algorithm as valid for
 // the given key type. This is used internally by init() and can also be called
 // from external modules that provide support for additional algorithms (e.g. Ed448).
-func RegisterAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) error {
 	muAlgorithmMaps.Lock()
 	defer muAlgorithmMaps.Unlock()
 	keyTypeToAlgorithms[kty] = append(keyTypeToAlgorithms[kty], alg)
+	return nil
 }
 
 // RegisterAlgorithmForCurve registers an algorithm as valid for the given
@@ -506,13 +536,19 @@ func RegisterAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) {
 //
 // This function is append-only and deduplicates entries, so builtin
 // registrations cannot be overwritten by external modules.
-func RegisterAlgorithmForCurve(crv jwa.EllipticCurveAlgorithm, alg jwa.SignatureAlgorithm) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func RegisterAlgorithmForCurve(crv jwa.EllipticCurveAlgorithm, alg jwa.SignatureAlgorithm) error {
 	muAlgorithmMaps.Lock()
 	defer muAlgorithmMaps.Unlock()
 	if slices.Contains(curveToAlgorithms[crv], alg) {
-		return
+		return nil
 	}
 	curveToAlgorithms[crv] = append(curveToAlgorithms[crv], alg)
+	return nil
 }
 
 // AlgorithmsForKey returns the possible signature algorithms that can

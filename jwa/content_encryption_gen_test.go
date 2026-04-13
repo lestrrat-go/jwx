@@ -143,7 +143,7 @@ func TestContentEncryptionAlgorithmCustomAlgorithm(t *testing.T) {
 		jwa.UnregisterContentEncryptionAlgorithm(customAlgorithm)
 	})
 	t.Run(`with custom algorithm registered`, func(t *testing.T) {
-		jwa.RegisterContentEncryptionAlgorithm(customAlgorithm)
+		require.NoError(t, jwa.RegisterContentEncryptionAlgorithm(customAlgorithm))
 		t.Run(`Lookup the object`, func(t *testing.T) {
 			t.Parallel()
 			v, ok := jwa.LookupContentEncryptionAlgorithm(customAlgorithmValue)
