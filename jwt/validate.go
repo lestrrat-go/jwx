@@ -213,21 +213,36 @@ func SetValidationCtxSkew(ctx context.Context, dur time.Duration) context.Contex
 }
 
 // ValidationCtxClock returns the Clock object associated with
-// the current validation context. This value will always be available
-// during validation of tokens.
+// the current validation context. When called from within a Validator
+// invoked by [Validate], the value is always populated. If the context
+// was not initialized by [Validate] (for example, a custom validator
+// was invoked with a bare context), a default clock backed by
+// [time.Now] is returned instead of panicking.
 func ValidationCtxClock(ctx context.Context) Clock {
-	//nolint:forcetypeassert
-	return ctx.Value(identValidationCtxClock{}).(Clock)
+	if cl, ok := ctx.Value(identValidationCtxClock{}).(Clock); ok {
+		return cl
+	}
+	return ClockFunc(time.Now)
 }
 
+// ValidationCtxSkew returns the clock skew associated with the current
+// validation context. If the context was not initialized by [Validate],
+// zero is returned instead of panicking.
 func ValidationCtxSkew(ctx context.Context) time.Duration {
-	//nolint:forcetypeassert
-	return ctx.Value(identValidationCtxSkew{}).(time.Duration)
+	if dur, ok := ctx.Value(identValidationCtxSkew{}).(time.Duration); ok {
+		return dur
+	}
+	return 0
 }
 
+// ValidationCtxTruncation returns the truncation granularity associated
+// with the current validation context. If the context was not initialized
+// by [Validate], zero is returned instead of panicking.
 func ValidationCtxTruncation(ctx context.Context) time.Duration {
-	//nolint:forcetypeassert
-	return ctx.Value(identValidationCtxTruncation{}).(time.Duration)
+	if dur, ok := ctx.Value(identValidationCtxTruncation{}).(time.Duration); ok {
+		return dur
+	}
+	return 0
 }
 
 // IsExpirationValid is one of the default validators that will be executed.
