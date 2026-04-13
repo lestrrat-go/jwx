@@ -15,7 +15,22 @@ import (
 //
 // This function loads the verifier registered in the jwsbb package _ONLY_.
 // It does not support custom verifiers that the user might have registered.
+//
+// Deprecated in spirit: in the next major release of jwx (v5), the
+// signature of Verify will change to match [VerifyWithOpts], i.e. it
+// will accept an additional [crypto.SignerOpts] parameter at the end.
+// Callers that need to pass per-call options today should use
+// [VerifyWithOpts]; callers that do not can keep using Verify and
+// migrate when v5 ships by threading a nil opts argument through at
+// the call site.
 func Verify(key any, alg string, payload, signature []byte) error {
+	return VerifyWithOpts(key, alg, payload, signature, nil)
+}
+
+// VerifyWithOpts is like [Verify] but threads an optional
+// [crypto.SignerOpts] through to the underlying dsig verifier. See
+// [SignWithOpts] for the rationale and the migration story.
+func VerifyWithOpts(key any, alg string, payload, signature []byte, opts crypto.SignerOpts) error {
 	dsigAlg, ok := getDsigAlgorithm(alg)
 	if !ok {
 		// For custom algorithms registered with dsig, JWS name = dsig name
@@ -25,7 +40,7 @@ func Verify(key any, alg string, payload, signature []byte) error {
 	// Get dsig algorithm info to determine key conversion strategy
 	dsigInfo, ok := dsig.GetAlgorithmInfo(dsigAlg)
 	if !ok {
-		return fmt.Errorf(`jwsbb.Verify: dsig algorithm %q not registered`, dsigAlg)
+		return fmt.Errorf(`jwsbb.VerifyWithOpts: dsig algorithm %q not registered`, dsigAlg)
 	}
 
 	switch dsigInfo.Family {
@@ -38,9 +53,9 @@ func Verify(key any, alg string, payload, signature []byte) error {
 	case dsig.EdDSAFamily:
 		return dispatchEdDSAVerify(key, alg, dsigAlg, payload, signature)
 	case dsig.Custom:
-		return dsig.Verify(key, dsigAlg, payload, signature)
+		return dsig.VerifyWithOpts(key, dsigAlg, payload, signature, opts)
 	default:
-		return fmt.Errorf(`jwsbb.Verify: unsupported dsig algorithm family %q`, dsigInfo.Family)
+		return fmt.Errorf(`jwsbb.VerifyWithOpts: unsupported dsig algorithm family %q`, dsigInfo.Family)
 	}
 }
 
