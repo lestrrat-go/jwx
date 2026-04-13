@@ -56,7 +56,7 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `-tags=jwx_es256k` | `github.com/jwx-go/es256k/v4` | Extension module |
 | `-tags=jwx_asmbase64` | `github.com/jwx-go/asmbase64/v4` | Extension module |
 | `jwa.ES256K()` | `es256k.ES256K()` | `import "github.com/jwx-go/es256k/v4"` |
-| `jwa.Ed448()` | `ed448.Ed448Curve()` | `import "github.com/jwx-go/ed448/v4"` |
+| `jwa.Ed448()` | `ed448.Curve()` | `import "github.com/jwx-go/ed448/v4"` |
 | `jwa.EdDSAEd448()` | `ed448.EdDSAEd448()` | `import "github.com/jwx-go/ed448/v4"` |
 
 ## Migration Recipes
@@ -256,7 +256,7 @@ import _ "github.com/jwx-go/es256k/v4"
 Same pattern for Ed448 and assembly base64:
 
 ```go
-import "github.com/jwx-go/ed448/v4"   // ed448.EdDSAEd448(), ed448.Ed448Curve()
+import "github.com/jwx-go/ed448/v4"   // ed448.EdDSAEd448(), ed448.Curve()
 import _ "github.com/jwx-go/asmbase64/v4" // registration only
 ```
 
