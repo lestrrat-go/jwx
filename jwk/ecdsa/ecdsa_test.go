@@ -19,20 +19,17 @@ import (
 // sequence of synthetic algorithm names, so the standard-curve entries
 // (P256/P384/P521) installed in init() are preserved for any subsequent
 // tests in the same process.
-func TestConcurrentRegisterAndLookup(t *testing.T) {
+func TestConcurrentRegisterAndLookup(_ *testing.T) {
 	const (
-		numReaders     = 8
-		writerEntries  = 200
+		numReaders    = 8
+		writerEntries = 200
 	)
 
 	var wg sync.WaitGroup
 	done := make(chan struct{})
 
-	// Readers hammer the three lookup functions.
-	for i := 0; i < numReaders; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range numReaders {
+		wg.Go(func() {
 			for {
 				select {
 				case <-done:
@@ -43,11 +40,10 @@ func TestConcurrentRegisterAndLookup(t *testing.T) {
 					_ = IsCurveAvailable(jwa.P256())
 				}
 			}
-		}()
+		})
 	}
 
-	// Writer registers synthetic algorithm names.
-	for i := 0; i < writerEntries; i++ {
+	for i := range writerEntries {
 		alg := jwa.NewEllipticCurveAlgorithm(fmt.Sprintf("xcut006-test-%d", i))
 		RegisterCurve(alg, elliptic.P256())
 	}
