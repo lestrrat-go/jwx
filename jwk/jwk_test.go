@@ -1362,6 +1362,31 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 	require.Equal(t, 65537, pubkey.E, `value for E should amtch`)
 }
 
+// TestRSAExportIndependentN is a regression guard for JWK-INT-004:
+// buildRSAPublicKey used to assign a pool-borrowed *big.Int to
+// rsa.PublicKey.N. Any future "fix" that returned that pooled value via
+// defer Put would zero the caller's N on return. Each export must own
+// its own independent big.Int, and mutating one result must not affect
+// another.
+func TestRSAExportIndependentN(t *testing.T) {
+	priv, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+	key, err := priv.PublicKey()
+	require.NoError(t, err, `PublicKey should succeed`)
+
+	var pub1 rsa.PublicKey
+	require.NoError(t, jwk.Export(key, &pub1), `first Export should succeed`)
+	var pub2 rsa.PublicKey
+	require.NoError(t, jwk.Export(key, &pub2), `second Export should succeed`)
+
+	require.Equal(t, 0, pub1.N.Cmp(pub2.N), `both exports must decode to the same modulus`)
+	require.NotSame(t, pub1.N, pub2.N, `each export must own an independent *big.Int`)
+
+	original := new(big.Int).Set(pub1.N)
+	pub2.N.SetInt64(0)
+	require.Equal(t, 0, pub1.N.Cmp(original), `mutating pub2.N must not corrupt pub1.N`)
+}
+
 type typedField struct {
 	Foo string
 	Bar int64
