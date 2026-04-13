@@ -17,14 +17,15 @@ import (
 
 // verifyContext holds the state during JWS verification
 type verifyContext struct {
-	parseOptions    []ParseOption
-	dst             *Message
-	detachedPayload []byte
-	keyProviders    []KeyProvider
-	keyUsed         any
-	validateKey     bool
-	strictCritical  bool
-	encoder         Base64Encoder
+	parseOptions       []ParseOption
+	dst                *Message
+	detachedPayload    []byte
+	keyProviders       []KeyProvider
+	keyUsed            any
+	validateKey        bool
+	critValidation     bool
+	criticalExtensions []string
+	encoder            Base64Encoder
 	//nolint:containedctx
 	ctx context.Context
 }
@@ -33,9 +34,8 @@ var verifyContextPool = pool.New[*verifyContext](allocVerifyContext, freeVerifyC
 
 func allocVerifyContext() *verifyContext {
 	return &verifyContext{
-		strictCritical: true,
-		encoder:        base64.DefaultEncoder(),
-		ctx:            context.Background(),
+		encoder: base64.DefaultEncoder(),
+		ctx:     context.Background(),
 	}
 }
 
@@ -46,7 +46,8 @@ func freeVerifyContext(vc *verifyContext) *verifyContext {
 	vc.keyProviders = vc.keyProviders[:0]
 	vc.keyUsed = nil
 	vc.validateKey = false
-	vc.strictCritical = true
+	vc.critValidation = false
+	vc.criticalExtensions = vc.criticalExtensions[:0]
 	vc.encoder = base64.DefaultEncoder()
 	vc.ctx = context.Background()
 	return vc
@@ -101,10 +102,16 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 			if err := option.Value(&vc.validateKey); err != nil {
 				return makeVerifyError(`failed to retrieve validate-key option value: %w`, err)
 			}
-		case identStrictCriticalHeaders{}:
-			if err := option.Value(&vc.strictCritical); err != nil {
-				return makeVerifyError(`failed to retrieve strict-critical-headers option value: %w`, err)
+		case identCritValidation{}:
+			if err := option.Value(&vc.critValidation); err != nil {
+				return makeVerifyError(`failed to retrieve crit-validation option value: %w`, err)
 			}
+		case identCritExtension{}:
+			var names []string
+			if err := option.Value(&names); err != nil {
+				return makeVerifyError(`failed to retrieve crit-extension option value: %w`, err)
+			}
+			vc.criticalExtensions = append(vc.criticalExtensions, names...)
 		case identSerialization{}:
 			vc.parseOptions = append(vc.parseOptions, option.(ParseOption))
 		case identBase64Encoder{}:
@@ -169,8 +176,8 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 			rawHeaders = protected
 		}
 
-		if vc.strictCritical {
-			if err := validateCritical(sig.protected); err != nil {
+		if vc.critValidation {
+			if err := validateCritical(sig.protected, vc.criticalExtensions); err != nil {
 				errs = append(errs, makeVerifyError(`signature #%d has invalid "crit" header: %w`, idx+1, err))
 				continue
 			}
@@ -238,9 +245,19 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 }
 
 // validateCritical checks the "crit" header per RFC 7515 Section 4.1.11.
-// It verifies that all header names listed in "crit" are present in the
-// protected header and are not standard JWS header parameters.
-func validateCritical(protected Headers) error {
+// It enforces:
+//   - the list is non-empty
+//   - no entry is the empty string
+//   - no entry duplicates another
+//   - no entry names a standard JOSE header parameter
+//   - every entry appears as a header parameter in the protected header
+//   - every entry is in the caller-supplied allowedExtensions allowlist
+//
+// The last check is the central RFC requirement: recipients MUST reject
+// any "crit" extension they do not understand, and the only way the
+// library knows which extensions the caller understands is via the
+// allowlist (populated from jws.WithCritExtension()).
+func validateCritical(protected Headers, allowedExtensions []string) error {
 	if !protected.Has(CriticalKey) {
 		return nil
 	}
@@ -250,45 +267,30 @@ func validateCritical(protected Headers) error {
 		return makeVerifyError(`"crit" header must not be empty`)
 	}
 
+	seen := make(map[string]struct{}, len(crit))
 	for _, name := range crit {
+		if name == "" {
+			return makeVerifyError(`"crit" header must not contain an empty extension name`)
+		}
+		if _, dup := seen[name]; dup {
+			return makeVerifyError(`"crit" header must not contain duplicate extension %q`, name)
+		}
+		seen[name] = struct{}{}
+
 		// RFC 7515 Section 4.1.11: "crit" MUST NOT include names defined
 		// by the JOSE Header specification itself.
 		if slices.Contains(stdHeaderNames, name) {
 			return makeVerifyError(`"crit" header must not contain standard header parameter %q`, name)
 		}
 
-		// The extension must be present in the protected header
+		// The extension must be present in the protected header.
 		if !protected.Has(name) {
 			return makeVerifyError(`"crit" header references extension %q, but it is not present in the protected header`, name)
 		}
-	}
 
-	return nil
-}
-
-// validateCriticalFast is the fastjson-based equivalent of validateCritical,
-// used by VerifyCompactFast to validate the "crit" header without full
-// message parsing.
-func validateCriticalFast(hdr jwsbb.Header) error {
-	crit, err := jwsbb.HeaderGetStringArray(hdr, CriticalKey)
-	if err != nil {
-		if errors.Is(err, jwsbb.ErrHeaderNotFound()) {
-			return nil
-		}
-		return makeVerifyError(`failed to read "crit" header: %w`, err)
-	}
-
-	if len(crit) == 0 {
-		return makeVerifyError(`"crit" header must not be empty`)
-	}
-
-	for _, name := range crit {
-		if slices.Contains(stdHeaderNames, name) {
-			return makeVerifyError(`"crit" header must not contain standard header parameter %q`, name)
-		}
-
-		if !jwsbb.HeaderHas(hdr, name) {
-			return makeVerifyError(`"crit" header references extension %q, but it is not present in the protected header`, name)
+		// The recipient must have declared support for the extension.
+		if !slices.Contains(allowedExtensions, name) {
+			return makeVerifyError(`"crit" header references extension %q, but the recipient has not declared support for it (use jws.WithCritExtension(%q))`, name, name)
 		}
 	}
 
