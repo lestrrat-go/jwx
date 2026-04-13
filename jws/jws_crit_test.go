@@ -31,7 +31,7 @@ func TestCritDefaultLax(t *testing.T) {
 	}{
 		{
 			name: "no crit header",
-			set:  func(h jws.Headers) {},
+			set:  func(_ jws.Headers) {},
 		},
 		{
 			name: "crit references missing extension",

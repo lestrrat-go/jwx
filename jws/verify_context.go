@@ -296,4 +296,3 @@ func validateCritical(protected Headers, allowedExtensions []string) error {
 
 	return nil
 }
-
