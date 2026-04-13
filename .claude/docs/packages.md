@@ -32,16 +32,16 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 - **Parse(src []byte, ...ParseOption) (Set, error)** / **ParseKey(data []byte, ...ParseOption) (Key, error)** — parse JWK/JWKS
 - **Fetch(ctx, url, ...FetchOption) (Set, error)** — HTTP fetch with optional whitelist, body size limit (default 10 MB via `WithMaxFetchBodySize`)
 - **DefaultHTTPClient() \*http.Client** — returns a new http.Client with library defaults (30s timeout, redirect policy)
-- **Import(raw any) (Key, error)** / **Export(key Key, dst any) error** — convert between Go crypto types and JWK
+- **Import[T Key](raw any) (T, error)** / **Export[T any](key Key) (T, error)** — convert between Go crypto types and JWK (generic)
 - **PublicKeyOf(v any) (Key, error)** / **PublicSetOf(v Set) (Set, error)** — extract public keys
-- **NewCache(ctx, client) (*Cache, error)** — auto-refreshing JWKS cache
 - **AssignKeyID(key Key, ...AssignKeyIDOption) error** — compute and set kid via thumbprint
 - **Pem(v any) ([]byte, error)** — PEM encode
-- Key interfaces: `Key`, `Set`, `RSAPublicKey`, `RSAPrivateKey`, `ECDSAPublicKey`, `ECDSAPrivateKey`, `OKPPublicKey`, `OKPPrivateKey`, `SymmetricKey`
+- JWKS caching moved to `github.com/jwx-go/jwkcache` — see [Extension Modules](../../docs/10-extensions.md)
+- Key interfaces: `Key`, `Set`, `RSAPublicKey`, `RSAPrivateKey`, `ECDSAPublicKey`, `ECDSAPrivateKey`, `OKPPublicKey`, `OKPPrivateKey`, `SymmetricKey`, `AKPPublicKey`, `AKPPrivateKey` (post-quantum, used by mldsa/mlkem extensions)
 - Extension: `RegisterCustomField[T]()`, `RegisterCustomDecoder[T]()`, `RegisterKeyParser()`, `RegisterKeyImporter()`, `RegisterKeyExporter()`
 - Error sentinels: `ImportError()`, `ParseError()`, `WhitelistError()`, `ContinueError()`
-- Files: `jwk.go`, `set.go`, `parser.go`, `convert.go`, `fetch.go`, `cache.go`, `interface.go`, `errors.go`, `x509.go`, `filter.go`, `rsa.go`, `ecdsa.go`, `okp.go`, `symmetric.go`
-- Sub-packages: `jwk/ecdsa` — elliptic curve registration (`RegisterCurve`, `CurveFromAlgorithm`, `AlgorithmFromCurve`); `jwk/jwkbb` — X.509/PEM encoding building blocks (`EncodeX509`, `DecodeX509`)
+- Files: `jwk.go`, `set.go`, `parser.go`, `convert.go`, `fetch.go`, `interface.go`, `errors.go`, `x509.go`, `filter.go`, `rsa.go`, `ecdsa.go`, `okp.go`, `symmetric.go`, `akp.go`, `accessors.go`, `io.go`
+- Sub-packages: `jwk/ecdsa` — elliptic curve registration (`RegisterCurve`, `CurveFromAlgorithm`, `AlgorithmFromCurve`); `jwk/jwkbb` — X.509/PEM encoding building blocks (`EncodeX509`, `DecodeX509`); `jwk/jwkunsafe` — low-level key constructors (`NewKey`, `NewPublicKey`) for extension modules
 - Imports: jwa, cert, transform, internal/{base64,json,ecutil}
 
 ## jws/
@@ -67,8 +67,10 @@ JSON Web Signatures per RFC 7515. Sign, verify, parse.
 JSON Web Encryption per RFC 7516. Encrypt, decrypt, parse.
 
 - **Encrypt(payload []byte, ...EncryptOption) ([]byte, error)** — encrypt payload
+- **EncryptStatic(payload, cek []byte, ...EncryptOption) ([]byte, error)** — encrypt with caller-supplied content encryption key
 - **Decrypt(buf []byte, ...DecryptOption) ([]byte, error)** — decrypt message
 - **Parse(buf []byte, ...ParseOption) (*Message, error)** — parse without decryption
+- **Settings(options ...GlobalOption)** — configure global jwe settings
 - Key types: `Message`, `Recipient`, `Headers`, `KeyProvider`, `KeyEncrypter`, `KeyDecrypter`
 - Options: `WithKey()`, `WithKeySet()`, `WithContentEncryption()`, `WithCompress()`, `WithJSON()`, `WithProtectedHeaders()`
 - Global/per-call settings: `WithMaxPBES2Count()`, `WithMinPBES2Count()`, `WithMaxDecompressBufferSize()`, `WithMaxRecipients()` (usable in both `Settings()` and `Decrypt()`); `WithMaxParseInputSize()` (usable in both `Settings()` and `ParseReader()`/`ReadFile()`); `WithCBCBufferSize()` (global only)
@@ -85,7 +87,8 @@ JSON Web Tokens per RFC 7519. Parse, sign, validate.
 - **ParseInsecure(s []byte, ...ParseOption) (Token, error)** — parse without verification/validation
 - **Sign(t Token, ...SignOption) ([]byte, error)** — sign token to compact serialization
 - **Validate(t Token, ...ValidateOption) error** — validate claims (exp, nbf, iat, iss, aud, etc.)
-- **New() Token** — create empty token
+- **Equal(t1, t2 Token) bool** — deep-compare two tokens
+- **New() Token** / **NewBuilder() *Builder** — create empty token or use fluent builder
 - HTTP helpers: `ParseCookie()`, `ParseHeader()`, `ParseForm()`, `ParseRequest()`
 - Validator factories: `IsExpirationValid()`, `IsIssuedAtValid()`, `IsNbfValid()`, `IsRequired()`, `ClaimValueIs()`, `ClaimContainsString()`
 - Key types: `Token` (interface), `Validator`, `ValidatorFunc`, `Clock`, `ClockFunc`, `Serializer`, `TokenFilter`

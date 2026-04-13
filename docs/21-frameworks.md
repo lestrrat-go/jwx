@@ -10,32 +10,38 @@ type Server struct {
 }
 ```
 
-The first step is to decide on the signature algorithm. Here we will show examples for using `jwa.HS256` and `jwa.RS256`. Choose the appropriate signature for your particular use case. You can find the full list of supported signature algorithms in the documentation or the source code for the [`jwa`](../jwa) package (remember that there are some [optional algorithms](./20-global-settings.md#enabling-optional-signature-methods)).
+The first step is to decide on the signature algorithm. Here we will show examples for using `jwa.HS256()` and `jwa.RS256()`. Choose the appropriate signature for your particular use case. You can find the full list of supported signature algorithms in the documentation or the source code for the [`jwa`](../jwa) package. Some post-quantum and curve-specific algorithms are available only via [extension modules](./10-extensions.md).
 
 
 ### Using HS256
 
-`jwa.HS256` is a symmetric algorithm, therefore the signing key should be exactly the same as the verifying key.
+`jwa.HS256()` is a symmetric algorithm, therefore the signing key should be exactly the same as the verifying key.
 
 ```go
-s.alg = jwa.HS256
-s.signKey = jwk.New([]byte("Hello, World!"))
+s.alg = jwa.HS256()
+symKey, err := jwk.Import[jwk.SymmetricKey]([]byte("Hello, World!"))
+if err != nil {
+  // handle error
+}
+s.signKey = symKey
 s.verifyKey = s.signKey
 ```
 
 ### Using RS256
 
-In this example we assume that your keys are stored in PEM-encoded files `private-key.pem` and `public-key.pem.
+In this example we assume that your keys are stored in PEM-encoded files `private-key.pem` and `public-key.pem`.
 
 ```go
-s.alg = jwa.RS256
+s.alg = jwa.RS256()
 
 {
   v, err := jwk.ParseFS(os.DirFS("."), `private-key.pem`, jwk.WithPEM(true))
   if err != nil {
     // handle error
   }
-  s.signKey = v
+  // ParseFS returns a Set; grab the first key
+  key, _ := v.Key(0)
+  s.signKey = key
 }
 
 {
@@ -43,7 +49,8 @@ s.alg = jwa.RS256
   if err != nil {
     // handle error
   }
-  s.verifyKey = v
+  key, _ := v.Key(0)
+  s.verifyKey = key
 }
 ```
 
@@ -77,7 +84,13 @@ In this example we are writing the token to the response body of the response.
 
 ```go
 func (s *Server) HandleBar(w http.ResponseWriter, req *http.Request) {
-  var token jwt.Token
+  token, err := jwt.NewBuilder().
+    Issuer(`example.com`).
+    IssuedAt(time.Now()).
+    Build()
+  if err != nil {
+    // handle errors
+  }
 
   signed, err := jwt.Sign(token, jwt.WithKey(s.alg, s.signKey))
   if err != nil {
