@@ -122,8 +122,8 @@ func getFieldPairList() []fieldPair {
 }
 
 func putFieldPairList(list []fieldPair) {
-	list = list[:0]
-	fieldPairPool.Put(list) //nolint:staticcheck
+	clear(list)
+	fieldPairPool.Put(list[:0]) //nolint:staticcheck
 }
 
 func fieldPairLess(a, b fieldPair) int {
