@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
@@ -270,6 +271,8 @@ type decryptContext struct {
 	maxDecompressBufferSize int64
 	maxPBES2Count           int
 	minPBES2Count           int
+	critValidation          bool
+	criticalExtensions      []string
 	//nolint:containedctx
 	ctx context.Context
 }
@@ -278,7 +281,8 @@ var decryptContextPool = pool.New(allocDecryptContext, freeDecryptContext)
 
 func allocDecryptContext() *decryptContext {
 	return &decryptContext{
-		ctx: context.Background(),
+		critValidation: true,
+		ctx:            context.Background(),
 	}
 }
 
@@ -291,6 +295,8 @@ func freeDecryptContext(dc *decryptContext) *decryptContext {
 	dc.maxDecompressBufferSize = 0
 	dc.maxPBES2Count = 0
 	dc.minPBES2Count = 0
+	dc.critValidation = true
+	dc.criticalExtensions = dc.criticalExtensions[:0]
 	dc.ctx = context.Background()
 	return dc
 }
@@ -329,6 +335,10 @@ func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 			dc.minPBES2Count = option.MustGet[int](opt)
 		case identContext{}:
 			ctxOpt = option.MustGet[context.Context](opt) //nolint:fatcontext // not nesting; selecting from options
+		case identCritValidation{}:
+			dc.critValidation = option.MustGet[bool](opt)
+		case identCritExtension{}:
+			dc.criticalExtensions = append(dc.criticalExtensions, option.MustGet[[]string](opt)...)
 		}
 	}
 	if ctxOpt != nil {
@@ -342,10 +352,73 @@ func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 	return nil
 }
 
+// validateCritical checks the "crit" header per RFC 7516 Section 4.1.13
+// (which references RFC 7515 Section 4.1.11). It enforces:
+//   - the list is non-empty
+//   - no entry is the empty string
+//   - no entry duplicates another
+//   - no entry names a standard JOSE/JWE header parameter
+//   - every entry appears as a header parameter in the protected header
+//   - every entry is in the caller-supplied allowedExtensions allowlist
+//
+// The last check is the central RFC requirement: recipients MUST reject
+// any "crit" extension they do not understand, and the only way the
+// library knows which extensions the caller understands is via the
+// allowlist (populated from jwe.WithCritExtension()).
+func validateCritical(protected Headers, allowedExtensions []string) error {
+	if !protected.Has(CriticalKey) {
+		return nil
+	}
+
+	crit, _ := protected.Critical()
+	if len(crit) == 0 {
+		return makeDecryptError(`"crit" header must not be empty`)
+	}
+
+	seen := make(map[string]struct{}, len(crit))
+	for _, name := range crit {
+		if name == "" {
+			return makeDecryptError(`"crit" header must not contain an empty extension name`)
+		}
+		if _, dup := seen[name]; dup {
+			return makeDecryptError(`"crit" header must not contain duplicate extension %q`, name)
+		}
+		seen[name] = struct{}{}
+
+		// RFC 7515 Section 4.1.11: "crit" MUST NOT include names defined
+		// by the JOSE Header specification itself.
+		if slices.Contains(stdHeaderNames, name) {
+			return makeDecryptError(`"crit" header must not contain standard header parameter %q`, name)
+		}
+
+		// The extension must be present in the protected header.
+		if !protected.Has(name) {
+			return makeDecryptError(`"crit" header references extension %q, but it is not present in the protected header`, name)
+		}
+
+		// The recipient must have declared support for the extension.
+		if !slices.Contains(allowedExtensions, name) {
+			return makeDecryptError(`"crit" header references extension %q, but the recipient has not declared support for it (use jwe.WithCritExtension(%q))`, name, name)
+		}
+	}
+
+	return nil
+}
+
 func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 	msg, err := parseJSONOrCompact(buf, true, dc.maxRecipients)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to parse buffer for Decrypt: %w`, err)
+	}
+
+	// Validate the "crit" header per RFC 7516 Section 4.1.13. The check
+	// runs against the protected header only — RFC says "crit" MUST live
+	// there — and short-circuits before any key-decrypt or content-decrypt
+	// work happens.
+	if dc.critValidation {
+		if err := validateCritical(msg.protectedHeaders, dc.criticalExtensions); err != nil {
+			return nil, err
+		}
 	}
 
 	// Process things that are common to the message
@@ -883,12 +956,12 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	defer decryptContextPool.Put(dc)
 
 	if err := dc.ProcessOptions(options); err != nil {
-		return nil, makeDecryptError(`jwe.Decrypt`, `failed to process options: %w`, err)
+		return nil, makeDecryptError(`failed to process options: %w`, err)
 	}
 
 	ret, err := dc.DecryptMessage(buf)
 	if err != nil {
-		return nil, makeDecryptError(`jwe.Decrypt`, `%w`, err)
+		return nil, makeDecryptError(`%w`, err)
 	}
 	return ret, nil
 }
