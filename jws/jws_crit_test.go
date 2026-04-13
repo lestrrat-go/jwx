@@ -228,10 +228,13 @@ func TestCritExtensionAllowlist(t *testing.T) {
 	})
 }
 
-// TestCritDetachedB64 verifies the RFC 7797 "b64:false" detached payload
-// flow still works under the default-strict crit validation when "b64" is
-// declared via WithCritExtension.
-func TestCritDetachedB64(t *testing.T) {
+// TestCritDetachedB64AutoDeclared verifies the RFC 7797 "b64:false"
+// detached-payload flow under the default-strict crit validation. The
+// caller does NOT pass jws.WithCritExtension("b64") — passing
+// jws.WithDetachedPayload auto-declares "b64" because that is the
+// canonical pairing for b64=false and the jws package implements the
+// b64=false handling natively.
+func TestCritDetachedB64AutoDeclared(t *testing.T) {
 	payload := []byte(`hello world`)
 	key, err := jwxtest.GenerateSymmetricJwk()
 	require.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`)
@@ -249,9 +252,38 @@ func TestCritDetachedB64(t *testing.T) {
 	_, err = jws.Verify(signed,
 		jws.WithKey(jwa.HS256(), key),
 		jws.WithDetachedPayload(payload),
+	)
+	require.NoError(t, err, `jws.Verify should succeed; WithDetachedPayload auto-declares "b64"`)
+}
+
+// TestCritInBandB64RequiresExplicit locks the scoping rule for the b64
+// auto-declaration: the auto-declare only happens when
+// jws.WithDetachedPayload is passed. An in-band b64=false JWS with
+// crit=["b64"] still requires the caller to declare "b64" explicitly,
+// otherwise jws.Verify rejects it.
+func TestCritInBandB64RequiresExplicit(t *testing.T) {
+	payload := []byte(`hello`)
+	key, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`)
+
+	hdrs := jws.NewHeaders()
+	require.NoError(t, hdrs.Set("b64", false))
+	require.NoError(t, hdrs.Set(jws.CriticalKey, []string{"b64"}))
+
+	signed, err := jws.Sign(payload,
+		jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs)),
+	)
+	require.NoError(t, err, `jws.Sign should succeed`)
+
+	_, err = jws.Verify(signed, jws.WithKey(jwa.HS256(), key))
+	require.Error(t, err, `jws.Verify should reject in-band b64=false without explicit WithCritExtension("b64")`)
+	require.ErrorContains(t, err, `not declared support`)
+
+	_, err = jws.Verify(signed,
+		jws.WithKey(jwa.HS256(), key),
 		jws.WithCritExtension("b64"),
 	)
-	require.NoError(t, err, `jws.Verify should succeed when b64 is declared in allowlist`)
+	require.NoError(t, err, `explicit WithCritExtension("b64") should make in-band b64=false succeed`)
 }
 
 // TestVerifyCompactFastIgnoresCrit documents that the fast path performs

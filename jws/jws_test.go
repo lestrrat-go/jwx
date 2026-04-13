@@ -960,11 +960,17 @@ func TestRFC7797(t *testing.T) {
 				payload := tc.Payload
 				signOptions := []jws.SignOption{jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs))}
 				var verifyOptions []jws.VerifyOption
-				verifyOptions = append(verifyOptions, jws.WithKey(jwa.HS256(), key), jws.WithCritExtension("b64"))
+				verifyOptions = append(verifyOptions, jws.WithKey(jwa.HS256(), key))
 				if tc.Detached {
 					signOptions = append(signOptions, jws.WithDetachedPayload(payload))
+					// WithDetachedPayload auto-declares "b64" for crit
+					// validation; no explicit WithCritExtension needed.
 					verifyOptions = append(verifyOptions, jws.WithDetachedPayload(payload))
 					payload = nil
+				} else {
+					// In-band b64=false still requires explicit
+					// WithCritExtension("b64") under default-strict.
+					verifyOptions = append(verifyOptions, jws.WithCritExtension("b64"))
 				}
 				signed, err := jws.Sign(payload, signOptions...)
 				require.NoError(t, err, `jws.Sign should succeed`)
@@ -985,7 +991,11 @@ func TestRFC7797(t *testing.T) {
 			Error         bool
 		}{
 			{
+				// In-band b64=false: requires explicit WithCritExtension("b64").
 				Name: "JSON format",
+				VerifyOptions: []jws.VerifyOption{
+					jws.WithCritExtension("b64"),
+				},
 				Input: []byte(`{
       "protected": "eyJhbGciOiJIUzI1NiIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19",
       "payload": "$.02",
@@ -993,6 +1003,7 @@ func TestRFC7797(t *testing.T) {
      }`),
 			},
 			{
+				// Detached: WithDetachedPayload auto-declares "b64".
 				Name: "JSON format (detached payload)",
 				VerifyOptions: []jws.VerifyOption{
 					jws.WithDetachedPayload(detached),
@@ -1003,8 +1014,14 @@ func TestRFC7797(t *testing.T) {
      }`),
 			},
 			{
+				// In-band: explicit WithCritExtension("b64") still required.
+				// The test expects an error from b64 mismatch across the two
+				// signatures, not from crit rejection.
 				Name:  "JSON Format (b64 does not match)",
 				Error: true,
+				VerifyOptions: []jws.VerifyOption{
+					jws.WithCritExtension("b64"),
+				},
 				Input: []byte(`{
 					"signatures": [
 						{
@@ -1020,6 +1037,7 @@ func TestRFC7797(t *testing.T) {
 				}`),
 			},
 			{
+				// Detached: WithDetachedPayload auto-declares "b64".
 				Name:  "Compact (detached payload)",
 				Input: []byte(`eyJhbGciOiJIUzI1NiIsImI2NCI6ZmFsc2UsImNyaXQiOlsiYjY0Il19..A5dxf2s96_n5FLueVuW1Z_vh161FwXZC4YLPff6dmDY`),
 				VerifyOptions: []jws.VerifyOption{
@@ -1031,7 +1049,7 @@ func TestRFC7797(t *testing.T) {
 		for _, tc := range testcases {
 			t.Run(tc.Name, func(t *testing.T) {
 				options := tc.VerifyOptions
-				options = append(options, jws.WithKey(jwa.HS256(), key), jws.WithCritExtension("b64"))
+				options = append(options, jws.WithKey(jwa.HS256(), key))
 				payload, err := jws.Verify(tc.Input, options...)
 				if tc.Error {
 					require.Error(t, err, `jws.Verify should fail`)
