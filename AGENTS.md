@@ -239,7 +239,7 @@ Read linked doc BEFORE working in that area. No exceptions.
 | Understanding package relationships, imports | `.claude/docs/dependencies.md` |
 | Working with errors, error handling patterns | `.claude/docs/error-formatting.md` |
 | Code generation, options pattern, extension points, JSON/base64 backends | `.claude/docs/internals.md` |
-| Extension modules (ES256K, Ed448, ML-DSA, X448, asmbase64, jwkcache) | `docs/10-extensions.md` |
+| Extension modules (ES256K, Ed448, ML-DSA, ML-KEM, X448, compsig, asmbase64, jwkcache) | `docs/10-extensions.md` |
 | Companion modules, CI templates, `/jwx-companion-bulk` | `.claude/docs/companions.md` |
 
 ## Cache Maintenance

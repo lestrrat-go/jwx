@@ -32,7 +32,8 @@ import (
 )
 
 func Example_jwk_usage() {
-  // Use jwk.Cache if you intend to keep reuse the JWKS over and over
+  // For repeated access to a remote JWKS, consider the jwkcache extension module
+  // (github.com/jwx-go/jwkcache) which keeps a JWKS auto-refreshed in the background.
   set, err := jwk.Fetch(context.Background(), "https://www.googleapis.com/oauth2/v3/certs")
   if err != nil {
     log.Printf("failed to parse JWK: %s", err)
