@@ -386,33 +386,33 @@ func validateCritical(protected Headers, allowedExtensions []string) error {
 
 	crit, _ := protected.Critical()
 	if len(crit) == 0 {
-		return makeDecryptError("jwe.Decrypt", `"crit" header must not be empty`)
+		return makeDecryptError(`"crit" header must not be empty`)
 	}
 
 	seen := make(map[string]struct{}, len(crit))
 	for _, name := range crit {
 		if name == "" {
-			return makeDecryptError("jwe.Decrypt", `"crit" header must not contain an empty extension name`)
+			return makeDecryptError(`"crit" header must not contain an empty extension name`)
 		}
 		if _, dup := seen[name]; dup {
-			return makeDecryptError("jwe.Decrypt", `"crit" header must not contain duplicate extension %q`, name)
+			return makeDecryptError(`"crit" header must not contain duplicate extension %q`, name)
 		}
 		seen[name] = struct{}{}
 
 		// RFC 7515 Section 4.1.11: "crit" MUST NOT include names defined
 		// by the JOSE Header specification itself.
 		if slices.Contains(stdHeaderNames, name) {
-			return makeDecryptError("jwe.Decrypt", `"crit" header must not contain standard header parameter %q`, name)
+			return makeDecryptError(`"crit" header must not contain standard header parameter %q`, name)
 		}
 
 		// The extension must be present in the protected header.
 		if !protected.Has(name) {
-			return makeDecryptError("jwe.Decrypt", `"crit" header references extension %q, but it is not present in the protected header`, name)
+			return makeDecryptError(`"crit" header references extension %q, but it is not present in the protected header`, name)
 		}
 
 		// The recipient must have declared support for the extension.
 		if !slices.Contains(allowedExtensions, name) {
-			return makeDecryptError("jwe.Decrypt", `"crit" header references extension %q, but the recipient has not declared support for it (use jwe.WithCritExtension(%q))`, name, name)
+			return makeDecryptError(`"crit" header references extension %q, but the recipient has not declared support for it (use jwe.WithCritExtension(%q))`, name, name)
 		}
 	}
 
@@ -1064,12 +1064,12 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	defer decryptContextPool.Put(dc)
 
 	if err := dc.ProcessOptions(options); err != nil {
-		return nil, makeDecryptError(`jwe.Decrypt`, `failed to process options: %w`, err)
+		return nil, makeDecryptError(`failed to process options: %w`, err)
 	}
 
 	ret, err := dc.DecryptMessage(buf)
 	if err != nil {
-		return nil, makeDecryptError(`jwe.Decrypt`, `%w`, err)
+		return nil, makeDecryptError(`%w`, err)
 	}
 	return ret, nil
 }
