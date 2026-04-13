@@ -202,21 +202,31 @@ func init() {
 	normalizedOKP = KeyKind(jwa.OKP().String()).normalize()
 	normalizedOCT = KeyKind(jwa.OctetSeq().String()).normalize()
 
-	RegisterKeyImporter(importRSAPrivateKey)
-	RegisterKeyImporter(importRSAPrivateKeyPtr)
-	RegisterKeyImporter(importRSAPublicKey)
-	RegisterKeyImporter(importRSAPublicKeyPtr)
-	RegisterKeyImporter(importECDSAPrivateKey)
-	RegisterKeyImporter(importECDSAPrivateKeyPtr)
-	RegisterKeyImporter(importECDSAPublicKey)
-	RegisterKeyImporter(importECDSAPublicKeyPtr)
-	RegisterKeyImporter(importEd25519PrivateKey)
-	RegisterKeyImporter(importECDHPrivateKey)
-	RegisterKeyImporter(importECDHPrivateKeyPtr)
-	RegisterKeyImporter(importEd25519PublicKey)
-	RegisterKeyImporter(importECDHPublicKey)
-	RegisterKeyImporter(importECDHPublicKeyPtr)
-	RegisterKeyImporter(importSymmetricKey)
+	panicOnRegistrationError(RegisterKeyImporter(importRSAPrivateKey))
+	panicOnRegistrationError(RegisterKeyImporter(importRSAPrivateKeyPtr))
+	panicOnRegistrationError(RegisterKeyImporter(importRSAPublicKey))
+	panicOnRegistrationError(RegisterKeyImporter(importRSAPublicKeyPtr))
+	panicOnRegistrationError(RegisterKeyImporter(importECDSAPrivateKey))
+	panicOnRegistrationError(RegisterKeyImporter(importECDSAPrivateKeyPtr))
+	panicOnRegistrationError(RegisterKeyImporter(importECDSAPublicKey))
+	panicOnRegistrationError(RegisterKeyImporter(importECDSAPublicKeyPtr))
+	panicOnRegistrationError(RegisterKeyImporter(importEd25519PrivateKey))
+	panicOnRegistrationError(RegisterKeyImporter(importECDHPrivateKey))
+	panicOnRegistrationError(RegisterKeyImporter(importECDHPrivateKeyPtr))
+	panicOnRegistrationError(RegisterKeyImporter(importEd25519PublicKey))
+	panicOnRegistrationError(RegisterKeyImporter(importECDHPublicKey))
+	panicOnRegistrationError(RegisterKeyImporter(importECDHPublicKeyPtr))
+	panicOnRegistrationError(RegisterKeyImporter(importSymmetricKey))
+}
+
+// panicOnRegistrationError converts a non-nil error returned by a Register*
+// call during jwk's own init() into a panic. Registration cannot actually
+// fail today, but the API reserves the error return for future validation
+// and this helper keeps builtin bootstrap honest if that ever changes.
+func panicOnRegistrationError(err error) {
+	if err != nil {
+		panic(fmt.Sprintf("jwk: failed to register builtin: %s", err))
+	}
 }
 
 // normalizedKeyKindForType returns the pre-computed normalized KeyKind

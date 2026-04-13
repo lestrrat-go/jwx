@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	RegisterKeyExporter(KeyKind(jwa.OctetSeq().String()), KeyExportFunc(octetSeqToRaw))
+	panicOnRegistrationError(RegisterKeyExporter(KeyKind(jwa.OctetSeq().String()), KeyExportFunc(octetSeqToRaw)))
 }
 
 func (k *symmetricKey) Import(rawKey []byte) error {

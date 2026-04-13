@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	RegisterKeyExporter(KeyKind(jwa.OKP().String()), KeyExportFunc(okpJWKToRaw))
+	panicOnRegistrationError(RegisterKeyExporter(KeyKind(jwa.OKP().String()), KeyExportFunc(okpJWKToRaw)))
 }
 
 // Pre-computed normalized KeyKind values for built-in OKP curves.

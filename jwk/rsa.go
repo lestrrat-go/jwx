@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	RegisterKeyExporter(KeyKind(jwa.RSA().String()), KeyExportFunc(rsaJWKToRaw))
+	panicOnRegistrationError(RegisterKeyExporter(KeyKind(jwa.RSA().String()), KeyExportFunc(rsaJWKToRaw)))
 }
 
 func (k *rsaPrivateKey) Import(rawKey *rsa.PrivateKey) error {
