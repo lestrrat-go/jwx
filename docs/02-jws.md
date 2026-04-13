@@ -563,7 +563,17 @@ func Example_jws_verify_detached_payload() {
     return
   }
 
-  verified, err := jws.Verify([]byte(serialized), jws.WithKey(jwa.HS256(), key), jws.WithDetachedPayload([]byte(payload)))
+  // The serialized JWS sets b64=false (RFC 7797) and lists "b64" in
+  // the "crit" header. Under v4's default-strict crit validation,
+  // passing jws.WithDetachedPayload auto-declares the "b64"
+  // extension on the caller's behalf — detached-payload verification
+  // is the canonical pairing for b64=false and the jws package
+  // implements it natively, so application code does not need to
+  // pass jws.WithCritExtension("b64") explicitly.
+  verified, err := jws.Verify([]byte(serialized),
+    jws.WithKey(jwa.HS256(), key),
+    jws.WithDetachedPayload([]byte(payload)),
+  )
   if err != nil {
     fmt.Printf("failed to verify payload: %s\n", err)
     return
