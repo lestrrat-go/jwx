@@ -38,8 +38,8 @@ func getFieldPairList() []fieldPair {
 }
 
 func putFieldPairList(list []fieldPair) {
-	list = list[:0]
-	fieldPairPool.Put(list)
+	clear(list) // zero fieldPair entries so pooled values don't retain references across Put/Get
+	fieldPairPool.Put(list[:0])
 }
 
 // Key defines the minimal interface for each of the
