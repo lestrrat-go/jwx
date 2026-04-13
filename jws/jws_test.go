@@ -7,6 +7,7 @@ import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/asn1"
@@ -1368,11 +1369,6 @@ func TestAlgorithmsForKey(t *testing.T) {
 			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA(), jwa.EdDSAEd25519()},
 		},
 		{
-			Name:     "ecdh.PublicKey (no curve filtering)",
-			Key:      &ecdh.PublicKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA()},
-		},
-		{
 			Name:     "jwk.OKPPublicKey (X25519)",
 			Key:      x25519pubkey,
 			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA()},
@@ -1402,6 +1398,35 @@ func TestAlgorithmsForKey(t *testing.T) {
 				return algs[i].String() < algs[j].String()
 			})
 			require.Equal(t, tc.Expected, algs, `results should match`)
+		})
+	}
+}
+
+// TestAlgorithmsForKeyECDHRejects is a regression test for JWS-004:
+// ecdh.{Public,Private}Key values are for key agreement (X25519/X448),
+// not signing. AlgorithmsForKey must reject them instead of handing back
+// the generic OKP algorithm list and deferring the type error to the
+// signing stack.
+func TestAlgorithmsForKeyECDHRejects(t *testing.T) {
+	x25519priv, err := ecdh.X25519().GenerateKey(rand.Reader)
+	require.NoError(t, err, `ecdh.X25519().GenerateKey should succeed`)
+	x25519pub := x25519priv.PublicKey()
+
+	testcases := []struct {
+		Name string
+		Key  any
+	}{
+		{Name: "*ecdh.PrivateKey", Key: x25519priv},
+		{Name: "ecdh.PrivateKey (value)", Key: *x25519priv},
+		{Name: "*ecdh.PublicKey", Key: x25519pub},
+		{Name: "ecdh.PublicKey (value)", Key: *x25519pub},
+		{Name: "empty *ecdh.PublicKey", Key: &ecdh.PublicKey{}},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.Name, func(t *testing.T) {
+			_, err := jws.AlgorithmsForKey(tc.Key)
+			require.Error(t, err, `AlgorithmsForKey should reject ecdh keys`)
 		})
 	}
 }
