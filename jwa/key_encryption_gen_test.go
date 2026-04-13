@@ -287,70 +287,6 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 	})
 	t.Run(`Lookup the object`, func(t *testing.T) {
 		t.Parallel()
-		v, ok := jwa.LookupKeyEncryptionAlgorithm("ML-KEM-1024")
-		require.True(t, ok, `Lookup should succeed`)
-		require.Equal(t, jwa.ML_KEM_1024(), v, `Lookup value should be equal to constant`)
-	})
-	t.Run(`Unmarshal the string ML-KEM-1024`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.KeyEncryptionAlgorithm
-		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("ML-KEM-1024")), &dst), `UnmarshalJSON is successful`)
-		require.Equal(t, jwa.ML_KEM_1024(), dst, `unmarshaled value should be equal to constant`)
-	})
-	t.Run(`stringification for ML-KEM-1024`, func(t *testing.T) {
-		t.Parallel()
-		require.Equal(t, "ML-KEM-1024", jwa.ML_KEM_1024().String(), `stringified value matches`)
-	})
-	t.Run(`Lookup the object`, func(t *testing.T) {
-		t.Parallel()
-		v, ok := jwa.LookupKeyEncryptionAlgorithm("ML-KEM-1024+A256KW")
-		require.True(t, ok, `Lookup should succeed`)
-		require.Equal(t, jwa.ML_KEM_1024_A256KW(), v, `Lookup value should be equal to constant`)
-	})
-	t.Run(`Unmarshal the string ML-KEM-1024+A256KW`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.KeyEncryptionAlgorithm
-		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("ML-KEM-1024+A256KW")), &dst), `UnmarshalJSON is successful`)
-		require.Equal(t, jwa.ML_KEM_1024_A256KW(), dst, `unmarshaled value should be equal to constant`)
-	})
-	t.Run(`stringification for ML-KEM-1024+A256KW`, func(t *testing.T) {
-		t.Parallel()
-		require.Equal(t, "ML-KEM-1024+A256KW", jwa.ML_KEM_1024_A256KW().String(), `stringified value matches`)
-	})
-	t.Run(`Lookup the object`, func(t *testing.T) {
-		t.Parallel()
-		v, ok := jwa.LookupKeyEncryptionAlgorithm("ML-KEM-768")
-		require.True(t, ok, `Lookup should succeed`)
-		require.Equal(t, jwa.ML_KEM_768(), v, `Lookup value should be equal to constant`)
-	})
-	t.Run(`Unmarshal the string ML-KEM-768`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.KeyEncryptionAlgorithm
-		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("ML-KEM-768")), &dst), `UnmarshalJSON is successful`)
-		require.Equal(t, jwa.ML_KEM_768(), dst, `unmarshaled value should be equal to constant`)
-	})
-	t.Run(`stringification for ML-KEM-768`, func(t *testing.T) {
-		t.Parallel()
-		require.Equal(t, "ML-KEM-768", jwa.ML_KEM_768().String(), `stringified value matches`)
-	})
-	t.Run(`Lookup the object`, func(t *testing.T) {
-		t.Parallel()
-		v, ok := jwa.LookupKeyEncryptionAlgorithm("ML-KEM-768+A192KW")
-		require.True(t, ok, `Lookup should succeed`)
-		require.Equal(t, jwa.ML_KEM_768_A192KW(), v, `Lookup value should be equal to constant`)
-	})
-	t.Run(`Unmarshal the string ML-KEM-768+A192KW`, func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.KeyEncryptionAlgorithm
-		require.NoError(t, json.Unmarshal([]byte(strconv.Quote("ML-KEM-768+A192KW")), &dst), `UnmarshalJSON is successful`)
-		require.Equal(t, jwa.ML_KEM_768_A192KW(), dst, `unmarshaled value should be equal to constant`)
-	})
-	t.Run(`stringification for ML-KEM-768+A192KW`, func(t *testing.T) {
-		t.Parallel()
-		require.Equal(t, "ML-KEM-768+A192KW", jwa.ML_KEM_768_A192KW().String(), `stringified value matches`)
-	})
-	t.Run(`Lookup the object`, func(t *testing.T) {
-		t.Parallel()
 		v, ok := jwa.LookupKeyEncryptionAlgorithm("PBES2-HS256+A128KW")
 		require.True(t, ok, `Lookup should succeed`)
 		require.Equal(t, jwa.PBES2_HS256_A128KW(), v, `Lookup value should be equal to constant`)
@@ -535,18 +471,6 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 		t.Run(`HPKE_7_KE`, func(t *testing.T) {
 			require.False(t, jwa.HPKE_7_KE().IsSymmetric(), `jwa.HPKE_7_KE returns expected value`)
 		})
-		t.Run(`ML_KEM_1024`, func(t *testing.T) {
-			require.False(t, jwa.ML_KEM_1024().IsSymmetric(), `jwa.ML_KEM_1024 returns expected value`)
-		})
-		t.Run(`ML_KEM_1024_A256KW`, func(t *testing.T) {
-			require.False(t, jwa.ML_KEM_1024_A256KW().IsSymmetric(), `jwa.ML_KEM_1024_A256KW returns expected value`)
-		})
-		t.Run(`ML_KEM_768`, func(t *testing.T) {
-			require.False(t, jwa.ML_KEM_768().IsSymmetric(), `jwa.ML_KEM_768 returns expected value`)
-		})
-		t.Run(`ML_KEM_768_A192KW`, func(t *testing.T) {
-			require.False(t, jwa.ML_KEM_768_A192KW().IsSymmetric(), `jwa.ML_KEM_768_A192KW returns expected value`)
-		})
 		t.Run(`PBES2_HS256_A128KW`, func(t *testing.T) {
 			require.True(t, jwa.PBES2_HS256_A128KW().IsSymmetric(), `jwa.PBES2_HS256_A128KW returns expected value`)
 		})
@@ -592,10 +516,6 @@ func TestKeyEncryptionAlgorithm(t *testing.T) {
 			jwa.HPKE_3_KE():          {},
 			jwa.HPKE_4_KE():          {},
 			jwa.HPKE_7_KE():          {},
-			jwa.ML_KEM_1024():        {},
-			jwa.ML_KEM_1024_A256KW(): {},
-			jwa.ML_KEM_768():         {},
-			jwa.ML_KEM_768_A192KW():  {},
 			jwa.PBES2_HS256_A128KW(): {},
 			jwa.PBES2_HS384_A192KW(): {},
 			jwa.PBES2_HS512_A256KW(): {},

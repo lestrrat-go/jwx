@@ -10,11 +10,11 @@ Package jwk implements JWK as described in [RFC 7517](https://tools.ietf.org/htm
 | EC  | P-256, P-384, P-521 | `ecdsa.PrivateKey` / `ecdsa.PublicKey` (*) |
 | oct | N/A | `[]byte` |
 | OKP | Ed25519, X25519, X448 | `ed25519.PrivateKey` / `ed25519.PublicKey`, `x25519.PrivateKey` / `x25519.PublicKey` (*) |
-| AKP | ML-KEM-768, ML-KEM-1024 | `mlkem.EncapsulationKey` / `mlkem.DecapsulationKey` (*) |
+| AKP | post-quantum (see extensions) | populated by extension modules |
 
 (*) Either value or pointers accepted (e.g. `rsa.PrivateKey` or `*rsa.PrivateKey`)
 
-Additional key types available via [extension modules](../docs/10-extensions.md): secp256k1 (ES256K), Ed448, ML-DSA.
+Additional key types available via [extension modules](../docs/10-extensions.md): secp256k1 (ES256K), Ed448, ML-DSA, ML-KEM.
 
 ## Parse and use a JWK key
 

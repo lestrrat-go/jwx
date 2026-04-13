@@ -270,19 +270,3 @@ algorithms:
         value: HPKE-7-KE
         token_reference: tokens.HPKE_7_KE
         returnval_comment: "HPKE-7-KE key encryption (DHKEM(P-256) + HKDF-SHA256 + AES-256-GCM). Based on draft-ietf-jose-hpke-encrypt-16: API is not yet stable"
-      - name: ML_KEM_768
-        value: ML-KEM-768
-        token_reference: tokens.ML_KEM_768
-        returnval_comment: ML-KEM-768 direct key agreement algorithm (FIPS 203)
-      - name: ML_KEM_1024
-        value: ML-KEM-1024
-        token_reference: tokens.ML_KEM_1024
-        returnval_comment: ML-KEM-1024 direct key agreement algorithm (FIPS 203)
-      - name: ML_KEM_768_A192KW
-        value: ML-KEM-768+A192KW
-        token_reference: tokens.ML_KEM_768_A192KW
-        returnval_comment: ML-KEM-768 + AES key wrap (192) key agreement algorithm (FIPS 203)
-      - name: ML_KEM_1024_A256KW
-        value: ML-KEM-1024+A256KW
-        token_reference: tokens.ML_KEM_1024_A256KW
-        returnval_comment: ML-KEM-1024 + AES key wrap (256) key agreement algorithm (FIPS 203)

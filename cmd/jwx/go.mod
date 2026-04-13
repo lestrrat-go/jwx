@@ -15,7 +15,6 @@ require (
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/valyala/fastjson v1.6.10 // indirect
 	github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e // indirect
-	golang.org/x/sys v0.42.0 // indirect
 )
 
 replace github.com/lestrrat-go/jwx/v4 v4.0.0 => ../..

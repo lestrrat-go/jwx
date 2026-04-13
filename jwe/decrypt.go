@@ -205,10 +205,28 @@ func decryptKeyMLKEM(recipientKey []byte, alg string, ctalg jwa.ContentEncryptio
 		return nil, fmt.Errorf(`jwe: decrypt key: missing 'ek' field for ML-KEM`)
 	}
 
-	if jwebb.IsMLKEMDirect(alg) {
-		return jwebb.KeyDecryptMLKEM(alg, ctalgStr, key, ek)
+	dec, err := mlkemDecrypterFromKey(key)
+	if err != nil {
+		return nil, fmt.Errorf(`jwe: decrypt key: %w`, err)
 	}
-	return jwebb.KeyDecryptMLKEMKeyWrap(recipientKey, alg, ctalgStr, key, ek)
+	return jwebb.KeyDecryptMLKEMCustom(recipientKey, alg, ctalgStr, dec, ek)
+}
+
+// mlkemDecrypterFromKey is the decrypt-side counterpart to
+// mlkemEncrypterFromKey. See its doc for the conversion strategy.
+func mlkemDecrypterFromKey(key any) (jwebb.MLKEMKeyDecrypter, error) {
+	if d, ok := key.(jwebb.MLKEMKeyDecrypter); ok {
+		return d, nil
+	}
+	jkey, ok := key.(jwk.Key)
+	if !ok {
+		imported, err := jwk.Import[jwk.Key](key)
+		if err != nil {
+			return nil, fmt.Errorf(`ML-KEM: cannot convert %T (import github.com/jwx-go/mlkem/v4 to enable ML-KEM): %w`, key, err)
+		}
+		jkey = imported
+	}
+	return jwk.Export[jwebb.MLKEMKeyDecrypter](jkey)
 }
 
 func decryptKeyRSA15(recipientKey []byte, _ string, key any, contentCipher content_crypt.Cipher) ([]byte, error) {

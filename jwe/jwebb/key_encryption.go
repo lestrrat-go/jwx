@@ -64,25 +64,18 @@ func IsDirect(alg string) bool {
 	return alg == tokens.DIRECT
 }
 
-// IsMLKEM checks if the algorithm is an ML-KEM based algorithm
+// IsMLKEM checks if the algorithm is an ML-KEM based algorithm.
+// ML-KEM algorithms are contributed by external modules (e.g.,
+// github.com/jwx-go/mlkem) via RegisterMLKEMAlgorithm.
 func IsMLKEM(alg string) bool {
-	switch alg {
-	case tokens.ML_KEM_768, tokens.ML_KEM_1024,
-		tokens.ML_KEM_768_A192KW, tokens.ML_KEM_1024_A256KW:
-		return true
-	default:
-		return false
-	}
+	return isRegisteredMLKEM(alg)
 }
 
-// IsMLKEMDirect checks if the algorithm is a direct ML-KEM algorithm (no key wrapping)
+// IsMLKEMDirect checks if the algorithm is a direct ML-KEM algorithm
+// (no key wrapping). Direct algorithms are registered via
+// RegisterMLKEMDirectAlgorithm.
 func IsMLKEMDirect(alg string) bool {
-	switch alg {
-	case tokens.ML_KEM_768, tokens.ML_KEM_1024:
-		return true
-	default:
-		return false
-	}
+	return isRegisteredMLKEMDirect(alg)
 }
 
 // IsHPKE checks if the algorithm is an HPKE-based algorithm.

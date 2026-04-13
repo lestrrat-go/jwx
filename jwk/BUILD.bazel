@@ -52,7 +52,6 @@ go_library(
 go_test(
     name = "jwk_test",
     srcs = [
-        "akp_test.go",
         "bench_set_test.go",
         "filter_test.go",
         "fuzz_test.go",

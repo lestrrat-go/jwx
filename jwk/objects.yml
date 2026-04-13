@@ -166,7 +166,8 @@ key_types:
       - name: publicKey
         comment: |
           AKPPublicKey represents the public portion of an Algorithm Key Pair (AKP) JWK,
-          used by post-quantum algorithms such as ML-KEM (FIPS 203) and ML-DSA (FIPS 204).
+          used by post-quantum algorithms such as ML-DSA (FIPS 204) and ML-KEM (FIPS 203).
+          ML-KEM support lives in the github.com/jwx-go/mlkem companion module.
         raw_key_type: "interface{}"
         fields:
           - name: pub
@@ -175,26 +176,8 @@ key_types:
       - name: privateKey
         comment: |
           AKPPrivateKey represents the private portion of an Algorithm Key Pair (AKP) JWK,
-          used by post-quantum algorithms such as ML-KEM (FIPS 203) and ML-DSA (FIPS 204).
-
-          INTEROPERABILITY WARNING: ML-KEM PRIVATE KEY ROUND-TRIP LIMITATION
-
-          FIPS 203 defines the ML-KEM private key seed as 64 bytes in the "d || z" form,
-          where d (32 bytes) generates the key pair and z (32 bytes) is the implicit
-          rejection seed used during decapsulation. However, draft-ietf-jose-pqc-kem
-          (https://datatracker.ietf.org/doc/draft-ietf-jose-pqc-kem/) mandates that
-          the "priv" field contain only d (32 bytes). Go's crypto/mlkem
-          package requires the full 64-byte seed to reconstruct a decapsulation key.
-
-          Because the draft limits "priv" to 32 bytes, the z component is lost when a
-          private key is exported to JWK. Re-importing will produce a decapsulation key
-          with a randomly generated z. This key is functionally equivalent for all normal
-          operations — z only affects implicit rejection (the fake shared secret returned
-          for tampered ciphertexts) and does not change decapsulation of valid ciphertexts.
-
-          This means JWK round-trips do NOT preserve bitwise key identity. If the draft
-          is revised to accommodate the full 64-byte seed, this limitation will be
-          resolved.
+          used by post-quantum algorithms such as ML-DSA (FIPS 204) and ML-KEM (FIPS 203).
+          ML-KEM support lives in the github.com/jwx-go/mlkem companion module.
         raw_key_type: "interface{}"
         fields:
           - name: pub

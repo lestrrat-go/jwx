@@ -8,6 +8,7 @@ import (
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwe/internal/keygen"
 	"github.com/lestrrat-go/jwx/v4/jwe/jwebb"
+	"github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 // encryptKey dispatches key encryption to the appropriate algorithm-specific
@@ -46,10 +47,11 @@ func encryptKey(cek []byte, keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.Content
 		}
 		return jwebb.KeyEncryptECDHESCustom(cek, algStr, apu, apv, gen, keysize, ctalgStr, keywrap)
 	case jwebb.IsMLKEM(algStr):
-		if jwebb.IsMLKEMDirect(algStr) {
-			return jwebb.KeyEncryptMLKEM(cek, algStr, ctalgStr, key)
+		enc, err := mlkemEncrypterFromKey(key)
+		if err != nil {
+			return nil, fmt.Errorf(`jwe: encrypt key: %w`, err)
 		}
-		return jwebb.KeyEncryptMLKEMKeyWrap(cek, algStr, ctalgStr, key)
+		return jwebb.KeyEncryptMLKEMCustom(cek, algStr, ctalgStr, enc)
 	case jwebb.IsHPKE(algStr):
 		result, err := jwebb.KeyEncryptHPKEKE(cek, algStr, ctalgStr, key)
 		if err != nil {
@@ -69,6 +71,26 @@ func encryptKey(cek []byte, keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.Content
 	default:
 		return nil, fmt.Errorf(`jwe: encrypt key: unsupported algorithm (%s)`, algStr)
 	}
+}
+
+// mlkemEncrypterFromKey converts a user-supplied key value into a
+// jwebb.MLKEMKeyEncrypter. ML-KEM support is provided by the
+// github.com/jwx-go/mlkem companion module — its init() registers raw
+// key importers (for stdlib *mlkem.EncapsulationKey768/1024) and a
+// jwk.Export adapter that yields an MLKEMKeyEncrypter wrapper.
+func mlkemEncrypterFromKey(key any) (jwebb.MLKEMKeyEncrypter, error) {
+	if e, ok := key.(jwebb.MLKEMKeyEncrypter); ok {
+		return e, nil
+	}
+	jkey, ok := key.(jwk.Key)
+	if !ok {
+		imported, err := jwk.Import[jwk.Key](key)
+		if err != nil {
+			return nil, fmt.Errorf(`ML-KEM: cannot convert %T (import github.com/jwx-go/mlkem/v4 to enable ML-KEM): %w`, key, err)
+		}
+		jkey = imported
+	}
+	return jwk.Export[jwebb.MLKEMKeyEncrypter](jkey)
 }
 
 func requireByteKey(key any, alg string) ([]byte, error) {

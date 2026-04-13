@@ -16,8 +16,8 @@ Package jwe implements JWE as described in [RFC 7516](https://tools.ietf.org/htm
 | AES-GCM key wrap (128/192/256)           | jwa.A128GCMKW / A192GCMKW / A256GCMKW | |
 | PBES2 + HMAC-SHA + AES key wrap          | jwa.PBES2_HS256_A128KW / HS384_A192KW / HS512_A256KW | |
 | HPKE (multiple modes)                    | jwa.HPKE_0_KE .. HPKE_7_KE | Single-recipient only |
-| ML-KEM-768                               | jwa.ML_KEM_768 / ML_KEM_768_A192KW | |
-| ML-KEM-1024                              | jwa.ML_KEM_1024 / ML_KEM_1024_A256KW | |
+| ML-KEM-768                               | mlkem.MLKEM768() / MLKEM768A192KW() | Companion module [`github.com/jwx-go/mlkem`](https://github.com/jwx-go/mlkem) (draft-ietf-jose-pqc-kem) |
+| ML-KEM-1024                              | mlkem.MLKEM1024() / MLKEM1024A256KW() | Companion module [`github.com/jwx-go/mlkem`](https://github.com/jwx-go/mlkem) (draft-ietf-jose-pqc-kem) |
 
 ## Supported content encryption algorithms
 
