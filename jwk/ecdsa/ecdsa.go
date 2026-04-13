@@ -55,6 +55,9 @@ func Algorithms() []jwa.EllipticCurveAlgorithm {
 }
 
 func AlgorithmFromCurve(crv elliptic.Curve) (jwa.EllipticCurveAlgorithm, error) {
+	muCurves.RLock()
+	defer muCurves.RUnlock()
+
 	alg, ok := curveToAlgMap[crv]
 	if !ok {
 		return jwa.InvalidEllipticCurve(), fmt.Errorf(`unknown elliptic curve: %q`, crv)
@@ -63,6 +66,9 @@ func AlgorithmFromCurve(crv elliptic.Curve) (jwa.EllipticCurveAlgorithm, error) 
 }
 
 func CurveFromAlgorithm(alg jwa.EllipticCurveAlgorithm) (elliptic.Curve, error) {
+	muCurves.RLock()
+	defer muCurves.RUnlock()
+
 	crv, ok := algToCurveMap[alg]
 	if !ok {
 		return nil, fmt.Errorf(`unknown elliptic curve algorithm: %q`, alg)
@@ -71,6 +77,9 @@ func CurveFromAlgorithm(alg jwa.EllipticCurveAlgorithm) (elliptic.Curve, error) 
 }
 
 func IsCurveAvailable(alg jwa.EllipticCurveAlgorithm) bool {
+	muCurves.RLock()
+	defer muCurves.RUnlock()
+
 	_, ok := algToCurveMap[alg]
 	return ok
 }
