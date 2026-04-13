@@ -371,6 +371,14 @@ func WithDetached(v bool) CompactOption {
 // When this option is used for `jws.Sign()`, the first parameter (normally the payload)
 // must be set to `nil`.
 //
+// When passed to `jws.Verify()` together with `jws.WithCritValidation(true)`,
+// the RFC 7797 `"b64"` extension is automatically added to the
+// caller's allowlist as if `jws.WithCritExtension("b64")` had also
+// been passed. Detached-payload verification is the canonical
+// pairing for `b64=false`, and the jws package implements `b64=false`
+// handling natively, so there is no need to declare it explicitly.
+// Other crit extensions still require explicit declaration.
+//
 // If you have to verify using this option, you should know exactly how and why this works.
 func WithDetachedPayload(v []byte) SignVerifyOption {
 	return &signVerifyOption{option.New(identDetachedPayload{}, v)}
