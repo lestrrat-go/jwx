@@ -116,4 +116,3 @@ func (k *akpPrivateKey) Validate() error {
 	}
 	return nil
 }
-
