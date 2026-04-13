@@ -547,10 +547,10 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 		crv = jwa.Ed25519()
 		hasCrv = true
 	case *ecdh.PublicKey, ecdh.PublicKey, *ecdh.PrivateKey, ecdh.PrivateKey:
-		kty = jwa.OKP()
 		// ecdh keys are for key agreement (X25519/X448), not signing.
-		// We still resolve kty so the caller gets a meaningful error
-		// or an empty curve-filtered result.
+		// Reject at the API boundary instead of returning a misleading
+		// algorithm list that would fail deeper in the signing stack.
+		return nil, fmt.Errorf(`key type %T cannot be used for signing (ecdh keys are key-agreement only)`, key)
 	case []byte:
 		kty = jwa.OctetSeq()
 	default:
