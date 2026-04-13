@@ -650,6 +650,7 @@ func (h *ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 		pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: v})
 	}
 	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm != nil {
 		{
 			v, err := json.Marshal(*(h.algorithm))
@@ -765,7 +766,6 @@ func (h *ecdsaPublicKey) MarshalJSON() ([]byte, error) {
 			pairs = append(pairs, fieldPair{Name: k, Value: encoded})
 		}
 	}
-	h.mu.RUnlock()
 
 	slices.SortFunc(pairs, fieldPairLess)
 	buf := pool.BytesBuffer().Get()
@@ -1513,6 +1513,7 @@ func (h *ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 		pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: v})
 	}
 	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm != nil {
 		{
 			v, err := json.Marshal(*(h.algorithm))
@@ -1637,7 +1638,6 @@ func (h *ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
 			pairs = append(pairs, fieldPair{Name: k, Value: encoded})
 		}
 	}
-	h.mu.RUnlock()
 
 	slices.SortFunc(pairs, fieldPairLess)
 	buf := pool.BytesBuffer().Get()
