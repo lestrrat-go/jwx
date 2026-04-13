@@ -103,10 +103,12 @@ func (k *rsaPublicKey) Import(rawKey *rsa.PublicKey) error {
 }
 
 func buildRSAPublicKey(key *rsa.PublicKey, n, e []byte) {
-	bin := pool.BigInt().Get()
 	bie := pool.BigInt().Get()
 	defer pool.BigInt().Put(bie)
 
+	// Do not pool bin: it escapes via key.N, so any future `defer Put(bin)`
+	// would zero the caller's modulus after return.
+	bin := new(big.Int)
 	bin.SetBytes(n)
 	bie.SetBytes(e)
 
