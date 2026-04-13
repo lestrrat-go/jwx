@@ -959,7 +959,7 @@ func TestRFC7797(t *testing.T) {
 				payload := tc.Payload
 				signOptions := []jws.SignOption{jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs))}
 				var verifyOptions []jws.VerifyOption
-				verifyOptions = append(verifyOptions, jws.WithKey(jwa.HS256(), key))
+				verifyOptions = append(verifyOptions, jws.WithKey(jwa.HS256(), key), jws.WithCritExtension("b64"))
 				if tc.Detached {
 					signOptions = append(signOptions, jws.WithDetachedPayload(payload))
 					verifyOptions = append(verifyOptions, jws.WithDetachedPayload(payload))
@@ -1030,7 +1030,7 @@ func TestRFC7797(t *testing.T) {
 		for _, tc := range testcases {
 			t.Run(tc.Name, func(t *testing.T) {
 				options := tc.VerifyOptions
-				options = append(options, jws.WithKey(jwa.HS256(), key))
+				options = append(options, jws.WithKey(jwa.HS256(), key), jws.WithCritExtension("b64"))
 				payload, err := jws.Verify(tc.Input, options...)
 				if tc.Error {
 					require.Error(t, err, `jws.Verify should fail`)
@@ -1055,12 +1055,12 @@ func TestGH485(t *testing.T) {
     "signatures": [{"protected": %q, "signature": %q}]
 }`, payload, protected, signature)
 
-	verified, err := jws.Verify([]byte(signed), jws.WithKey(jwa.HS256(), []byte("secret")))
+	verified, err := jws.Verify([]byte(signed), jws.WithKey(jwa.HS256(), []byte("secret")), jws.WithCritExtension("exp"))
 	require.NoError(t, err, `jws.Verify should succeed`)
 	require.Equal(t, expected, string(verified), `verified payload should match`)
 
 	compact := strings.Join([]string{protected, payload, signature}, ".")
-	verified, err = jws.Verify([]byte(compact), jws.WithKey(jwa.HS256(), []byte("secret")))
+	verified, err = jws.Verify([]byte(compact), jws.WithKey(jwa.HS256(), []byte("secret")), jws.WithCritExtension("exp"))
 	require.NoError(t, err, `jws.Verify should succeed`)
 	require.Equal(t, expected, string(verified), `verified payload should match`)
 }

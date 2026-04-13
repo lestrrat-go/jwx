@@ -185,6 +185,7 @@ func (*withKeySuboption) withKeySuboption() {}
 
 type identBase64Encoder struct{}
 type identContext struct{}
+type identCritValidation struct{}
 type identDetached struct{}
 type identDetachedPayload struct{}
 type identInferAlgorithmFromKey struct{}
@@ -200,7 +201,6 @@ type identProtectedHeaders struct{}
 type identPublicHeaders struct{}
 type identRequireKid struct{}
 type identSerialization struct{}
-type identStrictCriticalHeaders struct{}
 type identUseDefault struct{}
 type identValidateKey struct{}
 
@@ -210,6 +210,10 @@ func (identBase64Encoder) String() string {
 
 func (identContext) String() string {
 	return "WithContext"
+}
+
+func (identCritValidation) String() string {
+	return "WithCritValidation"
 }
 
 func (identDetached) String() string {
@@ -272,10 +276,6 @@ func (identSerialization) String() string {
 	return "WithSerialization"
 }
 
-func (identStrictCriticalHeaders) String() string {
-	return "WithStrictCriticalHeaders"
-}
-
 func (identUseDefault) String() string {
 	return "WithUseDefault"
 }
@@ -293,6 +293,36 @@ func WithBase64Encoder(v Base64Encoder) SignVerifyCompactOption {
 
 func WithContext(v context.Context) VerifyOption {
 	return &verifyOption{option.New(identContext{}, v)}
+}
+
+// WithCritValidation controls RFC 7515 Section 4.1.11 validation of the
+// "crit" (Critical) header parameter during verification. The default
+// is true: jws.Verify() rejects any JWS whose protected header lists
+// "crit" entries that the recipient has not declared support for via
+// jws.WithCritExtension(). It will also reject structurally invalid
+// "crit" lists: empty arrays, duplicate names, empty extension names,
+// names of standard JOSE header parameters, and names that do not
+// appear as header parameters in the protected header.
+//
+// Pass jws.WithCritValidation(false) to silently ignore the "crit"
+// header entirely, matching the lax pre-v3.0.14 behavior. This opt-out
+// is discouraged: per RFC 7515 Section 4.1.11, recipients MUST reject a
+// JWS whose "crit" list names extensions they do not understand, and
+// the only way to satisfy that requirement with this library is to
+// keep validation enabled and declare the extensions you support.
+//
+// IMPORTANT: with validation enabled, the library checks that every
+// "crit" entry has been declared via jws.WithCritExtension(), but the
+// library cannot perform the actual extension-specific processing on
+// your behalf. After jws.Verify() returns successfully, your code
+// MUST read each declared extension header and apply whatever check
+// or side effect the extension semantics demand. If you declare an
+// extension and then forget to act on its value, you have defeated
+// the protection the producer was trying to obtain by marking that
+// extension critical. See the documentation on jws.WithCritExtension
+// for details.
+func WithCritValidation(v bool) VerifyOption {
+	return &verifyOption{option.New(identCritValidation{}, v)}
 }
 
 // WithDetached specifies that the `jws.Message` should be serialized in
@@ -431,16 +461,6 @@ func WithRequireKid(v bool) WithKeySetSuboption {
 // do not need to specify this option other than to be explicit about it
 func WithCompact() SignVerifyParseOption {
 	return &signVerifyParseOption{option.New(identSerialization{}, fmtCompact)}
-}
-
-// WithStrictCriticalHeaders specifies whether the "crit" (Critical)
-// header parameter should be validated per RFC 7515 Section 4.1.11
-// during verification. The default is true.
-//
-// When set to false, the "crit" header is silently ignored during
-// jws.Verify(), matching the behavior of v3.0.13 and earlier.
-func WithStrictCriticalHeaders(v bool) VerifyOption {
-	return &verifyOption{option.New(identStrictCriticalHeaders{}, v)}
 }
 
 // WithUseDefault specifies that if and only if a jwk.Key contains

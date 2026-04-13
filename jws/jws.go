@@ -688,6 +688,11 @@ func Settings(options ...GlobalOption) {
 //
 // Since this function avoids doing many checks that jws.Verify would perform,
 // you must ensure to perform the necessary checks including ensuring that algorithm is safe to use for your payload yourself.
+//
+// In particular, VerifyCompactFast does NOT enforce the RFC 7515 Section
+// 4.1.11 "crit" (Critical) header validation. If your application processes
+// messages that may carry a "crit" header, use jws.Verify() with
+// jws.WithCritValidation and jws.WithCritExtension instead.
 func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error) {
 	if err := validateAlgorithmForKey(alg, key); err != nil {
 		return nil, makeVerifyError(`%w`, err)
@@ -699,12 +704,6 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	hdr, payload, encodedSig, err := jwsbb.SplitCompact(compact)
 	if err != nil {
 		return nil, makeVerifyError("failed to split compact: %w", err)
-	}
-
-	// Validate the "crit" header per RFC 7515 Section 4.1.11
-	parsedHdr := jwsbb.HeaderParseCompact(hdr)
-	if err := validateCriticalFast(parsedHdr); err != nil {
-		return nil, err
 	}
 
 	// Decode signature into pooled buffer (strict base64url, no padding per RFC 7515)
