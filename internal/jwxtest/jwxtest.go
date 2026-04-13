@@ -85,7 +85,9 @@ func GenerateEcdsaPublicJwk() (jwk.Key, error) {
 
 func GenerateSymmetricKey() []byte {
 	sharedKey := make([]byte, 64)
-	rand.Read(sharedKey)
+	if _, err := rand.Read(sharedKey); err != nil {
+		panic(fmt.Sprintf("jwxtest.GenerateSymmetricKey: rand.Read failed: %v", err))
+	}
 	return sharedKey
 }
 
