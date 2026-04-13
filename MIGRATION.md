@@ -209,6 +209,9 @@ set, err := cache.Lookup(ctx, url)
 
 ### Recipe 7: Custom Field Registration
 
+The field type is now carried by the type parameter instead of a sample
+value, so the second argument to `RegisterCustomField` is gone.
+
 ```go
 // Before
 jwt.RegisterCustomField("my-field", time.Time{})
@@ -218,6 +221,25 @@ jwk.RegisterCustomField("x-custom", "")
 jwt.RegisterCustomField[time.Time]("my-field")
 jwk.RegisterCustomField[string]("x-custom")
 ```
+
+`RegisterCustomField[T]` decodes the claim with stock `json.Unmarshal`
+into `T`. If you previously relied on the sample-value argument to drive
+custom parsing (for example, a `time.Time` that doesn't round-trip
+through RFC 3339), use `RegisterCustomDecoder[T]` instead — it takes a
+function that receives the raw JSON bytes and returns a `T`:
+
+```go
+jwt.RegisterCustomDecoder(`x-birthday`, jwt.CustomDecodeFunc[time.Time](func(data []byte) (time.Time, error) {
+    var s string
+    if err := json.Unmarshal(data, &s); err != nil {
+        return time.Time{}, err
+    }
+    return time.Parse(time.RFC1123, s)
+}))
+```
+
+`RegisterCustomDecoder` is available in `jwt`, `jws`, `jwe`, `jwk`, and
+`jwt/openid`.
 
 ### Recipe 8: JWK Probe Field Registration
 
