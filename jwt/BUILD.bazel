@@ -10,7 +10,7 @@ go_library(
         "filter.go",
         "http.go",
         "interface.go",
-        "io.go",
+        "io_gen.go",
         "jwt.go",
         "options.go",
         "options_gen.go",
