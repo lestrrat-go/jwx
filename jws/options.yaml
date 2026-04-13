@@ -241,13 +241,33 @@ options:
       This option can be passed to `jws.Settings()` to change the default
       globally, or to `jws.Parse()` / `jws.ParseFS()` for a per-call
       override.
-  - ident: StrictCriticalHeaders
+  - ident: CritValidation
     interface: VerifyOption
     argument_type: bool
     comment: |
-      WithStrictCriticalHeaders specifies whether the "crit" (Critical)
-      header parameter should be validated per RFC 7515 Section 4.1.11
-      during verification. The default is true.
+      WithCritValidation controls RFC 7515 Section 4.1.11 validation of the
+      "crit" (Critical) header parameter during verification. The default
+      is true: jws.Verify() rejects any JWS whose protected header lists
+      "crit" entries that the recipient has not declared support for via
+      jws.WithCritExtension(). It will also reject structurally invalid
+      "crit" lists: empty arrays, duplicate names, empty extension names,
+      names of standard JOSE header parameters, and names that do not
+      appear as header parameters in the protected header.
 
-      When set to false, the "crit" header is silently ignored during
-      jws.Verify(), matching the behavior of v3.0.13 and earlier.
+      Pass jws.WithCritValidation(false) to silently ignore the "crit"
+      header entirely, matching the lax pre-v3.0.14 behavior. This opt-out
+      is discouraged: per RFC 7515 Section 4.1.11, recipients MUST reject a
+      JWS whose "crit" list names extensions they do not understand, and
+      the only way to satisfy that requirement with this library is to
+      keep validation enabled and declare the extensions you support.
+
+      IMPORTANT: with validation enabled, the library checks that every
+      "crit" entry has been declared via jws.WithCritExtension(), but the
+      library cannot perform the actual extension-specific processing on
+      your behalf. After jws.Verify() returns successfully, your code
+      MUST read each declared extension header and apply whatever check
+      or side effect the extension semantics demand. If you declare an
+      extension and then forget to act on its value, you have defeated
+      the protection the producer was trying to obtain by marking that
+      extension critical. See the documentation on jws.WithCritExtension
+      for details.
