@@ -9,6 +9,9 @@ modules:
     repo: git@github.com:jwx-go/benchmarks.git
     branch: main
     runtests: false
+  - name: compsig
+    repo: git@github.com:jwx-go/compsig.git
+    branch: develop/v4
   - name: ed448
     repo: git@github.com:jwx-go/ed448.git
     branch: develop/v4
