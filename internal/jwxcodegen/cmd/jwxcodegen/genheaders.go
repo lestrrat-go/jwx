@@ -216,7 +216,14 @@ func generateHeaders(cfg *HeaderConfig, obj *codegen.Object) error {
 	o.L("return &stdHeaders{}")
 	o.L("}")
 
-	// Getter implementations
+	// Getter implementations.
+	//
+	// All non-indirect storage types in this codebase are nilable
+	// (slices, pointers, or interfaces marked direct_storage), so both
+	// branches emit the same nil-guard that returns ok=false when the
+	// field has never been set. Without this guard, callers that defend
+	// against missing fields with `if !ok` see ok=true plus a nil value
+	// — silently broken contract.
 	for _, f := range obj.Fields() {
 		o.LL("func (h *stdHeaders) %s() (%s, bool) {", f.GetterMethod(true), f.Type())
 		o.L("h.mu.RLock()")
@@ -227,6 +234,9 @@ func generateHeaders(cfg *HeaderConfig, obj *codegen.Object) error {
 			o.L("}")
 			o.L("return *(h.%s), true", f.Name(false))
 		} else {
+			o.L("if h.%s == nil {", f.Name(false))
+			o.L("return %s, false", codegen.ZeroVal(f.Type()))
+			o.L("}")
 			o.L("return h.%s, true", f.Name(false))
 		}
 		o.L("}") // func (h *stdHeaders) %s() %s

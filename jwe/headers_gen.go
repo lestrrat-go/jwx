@@ -117,12 +117,18 @@ func NewHeaders() Headers {
 func (h *stdHeaders) AgreementPartyUInfo() ([]byte, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+	if h.agreementPartyUInfo == nil {
+		return nil, false
+	}
 	return h.agreementPartyUInfo, true
 }
 
 func (h *stdHeaders) AgreementPartyVInfo() ([]byte, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+	if h.agreementPartyVInfo == nil {
+		return nil, false
+	}
 	return h.agreementPartyVInfo, true
 }
 
@@ -165,24 +171,36 @@ func (h *stdHeaders) ContentType() (string, bool) {
 func (h *stdHeaders) Critical() ([]string, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+	if h.critical == nil {
+		return nil, false
+	}
 	return h.critical, true
 }
 
 func (h *stdHeaders) EncapsulatedKey() ([]byte, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+	if h.encapsulatedKey == nil {
+		return nil, false
+	}
 	return h.encapsulatedKey, true
 }
 
 func (h *stdHeaders) EphemeralPublicKey() (jwk.Key, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+	if h.ephemeralPublicKey == nil {
+		return nil, false
+	}
 	return h.ephemeralPublicKey, true
 }
 
 func (h *stdHeaders) JWK() (jwk.Key, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+	if h.jwk == nil {
+		return nil, false
+	}
 	return h.jwk, true
 }
 
@@ -207,6 +225,9 @@ func (h *stdHeaders) KeyID() (string, bool) {
 func (h *stdHeaders) PSKID() ([]byte, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+	if h.pskID == nil {
+		return nil, false
+	}
 	return h.pskID, true
 }
 
@@ -222,6 +243,9 @@ func (h *stdHeaders) Type() (string, bool) {
 func (h *stdHeaders) X509CertChain() (*cert.Chain, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
+	if h.x509CertChain == nil {
+		return nil, false
+	}
 	return h.x509CertChain, true
 }
 
