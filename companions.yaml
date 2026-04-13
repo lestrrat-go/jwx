@@ -27,6 +27,9 @@ modules:
   - name: jwxmigrate
     repo: git@github.com:jwx-go/jwxmigrate.git
     branch: develop/v4
+  - name: mlkem
+    repo: git@github.com:jwx-go/mlkem.git
+    branch: develop/v4
   - name: mldsa
     repo: git@github.com:jwx-go/mldsa.git
     branch: develop/v4

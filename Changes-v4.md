@@ -87,10 +87,9 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 * The `AKP` key type (Algorithm Key Pair, RFC 9802) has been added, exposed as
   `jwa.AKP()` with `jwk.AKPPublicKey` / `jwk.AKPPrivateKey`. This is a generic
   key type for post-quantum algorithms and is used by both ML-DSA (signature)
-  and ML-KEM (key encapsulation) support.
-
-* ML-KEM (FIPS 203) key support has been added via the `AKP` key type,
-  covering ML-KEM-768 and ML-KEM-1024.
+  and ML-KEM (key encapsulation) support. ML-KEM key import/export lives in
+  the `github.com/jwx-go/mlkem` companion module; only the generic AKP
+  machinery is in core jwx.
 
 * `jwk.Set` now supports range-over-func iteration:
 
@@ -154,9 +153,13 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   spec-compliant: per-recipient headers are not merged into the protected header
   during flattened JSON serialization.
 
-* ML-KEM (FIPS 203) key encapsulation is now supported for JWE. The supported
-  algorithms include `ML-KEM-768` and `ML-KEM-1024` (standalone), as well as
-  hybrid variants `ML-KEM-768+A192KW` and `ML-KEM-1024+A256KW`.
+* ML-KEM (FIPS 203) key encapsulation for JWE is provided as a companion
+  module at [`github.com/jwx-go/mlkem`](https://github.com/jwx-go/mlkem).
+  Importing it for side effects registers `ML-KEM-768`, `ML-KEM-1024`,
+  `ML-KEM-768+A192KW`, and `ML-KEM-1024+A256KW` per draft-ietf-jose-pqc-kem.
+  ML-KEM lives in a companion (rather than core jwx) because the JOSE binding
+  is still an Internet-Draft. Core jwx exposes a `jwebb.MLKEMKeyEncrypter` /
+  `jwebb.MLKEMKeyDecrypter` extension hook that the companion plugs into.
 
 * HPKE key encryption (draft-ietf-jose-hpke-encrypt-16) is now supported for JWE.
   Six algorithms are available: `HPKE-0-KE` through `HPKE-7-KE`, covering

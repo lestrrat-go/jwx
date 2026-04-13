@@ -30,7 +30,8 @@ type ByteWithSaltAndCount struct {
 
 // ByteWithEncapsulatedKey holds the KEM ciphertext alongside the
 // derived key material. The ciphertext is populated into the JWE
-// header as the "ek" field during ML-KEM key encapsulation.
+// header as the "ek" field during KEM-based key encapsulation (HPKE,
+// ML-KEM via the github.com/jwx-go/mlkem companion, etc.).
 type ByteWithEncapsulatedKey struct {
 	ByteKey
 

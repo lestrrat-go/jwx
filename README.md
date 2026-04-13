@@ -174,7 +174,7 @@ Additionally supported via the main module or [extension modules](docs/10-extens
 
 | Specification | Support |
 |---------------|---------|
-| [FIPS 203](https://csrc.nist.gov/pubs/fips/203/final) (ML-KEM) | JWE key encapsulation: ML-KEM-768, ML-KEM-1024, hybrid variants |
+| [FIPS 203](https://csrc.nist.gov/pubs/fips/203/final) (ML-KEM) | JWE key encapsulation via [`github.com/jwx-go/mlkem`](https://github.com/jwx-go/mlkem): ML-KEM-768, ML-KEM-1024, hybrid variants (draft-ietf-jose-pqc-kem) |
 | [FIPS 204](https://csrc.nist.gov/pubs/fips/204/final) (ML-DSA) | JWS signatures via [`github.com/jwx-go/mldsa`](https://github.com/jwx-go/mldsa) |
 
 
