@@ -63,6 +63,20 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 			vc.dst = option.MustGet[*Message](opt)
 		case identDetachedPayload{}:
 			vc.detachedPayload = option.MustGet[[]byte](opt)
+			// RFC 7797 "b64" auto-declaration. Detached-payload
+			// verification is the canonical use case for b64=false,
+			// and the jws package implements b64=false handling
+			// natively, so requiring callers to also pass
+			// jws.WithCritExtension("b64") is busywork. We declare
+			// it implicitly here so application code stays focused
+			// on its own crit extensions. This does not relax any
+			// other validateCritical check — the b64 header still
+			// has to appear in the protected header, the crit list
+			// still has to be non-empty / no duplicates / no
+			// standard names, etc. Only the "is in the caller's
+			// allowlist" check is short-circuited for "b64", and
+			// only when WithDetachedPayload was passed.
+			vc.criticalExtensions = append(vc.criticalExtensions, "b64")
 		case identKey{}:
 			pair := option.MustGet[*withKey](opt)
 
@@ -233,6 +247,12 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 // any "crit" extension they do not understand, and the only way the
 // library knows which extensions the caller understands is via the
 // allowlist (populated from jws.WithCritExtension()).
+//
+// As a convenience, the RFC 7797 "b64" extension is auto-declared into
+// allowedExtensions whenever the caller passes jws.WithDetachedPayload
+// — see the identDetachedPayload case in ProcessOptions. The auto-
+// declaration only short-circuits the allowlist check; every other
+// rule above still applies to the "b64" entry.
 func validateCritical(protected Headers, allowedExtensions []string) error {
 	if !protected.Has(CriticalKey) {
 		return nil
