@@ -838,8 +838,8 @@ func generateGenericHeaders(fields codegen.FieldList, keyTypes []*KeyType) error
 	o.L("}")
 
 	o.LL("func putFieldPairList(list []fieldPair) {")
-	o.L("list = list[:0]")
-	o.L("fieldPairPool.Put(list)")
+	o.L("clear(list) // zero fieldPair entries so pooled values don't retain references across Put/Get")
+	o.L("fieldPairPool.Put(list[:0])")
 	o.L("}")
 
 	o.LL("// Key defines the minimal interface for each of the")
