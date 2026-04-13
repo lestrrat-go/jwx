@@ -52,6 +52,7 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `jws.RegisterSigner(alg, any)` | `jws.RegisterSigner(alg, Signer)` | Typed parameter |
 | `jws.RegisterVerifier(alg, any)` | `jws.RegisterVerifier(alg, Verifier)` | Typed parameter |
 | `jwx.DecoderSettings(jwx.WithUseNumber(true))` | `jwx.Settings(jwx.WithUseNumber(true))` | API renamed |
+| `errors.Is(err, jwt.TokenExpiredError())` | `errors.Is(err, jwt.TokenExpiredError{})` | Sentinel funcs → struct types; see Recipe 13 |
 | `-tags=jwx_goccy` | _(removed)_ | json/v2 is the only backend |
 | `-tags=jwx_es256k` | `github.com/jwx-go/es256k/v4` | Extension module |
 | `-tags=jwx_asmbase64` | `github.com/jwx-go/asmbase64/v4` | Extension module |
@@ -326,6 +327,34 @@ jwe.Encrypt(payload, jwe.WithKey(alg, key), jwe.WithLegacyHeaderMerging(true))
 // After: remove the option (legacy merging is gone)
 jwe.Encrypt(payload, jwe.WithKey(alg, key))
 ```
+
+### Recipe 13: JWT Validation Errors
+
+v3 exposed sentinel validation errors as zero-argument functions (`jwt.TokenExpiredError()`, `jwt.InvalidIssuerError()`, etc.) returning a singleton `error`. v4 promotes them to struct types carrying the values used in the comparison (`Expiration`, `Now`, `Skew`, `IssuedAt`, `NotBefore`, etc.), which means the call-site idiom changes.
+
+Rewrite `errors.Is` checks to pass a zero-value struct literal instead of a function call:
+
+```go
+// Before (v3)
+if errors.Is(err, jwt.TokenExpiredError()) {
+    // ...
+}
+
+// After (v4)
+if errors.Is(err, jwt.TokenExpiredError{}) {
+    // ...
+}
+```
+
+To inspect the structured fields, use `errors.AsType[T]` (Go 1.26+):
+
+```go
+if expErr, ok := errors.AsType[jwt.TokenExpiredError](err); ok {
+    log.Printf("token expired at %s (now=%s, skew=%s)", expErr.Expiration, expErr.Now, expErr.Skew)
+}
+```
+
+The same function→struct rewrite applies to: `TokenExpiredError`, `TokenNotYetValidError`, `InvalidIssuedAtError`, `InvalidIssuerError`, `InvalidAudienceError`, `MissingRequiredClaimError`, `ValidationError` (was `ValidateError()`), `ParseError`, `ClaimNotFoundError`, and `ClaimAssignmentFailedError`.
 
 ## Patterns Requiring Manual Review
 
