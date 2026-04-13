@@ -52,8 +52,17 @@ func freeSignatureBuilder(sb *signatureBuilder) *signatureBuilder {
 }
 
 func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, error) {
-	protected := sb.protected
-	if protected == nil {
+	// Clone caller-provided headers before mutating so that re-using the
+	// same Headers instance across multiple Sign calls does not cause
+	// cross-contamination of alg/kid.
+	var protected Headers
+	if sb.protected != nil {
+		cloned, err := sb.protected.Clone()
+		if err != nil {
+			return nil, makeSignError(`failed to clone protected headers: %w`, err)
+		}
+		protected = cloned
+	} else {
 		protected = NewHeaders()
 	}
 
