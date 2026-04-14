@@ -1156,7 +1156,7 @@ func TestJKU(t *testing.T) {
 					}
 				},
 			},
-			// Cache test case moved to ext/jwkcache
+			// Cache test case moved to ext/jwkfetch
 		}
 
 		for _, tc := range testcases {

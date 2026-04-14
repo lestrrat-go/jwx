@@ -1405,7 +1405,7 @@ func TestVerifyAuto(t *testing.T) {
 	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(nil, jwk.WithFetchWhitelist(wl)))
 	require.Error(t, err, `jwt.Parse should fail`)
 
-	// Cache test case moved to ext/jwkcache
+	// Cache test case moved to ext/jwkfetch
 }
 
 func TestSerializer(t *testing.T) {

@@ -2192,7 +2192,7 @@ func TestGH567(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	// Cache-based ignoreParseError tests moved to ext/jwkcache
+	// Cache-based ignoreParseError tests moved to ext/jwkfetch
 
 	// Test the case when WithIgnoreParseError is passed to ParseKey
 	t.Run(`ParseKey + WithIgnoreParseError should be an error`, func(t *testing.T) {
