@@ -15,8 +15,15 @@ func (f WhitelistFunc) IsAllowed(u string) bool {
 	return f(u)
 }
 
-// InsecureWhitelist is a whitelist that allows all URLs.
-// Use this only in development/testing.
+// InsecureWhitelist is a Whitelist implementation that allows every URL
+// jwk.Fetch() is asked to retrieve. It is the library's default, which
+// keeps first-time usage simple: callers with a hard-coded JWKS URL do
+// not have to configure anything.
+//
+// Do NOT use InsecureWhitelist in any code path where the URL originates
+// from untrusted input (for example, the `jku` header of a JWS). For
+// those paths, construct a MapWhitelist, RegexpWhitelist, or custom
+// Whitelist and pass it via jwk.WithFetchWhitelist().
 type InsecureWhitelist struct{}
 
 func (InsecureWhitelist) IsAllowed(string) bool { return true }
