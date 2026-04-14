@@ -58,10 +58,11 @@ type DecodeCtx interface {
 //
 // To sign and verify, use the appropriate `Sign()` and `Verify()` functions.
 type Message struct {
-	dc         DecodeCtx
-	payload    []byte
-	signatures []*Signature
-	b64        bool // true if payload should be base64 encoded
+	dc            DecodeCtx
+	payload       []byte
+	signatures    []*Signature
+	b64           bool // true if payload should be base64 encoded
+	maxSignatures int  // scratch cap enforced during UnmarshalJSON; 0 means use global default
 }
 
 type Signature struct {
