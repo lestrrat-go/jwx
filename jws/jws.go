@@ -754,6 +754,15 @@ func Settings(options ...GlobalOption) {
 // 4.1.11 "crit" (Critical) header validation. If your application processes
 // messages that may carry a "crit" header, use jws.Verify() with
 // jws.WithCritValidation(true) and jws.WithCritExtension(...) instead.
+//
+// VerifyCompactFast also assumes the JWS uses the default "b64":true
+// (base64url-encoded) payload encoding. JWSs that declare "b64":false
+// (RFC 7797), carry a detached payload, or otherwise rely on "crit"
+// semantics must be verified with jws.Verify() instead — jws.Verify()
+// handles all RFC 7797 and "crit" cases, including auto-allowlisting
+// "b64" in "crit" when jws.WithDetachedPayload is used. A conforming
+// b64:false JWS is required by RFC 7797 Section 5 to list "b64" in
+// "crit", so it is already outside VerifyCompactFast's contract.
 func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error) {
 	if err := validateAlgorithmForKey(alg, key); err != nil {
 		return nil, makeVerifyError(`%w`, err)
