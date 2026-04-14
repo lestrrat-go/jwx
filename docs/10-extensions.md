@@ -118,7 +118,7 @@ func Example_mldsa_sign_verify() {
 	// Hello, post-quantum world!
 }
 ```
-source: [examples/mldsa_sign_verify_example_test.go](https://github.com/jwx-go/examples/blob/main/mldsa_sign_verify_example_test.go)
+source: [examples/mldsa_sign_verify_example_test.go](https://github.com/jwx-go/examples/blob/v4/mldsa_sign_verify_example_test.go)
 
 ## Working with JWK
 
@@ -218,7 +218,7 @@ func Example_mldsa_jwk() {
 	// round-trip test
 }
 ```
-source: [examples/mldsa_jwk_example_test.go](https://github.com/jwx-go/examples/blob/main/mldsa_jwk_example_test.go)
+source: [examples/mldsa_jwk_example_test.go](https://github.com/jwx-go/examples/blob/v4/mldsa_jwk_example_test.go)
 
 ## Exporting Keys
 
@@ -282,7 +282,7 @@ func Example_mldsa_export() {
 	// keys match: true
 }
 ```
-source: [examples/mldsa_export_example_test.go](https://github.com/jwx-go/examples/blob/main/mldsa_export_example_test.go)
+source: [examples/mldsa_export_example_test.go](https://github.com/jwx-go/examples/blob/v4/mldsa_export_example_test.go)
 
 ---
 
@@ -375,7 +375,7 @@ func Example_jws_ed448() {
 	// Hello, Ed448!
 }
 ```
-source: [examples/jws_ed448_example_test.go](https://github.com/jwx-go/examples/blob/main/jws_ed448_example_test.go)
+source: [examples/jws_ed448_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_ed448_example_test.go)
 
 ---
 
@@ -466,7 +466,7 @@ func Example_jws_sign_es256k() {
 	// Hello, secp256k1!
 }
 ```
-source: [examples/jws_sign_es256k_example_test.go](https://github.com/jwx-go/examples/blob/main/jws_sign_es256k_example_test.go)
+source: [examples/jws_sign_es256k_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_sign_es256k_example_test.go)
 
 ## Signature malleability (low-S)
 
