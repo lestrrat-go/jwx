@@ -2641,10 +2641,8 @@ func TestX509DecoderConcurrent(t *testing.T) {
 	stop := make(chan struct{})
 	var wg sync.WaitGroup
 
-	for i := 0; i < 8; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+	for range 8 {
+		wg.Go(func() {
 			for {
 				select {
 				case <-stop:
@@ -2656,10 +2654,10 @@ func TestX509DecoderConcurrent(t *testing.T) {
 				// the read path must not race on the decoder slice.
 				_, _ = jwk.ParseKey(pemData, jwk.WithPEM(true))
 			}
-		}()
+		})
 	}
 
-	for i := 0; i < 200; i++ {
+	for i := range 200 {
 		ident := fmt.Sprintf("test-concurrent-%d", i)
 		jwk.RegisterX509Decoder(ident, decoder)
 		jwk.UnregisterX509Decoder(ident)
