@@ -162,17 +162,27 @@ func Parse(s []byte, options ...ParseOption) (Token, error) {
 //
 // You cannot override `jwt.WithVerify()` or `jwt.WithValidate()`
 // using this function. Providing these options would result in
-// an error
+// an error.
+//
+// Key-related options (`jwt.WithKey`, `jwt.WithKeySet`,
+// `jwt.WithKeyProvider`, `jwt.WithVerifyAuto`) are silently ignored,
+// so callers may reuse an option slice across `Parse` and
+// `ParseInsecure` call sites without worrying about leaking a stray
+// verification step.
 func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
+	filtered := make([]ParseOption, 0, len(options)+2)
 	for _, option := range options {
 		switch option.Ident() {
 		case identVerify{}, identValidate{}:
 			return nil, jwterrs.ParseErrorf(`jwt.ParseInsecure`, `jwt.WithVerify() and jwt.WithValidate() may not be specified`)
+		case identKey{}, identKeySet{}, identKeyProvider{}, identVerifyAuto{}:
+			continue
 		}
+		filtered = append(filtered, option)
 	}
 
-	options = append(options, WithVerify(false), WithValidate(false))
-	tok, err := Parse(s, options...)
+	filtered = append(filtered, WithVerify(false), WithValidate(false))
+	tok, err := Parse(s, filtered...)
 	if err != nil {
 		return nil, jwterrs.ParseErrorf(`jwt.ParseInsecure`, `failed to parse token: %w`, err)
 	}
