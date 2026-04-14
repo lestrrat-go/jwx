@@ -221,12 +221,11 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 
 type jkuProvider struct {
 	fetcher jwk.Fetcher
-	options []jwk.FetchOption
 }
 
 func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signature, _ *Message) error {
 	if kp.fetcher == nil {
-		kp.fetcher = jwk.FetchFunc(jwk.Fetch)
+		return fmt.Errorf(`jku verification requires a non-nil jwk.Fetcher (see jws.WithVerifyAuto)`)
 	}
 
 	kid, ok := sig.ProtectedHeaders().KeyID()
@@ -249,7 +248,7 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 		return fmt.Errorf(`url in "jku" must be HTTPS`)
 	}
 
-	set, err := kp.fetcher.Fetch(ctx, u, kp.options...)
+	set, err := kp.fetcher.Fetch(ctx, u)
 	if err != nil {
 		return fmt.Errorf(`failed to fetch %q: %w`, u, err)
 	}

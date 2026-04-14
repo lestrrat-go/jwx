@@ -285,13 +285,15 @@ func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 }
 
 // WithVerifyAuto specifies that the JWS verification should be attempted
-// by using the data available in the JWS message. Currently only verification
-// method available is to use the keys available in the JWKS URL pointed
-// in the `jku` field.
+// by using the data available in the JWS message. Currently the only
+// verification method available is to use the keys at the JWKS URL
+// specified in the `jku` field, via the provided jwk.Fetcher.
 //
-// Please read the documentation for `jws.VerifyAuto` for more details.
-func WithVerifyAuto(f jwk.Fetcher, options ...jwk.FetchOption) ParseOption {
-	return &parseOption{option.New(identVerifyAuto{}, jws.WithVerifyAuto(f, options...))}
+// See jws.WithVerifyAuto for the full contract: the fetcher owns all
+// transport and policy concerns (whitelist, HTTP client, body size),
+// and a nil fetcher will cause jku verification to fail at use time.
+func WithVerifyAuto(f jwk.Fetcher) ParseOption {
+	return &parseOption{option.New(identVerifyAuto{}, jws.WithVerifyAuto(f))}
 }
 
 func WithInsecureNoSignature() SignOption {

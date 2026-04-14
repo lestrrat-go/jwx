@@ -37,6 +37,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// failFetcher is a jwk.Fetcher that always errors; used in ParseInsecure
+// tests to assert that the verify path is short-circuited.
+type failFetcher struct{}
+
+func (failFetcher) Fetch(_ context.Context, _ string) (jwk.Set, error) {
+	return nil, fmt.Errorf(`should not be called`)
+}
+
 /* This is commented out, because it is intended to cause compilation errors */
 /*
 func TestOption(t *testing.T) {
@@ -1391,19 +1399,26 @@ func TestVerifyAuto(t *testing.T) {
 	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256(), key, jws.WithProtectedHeaders(hdrs)))
 	require.NoError(t, err, `jwt.Sign() should succeed`)
 
-	wl := jwk.NewMapWhitelist().
-		Add(srv.URL)
+	good := &jwxtest.JKUFetcher{
+		Client: srv.Client(),
+		Allow:  func(u string) bool { return u == srv.URL },
+	}
 
-	parsed, err := jwt.Parse(signed, jwt.WithVerifyAuto(nil, jwk.WithFetchWhitelist(wl), jwk.WithHTTPClient(srv.Client())))
+	parsed, err := jwt.Parse(signed, jwt.WithVerifyAuto(good))
 	require.NoError(t, err, `jwt.Parse should succeed`)
 	require.True(t, jwt.Equal(tok, parsed), `tokens should be equal`)
 
 	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(nil))
-	require.Error(t, err, `jwt.Parse should fail`)
-	wl = jwk.NewMapWhitelist().
-		Add(`https://github.com/lestrrat-go/jwx/v4`)
-	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(nil, jwk.WithFetchWhitelist(wl)))
-	require.Error(t, err, `jwt.Parse should fail`)
+	require.Error(t, err, `jwt.Parse should fail with nil fetcher`)
+
+	bad := &jwxtest.JKUFetcher{
+		Client: srv.Client(),
+		Allow: func(u string) bool {
+			return u == `https://github.com/lestrrat-go/jwx/v4`
+		},
+	}
+	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(bad))
+	require.Error(t, err, `jwt.Parse should fail when URL is not whitelisted`)
 
 	// Cache test case moved to ext/jwkfetch
 }
@@ -1711,10 +1726,7 @@ func TestParseInsecureStripsKeyOptions(t *testing.T) {
 	require.Equal(t, `me`, iss)
 
 	// WithVerifyAuto: a fetcher that always fails must not be invoked.
-	failFetcher := jwk.FetchFunc(func(_ context.Context, _ string, _ ...jwk.FetchOption) (jwk.Set, error) {
-		return nil, fmt.Errorf(`should not be called`)
-	})
-	got, err = jwt.ParseInsecure(signed, jwt.WithVerifyAuto(failFetcher))
+	got, err = jwt.ParseInsecure(signed, jwt.WithVerifyAuto(failFetcher{}))
 	require.NoError(t, err, `jwt.ParseInsecure with jwt.WithVerifyAuto() should succeed`)
 	iss, ok = got.Issuer()
 	require.True(t, ok)

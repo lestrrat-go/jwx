@@ -228,47 +228,25 @@ func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) VerifyOption {
 	})
 }
 
-// WithVerifyAuto enables automatic verification of the signature using the JWKS specified in
-// the `jku` header. Note that by default this option will _reject_ any jku
-// provided by the JWS message. Read on for details.
+// WithVerifyAuto enables automatic verification of the signature using
+// the JWKS specified in the `jku` header, via the provided jwk.Fetcher.
 //
-// The JWKS is retrieved by the `jwk.Fetcher` specified in the first argument.
-// If the fetcher object is nil, the default fetcher, which is the `jwk.Fetch()`
-// function (wrapped in the `jwk.FetchFunc` type) is used.
+// The fetcher is responsible for all transport and policy concerns
+// (HTTP client, whitelist, body-size limits). The main jwx module is
+// transport-agnostic — use a companion such as
+// github.com/jwx-go/jwkfetch to construct a concrete fetcher:
 //
-// The remaining arguments are passed to the `(jwk.Fetcher).Fetch` method
-// when the JWKS is retrieved.
+//	client := &jwkfetch.Client{
+//	    Whitelist: jwkfetch.NewMapWhitelist().Add("https://issuer.example/jwks.json"),
+//	}
+//	jws.WithVerifyAuto(client)
 //
-//	jws.WithVerifyAuto(nil) // uses jwk.Fetch
-//	jws.WithVerifyAuto(jwk.NewCachedFetcher(...)) // uses cached fetcher
-//	jws.WithVerifyAuto(myFetcher) // use your custom fetcher
-//
-// By default a whitelist that disallows all URLs is added to the options
-// passed to the fetcher. You must explicitly specify a whitelist that allows
-// the URLs you trust. This default behavior is provided because by design
-// of the JWS specification it is the/ caller's responsibility to verify if
-// the URL specified in the `jku` header can be trusted -- thus by default
-// we trust nothing.
-//
-// Users are free to specify an open whitelist if they so choose, but this must
-// be explicitly done:
-//
-//	jws.WithVerifyAuto(nil, jwk.WithFetchWhitelist(jwk.InsecureWhitelist()))
-//
-// You can also use `jwk.CachedFetcher` to use cached JWKS objects, but do note
-// that this object is not really designed to accommodate a large set of
-// arbitrary URLs. Use `jwk.CachedFetcher` as the first argument if you only
-// have a small set of URLs that you trust. For anything more complex, you should
-// implement your own `jwk.Fetcher` object.
-func WithVerifyAuto(f jwk.Fetcher, options ...jwk.FetchOption) VerifyOption {
-	// the option MUST start with a "disallow no whitelist" to force
-	// users provide a whitelist
-	options = append(append([]jwk.FetchOption(nil), jwk.WithFetchWhitelist(allowNoneWhitelist)), options...)
-
-	return WithKeyProvider(jkuProvider{
-		fetcher: f,
-		options: options,
-	})
+// A nil fetcher is not permitted: jku verification will fail with an
+// error at use time. This is intentional — there is no secure default
+// for fetching attacker-controllable URLs, so callers must explicitly
+// wire a fetcher (and its whitelist) at construction time.
+func WithVerifyAuto(f jwk.Fetcher) VerifyOption {
+	return WithKeyProvider(jkuProvider{fetcher: f})
 }
 
 type withInsecureNoSignature struct {

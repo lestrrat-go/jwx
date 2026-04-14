@@ -117,23 +117,17 @@ func setFetchHTTPClient(c HTTPClient) {
 	fetchHTTPClient = c
 }
 
-// Fetcher is an interface that represents an object that fetches a JWKS.
-// Currently this is only used in the `jws.WithVerifyAuto` option.
+// Fetcher retrieves a JWK Set from a URL. The main jwx module is
+// transport-agnostic: there is no concrete implementation of this
+// interface in `jwk` itself. Use a companion such as
+// `github.com/jwx-go/jwkfetch` to construct a concrete fetcher, or
+// implement this interface directly on your own type.
 //
-// Particularly, do not confuse this as the backend to `jwk.Fetch()` function.
-// If you need to control how `jwk.Fetch()` implements HTTP requests look into
-// providing a custom `http.Client` object via `jwk.WithHTTPClient` option
+// All transport and policy concerns (HTTP client, whitelist, body-size
+// caps, caching) are the implementation's responsibility — this
+// interface takes no options on purpose.
 type Fetcher interface {
-	Fetch(context.Context, string, ...FetchOption) (Set, error)
-}
-
-// FetchFunc describes a type of Fetcher that is represented as a function.
-//
-// You can use this to wrap functions (e.g. `jwk.Fetch“) as a Fetcher object.
-type FetchFunc func(context.Context, string, ...FetchOption) (Set, error)
-
-func (ff FetchFunc) Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
-	return ff(ctx, u, options...)
+	Fetch(ctx context.Context, url string) (Set, error)
 }
 
 // Fetch fetches a JWK resource specified by a URL. The url must be
