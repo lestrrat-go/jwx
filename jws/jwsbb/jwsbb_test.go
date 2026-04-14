@@ -33,6 +33,7 @@ func (r *endlessReader) Read(p []byte) (int, error) {
 
 func TestSplitCompactReaderNonFiniteSizeCap(t *testing.T) {
 	t.Parallel()
+	//nolint:dogsled // SplitCompactReader returns 4 values; we only need err here
 	_, _, _, err := jwsbb.SplitCompactReader(&endlessReader{b: 'X'})
 	require.Error(t, err, "SplitCompactReader should fail on oversized non-finite input")
 	require.ErrorIs(t, err, jwsbb.InputTooLargeError(), "error should be InputTooLargeError")
