@@ -14,6 +14,9 @@ templates:
   lint.yml:
     dest: .github/workflows/lint.yml
     skip: [benchmarks]
+  golangci.yml:
+    dest: .golangci.yml
+    skip: [benchmarks, examples]
   ci.yml:
     dest: .github/workflows/ci.yml
     skip: [benchmarks]

@@ -1,0 +1,107 @@
+version: "2"
+linters:
+  default: all
+  disable:
+    - cyclop
+    - depguard
+    - dupl
+    - err113
+    - errorlint
+    - exhaustive
+    - funcorder
+    - funlen
+    - gochecknoglobals
+    - gochecknoinits
+    - gocognit
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - gosec
+    - gosmopolitan
+    - govet
+    - inamedparam
+    - ireturn
+    - lll
+    - maintidx
+    - makezero
+    - mnd
+    - nakedret
+    - nestif
+    - nlreturn
+    - noinlineerr
+    - nonamedreturns
+    - paralleltest
+    - perfsprint
+    - staticcheck
+    - recvcheck
+    - tagliatelle
+    - testifylint
+    - testpackage
+    - thelper
+    - varnamelen
+    - wrapcheck
+    - wsl
+    - wsl_v5
+  settings:
+    govet:
+      disable:
+        - shadow
+        - fieldalignment
+      enable-all: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - staticcheck
+        path: /*.go
+        text: 'ST1003: should not use underscores in package names'
+      - linters:
+          - revive
+        path: /*.go
+        text: don't use an underscore in package name
+      - linters:
+          - staticcheck
+        text: SA1019
+      - linters:
+          - contextcheck
+          - exhaustruct
+        path: /*.go
+      - linters:
+          - errcheck
+        path: /main.go
+      - linters:
+          - errcheck
+          - errchkjson
+          - forcetypeassert
+        path: /*_test.go
+      - linters:
+          - forbidigo
+        path: /*_example_test.go
+      - linters:
+          - revive
+        path: /*_test.go
+        text: 'var-naming: '
+      - linters:
+          - godoclint
+        path: (^|/)internal/
+    paths:
+      - third_party$
+      - builtin$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
