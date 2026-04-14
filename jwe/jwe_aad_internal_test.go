@@ -19,7 +19,7 @@ func TestConcatAADDoesNotAlias(t *testing.T) {
 	})
 
 	t.Run("computed's backing array past len is untouched", func(t *testing.T) {
-		const head = "AAAAAAAAAA"       // 10 bytes
+		const head = "AAAAAAAAAA" // 10 bytes
 		const sentinel = byte('Z')
 		backing := make([]byte, 64)
 		copy(backing, head)
