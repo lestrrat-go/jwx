@@ -265,9 +265,15 @@ func getB64Value(hdr Headers) bool {
 // will attempt to autodetect the format. If one or the other is specified,
 // only the specified format will be attempted.
 //
+// Parse enforces the `WithMaxParseInputSize` cap on the length of src,
+// matching the behavior of ParseReader. Callers who pre-read bytes into
+// memory (e.g. HTTP middleware, database values) therefore get the same
+// hardening as the io.Reader path.
+//
 // On error, returns a jws.ParseError.
 func Parse(src []byte, options ...ParseOption) (*Message, error) {
 	maxSigs := int(maxSignatures.Load())
+	maxSize := maxParseInputSize.Load()
 
 	var formats int
 	for _, opt := range options {
@@ -285,7 +291,16 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 			if maxSigs <= 0 {
 				return nil, makeParseError(`jws.Parse`, `WithMaxSignatures must be greater than zero`)
 			}
+		case identMaxParseInputSize{}:
+			maxSize = option.MustGet[int64](opt)
+			if maxSize <= 0 {
+				return nil, makeParseError(`jws.Parse`, `WithMaxParseInputSize must be greater than zero`)
+			}
 		}
+	}
+
+	if maxSize > 0 && int64(len(src)) > maxSize {
+		return nil, makeParseError(`jws.Parse`, `input exceeded max size of %d bytes`, maxSize)
 	}
 
 	// if format is 0 or both JSON/Compact, auto detect
