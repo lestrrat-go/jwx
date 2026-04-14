@@ -117,13 +117,13 @@ func (h *stdHeaders) ContentType() (string, bool) {
 func (h *stdHeaders) Critical() ([]string, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	return h.critical, true
+	return h.critical, h.critical != nil
 }
 
 func (h *stdHeaders) JWK() (jwk.Key, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	return h.jwk, true
+	return h.jwk, h.jwk != nil
 }
 
 func (h *stdHeaders) JWKSetURL() (string, bool) {
@@ -156,7 +156,7 @@ func (h *stdHeaders) Type() (string, bool) {
 func (h *stdHeaders) X509CertChain() (*cert.Chain, bool) {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	return h.x509CertChain, true
+	return h.x509CertChain, h.x509CertChain != nil
 }
 
 func (h *stdHeaders) X509CertThumbprint() (string, bool) {
