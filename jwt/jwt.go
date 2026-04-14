@@ -6,6 +6,7 @@ package jwt
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -313,10 +314,15 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 		alg, ok := wk.alg.(jwa.SignatureAlgorithm)
 		if ok && len(wk.options) == 0 {
 			verified, err := jws.VerifyCompactFast(wk.key, payload, alg)
-			if err != nil {
+			if err == nil {
+				return verified, _JwsVerifyDone, nil
+			}
+			// VerifyCompactFast refuses crit-bearing messages; on
+			// that sentinel, fall through to jws.Verify below so
+			// the full validateCritical rule set applies.
+			if !errors.Is(err, jws.ErrCritPresent()) {
 				return nil, _JwsVerifyDone, err
 			}
-			return verified, _JwsVerifyDone, nil
 		}
 	}
 

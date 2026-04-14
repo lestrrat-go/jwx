@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v4/internal/json"
@@ -72,6 +73,38 @@ func tryFastPath(ctx *fastParseCtx, data []byte, options []ParseOption) bool {
 // Validation is performed unless ctx.skipValidate is true.
 func parseCompactFast(data []byte, ctx *fastParseCtx) (Token, error) {
 	payload, err := jws.VerifyCompactFast(ctx.key, data, ctx.alg)
+	if err != nil {
+		// VerifyCompactFast refuses crit-bearing messages. jwt.Parse
+		// must not be laxer than jws.Verify, so fall through to the
+		// full jws.Verify path which enforces validateCritical with
+		// the default-strict (empty) WithCritExtension allowlist.
+		if errors.Is(err, jws.ErrCritPresent()) {
+			return parseCompactCritFallback(data, ctx)
+		}
+		return nil, parseErrorf(`jwt.Parse`, `%w`, err)
+	}
+
+	token := New()
+	if err := json.Unmarshal(payload, token); err != nil {
+		return nil, fmt.Errorf(`failed to parse token: %w`, err)
+	}
+
+	if !ctx.skipValidate {
+		if err := Validate(token); err != nil {
+			return nil, err
+		}
+	}
+
+	return token, nil
+}
+
+// parseCompactCritFallback routes a fast-path-eligible input through
+// jws.Verify so the full RFC 7515 §4.1.11 "crit" rule set applies.
+// Reached only when the protected header actually contains "crit" (or
+// fails to split), so the extra cost is limited to adversarial / RFC 7797
+// inputs.
+func parseCompactCritFallback(data []byte, ctx *fastParseCtx) (Token, error) {
+	payload, err := jws.Verify(data, jws.WithCompact(), jws.WithKey(ctx.alg, ctx.key))
 	if err != nil {
 		return nil, parseErrorf(`jwt.Parse`, `%w`, err)
 	}
