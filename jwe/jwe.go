@@ -431,6 +431,24 @@ func validateCritical(protected Headers, allowedExtensions []string) error {
 	return nil
 }
 
+// concatAAD returns the AAD value used to seal or open a JWE payload:
+// the protected-header segment, optionally followed by ASCII '.' and
+// the caller-supplied external aad (RFC 7516 §5.1 step 14 / §5.2
+// step 14). A fresh slice is always allocated so the caller's computed
+// and aad slices are never appended into, which matters because
+// computedAad often aliases a Message field whose backing array is
+// still referenced elsewhere.
+func concatAAD(computed, aad []byte) []byte {
+	if len(aad) == 0 {
+		return computed
+	}
+	out := make([]byte, len(computed)+1+len(aad))
+	n := copy(out, computed)
+	out[n] = tokens.Period
+	copy(out[n+1:], aad)
+	return out
+}
+
 func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 	msg, err := parseJSONOrCompact(buf, true, dc.maxRecipients)
 	if err != nil {
