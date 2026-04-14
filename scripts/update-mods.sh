@@ -5,13 +5,13 @@ set -e
 TAG="$1"
 if [[ -z "$TAG" ]]; then
 	echo "tag name must be provided"
+	exit 1
 fi
 
 # Make sure Changes file contains an entry for this release
-relentry=$(grep "$TAG" Changes | head -n 1)
-if [[ "$?" -ne 0 ]]; then
-	echo "$TAG does not exist in Changes file";
-	exit 1;
+if ! relentry=$(grep -m1 "$TAG" Changes); then
+	echo "$TAG does not exist in Changes file"
+	exit 1
 fi
 
 reldate=${relentry#$TAG - }
@@ -23,8 +23,8 @@ if [[ "$reldate" != "$parseddate" ]]; then
 	exit 1;
 fi
 
-# Update dependency in ./cmd/jwx ./examples
-for dir in ./cmd/jwx ./examples ./bench/performance; do
+# Update dependency in sibling modules
+for dir in ./cmd/jwx; do
 	echo "👉 $dir"
 	pushd $dir > /dev/null
 
