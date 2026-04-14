@@ -750,19 +750,21 @@ func Settings(options ...GlobalOption) {
 // Since this function avoids doing many checks that jws.Verify would perform,
 // you must ensure to perform the necessary checks including ensuring that algorithm is safe to use for your payload yourself.
 //
-// In particular, VerifyCompactFast does NOT enforce the RFC 7515 Section
-// 4.1.11 "crit" (Critical) header validation. If your application processes
-// messages that may carry a "crit" header, use jws.Verify() with
-// jws.WithCritValidation(true) and jws.WithCritExtension(...) instead.
+// VerifyCompactFast refuses messages whose protected header carries a
+// "crit" list. RFC 7515 §4.1.11 requires every critical extension to be
+// understood by the recipient, and the fast path has no WithCritExtension
+// allowlist to consult. On crit-present input it returns a sentinel error
+// that callers can detect with errors.Is(err, jws.ErrCritPresent()) and
+// retry through jws.Verify, which enforces the full validateCritical rule
+// set. Applications that may legitimately receive "crit" headers should
+// call jws.Verify directly.
 //
 // VerifyCompactFast also assumes the JWS uses the default "b64":true
-// (base64url-encoded) payload encoding. JWSs that declare "b64":false
-// (RFC 7797), carry a detached payload, or otherwise rely on "crit"
-// semantics must be verified with jws.Verify() instead — jws.Verify()
-// handles all RFC 7797 and "crit" cases, including auto-allowlisting
-// "b64" in "crit" when jws.WithDetachedPayload is used. A conforming
-// b64:false JWS is required by RFC 7797 Section 5 to list "b64" in
-// "crit", so it is already outside VerifyCompactFast's contract.
+// (base64url-encoded) payload encoding. A conforming RFC 7797 b64:false
+// JWS is required to list "b64" in "crit", so it is automatically routed
+// away from the fast path by the crit refusal above. Detached-payload
+// callers must use jws.Verify with jws.WithDetachedPayload regardless,
+// since VerifyCompactFast has no way to accept a detached payload.
 func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error) {
 	if err := validateAlgorithmForKey(alg, key); err != nil {
 		return nil, makeVerifyError(`%w`, err)
@@ -774,6 +776,14 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	hdr, payload, encodedSig, err := jwsbb.SplitCompact(compact)
 	if err != nil {
 		return nil, makeVerifyError("failed to split compact: %w", err)
+	}
+
+	// Refuse crit-bearing messages: the fast path has no WithCritExtension
+	// allowlist, so accepting them would silently violate RFC 7515 §4.1.11.
+	// Callers that wrap VerifyCompactFast can detect this via
+	// errors.Is(err, jws.ErrCritPresent()) and fall through to jws.Verify.
+	if jwsbb.HeaderHas(jwsbb.HeaderParseCompact(hdr), CriticalKey) {
+		return nil, errCritPresent
 	}
 
 	signature, err := base64.Decode(encodedSig)

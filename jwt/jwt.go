@@ -6,6 +6,7 @@ package jwt
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -337,10 +338,20 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 		alg, ok := wk.alg.(jwa.SignatureAlgorithm)
 		if ok && len(wk.options) == 0 {
 			verified, err := jws.VerifyCompactFast(wk.key, payload, alg)
-			if err != nil {
-				return nil, _JwsVerifyDone, err
+			if err == nil {
+				return verified, _JwsVerifyDone, nil
 			}
-			return verified, _JwsVerifyDone, nil
+			// VerifyCompactFast refuses crit-bearing messages. In v3
+			// jws.Verify defaults critValidation=false, so the generic
+			// fall-through path would still silently accept "crit".
+			// Force the strict path here: jwt.Parse must not be laxer
+			// than jws.Verify + WithCritValidation.
+			if errors.Is(err, jws.ErrCritPresent()) {
+				verifyOpts := append(ctx.verifyOpts, jws.WithCompact(), jws.WithCritValidation(true))
+				verified, err := jws.Verify(payload, verifyOpts...)
+				return verified, _JwsVerifyDone, err
+			}
+			return nil, _JwsVerifyDone, err
 		}
 	}
 

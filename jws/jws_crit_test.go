@@ -313,9 +313,12 @@ func TestCritInBandB64RequiresExplicit(t *testing.T) {
 	require.NoError(t, err, `explicit WithCritExtension("b64") should make in-band b64=false succeed`)
 }
 
-// TestVerifyCompactFastIgnoresCrit documents that the fast path performs
-// no crit validation regardless of message contents.
-func TestVerifyCompactFastIgnoresCrit(t *testing.T) {
+// TestVerifyCompactFastRefusesCrit documents that the fast path refuses
+// crit-bearing messages with the jws.ErrCritPresent() sentinel. The fast
+// path has no WithCritExtension allowlist, so it cannot enforce RFC 7515
+// §4.1.11; silently accepting would violate the RFC. Callers that want
+// full crit handling must use jws.Verify.
+func TestVerifyCompactFastRefusesCrit(t *testing.T) {
 	payload := []byte(`hello world`)
 	key, err := jwxtest.GenerateSymmetricJwk()
 	require.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`)
@@ -351,7 +354,8 @@ func TestVerifyCompactFastIgnoresCrit(t *testing.T) {
 			signed := signWith(t, key, payload, hdrs)
 
 			_, err := jws.VerifyCompactFast(key, signed, jwa.HS256())
-			require.NoError(t, err, `VerifyCompactFast does not enforce crit; should succeed`)
+			require.Error(t, err, `VerifyCompactFast must refuse crit-bearing messages`)
+			require.ErrorIs(t, err, jws.ErrCritPresent(), `error should match jws.ErrCritPresent sentinel`)
 		})
 	}
 }

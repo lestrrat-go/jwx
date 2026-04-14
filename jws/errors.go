@@ -1,8 +1,25 @@
 package jws
 
 import (
+	"errors"
 	"fmt"
 )
+
+// errCritPresent is returned by VerifyCompactFast when the protected
+// header carries a "crit" list. The fast path cannot enforce RFC 7515
+// §4.1.11 (it has no WithCritExtension allowlist), so it refuses rather
+// than silently accepting. Callers that wrap VerifyCompactFast and want
+// the full validateCritical rule set applied should detect this via
+// errors.Is(err, jws.ErrCritPresent()) and retry through jws.Verify.
+var errCritPresent = errors.New("VerifyCompactFast: protected header contains \"crit\"; use jws.Verify")
+
+// ErrCritPresent returns the sentinel error returned by VerifyCompactFast
+// when the protected header contains a "crit" list. Callers that front
+// VerifyCompactFast with an auto-fallback to jws.Verify can detect it
+// via errors.Is.
+func ErrCritPresent() error {
+	return errCritPresent
+}
 
 type signError struct {
 	error
