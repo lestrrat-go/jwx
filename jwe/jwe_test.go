@@ -1383,3 +1383,60 @@ func TestMaxRecipients(t *testing.T) {
 		require.NoError(t, err, `jwe.Decrypt should succeed with per-call limit of 10`)
 	})
 }
+
+// TestDecryptIgnoresUnprotectedHeader pins PR #1770 — per RFC 7516 §5.3
+// only the protected header is integrity-checked, so algorithm parameters
+// (alg, enc, epk, p2s, p2c, iv, tag) MUST be sourced from the
+// protected/per-recipient header. Before the fix jwe.Decrypt merged the
+// unprotected header into the protected copy, so a tampered JWE whose
+// unprotected header overrode the real alg with a garbage value would
+// cause decryption to fail (the merged alg no longer matched the key).
+// After the fix the unprotected header is ignored and decrypt succeeds,
+// recovering the original plaintext.
+//
+// Tampering leaves `protected` byte-identical so that AAD/tag verification
+// is unaffected — this isolates the merge bug from incidental AEAD failures.
+func TestDecryptIgnoresUnprotectedHeader(t *testing.T) {
+	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, `rsa.GenerateKey should succeed`)
+
+	const payload = `lorem ipsum dolor sit amet`
+	encrypted, err := jwe.Encrypt(
+		[]byte(payload),
+		jwe.WithKey(jwa.RSA_OAEP(), &privkey.PublicKey),
+		jwe.WithContentEncryption(jwa.A128GCM()),
+		jwe.WithJSON(),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), privkey))
+	require.NoError(t, err, `baseline jwe.Decrypt should succeed`)
+	require.Equal(t, []byte(payload), decrypted, `baseline plaintext should round-trip`)
+
+	var parsed map[string]any
+	require.NoError(t, json.Unmarshal(encrypted, &parsed), `freshly encrypted JWE should parse as JSON`)
+	// Inject an unprotected header whose values contradict the real
+	// protected-header parameters. Leave `protected` untouched so AAD
+	// verification is unaffected — only the merge path under test can
+	// surface these bogus values.
+	// Use a valid-but-different registered algorithm. The real JWE was
+	// encrypted with RSA-OAEP; claim RSA1_5 in the unprotected header.
+	// Under the buggy merge this would clobber the real alg and
+	// decryptContent's algMatched loop would reject the mismatch. The
+	// fix ignores the unprotected header, so decrypt still succeeds.
+	parsed["unprotected"] = map[string]any{
+		"alg": jwa.RSA1_5().String(),
+	}
+	// Flattened JSON mirrors alg into a top-level per-recipient "header".
+	// Decrypt's alg-match loop checks recipient.Headers() first — if that
+	// still carries alg=RSA-OAEP the merged protected-header path never
+	// runs. Strip it so the alg lookup must reach the protected header.
+	delete(parsed, "header")
+
+	tampered, err := json.Marshal(parsed)
+	require.NoError(t, err, `re-marshaling tampered JWE should succeed`)
+
+	decrypted, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.RSA_OAEP(), privkey))
+	require.NoError(t, err, `jwe.Decrypt must ignore unprotected-header overrides`)
+	require.Equal(t, []byte(payload), decrypted, `plaintext should still round-trip through the tampered JWE`)
+}
