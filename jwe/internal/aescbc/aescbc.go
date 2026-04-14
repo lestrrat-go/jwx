@@ -227,6 +227,19 @@ func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 
 // Open fulfills the crypto.AEAD interface
 func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
+	// Validate the IV length explicitly instead of letting
+	// cipher.NewCBCDecrypter panic on a mismatched nonce. The caller in
+	// jwe/internal/cipher also wraps Open in a defer/recover, and we
+	// intentionally keep BOTH layers: the explicit check turns a malformed
+	// IV into a normal error on the happy path (reviewable, testable, no
+	// stack unwind), while the recover stays as a belt-and-braces guard
+	// against other panics inside the stdlib CBC path (e.g. future
+	// invariants we don't currently enforce). Removing either layer would
+	// mean relying on the other — this way a regression in one is still
+	// caught by the other. See JWE-005 in the v4 security review.
+	if len(nonce) != c.blockCipher.BlockSize() {
+		return nil, fmt.Errorf(`invalid nonce (length %d, expected %d)`, len(nonce), c.blockCipher.BlockSize())
+	}
 	if len(ciphertext) < c.keysize {
 		return nil, fmt.Errorf(`invalid ciphertext (too short)`)
 	}
