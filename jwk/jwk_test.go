@@ -1251,6 +1251,7 @@ func TestECDSA(t *testing.T) {
 }
 
 func TestSymmetric(t *testing.T) {
+	t.Parallel()
 	t.Run("Key", func(t *testing.T) {
 		VerifyKey(t, map[string]keyDef{
 			jwk.KeyTypeKey: {
