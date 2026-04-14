@@ -1107,11 +1107,25 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 // Parse parses the JWE message into a Message object. The JWE message
 // can be either compact or full JSON format.
 //
-// Parse() currently does not process any options, but the API accepts
-// them so that callers like ParseReader can forward their option lists
-// without filtering. Options such as WithMaxParseInputSize are handled
-// by ParseReader before the data reaches this function.
-func Parse(buf []byte, _ ...ParseOption) (*Message, error) {
+// Parse enforces the `WithMaxParseInputSize` cap on the length of buf,
+// matching the behavior of ParseReader. Callers who pre-read bytes into
+// memory (e.g. HTTP middleware, database values) therefore get the same
+// hardening as the io.Reader path.
+func Parse(buf []byte, options ...ParseOption) (*Message, error) {
+	maxSize := maxParseInputSize.Load()
+	for _, option := range options {
+		if option.Ident() == (identMaxParseInputSize{}) {
+			if err := option.Value(&maxSize); err != nil {
+				return nil, makeParseError(`jwe.Parse`, `invalid WithMaxParseInputSize: %w`, err)
+			}
+			if maxSize <= 0 {
+				return nil, makeParseError(`jwe.Parse`, `WithMaxParseInputSize must be greater than zero`)
+			}
+		}
+	}
+	if maxSize > 0 && int64(len(buf)) > maxSize {
+		return nil, makeParseError(`jwe.Parse`, `input exceeded max size of %d bytes`, maxSize)
+	}
 	return parseJSONOrCompact(buf, false, int(maxRecipients.Load()))
 }
 
