@@ -18,7 +18,7 @@ import (
 // byte disqualifies the fast path; such kids fall through to the
 // regular jws.Sign path where encoding/json handles escaping.
 func fastPathKidSafe(kid string) bool {
-	for i := 0; i < len(kid); i++ {
+	for i := range len(kid) {
 		c := kid[i]
 		if c < 0x20 || c >= 0x7f || c == '"' || c == '\\' {
 			return false
