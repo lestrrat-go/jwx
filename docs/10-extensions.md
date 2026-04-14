@@ -11,14 +11,22 @@ In v4, optional features are provided as standalone modules under [`github.com/j
 | [`github.com/jwx-go/mldsa/v4`](https://github.com/jwx-go/mldsa) | ML-DSA-44, ML-DSA-65, ML-DSA-87 | [`filippo.io/mldsa`](https://pkg.go.dev/filippo.io/mldsa) |
 | [`github.com/jwx-go/ed448/v4`](https://github.com/jwx-go/ed448) | EdDSA (Ed448) | [`github.com/cloudflare/circl/sign/ed448`](https://pkg.go.dev/github.com/cloudflare/circl/sign/ed448) |
 | [`github.com/jwx-go/es256k/v4`](https://github.com/jwx-go/es256k) | ES256K (secp256k1) | [`github.com/decred/dcrd/dcrec/secp256k1/v4`](https://pkg.go.dev/github.com/decred/dcrd/dcrec/secp256k1/v4) |
+| [`github.com/jwx-go/compsig/v4`](https://github.com/jwx-go/compsig) | ML-DSA composite signatures (ML-DSA-44/65/87 paired with ES256/ES384/Ed25519/Ed448) per draft-ietf-jose-pq-composite-sigs — **experimental, draft-spec** | [`filippo.io/mldsa`](https://pkg.go.dev/filippo.io/mldsa) + stdlib/circl |
 
 ### Key Agreement / Encryption
 
 | Module | Capability | Key Package |
 |:-------|:-----------|:------------|
 | [`github.com/jwx-go/x448/v4`](https://github.com/jwx-go/x448) | X448 ECDH-ES, HPKE with DHKEM(X448) | [`github.com/cloudflare/circl/dh/x448`](https://pkg.go.dev/github.com/cloudflare/circl/dh/x448) |
-| [`github.com/jwx-go/mlkem/v4`](https://github.com/jwx-go/mlkem) | ML-KEM-768/1024 (with and without AES key wrap) per draft-ietf-jose-pqc-kem — **experimental, draft-spec** | [`crypto/mlkem`](https://pkg.go.dev/crypto/mlkem) (Go 1.24+) |
+| [`github.com/jwx-go/mlkem/v4`](https://github.com/jwx-go/mlkem) | ML-KEM-768/1024 (with and without AES key wrap) per draft-ietf-jose-pqc-kem — **experimental, draft-spec** | [`crypto/mlkem`](https://pkg.go.dev/crypto/mlkem) (jwx requires Go 1.26) |
 | [`github.com/jwx-go/reddy-pqchpke/v4`](https://github.com/jwx-go/reddy-pqchpke) | Hybrid PQ HPKE (HPKE-10-KE, HPKE-11-KE) per draft-reddy-cose-jose-pqc-hybrid-hpke — **experimental, pre-WG-adoption** | [`github.com/cloudflare/circl/kem/xwing`](https://pkg.go.dev/github.com/cloudflare/circl/kem/xwing) |
+
+### Tooling / Backends
+
+| Module | Capability |
+|:-------|:-----------|
+| [`github.com/jwx-go/jwkcache/v4`](https://github.com/jwx-go/jwkcache) | JWK Set caching backed by [`httprc`](https://github.com/lestrrat-go/httprc) (extracted from the v3 `jwk` package) |
+| [`github.com/jwx-go/asmbase64/v4`](https://github.com/jwx-go/asmbase64) | Assembly-optimized base64 backend via [`segmentio/asm`](https://github.com/segmentio/asm) |
 
 * [ML-DSA (Post-Quantum Signatures)](#ml-dsa-post-quantum-signatures)
   * [Signing and Verifying](#signing-and-verifying)
@@ -26,9 +34,14 @@ In v4, optional features are provided as standalone modules under [`github.com/j
   * [Exporting Keys](#exporting-keys)
 * [Ed448](#ed448)
 * [ES256K (secp256k1)](#es256k-secp256k1)
+* [Composite Signatures (compsig)](#composite-signatures-compsig)
 * [X448](#x448)
   * [HPKE-5-KE (AES-256-GCM)](#hpke-5-ke-aes-256-gcm)
   * [HPKE-6-KE (ChaCha20Poly1305)](#hpke-6-ke-chacha20poly1305)
+* [ML-KEM](#ml-kem)
+* [Hybrid PQ HPKE (reddy-pqchpke)](#hybrid-pq-hpke-reddy-pqchpke)
+* [JWK Set Caching (jwkcache)](#jwk-set-caching-jwkcache)
+* [Assembly base64 (asmbase64)](#assembly-base64-asmbase64)
 
 ---
 
@@ -661,3 +674,130 @@ func Example_jwe_encrypt_hpke6() {
 ```
 source: [examples/jwe_encrypt_hpke6_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_encrypt_hpke6_example_test.go)
 <!-- END INCLUDE -->
+
+---
+
+# Composite Signatures (compsig)
+
+Composite signatures pair ML-DSA (FIPS 204) with a traditional signature scheme; both component signatures must verify for the composite to be accepted. This provides defense-in-depth during the transition to post-quantum cryptography — the signature remains secure as long as either component is unbroken. The module tracks [`draft-ietf-jose-pq-composite-sigs`](https://datatracker.ietf.org/doc/draft-ietf-jose-pq-composite-sigs/).
+
+> **Experimental.** Algorithm identifiers, JWK encoding, and on-wire formats may change until the draft reaches WG Last Call.
+
+To use compsig, import [`github.com/jwx-go/compsig/v4`](https://github.com/jwx-go/compsig) for its side effects. The import transitively pulls in the `mldsa` and `ed448` modules, so pure ML-DSA-44/65/87 and Ed448 are also registered.
+
+```go
+import (
+    compsig "github.com/jwx-go/compsig/v4"
+    "github.com/lestrrat-go/jwx/v4/jws"
+)
+
+sk, _ := compsig.GenerateKey(compsig.MLDSA65ES256())
+pub := sk.Public()
+
+signed, _ := jws.Sign(payload, jws.WithKey(compsig.MLDSA65ES256(), sk))
+verified, _ := jws.Verify(signed, jws.WithKey(compsig.MLDSA65ES256(), pub))
+```
+
+Composite keys use the `AKP` key type, discriminated by the `alg` field. Supported algorithms: `ML-DSA-44-ES256`, `ML-DSA-65-ES256`, `ML-DSA-87-ES384`, `ML-DSA-44-Ed25519`, `ML-DSA-65-Ed25519`, `ML-DSA-87-Ed448`. See [`examples/compsig_sign_verify_example_test.go`](https://github.com/jwx-go/examples/blob/v4/compsig_sign_verify_example_test.go) for a runnable example and the [module README](https://github.com/jwx-go/compsig) for the full algorithm table.
+
+---
+
+# ML-KEM
+
+ML-KEM is a post-quantum key encapsulation mechanism standardized in [FIPS 203](https://csrc.nist.gov/pubs/fips/203/final). The module implements the JWE bindings from [`draft-ietf-jose-pqc-kem`](https://datatracker.ietf.org/doc/draft-ietf-jose-pqc-kem/) using the stdlib `crypto/mlkem` package — no third-party dependency.
+
+> **Experimental.** The draft is still in active IETF development. Once it is published as an RFC, ML-KEM support may fold into the main jwx module and this companion will be deprecated.
+
+To use ML-KEM, import [`github.com/jwx-go/mlkem/v4`](https://github.com/jwx-go/mlkem) for its side effects. Keys use the `AKP` JWK key type.
+
+```go
+import (
+    "crypto/mlkem"
+    jwxmlkem "github.com/jwx-go/mlkem/v4"
+    "github.com/lestrrat-go/jwx/v4/jwa"
+    "github.com/lestrrat-go/jwx/v4/jwe"
+)
+
+dk, _ := mlkem.GenerateKey768()
+ek := dk.EncapsulationKey()
+
+encrypted, _ := jwe.Encrypt(payload,
+    jwe.WithKey(jwxmlkem.MLKEM768(), ek),
+    jwe.WithContentEncryption(jwa.A256GCM()),
+)
+
+decrypted, _ := jwe.Decrypt(encrypted, jwe.WithKey(jwxmlkem.MLKEM768(), dk))
+```
+
+Supported algorithms: `ML-KEM-768`, `ML-KEM-1024` (direct), and `ML-KEM-768+A192KW`, `ML-KEM-1024+A256KW` (key wrap variants). Raw `*mlkem.EncapsulationKey*`/`*mlkem.DecapsulationKey*` values and `jwk.Key` values are both accepted via `jwe.WithKey`. See [`examples/mlkem_encrypt_decrypt_example_test.go`](https://github.com/jwx-go/examples/blob/v4/mlkem_encrypt_decrypt_example_test.go) for a runnable example.
+
+**JWK round-trip caveat:** `draft-ietf-jose-pqc-kem` defines the `priv` field as the 32-byte `d` seed only, while stdlib `crypto/mlkem` requires the full 64-byte `d || z` seed. On re-import, a fresh random `z` is generated. Decapsulation of valid ciphertexts is unaffected, but JWK round-trips are not bitwise-identical. See the [module README](https://github.com/jwx-go/mlkem) for details.
+
+---
+
+# Hybrid PQ HPKE (reddy-pqchpke)
+
+Hybrid post-quantum HPKE key encryption pairing X25519 with ML-KEM-768 via the [X-Wing KEM](https://datatracker.ietf.org/doc/draft-connolly-cfrg-xwing-kem/), SHAKE256 as the HPKE KDF, and AES-256-GCM or ChaCha20-Poly1305 as the AEAD. Tracks [`draft-reddy-cose-jose-pqc-hybrid-hpke`](https://datatracker.ietf.org/doc/draft-reddy-cose-jose-pqc-hybrid-hpke/).
+
+> **Experimental, pre-WG-adoption.** This is an individual IETF submission, not a WG document. Algorithm identifiers, KDF info bytes, and key encodings may change without notice. Do not use for interoperable production traffic yet.
+
+To use hybrid PQ HPKE, import [`github.com/jwx-go/reddy-pqchpke/v4`](https://github.com/jwx-go/reddy-pqchpke) for its side effects. The module registers AKP key import/export and two key-encryption-mode HPKE algorithms:
+
+| Algorithm | KEM | KDF | AEAD |
+|:----------|:----|:----|:-----|
+| `HPKE-10-KE` | X25519+ML-KEM-768 (X-Wing) | SHAKE256 | AES-256-GCM |
+| `HPKE-11-KE` | X25519+ML-KEM-768 (X-Wing) | SHAKE256 | ChaCha20-Poly1305 |
+
+```go
+import (
+    _ "github.com/jwx-go/reddy-pqchpke/v4"
+)
+```
+
+The module intentionally implements only the X25519+ML-KEM-768 ciphersuite (the only hybrid in the draft that corresponds to a named, peer-reviewed construction). See [`examples/pqchpke_encrypt_decrypt_example_test.go`](https://github.com/jwx-go/examples/blob/v4/pqchpke_encrypt_decrypt_example_test.go) for a runnable encrypt/decrypt example.
+
+---
+
+# JWK Set Caching (jwkcache)
+
+`jwkcache` provides background-refreshing JWK Set caching backed by [`httprc`](https://github.com/lestrrat-go/httprc). It was extracted from the v3 `jwk` package to keep the core jwx/v4 module free of the `httprc` dependency.
+
+To use it, add the module as a regular (non-side-effect) import:
+
+```go
+import "github.com/jwx-go/jwkcache/v4"
+
+cache, _ := jwkcache.NewCache(ctx, httprc.NewClient())
+_ = cache.Register(ctx, "https://example.com/.well-known/jwks.json",
+    jwkcache.WithMinInterval(15*time.Minute),
+)
+
+set, _ := cache.CachedSet("https://example.com/.well-known/jwks.json")
+// Pass `set` anywhere a jwk.Set is accepted (jws.WithKeySet, jwt.WithKeySet, ...).
+```
+
+`Cache.CachedSet(url)` returns a read-only `jwk.Set` that always reflects the latest cached data. `jwkcache.NewFetcher(cache)` wraps a cache as a `jwk.Fetcher` for APIs that accept one. Available register options:
+
+| Option | Purpose |
+|:-------|:--------|
+| `WithConstantInterval(d)` | Use a fixed refresh interval |
+| `WithMinInterval(d)` / `WithMaxInterval(d)` | Bounds for adaptive refresh |
+| `WithHTTPClient(c)` | Override the HTTP client for this resource |
+| `WithWaitReady(bool)` | Whether `Register` blocks until the first fetch completes (default: true) |
+| `WithMaxFetchBodySize(n)` | Override the max response body size (default: 10 MB) |
+
+See the [module README](https://github.com/jwx-go/jwkcache) for the full API reference.
+
+---
+
+# Assembly base64 (asmbase64)
+
+`asmbase64` replaces jwx's default `encoding/base64` implementation with the assembly-optimized [`github.com/segmentio/asm/base64`](https://github.com/segmentio/asm) encoder/decoder. On amd64 with AVX2 this is meaningfully faster for the base64url workloads that dominate JWK/JWS/JWT parsing.
+
+Activate via a blank import — no API surface of its own:
+
+```go
+import _ "github.com/jwx-go/asmbase64/v4"
+```
+
+The import registers an optimized RawURL encoder via `jwx.SetBase64Encoder()` and a decoder with automatic encoding detection via `jwx.SetBase64Decoder()`. All JWK, JWS, and JWT operations pick up the new backend automatically. See [`examples/jwx_asmbase64_example_test.go`](https://github.com/jwx-go/examples/blob/v4/jwx_asmbase64_example_test.go) for a runnable example.
