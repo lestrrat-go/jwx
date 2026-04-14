@@ -934,6 +934,66 @@ func TestPBES2CountPerCall(t *testing.T) {
 	})
 }
 
+func TestPBES2CountEncrypt(t *testing.T) {
+	password := []byte(`supersecret`)
+	key, err := jwk.Import(password)
+	require.NoError(t, err, `jwk.Import should succeed`)
+
+	payload := []byte(`hello world`)
+
+	t.Run("per-call WithPBES2Count reflected in p2c header and round-trips", func(t *testing.T) {
+		encrypted, err := jwe.Encrypt(payload,
+			jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+			jwe.WithPBES2Count(2000),
+		)
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+		msg, err := jwe.Parse(encrypted)
+		require.NoError(t, err, `jwe.Parse should succeed`)
+		var p2c float64
+		require.NoError(t, msg.ProtectedHeaders().Get("p2c", &p2c), `protected header should have p2c`)
+		require.Equal(t, float64(2000), p2c, `p2c should match WithPBES2Count value`)
+
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.NoError(t, err, `jwe.Decrypt should succeed`)
+		require.Equal(t, payload, decrypted, `decrypted payload should match`)
+	})
+
+	t.Run("per-call overrides Settings", func(t *testing.T) {
+		// NOTE: HAS GLOBAL EFFECT
+		jwe.Settings(jwe.WithPBES2Count(15000))
+		defer jwe.Settings(jwe.WithPBES2Count(10000))
+		// Decrypt with a raised max so both 15000 and 3000 round-trip.
+		jwe.Settings(jwe.WithMaxPBES2Count(20000))
+		defer jwe.Settings(jwe.WithMaxPBES2Count(10000))
+
+		// With only the global set, encrypt should use 15000.
+		encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+		msg, err := jwe.Parse(encrypted)
+		require.NoError(t, err)
+		var p2c float64
+		require.NoError(t, msg.ProtectedHeaders().Get("p2c", &p2c))
+		require.Equal(t, float64(15000), p2c, `p2c should match global setting`)
+
+		// Per-call option should win over global.
+		encrypted2, err := jwe.Encrypt(payload,
+			jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+			jwe.WithPBES2Count(3000),
+		)
+		require.NoError(t, err)
+		msg2, err := jwe.Parse(encrypted2)
+		require.NoError(t, err)
+		var p2c2 float64
+		require.NoError(t, msg2.ProtectedHeaders().Get("p2c", &p2c2))
+		require.Equal(t, float64(3000), p2c2, `per-call WithPBES2Count should override global`)
+
+		decrypted, err := jwe.Decrypt(encrypted2, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.NoError(t, err)
+		require.Equal(t, payload, decrypted)
+	})
+}
+
 func TestCBCBufferSize(t *testing.T) {
 	// NOTE: This has GLOBAL EFFECT
 	jwe.Settings(jwe.WithCBCBufferSize(1))

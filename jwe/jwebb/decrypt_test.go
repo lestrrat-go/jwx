@@ -41,7 +41,7 @@ func TestKeyDecryptPBES2(t *testing.T) {
 	cek := testCEK
 	password := testPassword
 
-	encrypted, err := jwebb.KeyEncryptPBES2(cek, tokens.PBES2_HS256_A128KW, password)
+	encrypted, err := jwebb.KeyEncryptPBES2(cek, tokens.PBES2_HS256_A128KW, password, tokens.PBES2DefaultIterations)
 	require.NoError(t, err)
 	require.NotNil(t, encrypted)
 

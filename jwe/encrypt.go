@@ -17,12 +17,13 @@ import (
 //
 //nolint:govet
 type encrypter struct {
-	apu    []byte
-	apv    []byte
-	ctalg  jwa.ContentEncryptionAlgorithm
-	keyalg jwa.KeyEncryptionAlgorithm
-	pubkey any
-	rawKey any
+	apu        []byte
+	apv        []byte
+	ctalg      jwa.ContentEncryptionAlgorithm
+	keyalg     jwa.KeyEncryptionAlgorithm
+	pubkey     any
+	rawKey     any
+	pbes2Count int
 }
 
 // newEncrypter creates a new Encrypter instance with all required parameters.
@@ -32,14 +33,15 @@ type encrypter struct {
 // *rsa.PublicKey, instead of jwk.Key)
 //
 // You should consider this object immutable once created.
-func newEncrypter(keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryptionAlgorithm, pubkey any, rawKey any, apu, apv []byte) *encrypter {
+func newEncrypter(keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryptionAlgorithm, pubkey any, rawKey any, apu, apv []byte, pbes2Count int) *encrypter {
 	return &encrypter{
-		apu:    apu,
-		apv:    apv,
-		ctalg:  ctalg,
-		keyalg: keyalg,
-		pubkey: pubkey,
-		rawKey: rawKey,
+		apu:        apu,
+		apv:        apv,
+		ctalg:      ctalg,
+		keyalg:     keyalg,
+		pubkey:     pubkey,
+		rawKey:     rawKey,
+		pbes2Count: pbes2Count,
 	}
 }
 
@@ -68,7 +70,7 @@ func (e *encrypter) EncryptKey(cek []byte) (keygen.ByteSource, error) {
 		if !ok {
 			return nil, fmt.Errorf("encrypt key: []byte is required as the password for %s (got %T)", keyalgStr, e.rawKey)
 		}
-		return jwebb.KeyEncryptPBES2(cek, keyalgStr, password)
+		return jwebb.KeyEncryptPBES2(cek, keyalgStr, password, e.pbes2Count)
 	}
 
 	if jwebb.IsAESGCMKW(keyalgStr) {

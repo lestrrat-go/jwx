@@ -31,6 +31,7 @@ import (
 
 var maxPBES2Count atomic.Int64
 var minPBES2Count atomic.Int64
+var pbes2Count atomic.Int64
 var maxRecipients atomic.Int64
 var maxDecompressBufferSize atomic.Int64
 var maxParseInputSize atomic.Int64
@@ -38,6 +39,7 @@ var maxParseInputSize atomic.Int64
 func init() {
 	maxPBES2Count.Store(10000)
 	minPBES2Count.Store(1000)
+	pbes2Count.Store(int64(tokens.PBES2DefaultIterations))
 	maxRecipients.Store(100)
 	maxDecompressBufferSize.Store(10 * 1024 * 1024) // 10MB
 	maxParseInputSize.Store(10 * 1024 * 1024)       // 10MB
@@ -58,6 +60,15 @@ func Settings(options ...GlobalOption) {
 				panic(fmt.Sprintf("jwe.Settings: value for option WithMinPBES2Count must be an int: %s", err))
 			}
 			minPBES2Count.Store(int64(v))
+		case identPBES2Count{}:
+			var v int
+			if err := option.Value(&v); err != nil {
+				panic(fmt.Sprintf("jwe.Settings: value for option WithPBES2Count must be an int: %s", err))
+			}
+			if v <= 0 {
+				v = tokens.PBES2DefaultIterations
+			}
+			pbes2Count.Store(int64(v))
 		case identMaxRecipients{}:
 			var v int
 			if err := option.Value(&v); err != nil {
@@ -100,9 +111,10 @@ const (
 var registry = json.NewRegistry()
 
 type recipientBuilder struct {
-	alg     jwa.KeyEncryptionAlgorithm
-	key     any
-	headers Headers
+	alg        jwa.KeyEncryptionAlgorithm
+	key        any
+	headers    Headers
+	pbes2Count int
 }
 
 func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryptionAlgorithm, _ *content_crypt.Generic) ([]byte, error) {
@@ -147,7 +159,7 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 	}
 
 	// Create the encrypter using the new jwebb pattern
-	enc := newEncrypter(b.alg, calg, b.key, rawKey, apu, apv)
+	enc := newEncrypter(b.alg, calg, b.key, rawKey, apu, apv, b.pbes2Count)
 
 	_ = r.SetHeaders(hdr)
 
@@ -692,6 +704,7 @@ type encryptContext struct {
 	calg                jwa.ContentEncryptionAlgorithm
 	compression         jwa.CompressionAlgorithm
 	format              int
+	pbes2Count          int
 	builders            []*recipientBuilder
 	protected           Headers
 	legacyHeaderMerging bool
@@ -711,6 +724,7 @@ func freeEncryptContext(ec *encryptContext) *encryptContext {
 	ec.calg = jwa.A256GCM()
 	ec.compression = jwa.NoCompress()
 	ec.format = fmtCompact
+	ec.pbes2Count = 0
 	ec.builders = ec.builders[:0]
 	ec.protected = nil
 	return ec
@@ -718,6 +732,7 @@ func freeEncryptContext(ec *encryptContext) *encryptContext {
 
 func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 	ec.legacyHeaderMerging = true
+	ec.pbes2Count = int(pbes2Count.Load())
 	var mergeProtected bool
 	var useRawCEK bool
 	for _, option := range options {
@@ -739,6 +754,14 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 				key:     wk.key,
 				headers: wk.headers,
 			})
+		case identPBES2Count{}:
+			var v int
+			if err := option.Value(&v); err != nil {
+				return fmt.Errorf("jwe.encrypt: WithPBES2Count must be int: %w", err)
+			}
+			if v > 0 {
+				ec.pbes2Count = v
+			}
 		case identContentEncryptionAlgorithm{}:
 			var c jwa.ContentEncryptionAlgorithm
 			if err := option.Value(&c); err != nil {
@@ -908,6 +931,7 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 	defer recipientSlicePool.Put(recipients)
 
 	for i, builder := range ec.builders {
+		builder.pbes2Count = ec.pbes2Count
 		r := recipientPool.Get()
 		defer recipientPool.Put(r)
 
