@@ -495,13 +495,12 @@ func WithMinPBES2Count(v int) GlobalDecryptOption {
 
 // WithPBES2Count specifies the number of PBKDF2 iterations to use when
 // encrypting a key with the PBES2 family of algorithms. If not specified,
-// the default value of 10,000 is used.
+// the default value of 10,000 is used. Modern guidance (OWASP 2023)
+// recommends 600,000 or more for PBKDF2-HMAC-SHA256.
 //
-// Modern guidance (OWASP 2023) recommends 600,000 or more for
-// PBKDF2-HMAC-SHA256. Callers handling long-lived or high-value tokens
-// should raise this value. Note that raising the encrypt-side count above
-// the decrypt-side WithMaxPBES2Count (default 10,000) will cause your own
-// messages to be rejected on decrypt until you also raise the max.
+// This option only affects encryption. Iteration counts on incoming
+// messages are validated separately on decrypt via WithMinPBES2Count
+// and WithMaxPBES2Count.
 //
 // This option can be used for `jwe.Settings()`, which changes the behavior
 // globally, or for `jwe.Encrypt()`, which changes the behavior for that
