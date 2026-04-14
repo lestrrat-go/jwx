@@ -124,49 +124,49 @@ func buildECDSAPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ec
 //
 // The implementation is split into two branches for a reason:
 //
-// 1. For the NIST P-256/P-384/P-521 curves we route through crypto/ecdh.
-//    Go 1.21 deprecated most of crypto/elliptic's Curve methods — not
-//    because point-on-curve validation stopped being necessary, but
-//    because the generic big.Int implementation in crypto/elliptic had
-//    subtle edge cases and the Go team wanted users off it. The blessed
-//    replacement for "parse and validate an uncompressed point" on
-//    stdlib curves is ecdh.Curve.NewPublicKey, which enforces on-curve
-//    membership and rejects the identity as part of parsing the SEC1
-//    0x04 || X || Y encoding. Using ecdh here means we're using exactly
-//    the Go team's recommended replacement, and the deprecated stdlib
-//    elliptic methods are never reached for any NIST-curve input.
+//  1. For the NIST P-256/P-384/P-521 curves we route through crypto/ecdh.
+//     Go 1.21 deprecated most of crypto/elliptic's Curve methods — not
+//     because point-on-curve validation stopped being necessary, but
+//     because the generic big.Int implementation in crypto/elliptic had
+//     subtle edge cases and the Go team wanted users off it. The blessed
+//     replacement for "parse and validate an uncompressed point" on
+//     stdlib curves is ecdh.Curve.NewPublicKey, which enforces on-curve
+//     membership and rejects the identity as part of parsing the SEC1
+//     0x04 || X || Y encoding. Using ecdh here means we're using exactly
+//     the Go team's recommended replacement, and the deprecated stdlib
+//     elliptic methods are never reached for any NIST-curve input.
 //
-// 2. For any other curve registered through jwk/ecdsa.RegisterCurve
-//    (most importantly secp256k1 via the ES256K extension module),
-//    crypto/ecdh has no entry point — it only supports the four curves
-//    listed above. The only mechanism available for validating a point
-//    on a custom curve is the elliptic.Curve interface's IsOnCurve
-//    method. Calling it here is correct despite the staticcheck
-//    deprecation notice, for three reasons:
+//  2. For any other curve registered through jwk/ecdsa.RegisterCurve
+//     (most importantly secp256k1 via the ES256K extension module),
+//     crypto/ecdh has no entry point — it only supports the four curves
+//     listed above. The only mechanism available for validating a point
+//     on a custom curve is the elliptic.Curve interface's IsOnCurve
+//     method. Calling it here is correct despite the staticcheck
+//     deprecation notice, for three reasons:
 //
-//    a. The deprecation targets the *stdlib* elliptic.Curve
-//       implementations (elliptic.P256() etc.). Custom curves such as
-//       btcec/secp256k1 ship their own IsOnCurve implementation; the
-//       interface dispatch lands in that implementation, not in the
-//       deprecated stdlib one. staticcheck cannot see through interface
-//       dispatch, so the lint scope is suppressed on just this line.
+//     a. The deprecation targets the *stdlib* elliptic.Curve
+//     implementations (elliptic.P256() etc.). Custom curves such as
+//     btcec/secp256k1 ship their own IsOnCurve implementation; the
+//     interface dispatch lands in that implementation, not in the
+//     deprecated stdlib one. staticcheck cannot see through interface
+//     dispatch, so the lint scope is suppressed on just this line.
 //
-//    b. The elliptic.Curve interface itself remains part of Go's
-//       supported API because crypto/ecdsa.Verify and
-//       crypto/ecdsa.Sign continue to take elliptic.Curve-backed keys.
-//       Any third-party curve that plugs into crypto/ecdsa is
-//       contractually required to implement a working IsOnCurve; that
-//       is the only thing crypto/ecdsa has to validate the public point
-//       before verification. Calling it from here is the same contract.
+//     b. The elliptic.Curve interface itself remains part of Go's
+//     supported API because crypto/ecdsa.Verify and
+//     crypto/ecdsa.Sign continue to take elliptic.Curve-backed keys.
+//     Any third-party curve that plugs into crypto/ecdsa is
+//     contractually required to implement a working IsOnCurve; that
+//     is the only thing crypto/ecdsa has to validate the public point
+//     before verification. Calling it from here is the same contract.
 //
-//    c. The remaining alternatives are worse: (i) refusing to validate
-//       non-stdlib curves at all reintroduces JWK-003 for ES256K users;
-//       (ii) refusing to *support* non-stdlib curves is a regression
-//       for ES256K users. A cleaner long-term fix is to extend
-//       jwk/ecdsa.RegisterCurve so extension modules can register a
-//       validator function alongside the curve, letting us drop the
-//       IsOnCurve call entirely. That is a deliberate follow-up, not a
-//       blocker for this security fix.
+//     c. The remaining alternatives are worse: (i) refusing to validate
+//     non-stdlib curves at all reintroduces JWK-003 for ES256K users;
+//     (ii) refusing to *support* non-stdlib curves is a regression
+//     for ES256K users. A cleaner long-term fix is to extend
+//     jwk/ecdsa.RegisterCurve so extension modules can register a
+//     validator function alongside the curve, letting us drop the
+//     IsOnCurve call entirely. That is a deliberate follow-up, not a
+//     blocker for this security fix.
 func validateECDSAPoint(crv elliptic.Curve, x, y *big.Int) error {
 	if x.Sign() == 0 && y.Sign() == 0 {
 		return fmt.Errorf(`invalid ECDSA public key: identity point is not a valid public key`)
