@@ -24,6 +24,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -2627,6 +2628,153 @@ func TestUnregisterX509Decoder_NotRegistered(t *testing.T) {
 	require.NotPanics(t, func() {
 		jwk.UnregisterX509Decoder("non-existent-decoder")
 	})
+}
+
+// registerTrioDecoders registers three decoders that each recognize a
+// distinct PEM block type. Callers receive the idents and a function
+// that builds a PEM body for one of the types. Cleanup is registered
+// via t.Cleanup so leftover decoders never leak across tests.
+func registerTrioDecoders(t *testing.T) (identA, identB, identC string, pemFor func(string) []byte) {
+	t.Helper()
+	testKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+
+	mk := func(wantType string) jwk.X509Decoder {
+		return jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
+			if block.Type == wantType {
+				return testKey, nil
+			}
+			return nil, fmt.Errorf("unsupported type")
+		})
+	}
+
+	identA = "test-trio-A"
+	identB = "test-trio-B"
+	identC = "test-trio-C"
+	require.NoError(t, jwk.RegisterX509Decoder(identA, mk("TRIO A")))
+	require.NoError(t, jwk.RegisterX509Decoder(identB, mk("TRIO B")))
+	require.NoError(t, jwk.RegisterX509Decoder(identC, mk("TRIO C")))
+
+	t.Cleanup(func() {
+		jwk.UnregisterX509Decoder(identA)
+		jwk.UnregisterX509Decoder(identB)
+		jwk.UnregisterX509Decoder(identC)
+	})
+
+	pemFor = func(typ string) []byte {
+		return []byte("-----BEGIN " + typ + "-----\ndGVzdCBkYXRh\n-----END " + typ + "-----")
+	}
+	return identA, identB, identC, pemFor
+}
+
+// TestUnregisterX509Decoder_StaleIndexMiddle exercises JWK-003: after
+// removing a decoder from the middle of the list, a subsequent
+// unregister of a later-registered ident must not panic and must
+// remove the correct decoder.
+func TestUnregisterX509Decoder_StaleIndexMiddle(t *testing.T) {
+	identA, identB, identC, pemFor := registerTrioDecoders(t)
+
+	// Remove the middle decoder. Prior to the fix, the surviving
+	// entry for identC kept its original index, which pointed past
+	// the end of the shrunken slice.
+	jwk.UnregisterX509Decoder(identB)
+
+	// B must no longer decode.
+	_, err := jwk.ParseKey[jwk.Key](pemFor("TRIO B"), jwk.WithPEM(true))
+	require.Error(t, err, "TRIO B should fail after unregister")
+
+	// A and C must still decode.
+	_, err = jwk.ParseKey[jwk.Key](pemFor("TRIO A"), jwk.WithPEM(true))
+	require.NoError(t, err, "TRIO A should still decode")
+	_, err = jwk.ParseKey[jwk.Key](pemFor("TRIO C"), jwk.WithPEM(true))
+	require.NoError(t, err, "TRIO C should still decode")
+
+	// Now unregister C by ident. Before the fix this would panic
+	// with an out-of-range slice index.
+	require.NotPanics(t, func() {
+		jwk.UnregisterX509Decoder(identC)
+	})
+
+	// C must no longer decode; A must still decode.
+	_, err = jwk.ParseKey[jwk.Key](pemFor("TRIO C"), jwk.WithPEM(true))
+	require.Error(t, err, "TRIO C should fail after second unregister")
+	_, err = jwk.ParseKey[jwk.Key](pemFor("TRIO A"), jwk.WithPEM(true))
+	require.NoError(t, err, "TRIO A must survive unrelated unregister")
+
+	// Keep identA alive until cleanup fires.
+	_ = identA
+}
+
+// TestUnregisterX509Decoder_StaleIndexFirst exercises the case where
+// the removed element is at index 0 of the user-registered portion of
+// the list. A later unregister for a surviving ident must still hit
+// the correct decoder.
+func TestUnregisterX509Decoder_StaleIndexFirst(t *testing.T) {
+	identA, identB, identC, pemFor := registerTrioDecoders(t)
+
+	jwk.UnregisterX509Decoder(identA)
+
+	_, err := jwk.ParseKey[jwk.Key](pemFor("TRIO A"), jwk.WithPEM(true))
+	require.Error(t, err)
+	_, err = jwk.ParseKey[jwk.Key](pemFor("TRIO B"), jwk.WithPEM(true))
+	require.NoError(t, err)
+	_, err = jwk.ParseKey[jwk.Key](pemFor("TRIO C"), jwk.WithPEM(true))
+	require.NoError(t, err)
+
+	require.NotPanics(t, func() {
+		jwk.UnregisterX509Decoder(identC)
+	})
+
+	_, err = jwk.ParseKey[jwk.Key](pemFor("TRIO C"), jwk.WithPEM(true))
+	require.Error(t, err)
+	_, err = jwk.ParseKey[jwk.Key](pemFor("TRIO B"), jwk.WithPEM(true))
+	require.NoError(t, err, "TRIO B must survive unrelated unregister")
+
+	_ = identB
+}
+
+// TestX509DecoderConcurrent runs parsers and register/unregister
+// concurrently. Under -race this catches the in-place slice mutation
+// that was racing with snapshot-then-iterate readers in decodeX509.
+func TestX509DecoderConcurrent(t *testing.T) {
+	testKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+
+	pemData := []byte("-----BEGIN TRIO CONCURRENT-----\ndGVzdCBkYXRh\n-----END TRIO CONCURRENT-----")
+	decoder := jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
+		if block.Type == "TRIO CONCURRENT" {
+			return testKey, nil
+		}
+		return nil, fmt.Errorf("unsupported type")
+	})
+
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+
+	for range 8 {
+		wg.Go(func() {
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+				}
+				// Best-effort parse; error is fine (decoder may be
+				// unregistered at this moment). The point is that
+				// the read path must not race on the decoder slice.
+				_, _ = jwk.ParseKey[jwk.Key](pemData, jwk.WithPEM(true))
+			}
+		})
+	}
+
+	for i := range 200 {
+		ident := fmt.Sprintf("test-concurrent-%d", i)
+		require.NoError(t, jwk.RegisterX509Decoder(ident, decoder))
+		jwk.UnregisterX509Decoder(ident)
+	}
+
+	close(stop)
+	wg.Wait()
 }
 
 func TestGH1529(t *testing.T) {
