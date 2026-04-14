@@ -46,7 +46,16 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `jwk.RegisterProbeField(reflect.StructField{...})` | `jwk.RegisterProbeField[T](name, jsonKey)` | No `reflect` import needed |
 | `jwk.Import(raw)` | `jwk.Import[T](raw)` | Generic return type |
 | `jwk.ParseKey(data)` | `jwk.ParseKey[T](data)` | Generic return type |
-| `jwk.NewCache(ctx, client)` | `jwkcache.NewCache(ctx, client)` | Extension module |
+| `jwk.NewCache(ctx, client)` | `jwkfetch.NewCache(ctx, client)` | Extension module (see Recipe 6) |
+| `jwk.Fetch(ctx, url, opts...)` | `jwkfetch.NewClient(opts...).Fetch(ctx, url)` | Extension module (see Recipe 6) |
+| `jwk.WithHTTPClient(c)` | `jwkfetch.WithHTTPClient(c)` | Extension module |
+| `jwk.WithFetchWhitelist(w)` | `jwkfetch.WithWhitelist(w)` | Extension module; default tightened to deny-all |
+| `jwk.WithMaxFetchBodySize(n)` | `jwkfetch.WithMaxBodySize(n)` | Extension module |
+| `jwk.InsecureWhitelist{}` / `jwk.MapWhitelist` / `jwk.RegexpWhitelist` / `jwk.WhitelistFunc` | `jwkfetch.InsecureWhitelist{}` / `jwkfetch.MapWhitelist` / `jwkfetch.RegexpWhitelist` / `jwkfetch.WhitelistFunc` | Extension module |
+| `jwk.WhitelistError()` | `jwkfetch.WhitelistError()` | Extension module |
+| `jwk.Fetcher` | `jwk.Fetcher` (unchanged name, new shape: `Fetch(ctx, url) (Set, error)` — no variadic options) | Core interface, no in-package implementation |
+| `jws.WithVerifyAuto(f, fetchOpts...)` | `jws.WithVerifyAuto(f)` | Variadic options dropped; nil fetcher now errors instead of silently using `jwk.Fetch` |
+| `jwt.WithVerifyAuto(f, fetchOpts...)` | `jwt.WithVerifyAuto(f)` | Same as jws |
 | `jws.Signer2` | `jws.Signer` | Interface renamed |
 | `jws.Verifier2` | `jws.Verifier` | Interface renamed |
 | `jws.RegisterSigner(alg, any)` | `jws.RegisterSigner(alg, Signer)` | Typed parameter |
@@ -176,36 +185,79 @@ func (s MySigner) Sign(key any, payload []byte) ([]byte, error) {
 jws.RegisterSigner(jwa.RS256(), MySigner{})
 ```
 
-### Recipe 6: JWK Caching
+### Recipe 6: HTTP JWK Set retrieval (jwk.Fetch, jwk.Cache, jwk.Whitelist)
 
-The caching subsystem moved to a separate module.
+All HTTP-based JWK Set retrieval has moved out of the core `jwk` package into a single companion: [`github.com/jwx-go/jwkfetch/v4`](https://github.com/jwx-go/jwkfetch). The main jwx/v4 module no longer depends on `net/http` or `httprc`. `jwkfetch` supersedes both the v3 `jwk.Fetch` / `jwk.Whitelist` / `jwk.HTTPClient` surface **and** the standalone v3 `jwx-go/jwkcache` companion.
+
+jwkfetch offers two complementary types, both implementing `jwk.Fetcher`:
+
+- `jwkfetch.Client` — one-shot fetcher with whitelist, body-size cap, parse options. For `jku`-style verification.
+- `jwkfetch.Cache` — background-refreshed JWKS store backed by `httprc`. For a small trusted set of issuer endpoints.
+
+Both are **closed structs** constructed via functional options. The core `jwk.Fetcher` interface is now options-free:
 
 ```go
-// Before
+type Fetcher interface {
+    Fetch(ctx context.Context, url string) (Set, error)
+}
+```
+
+**Safety default tightened.** In v3, `jwk.Fetch()` defaulted to `jwk.InsecureWhitelist{}` (allow every URL). A `jwkfetch.Client` with no `WithWhitelist` denies every URL. Callers with hard-coded trusted URLs must opt in explicitly. `jws.WithVerifyAuto(nil)` / `jwt.WithVerifyAuto(nil)` is no longer supported — both error at use time instead of silently falling back to an insecure default.
+
+```go
+// Before — one-shot jwk.Fetch
+import "github.com/lestrrat-go/jwx/v3/jwk"
+
+set, err := jwk.Fetch(ctx, url,
+    jwk.WithHTTPClient(myClient),
+    jwk.WithFetchWhitelist(jwk.NewMapWhitelist().Add(url)),
+)
+
+// After — one-shot jwkfetch.Client
+import "github.com/jwx-go/jwkfetch/v4"
+
+client := jwkfetch.NewClient(
+    jwkfetch.WithHTTPClient(myClient),
+    jwkfetch.WithWhitelist(jwkfetch.NewMapWhitelist().Add(url)),
+)
+set, err := client.Fetch(ctx, url)
+```
+
+```go
+// Before — background-refreshed cache (v3 jwk.Cache)
 import (
     "github.com/lestrrat-go/httprc/v3"
     "github.com/lestrrat-go/jwx/v3/jwk"
 )
 
-cache, err := jwk.NewCache(ctx, httprc.NewClient())
+cache, _ := jwk.NewCache(ctx, httprc.NewClient())
 cache.Register(ctx, url, jwk.WithMinRefreshInterval(15*time.Minute))
-set, err := cache.Lookup(ctx, url)
+set, _ := cache.Lookup(ctx, url)
 
-// After
+// After — jwkfetch.Cache (same idea, new module)
 import (
+    "github.com/jwx-go/jwkfetch/v4"
     "github.com/lestrrat-go/httprc/v3"
-    "github.com/jwx-go/jwkcache/v4"
 )
 
-cache, err := jwkcache.NewCache(ctx, httprc.NewClient())
-if err != nil {
-    return err
-}
-if err := cache.Register(ctx, url); err != nil {
-    return err
-}
-set, err := cache.Lookup(ctx, url)
+cache, _ := jwkfetch.NewCache(ctx, httprc.NewClient())
+_ = cache.Register(ctx, url, jwkfetch.WithMinInterval(15*time.Minute))
+set, _ := cache.Lookup(ctx, url)
 ```
+
+```go
+// Before — wiring into jws.Verify via jku
+_, err := jws.Verify(signed, jws.WithVerifyAuto(nil, jwk.WithFetchWhitelist(wl), jwk.WithHTTPClient(c)))
+
+// After — build the fetcher once, pass it
+fetcher := jwkfetch.NewClient(
+    jwkfetch.WithWhitelist(wl),
+    jwkfetch.WithHTTPClient(c),
+)
+_, err := jws.Verify(signed, jws.WithVerifyAuto(fetcher))
+```
+
+`Cache.Client.Whitelist` is not consulted by Cache — registration is the trust boundary for cached URLs. If you need per-fetch whitelist enforcement, use `Client` via `jwk.Fetcher` instead.
 
 ### Recipe 7: Custom Field Registration
 
@@ -384,7 +436,9 @@ These changes cannot be mechanically transformed and need human judgment:
 
 1. **Custom `Signer2`/`Verifier2` implementations**: If your implementation used `Algorithm()` for internal dispatch, you need to restructure. The algorithm is now passed to `RegisterSigner`/`RegisterVerifier` only.
 
-2. **Complex cache configurations**: If you used `WithHttprcResourceOption`, `WithConstantInterval`, or other httprc-specific options with jwk.Cache, review the jwkcache extension module's API for equivalents.
+2. **Complex cache configurations**: If you used `WithHttprcResourceOption`, `WithConstantInterval`, or other httprc-specific options with jwk.Cache, review the `jwkfetch` extension module's `RegisterOption` family for equivalents. Note that per-URL `WithHTTPClient` / `WithMaxFetchBodySize` overrides from the v3 jwkcache companion are not carried forward — in jwkfetch, HTTP transport and body-size cap are set once on `NewCache` via `WithHTTPClient` / `WithMaxBodySize` and apply uniformly to every registered URL.
+
+3. **Whitelist-based security posture**: Audit every `jws.WithVerifyAuto` / `jwt.WithVerifyAuto` call site. In v3 these accepted fetch options and defaulted to a prepended deny-all whitelist when the caller didn't set one. In v4, `WithVerifyAuto` takes only a `jwk.Fetcher` — the whitelist has to be configured on the fetcher itself at construction time, and a `jwkfetch.Client` with no `WithWhitelist` denies every URL. Any code path that previously relied on the implicit deny-all will keep working, but any code path that relied on `jwk.InsecureWhitelist{}` being the default (e.g. a `jwk.Fetch(ctx, url)` with no options) must now pass `jwkfetch.WithWhitelist(jwkfetch.InsecureWhitelist{})` explicitly.
 
 3. **`json.Number` usage**: If you relied on `json.Number` type preservation via `jwx.WithUseNumber(true)`, use `jwx.Settings(jwx.WithUseNumber(true))` instead. The API was renamed from `DecoderSettings` to `Settings` to match the sub-package convention.
 

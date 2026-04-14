@@ -462,8 +462,8 @@ func Example_jws_verify_with_jwk_set() {
   k3, _ := jwk.PublicKeyOf(privkey)
   _ = set.AddKey(k3)
 
-  // Up to this point, you probably will replace with a simple jwk.Fetch()
-  // or similar to obtain the JWKS
+  // Up to this point, you would typically replace with a jwkfetch.Client
+  // or Cache to obtain the JWKS over HTTP. See docs/10-extensions.md.
 
   // Sign with a key that has a Key ID. This forces jws.Sign() to include its
   // key ID in the JWS header.
@@ -589,44 +589,27 @@ source: [examples/jws_verify_detached_payload_example_test.go](https://github.co
 
 ## Verification using `jku`
 
-Regular calls to `jws.Verify()` does not respect the JWK Set referenced in the `jku` field. In order to
-verify the payload using the `jku` field, you must use the `jws.VerifyAuto()` function.
+Regular calls to `jws.Verify()` do not respect the JWK Set referenced in the `jku` field. In order to verify the payload using the `jku` field, use `jws.WithVerifyAuto(f jwk.Fetcher)`. The fetcher is responsible for all HTTP transport and whitelist policy — jwx v4 has no built-in `jwk.Fetcher` implementation. Use the [`github.com/jwx-go/jwkfetch/v4`](https://github.com/jwx-go/jwkfetch) companion to construct one:
 
 ```go
-wl := ... // Create an appropriate whitelist
-payload, _ := jws.VerifyAuto(buf, jws.WithFetchWhitelist(wl))
+import "github.com/jwx-go/jwkfetch/v4"
+
+fetcher := jwkfetch.NewClient(
+  jwkfetch.WithWhitelist(
+    jwkfetch.NewMapWhitelist().Add(`https://issuer.example/jwks.json`),
+  ),
+)
+
+payload, err := jws.Verify(buf, jws.WithVerifyAuto(fetcher))
 ```
 
-This will tell `jws` to verify the given buffer using the JWK Set presented at the URL specified in
-the `jku` field. If the buffer is a JSON message, then this is done for each of the signature in
-the `signatures` array.
+A `jwkfetch.Client` built with no `WithWhitelist` denies every URL. This is a deliberate safe default for `jku`-style verification because the URL is attacker-controllable by construction. If you genuinely want to accept any URL, set `jwkfetch.WithWhitelist(jwkfetch.InsecureWhitelist{})` explicitly.
 
-The URL in the `jku` field must have the `https` scheme, and the key ID in the JWK Set must
-match the key ID present in the JWS message.
+The URL in the `jku` field must have the `https` scheme and the key ID in the fetched JWK Set must match the key ID in the JWS header.
 
-Because this operation will result in your program accessing remote resources, the default behavior
-is to NOT allow any URLs. You must specify a whitelist
+Passing `nil` to `jws.WithVerifyAuto` is not supported: jku verification will error at use time. This is intentional — there is no secure default for fetching attacker-controllable URLs, so callers must wire a fetcher (and its whitelist) explicitly.
 
-```go
-wl := jwk.NewMapWhitelist().
-  Add(`https://white-listed-address`)
-
-payload, _ := jws.VerifyAuto(buf, jws.WithFetchWhitelist(wl))
-```
-
-If you want to allow any URLs to be accessible, use the `jwk.InsecureWhitelist`.
-
-```go
-wl := jwk.InsecureWhitelist{}
-payload, _ := jws.VerifyAuto(buf, jws.WithFetchWhitelist(wl))
-```
-
-If you must configure the HTTP Client in a special way, use the `jws.WithHTTPClient()` option:
-
-```go
-client := &http.Client{ ... }
-payload, _ := jws.VerifyAuto(buf, jws.WithHTTPClient(client))
-```
+Both `jwkfetch.Client` (one-shot) and `jwkfetch.Cache` (background-refreshed) implement `jwk.Fetcher` and can be passed to `jws.WithVerifyAuto`. See the [jwkfetch section of the extensions doc](./10-extensions.md#http-jwk-set-retrieval-jwkfetch) and the [module README](https://github.com/jwx-go/jwkfetch) for full details.
 
 # Using a custom signing/verification algorithm
 

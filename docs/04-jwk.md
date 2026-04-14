@@ -525,352 +525,70 @@ source: [examples/jwk_import_example_test.go](https://github.com/jwx-go/examples
 
 # Fetching JWK Sets
 
-## Parse a key from a remote resource
+HTTP-based JWK Set retrieval has moved out of the core `jwk` package in v4. The main jwx module no longer depends on `net/http` or [`httprc`](https://github.com/lestrrat-go/httprc), and there is no `jwk.Fetch` function. All HTTP fetching lives in the [`github.com/jwx-go/jwkfetch/v4`](https://github.com/jwx-go/jwkfetch) companion, which supersedes the v3 `jwk.Fetch` / `jwk.WithHTTPClient` / `jwk.Whitelist` surface **and** the standalone `jwx-go/jwkcache` companion.
 
-To parse keys stored in a remote location pointed by a HTTP(s) URL, use [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Fetch)
-
-If you are going to be using this key repeatedly in a long running process, consider using [`jwkcache.Cache`](https://pkg.go.dev/github.com/jwx-go/jwkcache/v4#Cache) or [`jwkcache.CachedSet`](https://pkg.go.dev/github.com/jwx-go/jwkcache/v4#CachedSet) from the [`github.com/jwx-go/jwkcache/v4`](https://github.com/jwx-go/jwkcache) extension module, described elsewhere in this document.
-
-By default, `jwk.Fetch()` uses an HTTP client that blocks HTTPS-to-HTTP redirect downgrades and limits redirect chains to 5 hops. This prevents the most common SSRF vector where an attacker-controlled JWKS URL redirects to an internal HTTP service.
-
-When you supply your own client via `jwk.WithHTTPClient()` or `jwk.Configure(jwk.WithHTTPClient(...))`, the library uses it as-is — it does **not** automatically apply the default timeout or redirect policy. If you need to bring your own client (e.g. for custom TLS or proxy settings) while retaining the library's defaults, wrap it with [`jwk.WrapHTTPClientDefaults()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#WrapHTTPClientDefaults) before passing it:
+The `jwk` package still defines the minimal `jwk.Fetcher` interface:
 
 ```go
-myClient := &http.Client{
-  Transport: myCustomTransport,
-}
-jwk.Configure(jwk.WithHTTPClient(jwk.WrapHTTPClientDefaults(myClient)))
-```
-
-For full SSRF protection (blocking redirects to private IP ranges, DNS rebinding prevention), provide a custom `http.Client` with an appropriate `Transport.DialContext` that validates resolved IP addresses, and pass it via `jwk.WithHTTPClient()` or `jwk.Configure()`.
-
-<!-- INCLUDE(examples/jwk_fetch_example_test.go) -->
-```go
-package examples_test
-
-import (
-  "context"
-  "encoding/json"
-  "fmt"
-  "net/http"
-  "net/http/httptest"
-  "os"
-
-  "github.com/lestrrat-go/jwx/v4/jwk"
-)
-
-func Example_jwk_fetch() {
-  srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    w.WriteHeader(http.StatusOK)
-    fmt.Fprintf(w, `{
-  		"keys": [
-        {"kty":"EC",
-         "crv":"P-256",
-         "x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
-         "y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
-         "use":"enc",
-         "kid":"1"},
-        {"kty":"RSA",
-         "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
-         "e":"AQAB",
-         "alg":"RS256",
-         "kid":"2011-04-29"}
-      ]
-    }`)
-  }))
-  defer srv.Close()
-
-  set, err := jwk.Fetch(
-    context.Background(),
-    srv.URL,
-    // This is necessary because httptest.Server is using a custom certificate
-    jwk.WithHTTPClient(srv.Client()),
-  )
-  if err != nil {
-    fmt.Printf("failed to fetch JWKS: %s\n", err)
-    return
-  }
-
-  json.NewEncoder(os.Stdout).Encode(set)
-  // OUTPUT:
-  // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
+type Fetcher interface {
+    Fetch(ctx context.Context, url string) (Set, error)
 }
 ```
-source: [examples/jwk_fetch_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_fetch_example_test.go)
-<!-- END INCLUDE -->
 
-## Auto-refreshing remote keys
+…but there is no in-package implementation. You get a concrete implementation from `jwkfetch`, which offers two complementary types:
 
-Sometimes you need to fetch a remote JWK, and use it multiple times in a long-running process.
-For example, you may act as an intermediary to some other service, and you may need to verify incoming JWT tokens against the tokens in said other service.
+- **`jwkfetch.Client`** — one-shot HTTPS fetch with whitelist, body-size cap, and parse options. Use for `jku`-style verification and any fetch where the URL may be attacker-controllable.
+- **`jwkfetch.Cache`** — background-refreshed JWKS store backed by [`httprc`](https://github.com/lestrrat-go/httprc). Use for a small, trusted set of issuer JWKS endpoints where amortizing fetch cost matters.
 
-Normally, you should be able to simply fetch the JWK using [`jwk.Fetch()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Fetch),
-but keys are usually routinely expired and rotated due to security reasons.
-In such cases you would need to refetch the JWK periodically, which is a pain.
+Both implement `jwk.Fetcher` and are **closed structs** constructed via functional options. A `Client` built with no `WithWhitelist` denies every URL — a deliberate tightening over v3's `jwk.Fetch` which defaulted to allow-all.
 
-The [`github.com/jwx-go/jwkcache/v4`](https://github.com/jwx-go/jwkcache) extension module provides [`jwkcache.Cache`](https://pkg.go.dev/github.com/jwx-go/jwkcache/v4#Cache) and [`jwkcache.CachedSet`](https://pkg.go.dev/github.com/jwx-go/jwkcache/v4#CachedSet) to do this for you.
-
-<!-- INCLUDE(examples/jwk_cache_example_test.go) -->
 ```go
-package examples_test
-
 import (
-  "context"
-  "fmt"
-  "time"
-
+  "github.com/jwx-go/jwkfetch/v4"
   "github.com/lestrrat-go/httprc/v3"
-
-  "github.com/jwx-go/jwkcache/v4"
 )
 
-func Example_jwk_cache() {
-  ctx, cancel := context.WithCancel(context.Background())
-  defer cancel()
+// --- one-shot fetch ---
+client := jwkfetch.NewClient(
+  jwkfetch.WithWhitelist(
+    jwkfetch.NewMapWhitelist().Add("https://issuer.example/jwks.json"),
+  ),
+)
+set, err := client.Fetch(ctx, "https://issuer.example/jwks.json")
 
-  const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
-
-  // First, set up the `jwkcache.Cache` object. You need to pass it a
-  // `context.Context` object to control the lifecycle of the background fetching goroutine.
-  c, err := jwkcache.NewCache(ctx, httprc.NewClient())
-  if err != nil {
-    fmt.Printf("failed to create cache: %s\n", err)
-    return
-  }
-
-  // Tell the cache that we only want to refresh this JWKS periodically.
-  if err := c.Register(ctx, googleCerts); err != nil {
-    fmt.Printf("failed to register google JWKS: %s\n", err)
-    return
-  }
-
-  // Pretend that this is your program's main loop
-MAIN:
-  for {
-    select {
-    case <-ctx.Done():
-      break MAIN
-    default:
-    }
-    keyset, err := c.Lookup(ctx, googleCerts)
-    if err != nil {
-      fmt.Printf("failed to fetch google JWKS: %s\n", err)
-      return
-    }
-    _ = keyset
-    // The returned `keyset` will always be "reasonably" new.
-    //
-    // By "reasonably" we mean that we cannot guarantee that the keys will be refreshed
-    // immediately after it has been rotated in the remote source. But it should be close\
-    // enough, and should you need to forcefully refresh the token using the `(jwkcache.Cache).Refresh()` method.
-    //
-    // If refetching the keyset fails, a cached version will be returned from the previous
-    // successful sync
-
-    // Do interesting stuff with the keyset... but here, we just
-    // sleep for a bit
-    time.Sleep(time.Second)
-
-    // Because we're a dummy program, we just cancel the loop now.
-    // If this were a real program, you presumably loop forever
-    cancel()
-  }
-  // OUTPUT:
-}
+// --- background-refreshed cache ---
+cache, _ := jwkfetch.NewCache(ctx, httprc.NewClient())
+_ = cache.Register(ctx, "https://issuer.example/jwks.json",
+  jwkfetch.WithMinInterval(15*time.Minute),
+)
+// Both types satisfy jwk.Fetcher and can be wired into jws.WithVerifyAuto / jwt.WithVerifyAuto.
+_, err = jws.Verify(signed, jws.WithVerifyAuto(cache))
 ```
-source: [examples/jwk_cache_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_cache_example_test.go)
-<!-- END INCLUDE -->
 
-<!-- INCLUDE(examples/jwk_cached_set_example_test.go) -->
+## Default security behavior
+
+`jwkfetch.NewClient()` with no `WithWhitelist` returns a Client that denies every URL. This is the safe default for `jku`-style verification where the URL is attacker-controllable. Callers with a fixed trusted URL must opt in explicitly:
+
 ```go
-package examples_test
-
-import (
-  "context"
-  "fmt"
-  "log/slog"
-  "os"
-  "time"
-
-  "github.com/lestrrat-go/httprc/v3"
-  "github.com/lestrrat-go/httprc/v3/tracesink"
-  "github.com/lestrrat-go/jwx/v4/jwk"
-  "github.com/lestrrat-go/jwx/v4/jws"
-
-  "github.com/jwx-go/jwkcache/v4"
-)
-
-func Example_jwk_cached_set() {
-  ctx, cancel := context.WithCancel(context.Background())
-  defer cancel()
-
-  const googleCerts = `https://www.googleapis.com/oauth2/v3/certs`
-
-  // The first steps are the same as examples/jwk_cache_example_test.go
-  c, err := jwkcache.NewCache(
-    ctx,
-    httprc.NewClient(
-      httprc.WithTraceSink(tracesink.NewSlog(slog.New(slog.NewJSONHandler(os.Stderr, nil)))),
-    ),
-  )
-  if err != nil {
-    fmt.Printf("failed to create cache: %s\n", err)
-    return
-  }
-
-  // Register the URL to fetch the JWKS from. In this case, we're saying that
-  // the cache can dynamically decide how often to refresh the keyset based on
-  // the HTTP headers returned by the server, but the value must be at least
-  // 1 hour, and at most 7 days.
-  if err := c.Register(
-    ctx,
-    googleCerts,
-    jwkcache.WithMaxInterval(24*time.Hour*7),
-    jwkcache.WithMinInterval(15*time.Minute),
-  ); err != nil {
-    fmt.Printf("failed to register google JWKS: %s\n", err)
-    return
-  }
-
-  cached, err := c.CachedSet(googleCerts)
-  if err != nil {
-    fmt.Printf("failed to get cached keyset: %s\n", err)
-    return
-  }
-
-  // cached fulfills the jwk.Set interface.
-  var _ jwk.Set = cached
-
-  // That means you can pass it to things like jws.WithKeySet,
-  // allowing you to pretend as if you are using the result of
-  //
-  //   jwk.Fetch(ctx, googleCerts)
-  //
-  // But you are instead using a cached (and periodically refreshed) set
-  // for each operation.
-  _ = jws.WithKeySet(cached)
-
-  // OUTPUT:
-}
+// Permissive — only do this when the URL is hard-coded in trusted config.
+c := jwkfetch.NewClient(jwkfetch.WithWhitelist(jwkfetch.InsecureWhitelist{}))
 ```
-source: [examples/jwk_cached_set_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_cached_set_example_test.go)
-<!-- END INCLUDE -->
 
-## Default Fetch Security Behavior
+The default HTTP client (`jwkfetch.DefaultHTTPClient()`) applies a 30-second timeout, a 5-redirect cap, and a redirect policy that blocks HTTPS→HTTP scheme downgrades. If you bring your own `*http.Client` via `jwkfetch.WithHTTPClient(...)`, wrap it with `jwkfetch.WrapHTTPClientDefaults(...)` first to keep those protections. For full SSRF defense (private-IP blocking, DNS rebinding prevention), supply a `*http.Client` whose `Transport.DialContext` validates resolved addresses.
 
-`jwk.Fetch()` does not apply a URL whitelist by default — it uses
-`jwk.InsecureWhitelist{}`, which allows every URL. This keeps the
-zero-config path short for the common case where the URL is a constant
-in your own code or a value loaded from trusted configuration.
+## Whitelist types
 
-**If the URL comes from an untrusted source** — most commonly the `jku`
-header of a JWS handed to you by a peer — you **must** pass a
-`jwk.WithFetchWhitelist()` option that restricts which destinations the
-library will contact. See [Using Whitelists](#using-whitelists) below for
-the concrete whitelist types and an example.
+Pass any implementation of `jwkfetch.Whitelist` to `jwkfetch.WithWhitelist`:
 
-Note that even with a whitelist, the default HTTP client will follow
-redirects and does not inspect the resolved destination IP. For defense
-against redirect-to-private-IP and DNS-rebinding attacks, combine the
-whitelist with a custom `http.Client` (via `jwk.WithHTTPClient`) whose
-`Transport.DialContext` validates addresses.
+- `jwkfetch.InsecureWhitelist{}` — allow every URL (opt-in permissive)
+- `jwkfetch.BlockAllWhitelist{}` — deny every URL (the nil default)
+- `jwkfetch.NewMapWhitelist().Add(url1).Add(url2)` — fixed allow-list
+- `jwkfetch.NewRegexpWhitelist().Add(pattern)` — pattern-based allow-list
+- `jwkfetch.WhitelistFunc(func(string) bool)` — custom predicate
 
-## Using Whitelists
+Whitelist rejections can be detected with `errors.Is(err, jwkfetch.WhitelistError())`.
 
-If you are fetching JWK Sets from a possibly untrusted source such as the URL in the `jku` field of a JWS message,
-you may have to perform some sort of whitelist checking. You can provide a `jwk.Whitelist` object to either
-`jwk.Fetch()` or `(*jwkcache.Cache).Register()` methods to specify the use of a whitelist.
-
-Currently the package provides `jwk.MapWhitelist` and `jwk.RegexpWhitelist` types for simpler cases,
-as well as `jwk.InsecureWhitelist` for when you explicitly want to allow all URLs.
-If you would like to implement something more complex, you can provide a function via `jwk.WhitelistFunc` or implement your own type of `jwk.Whitelist`.
-
-<!-- INCLUDE(examples/jwk_whitelist_example_test.go) -->
-```go
-package examples_test
-
-import (
-  "context"
-  "encoding/json"
-  "fmt"
-  "net/http"
-  "net/http/httptest"
-  "os"
-  "regexp"
-
-  "github.com/lestrrat-go/jwx/v4/jwk"
-)
-
-func Example_jwk_whitelist() {
-  srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-    w.WriteHeader(http.StatusOK)
-    fmt.Fprintf(w, `{
-  		"keys": [
-        {"kty":"EC",
-         "crv":"P-256",
-         "x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4",
-         "y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM",
-         "use":"enc",
-         "kid":"1"},
-        {"kty":"RSA",
-         "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
-         "e":"AQAB",
-         "alg":"RS256",
-         "kid":"2011-04-29"}
-      ]
-    }`)
-  }))
-  defer srv.Close()
-
-  testcases := []struct {
-    Whitelist jwk.Whitelist
-    Error     bool
-  }{
-    // The first two whitelists are meant to prevent access to any other
-    // URLs other than www.google.com
-    {
-      Whitelist: jwk.NewMapWhitelist().Add(`https://www.googleapis.com/oauth2/v3/certs`),
-      Error:     true,
-    },
-    {
-      Whitelist: jwk.NewRegexpWhitelist().Add(regexp.MustCompile(`^https://www\.googleapis\.com/`)),
-      Error:     true,
-    },
-    // This whitelist allows anything
-    {
-      Whitelist: jwk.InsecureWhitelist{},
-    },
-  }
-
-  for _, tc := range testcases {
-    set, err := jwk.Fetch(
-      context.Background(),
-      srv.URL,
-      // This is necessary because httptest.Server is using a custom certificate
-      jwk.WithHTTPClient(srv.Client()),
-      // Pass the whitelist!
-      jwk.WithFetchWhitelist(tc.Whitelist),
-    )
-    if tc.Error {
-      if err == nil {
-        fmt.Printf("expected fetch to fail, but got no error\n")
-        return
-      }
-    } else {
-      if err != nil {
-        fmt.Printf("failed to fetch JWKS: %s\n", err)
-        return
-      }
-      json.NewEncoder(os.Stdout).Encode(set)
-    }
-  }
-
-  // OUTPUT:
-  // {"keys":[{"crv":"P-256","kid":"1","kty":"EC","use":"enc","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM"},{"alg":"RS256","e":"AQAB","kid":"2011-04-29","kty":"RSA","n":"0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"}]}
-}
-```
-source: [examples/jwk_whitelist_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_whitelist_example_test.go)
-<!-- END INCLUDE -->
+See the [`jwkfetch` section of the extensions doc](./10-extensions.md#http-jwk-set-retrieval-jwkfetch) for the full story and the [module README](https://github.com/jwx-go/jwkfetch) for the complete API reference.
 
 # Working with jwk.Key
 
