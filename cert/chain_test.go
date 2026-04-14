@@ -35,8 +35,12 @@ func TestChain(t *testing.T) {
 			Data: certBytes,
 		},
 		{
-			Name: `proper base64 in ASN.1 DER, but with markers`,
-			Data: append(append([]byte("----- BEGIN CERTIFICATE -----\n"), certBytes...), []byte("\n----- END CERTIFICATE -----")...),
+			Name: `PEM block with RFC 7468 markers`,
+			Data: append(append([]byte("-----BEGIN CERTIFICATE-----\n"), certBytes...), []byte("\n-----END CERTIFICATE-----")...),
+		},
+		{
+			Name: `PEM block with trailing newline`,
+			Data: append(append([]byte("-----BEGIN CERTIFICATE-----\n"), certBytes...), []byte("\n-----END CERTIFICATE-----\n")...),
 		},
 	}
 
