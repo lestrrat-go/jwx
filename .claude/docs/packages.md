@@ -41,7 +41,7 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 - Extension: `RegisterCustomField[T]()`, `RegisterCustomDecoder[T]()`, `RegisterKeyParser()`, `RegisterKeyImporter()`, `RegisterKeyExporter()`
 - Error sentinels: `ImportError()`, `ParseError()`, `WhitelistError()`, `ContinueError()`
 - Files: `jwk.go`, `set.go`, `parser.go`, `convert.go`, `fetch.go`, `interface.go`, `errors.go`, `x509.go`, `filter.go`, `rsa.go`, `ecdsa.go`, `okp.go`, `symmetric.go`, `akp.go`, `accessors.go`, `io.go`
-- Sub-packages: `jwk/ecdsa` — elliptic curve registration (`RegisterCurve`, `CurveFromAlgorithm`, `AlgorithmFromCurve`); `jwk/jwkbb` — X.509/PEM encoding building blocks (`EncodeX509`, `DecodeX509`); `jwk/jwkunsafe` — low-level key constructors (`NewKey`, `NewPublicKey`) for extension modules
+- Sub-packages: `jwk/ecdsa` — elliptic curve registration (`RegisterCurve(alg, curve, PointValidator)`, `CurveFromAlgorithm`, `AlgorithmFromCurve`, `ValidatorFromCurve`, `PointValidator` interface, `PointValidatorFunc` adapter); `jwk/jwkbb` — X.509/PEM encoding building blocks (`EncodeX509`, `DecodeX509`); `jwk/jwkunsafe` — low-level key constructors (`NewKey`, `NewPublicKey`) for extension modules
 - Imports: jwa, cert, transform, internal/{base64,json,ecutil}
 
 ## jws/
