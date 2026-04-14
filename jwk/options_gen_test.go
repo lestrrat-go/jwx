@@ -9,11 +9,8 @@ import (
 )
 
 func TestOptionIdent(t *testing.T) {
-	require.Equal(t, "WithFetchWhitelist", identFetchWhitelist{}.String())
-	require.Equal(t, "WithHTTPClient", identHTTPClient{}.String())
 	require.Equal(t, "WithIgnoreParseError", identIgnoreParseError{}.String())
 	require.Equal(t, "withLocalRegistry", identLocalRegistry{}.String())
-	require.Equal(t, "WithMaxFetchBodySize", identMaxFetchBodySize{}.String())
 	require.Equal(t, "WithPEM", identPEM{}.String())
 	require.Equal(t, "WithPEMDecoder", identPEMDecoder{}.String())
 	require.Equal(t, "WithStrictKeyUsage", identStrictKeyUsage{}.String())
