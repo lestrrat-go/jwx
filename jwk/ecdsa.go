@@ -35,6 +35,10 @@ func (k *ecdsaPublicKey) Import(rawKey *ecdsa.PublicKey) error {
 		return fmt.Errorf(`invalid ecdsa.PublicKey`)
 	}
 
+	if err := validateECDSAPoint(rawKey.Curve, rawKey.X, rawKey.Y); err != nil {
+		return fmt.Errorf(`jwk: %w`, err)
+	}
+
 	xbuf := ecutil.AllocECPointBuffer(rawKey.X, rawKey.Curve)
 	ybuf := ecutil.AllocECPointBuffer(rawKey.Y, rawKey.Curve)
 	defer ecutil.ReleaseECPointBuffer(xbuf)
@@ -66,6 +70,10 @@ func (k *ecdsaPrivateKey) Import(rawKey *ecdsa.PrivateKey) error {
 	}
 	if rawKey.D == nil {
 		return fmt.Errorf(`invalid ecdsa.PrivateKey`)
+	}
+
+	if err := validateECDSAPoint(rawKey.Curve, rawKey.PublicKey.X, rawKey.PublicKey.Y); err != nil {
+		return fmt.Errorf(`jwk: %w`, err)
 	}
 
 	xbuf := ecutil.AllocECPointBuffer(rawKey.PublicKey.X, rawKey.Curve)
@@ -101,7 +109,105 @@ func buildECDSAPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ec
 	x.SetBytes(xbuf)
 	y.SetBytes(ybuf)
 
+	if err := validateECDSAPoint(crv, &x, &y); err != nil {
+		return nil, fmt.Errorf(`jwk: %w`, err)
+	}
+
 	return &ecdsa.PublicKey{Curve: crv, X: &x, Y: &y}, nil
+}
+
+// validateECDSAPoint rejects ECDSA public key coordinates that are not
+// safe to use: the identity point (0, 0) and any point that does not lie
+// on the named curve. Without these checks, attacker-supplied JWKs can
+// smuggle off-curve or small-subgroup points into downstream ECDSA/ECDH
+// operations (invalid-curve attacks). See JWK-003.
+//
+// The implementation is split into two branches for a reason:
+//
+// 1. For the NIST P-256/P-384/P-521 curves we route through crypto/ecdh.
+//    Go 1.21 deprecated most of crypto/elliptic's Curve methods — not
+//    because point-on-curve validation stopped being necessary, but
+//    because the generic big.Int implementation in crypto/elliptic had
+//    subtle edge cases and the Go team wanted users off it. The blessed
+//    replacement for "parse and validate an uncompressed point" on
+//    stdlib curves is ecdh.Curve.NewPublicKey, which enforces on-curve
+//    membership and rejects the identity as part of parsing the SEC1
+//    0x04 || X || Y encoding. Using ecdh here means we're using exactly
+//    the Go team's recommended replacement, and the deprecated stdlib
+//    elliptic methods are never reached for any NIST-curve input.
+//
+// 2. For any other curve registered through jwk/ecdsa.RegisterCurve
+//    (most importantly secp256k1 via the ES256K extension module),
+//    crypto/ecdh has no entry point — it only supports the four curves
+//    listed above. The only mechanism available for validating a point
+//    on a custom curve is the elliptic.Curve interface's IsOnCurve
+//    method. Calling it here is correct despite the staticcheck
+//    deprecation notice, for three reasons:
+//
+//    a. The deprecation targets the *stdlib* elliptic.Curve
+//       implementations (elliptic.P256() etc.). Custom curves such as
+//       btcec/secp256k1 ship their own IsOnCurve implementation; the
+//       interface dispatch lands in that implementation, not in the
+//       deprecated stdlib one. staticcheck cannot see through interface
+//       dispatch, so the lint scope is suppressed on just this line.
+//
+//    b. The elliptic.Curve interface itself remains part of Go's
+//       supported API because crypto/ecdsa.Verify and
+//       crypto/ecdsa.Sign continue to take elliptic.Curve-backed keys.
+//       Any third-party curve that plugs into crypto/ecdsa is
+//       contractually required to implement a working IsOnCurve; that
+//       is the only thing crypto/ecdsa has to validate the public point
+//       before verification. Calling it from here is the same contract.
+//
+//    c. The remaining alternatives are worse: (i) refusing to validate
+//       non-stdlib curves at all reintroduces JWK-003 for ES256K users;
+//       (ii) refusing to *support* non-stdlib curves is a regression
+//       for ES256K users. A cleaner long-term fix is to extend
+//       jwk/ecdsa.RegisterCurve so extension modules can register a
+//       validator function alongside the curve, letting us drop the
+//       IsOnCurve call entirely. That is a deliberate follow-up, not a
+//       blocker for this security fix.
+func validateECDSAPoint(crv elliptic.Curve, x, y *big.Int) error {
+	if x.Sign() == 0 && y.Sign() == 0 {
+		return fmt.Errorf(`invalid ECDSA public key: identity point is not a valid public key`)
+	}
+
+	if ecdhCrv, ok := stdlibECDHCurve(crv); ok {
+		size := (crv.Params().BitSize + 7) / 8
+		buf := make([]byte, 1+2*size)
+		buf[0] = 0x04
+		x.FillBytes(buf[1 : 1+size])
+		y.FillBytes(buf[1+size:])
+		if _, err := ecdhCrv.NewPublicKey(buf); err != nil {
+			return fmt.Errorf(`invalid ECDSA public key: %w`, err)
+		}
+		return nil
+	}
+
+	// Custom-curve fallback. See the block comment on validateECDSAPoint
+	// for the full justification of calling a deprecated-marked method;
+	// the short version is that interface dispatch lands in the custom
+	// curve's own IsOnCurve, not in deprecated stdlib code.
+	if !crv.IsOnCurve(x, y) { //nolint:staticcheck // see validateECDSAPoint godoc: only path that validates custom curves
+		return fmt.Errorf(`invalid ECDSA public key: point is not on curve %q`, crv.Params().Name)
+	}
+	return nil
+}
+
+// stdlibECDHCurve maps a crypto/elliptic curve to its crypto/ecdh
+// counterpart when one exists. Only the NIST P-curves supported by both
+// packages are mapped; everything else returns ok=false and falls back
+// to the elliptic.Curve path in validateECDSAPoint.
+func stdlibECDHCurve(crv elliptic.Curve) (ecdh.Curve, bool) {
+	switch crv {
+	case elliptic.P256():
+		return ecdh.P256(), true
+	case elliptic.P384():
+		return ecdh.P384(), true
+	case elliptic.P521():
+		return ecdh.P521(), true
+	}
+	return nil, false
 }
 
 func buildECDHPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ecdh.PublicKey, error) {
@@ -408,12 +514,21 @@ func ecdsaValidateKey(k interface {
 	}
 
 	keySize := ecutil.CalculateKeySize(crv)
-	if x, ok := k.X(); !ok || len(x) != keySize {
-		return fmt.Errorf(`invalid "x" length (%d) for curve %q`, len(x), crv.Params().Name)
+	xbuf, ok := k.X()
+	if !ok || len(xbuf) != keySize {
+		return fmt.Errorf(`invalid "x" length (%d) for curve %q`, len(xbuf), crv.Params().Name)
 	}
 
-	if y, ok := k.Y(); !ok || len(y) != keySize {
-		return fmt.Errorf(`invalid "y" length (%d) for curve %q`, len(y), crv.Params().Name)
+	ybuf, ok := k.Y()
+	if !ok || len(ybuf) != keySize {
+		return fmt.Errorf(`invalid "y" length (%d) for curve %q`, len(ybuf), crv.Params().Name)
+	}
+
+	var x, y big.Int
+	x.SetBytes(xbuf)
+	y.SetBytes(ybuf)
+	if err := validateECDSAPoint(crv, &x, &y); err != nil {
+		return err
 	}
 
 	if checkPrivate {

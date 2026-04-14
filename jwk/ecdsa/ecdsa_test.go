@@ -44,7 +44,7 @@ func TestConcurrentRegisterAndLookup(_ *testing.T) {
 	}
 
 	for i := range writerEntries {
-		alg := jwa.NewEllipticCurveAlgorithm(fmt.Sprintf("xcut006-test-%d", i))
+		alg := jwa.NewEllipticCurveAlgorithm(fmt.Sprintf("concurrent-register-test-%d", i))
 		RegisterCurve(alg, elliptic.P256())
 	}
 
