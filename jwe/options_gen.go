@@ -78,6 +78,21 @@ func (*globalDecryptOption) globalOption() {}
 
 func (*globalDecryptOption) decryptOption() {}
 
+// GlobalEncryptOption describes options that changes global settings and for each call of the `jwe.Encrypt` function
+type GlobalEncryptOption interface {
+	Option
+	globalOption()
+	encryptOption()
+}
+
+type globalEncryptOption struct {
+	Option
+}
+
+func (*globalEncryptOption) globalOption() {}
+
+func (*globalEncryptOption) encryptOption() {}
+
 // GlobalOption describes options that changes global settings for this package
 type GlobalOption interface {
 	Option
@@ -172,6 +187,7 @@ type identMaxRecipients struct{}
 type identMergeProtectedHeaders struct{}
 type identMessage struct{}
 type identMinPBES2Count struct{}
+type identPBES2Count struct{}
 type identPerRecipientHeaders struct{}
 type identPretty struct{}
 type identProtectedHeaders struct{}
@@ -248,6 +264,10 @@ func (identMessage) String() string {
 
 func (identMinPBES2Count) String() string {
 	return "WithMinPBES2Count"
+}
+
+func (identPBES2Count) String() string {
+	return "WithPBES2Count"
 }
 
 func (identPerRecipientHeaders) String() string {
@@ -471,6 +491,23 @@ func WithMessage(v *Message) DecryptOption {
 // specific call.
 func WithMinPBES2Count(v int) GlobalDecryptOption {
 	return &globalDecryptOption{option.New(identMinPBES2Count{}, v)}
+}
+
+// WithPBES2Count specifies the number of PBKDF2 iterations to use when
+// encrypting a key with the PBES2 family of algorithms. If not specified,
+// the default value of 10,000 is used.
+//
+// Modern guidance (OWASP 2023) recommends 600,000 or more for
+// PBKDF2-HMAC-SHA256. Callers handling long-lived or high-value tokens
+// should raise this value. Note that raising the encrypt-side count above
+// the decrypt-side WithMaxPBES2Count (default 10,000) will cause your own
+// messages to be rejected on decrypt until you also raise the max.
+//
+// This option can be used for `jwe.Settings()`, which changes the behavior
+// globally, or for `jwe.Encrypt()`, which changes the behavior for that
+// specific call.
+func WithPBES2Count(v int) GlobalEncryptOption {
+	return &globalEncryptOption{option.New(identPBES2Count{}, v)}
 }
 
 // WithPretty specifies whether the JSON output should be formatted and
