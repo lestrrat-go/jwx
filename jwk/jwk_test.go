@@ -1149,6 +1149,7 @@ func TestECDSA(t *testing.T) {
 }
 
 func TestSymmetric(t *testing.T) {
+	t.Parallel()
 	t.Run("Key", func(t *testing.T) {
 		VerifyKey(t, map[string]keyDef{
 			jwk.KeyTypeKey: {
@@ -1160,6 +1161,24 @@ func TestSymmetric(t *testing.T) {
 				Value:  "aGVsbG8K",
 			}),
 		})
+	})
+	t.Run("ImportCopiesCallerSlice", func(t *testing.T) {
+		t.Parallel()
+		buf := []byte("super-secret-hmac-key")
+		want := append([]byte(nil), buf...)
+
+		key, err := jwk.Import(buf)
+		require.NoError(t, err)
+
+		for i := range buf {
+			buf[i] = 0
+		}
+
+		sym, ok := key.(jwk.SymmetricKey)
+		require.True(t, ok)
+		got, ok := sym.Octets()
+		require.True(t, ok)
+		require.Equal(t, want, got, "JWK octets must not alias caller slice")
 	})
 }
 
