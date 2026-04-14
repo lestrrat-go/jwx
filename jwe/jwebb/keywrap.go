@@ -25,15 +25,11 @@ func Wrap(kek cipher.Block, cek []byte) ([]byte, error) {
 		copy(r[i], cek[i*tokens.KeywrapChunkLen:])
 	}
 
-	buffer := pool.ByteSlice().GetCapacity(tokens.KeywrapChunkLen * 2)
+	buffer := pool.ByteSlice().GetCapacity(tokens.KeywrapChunkLen * 2)[:tokens.KeywrapChunkLen*2]
 	defer pool.ByteSlice().Put(buffer)
-	// the byte slice has the capacity, but len is 0
-	buffer = buffer[:tokens.KeywrapChunkLen*2]
 
-	tBytes := pool.ByteSlice().GetCapacity(tokens.KeywrapChunkLen)
+	tBytes := pool.ByteSlice().GetCapacity(tokens.KeywrapChunkLen)[:tokens.KeywrapChunkLen]
 	defer pool.ByteSlice().Put(tBytes)
-	// the byte slice has the capacity, but len is 0
-	tBytes = tBytes[:tokens.KeywrapChunkLen]
 
 	copy(buffer, keywrapDefaultIV)
 
@@ -72,15 +68,11 @@ func Unwrap(block cipher.Block, ciphertxt []byte) ([]byte, error) {
 		copy(r[i], ciphertxt[(i+1)*tokens.KeywrapChunkLen:])
 	}
 
-	buffer := pool.ByteSlice().GetCapacity(tokens.KeywrapChunkLen * 2)
+	buffer := pool.ByteSlice().GetCapacity(tokens.KeywrapChunkLen * 2)[:tokens.KeywrapChunkLen*2]
 	defer pool.ByteSlice().Put(buffer)
-	// the byte slice has the capacity, but len is 0
-	buffer = buffer[:tokens.KeywrapChunkLen*2]
 
-	tBytes := pool.ByteSlice().GetCapacity(tokens.KeywrapChunkLen)
+	tBytes := pool.ByteSlice().GetCapacity(tokens.KeywrapChunkLen)[:tokens.KeywrapChunkLen]
 	defer pool.ByteSlice().Put(tBytes)
-	// the byte slice has the capacity, but len is 0
-	tBytes = tBytes[:tokens.KeywrapChunkLen]
 
 	copy(buffer[:tokens.KeywrapChunkLen], ciphertxt[:tokens.KeywrapChunkLen])
 
