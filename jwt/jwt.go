@@ -15,6 +15,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jws"
 	jwterrs "github.com/lestrrat-go/jwx/v3/jwt/internal/errors"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
@@ -512,8 +513,19 @@ func Sign(t Token, options ...SignOption) ([]byte, error) {
 
 			// Check if option contains anything other than alg/key
 			if len(wk.options) == 0 {
-				// yay, we have something we can put in the FAST PATH!
-				return signFast(t, alg, wk.key)
+				// If the key carries a kid that would require JSON escaping,
+				// skip the fast path (which concatenates kid raw into the
+				// protected header) and fall through to jws.Sign.
+				fastSafe := true
+				if jwkKey, ok := wk.key.(jwk.Key); ok {
+					if v, ok := jwkKey.KeyID(); ok && !fastPathKidSafe(v) {
+						fastSafe = false
+					}
+				}
+				if fastSafe {
+					// yay, we have something we can put in the FAST PATH!
+					return signFast(t, alg, wk.key)
+				}
 			}
 			// fallthrough
 		}
