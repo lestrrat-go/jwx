@@ -422,7 +422,7 @@ func validateCritical(protected Headers, allowedExtensions []string) error {
 func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 	msg, err := parseJSONOrCompact(buf, true, dc.maxRecipients)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to parse buffer for Decrypt: %w`, err)
+		return nil, fmt.Errorf(`jwe.Decrypt: failed to parse buffer: %w`, err)
 	}
 
 	// Validate the "crit" header per RFC 7516 Section 4.1.13. The check
@@ -435,14 +435,16 @@ func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 		}
 	}
 
-	// Process things that are common to the message
+	// Process things that are common to the message. We deliberately do
+	// NOT merge msg.unprotectedHeaders into h: per RFC 7516 §5.3 only the
+	// protected header is integrity-checked, so algorithm parameters
+	// (alg, enc, epk, p2s, p2c, iv, tag, …) must come from the protected
+	// and per-recipient headers only. Merging unprotected headers here
+	// would let an attacker contribute or override parameters that the
+	// AEAD tag never covered.
 	h, err := msg.protectedHeaders.Clone()
 	if err != nil {
-		return nil, fmt.Errorf(`failed to copy protected headers: %w`, err)
-	}
-	h, err = h.Merge(msg.unprotectedHeaders)
-	if err != nil {
-		return nil, fmt.Errorf(`failed to merge headers for message decryption: %w`, err)
+		return nil, fmt.Errorf(`jwe.Decrypt: failed to copy protected headers: %w`, err)
 	}
 
 	var aad []byte
@@ -458,7 +460,7 @@ func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 		var err error
 		computedAad, err = msg.protectedHeaders.Encode()
 		if err != nil {
-			return nil, fmt.Errorf(`failed to encode protected headers: %w`, err)
+			return nil, fmt.Errorf(`jwe.Decrypt: failed to encode protected headers: %w`, err)
 		}
 	}
 
@@ -468,7 +470,7 @@ func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 	if len(recipients) == 0 {
 		r := NewRecipient()
 		if err := r.SetHeaders(msg.protectedHeaders); err != nil {
-			return nil, fmt.Errorf(`failed to set headers to recipient: %w`, err)
+			return nil, fmt.Errorf(`jwe.Decrypt: failed to set headers to recipient: %w`, err)
 		}
 		recipients = append(recipients, r)
 	}
@@ -487,7 +489,7 @@ func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 		}
 		return decrypted, nil
 	}
-	return nil, fmt.Errorf(`failed to decrypt any of the recipients: %w`, errors.Join(errs...))
+	return nil, fmt.Errorf(`jwe.Decrypt: failed to decrypt any of the recipients: %w`, errors.Join(errs...))
 }
 
 func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
