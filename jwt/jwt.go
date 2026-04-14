@@ -16,6 +16,7 @@ import (
 	"github.com/lestrrat-go/jwx/v4"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/lestrrat-go/jwx/v4/jws"
 	"github.com/lestrrat-go/jwx/v4/jwt/internal/types"
 	"github.com/lestrrat-go/option/v3"
@@ -148,27 +149,17 @@ func Parse(s []byte, options ...ParseOption) (Token, error) {
 //
 // You cannot override `jwt.WithVerify()` or `jwt.WithValidate()`
 // using this function. Providing these options would result in
-// an error.
-//
-// Key-related options (`jwt.WithKey`, `jwt.WithKeySet`,
-// `jwt.WithKeyProvider`, `jwt.WithVerifyAuto`) are silently ignored,
-// so callers may reuse an option slice across `Parse` and
-// `ParseInsecure` call sites without worrying about leaking a stray
-// verification step.
+// an error
 func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
-	filtered := make([]ParseOption, 0, len(options)+2)
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identVerify{}, identValidate{}:
 			return nil, parseErrorf(`jwt.ParseInsecure`, `jwt.WithVerify() and jwt.WithValidate() may not be specified`)
-		case identKey{}, identKeySet{}, identKeyProvider{}, identVerifyAuto{}:
-			continue
 		}
-		filtered = append(filtered, opt)
 	}
 
-	filtered = append(filtered, WithVerify(false), WithValidate(false))
-	tok, err := Parse(s, filtered...)
+	options = append(options, WithVerify(false), WithValidate(false))
+	tok, err := Parse(s, options...)
 	if err != nil {
 		return nil, parseErrorf(`jwt.ParseInsecure`, `failed to parse token: %w`, err)
 	}
@@ -503,8 +494,19 @@ func Sign(t Token, options ...SignOption) ([]byte, error) {
 
 		// Check if option contains anything other than alg/key
 		if len(wk.options) == 0 {
-			// yay, we have something we can put in the FAST PATH!
-			return signFast(t, alg, wk.key)
+			// If the key carries a kid that would require JSON escaping,
+			// skip the fast path (which concatenates kid raw into the
+			// protected header) and fall through to jws.Sign.
+			fastSafe := true
+			if jwkKey, ok := wk.key.(jwk.Key); ok {
+				if v, ok := jwkKey.KeyID(); ok && !fastPathKidSafe(v) {
+					fastSafe = false
+				}
+			}
+			if fastSafe {
+				// yay, we have something we can put in the FAST PATH!
+				return signFast(t, alg, wk.key)
+			}
 		}
 		// fallthrough
 	}
