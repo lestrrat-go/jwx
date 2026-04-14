@@ -261,9 +261,8 @@ func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 	}
 
 	cbc := cipher.NewCBCDecrypter(c.blockCipher, nonce)
-	buf := pool.ByteSlice().GetCapacity(tagOffset)
+	buf := pool.ByteSlice().GetCapacity(tagOffset)[:tagOffset]
 	defer pool.ByteSlice().Put(buf)
-	buf = buf[:tagOffset]
 
 	cbc.CryptBlocks(buf, ciphertext)
 
