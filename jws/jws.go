@@ -320,15 +320,10 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 		}
 		return msg, nil
 	} else if formats&fmtJSON == fmtJSON {
-		msg, err := parseJSON(src)
+		msg, err := parseJSON(src, maxSigs)
 		if err != nil {
 			return nil, makeParseError(`jws.Parse`, `failed to parse JSON format: %w`, err)
 		}
-
-		if maxSigs > 0 && len(msg.signatures) > maxSigs {
-			return nil, makeParseError(`jws.Parse`, `too many signatures in JWS message (%d > %d)`, len(msg.signatures), maxSigs)
-		}
-
 		return msg, nil
 	}
 
@@ -389,8 +384,9 @@ func ParseReader(src io.Reader, options ...ParseOption) (*Message, error) {
 	return Parse(buf, options...)
 }
 
-func parseJSON(data []byte) (result *Message, err error) {
+func parseJSON(data []byte, maxSigs int) (result *Message, err error) {
 	var m Message
+	m.maxSignatures = maxSigs
 	if err := json.Unmarshal(data, &m); err != nil {
 		return nil, fmt.Errorf(`failed to unmarshal jws message: %w`, err)
 	}
