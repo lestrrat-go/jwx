@@ -4,6 +4,7 @@ import (
 	"crypto"
 	"fmt"
 	"reflect"
+	"slices"
 
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/jwa"
@@ -21,7 +22,7 @@ func (k *symmetricKey) Import(rawKey []byte) error {
 		return fmt.Errorf(`non-empty []byte key required`)
 	}
 
-	k.octets = rawKey
+	k.octets = slices.Clone(rawKey)
 
 	return nil
 }
