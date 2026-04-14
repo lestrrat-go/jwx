@@ -13,6 +13,9 @@ import (
 var keywrapDefaultIV = []byte{0xa6, 0xa6, 0xa6, 0xa6, 0xa6, 0xa6, 0xa6, 0xa6}
 
 func Wrap(kek cipher.Block, cek []byte) ([]byte, error) {
+	if len(cek) < tokens.KeywrapChunkLen {
+		return nil, fmt.Errorf(`keywrap input must be at least %d bytes`, tokens.KeywrapChunkLen)
+	}
 	if len(cek)%tokens.KeywrapBlockSize != 0 {
 		return nil, fmt.Errorf(`keywrap input must be %d byte blocks`, tokens.KeywrapBlockSize)
 	}
@@ -60,6 +63,9 @@ func Wrap(kek cipher.Block, cek []byte) ([]byte, error) {
 }
 
 func Unwrap(block cipher.Block, ciphertxt []byte) ([]byte, error) {
+	if len(ciphertxt) < 2*tokens.KeywrapChunkLen {
+		return nil, fmt.Errorf(`keyunwrap input must be at least %d bytes`, 2*tokens.KeywrapChunkLen)
+	}
 	if len(ciphertxt)%tokens.KeywrapChunkLen != 0 {
 		return nil, fmt.Errorf(`keyunwrap input must be %d byte blocks`, tokens.KeywrapChunkLen)
 	}
