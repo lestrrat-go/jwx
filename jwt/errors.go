@@ -292,14 +292,23 @@ func missingRequiredClaimErrorf(name string) error {
 
 // ClaimValidationError is returned when a generic claim validator
 // (ClaimValueIs, ClaimContainsString) detects a mismatch.
+//
+// The Error() message intentionally omits the Expected and Actual
+// values so that arbitrary claim payloads do not end up in log output
+// via "%v"/"%s" formatting. Callers that need to inspect the mismatched
+// values can access the fields directly, but should treat them as
+// potentially sensitive (PII, secrets, etc.) and avoid logging them
+// verbatim.
 type ClaimValidationError struct {
 	error
 
 	// Claim is the name of the claim that failed validation.
 	Claim string
-	// Expected is the value the validator expected.
+	// Expected is the value the validator expected. May contain
+	// sensitive data; see the type-level godoc.
 	Expected any
-	// Actual is the value found in the token.
+	// Actual is the value found in the token. May contain sensitive
+	// data (PII, secrets, etc.); see the type-level godoc.
 	Actual any
 }
 

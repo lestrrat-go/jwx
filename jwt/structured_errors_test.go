@@ -2,6 +2,7 @@ package jwt_test
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -93,6 +94,14 @@ func TestStructuredErrors(t *testing.T) {
 		require.Equal(t, jwt.SubjectKey, claimErr.Claim)
 		require.Equal(t, "expected-subject", claimErr.Expected)
 		require.Equal(t, "actual-subject", claimErr.Actual)
+
+		// Error() message must not leak claim values via fmt verbs.
+		// See ClaimValidationError godoc.
+		for _, verb := range []string{"%s", "%v", "%+v"} {
+			msg := fmt.Sprintf(verb, err)
+			require.NotContains(t, msg, "expected-subject", verb)
+			require.NotContains(t, msg, "actual-subject", verb)
+		}
 	})
 
 	t.Run("ClaimValidationError from ClaimContainsString", func(t *testing.T) {
@@ -113,6 +122,12 @@ func TestStructuredErrors(t *testing.T) {
 		require.Equal(t, "groups", claimErr.Claim)
 		require.Equal(t, "superadmin", claimErr.Expected)
 		require.Equal(t, []string{"admin", "user"}, claimErr.Actual)
+
+		for _, verb := range []string{"%s", "%v", "%+v"} {
+			msg := fmt.Sprintf(verb, err)
+			require.NotContains(t, msg, "superadmin", verb)
+			require.NotContains(t, msg, "admin", verb)
+		}
 	})
 
 	t.Run("issuer/audience still use typed errors not ClaimValidationError", func(t *testing.T) {
