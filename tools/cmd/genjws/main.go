@@ -165,7 +165,7 @@ func generateHeaders(obj *codegen.Object) error {
 			o.L("}")
 			o.L("return *(h.%s), true", f.Name(false))
 		} else {
-			o.L("return h.%s, true", f.Name(false))
+			o.L("return h.%[1]s, h.%[1]s != nil", f.Name(false))
 		}
 		o.L("}") // func (h *stdHeaders) %s() %s
 	}
