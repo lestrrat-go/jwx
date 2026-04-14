@@ -1957,6 +1957,23 @@ func TestMaxSignatures(t *testing.T) {
 		require.NoError(t, err, `jws.Parse should succeed with per-call limit of 10`)
 	})
 
+	t.Run("rejects before decoding entries", func(t *testing.T) {
+		// Build a payload with many tiny signature stubs. If the cap were
+		// enforced only after Message.UnmarshalJSON finished decoding every
+		// entry, this would allocate hundreds of thousands of Headers before
+		// rejection (REV-JWS-20260414T114515Z-002).
+		const n = 200000
+		parts := make([]string, n)
+		for i := range parts {
+			parts[i] = `{"protected":"","signature":""}`
+		}
+		body := []byte(`{"payload":"","signatures":[` + strings.Join(parts, ",") + `]}`)
+
+		_, err := jws.Parse(body, jws.WithMaxSignatures(16))
+		require.Error(t, err, `jws.Parse should reject oversized signatures array`)
+		require.Contains(t, err.Error(), `too many signatures`)
+	})
+
 	t.Run("verify inherits limit", func(t *testing.T) {
 		jws.Settings(jws.WithMaxSignatures(5))
 		defer jws.Settings(jws.WithMaxSignatures(100))
