@@ -14,53 +14,28 @@ import (
 func TestHeaders_NilAccessorsReportNotPresent(t *testing.T) {
 	t.Parallel()
 
-	h := jws.NewHeaders()
+	testcases := []struct {
+		name string
+		get  func(jws.Headers) (any, bool)
+	}{
+		{"Algorithm", func(h jws.Headers) (any, bool) { v, ok := h.Algorithm(); return v, ok }},
+		{"ContentType", func(h jws.Headers) (any, bool) { v, ok := h.ContentType(); return v, ok }},
+		{"Critical", func(h jws.Headers) (any, bool) { v, ok := h.Critical(); return v, ok }},
+		{"JWK", func(h jws.Headers) (any, bool) { v, ok := h.JWK(); return v, ok }},
+		{"JWKSetURL", func(h jws.Headers) (any, bool) { v, ok := h.JWKSetURL(); return v, ok }},
+		{"KeyID", func(h jws.Headers) (any, bool) { v, ok := h.KeyID(); return v, ok }},
+		{"Type", func(h jws.Headers) (any, bool) { v, ok := h.Type(); return v, ok }},
+		{"X509CertChain", func(h jws.Headers) (any, bool) { v, ok := h.X509CertChain(); return v, ok }},
+		{"X509CertThumbprint", func(h jws.Headers) (any, bool) { v, ok := h.X509CertThumbprint(); return v, ok }},
+		{"X509CertThumbprintS256", func(h jws.Headers) (any, bool) { v, ok := h.X509CertThumbprintS256(); return v, ok }},
+		{"X509URL", func(h jws.Headers) (any, bool) { v, ok := h.X509URL(); return v, ok }},
+	}
 
-	t.Run("Algorithm", func(t *testing.T) {
-		_, ok := h.Algorithm()
-		require.False(t, ok)
-	})
-	t.Run("ContentType", func(t *testing.T) {
-		_, ok := h.ContentType()
-		require.False(t, ok)
-	})
-	t.Run("Critical", func(t *testing.T) {
-		v, ok := h.Critical()
-		require.False(t, ok)
-		require.Nil(t, v)
-	})
-	t.Run("JWK", func(t *testing.T) {
-		v, ok := h.JWK()
-		require.False(t, ok)
-		require.Nil(t, v)
-	})
-	t.Run("JWKSetURL", func(t *testing.T) {
-		_, ok := h.JWKSetURL()
-		require.False(t, ok)
-	})
-	t.Run("KeyID", func(t *testing.T) {
-		_, ok := h.KeyID()
-		require.False(t, ok)
-	})
-	t.Run("Type", func(t *testing.T) {
-		_, ok := h.Type()
-		require.False(t, ok)
-	})
-	t.Run("X509CertChain", func(t *testing.T) {
-		v, ok := h.X509CertChain()
-		require.False(t, ok)
-		require.Nil(t, v)
-	})
-	t.Run("X509CertThumbprint", func(t *testing.T) {
-		_, ok := h.X509CertThumbprint()
-		require.False(t, ok)
-	})
-	t.Run("X509CertThumbprintS256", func(t *testing.T) {
-		_, ok := h.X509CertThumbprintS256()
-		require.False(t, ok)
-	})
-	t.Run("X509URL", func(t *testing.T) {
-		_, ok := h.X509URL()
-		require.False(t, ok)
-	})
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, ok := tc.get(jws.NewHeaders())
+			require.False(t, ok)
+		})
+	}
 }
