@@ -291,6 +291,19 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		return fmt.Errorf(`failed to unmarshal into temporary structure: %w`, err)
 	}
 
+	// Enforce the signature cap before we decode any signature entry.
+	// The probe above leaves mup.Signatures as []json.RawMessage, so no
+	// headers/base64 work has happened yet. Doing the check here prevents
+	// a large signatures array from allocating O(input) work before Parse
+	// gets a chance to reject it.
+	maxSigs := m.maxSignatures
+	if maxSigs == 0 {
+		maxSigs = int(maxSignatures.Load())
+	}
+	if maxSigs > 0 && len(mup.Signatures) > maxSigs {
+		return fmt.Errorf(`too many signatures in JWS message (%d > %d)`, len(mup.Signatures), maxSigs)
+	}
+
 	b64 := true
 	if mup.Signature == nil { // flattened signature is NOT present
 		if len(mup.Signatures) == 0 {
