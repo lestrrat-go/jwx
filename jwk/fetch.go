@@ -168,6 +168,22 @@ func (f *CachedFetcher) Fetch(ctx context.Context, u string, _ ...FetchOption) (
 // contents of the object with the data at the remote resource,
 // consider using `jwk.Cache`, which automatically refreshes
 // jwk.Set objects asynchronously.
+//
+// # Security
+//
+// By default, jwk.Fetch does not restrict which URLs may be contacted: the
+// URL you pass is fetched as-is, with only the default HTTP client's
+// HTTPS-to-HTTP redirect block applied. This is the right default when the
+// URL is hard-coded or comes from configuration you control.
+//
+// It is NOT safe when the URL is attacker-controllable — most commonly a
+// `jku` header copied out of an untrusted JWS. In that case you MUST pass
+// a jwk.WithFetchWhitelist() option that restricts the reachable URLs via
+// jwk.MapWhitelist, jwk.RegexpWhitelist, or a custom Whitelist.
+//
+// For defense against redirect-to-private-IP and DNS-rebinding attacks,
+// combine WithFetchWhitelist with a custom http.Client (see WithHTTPClient)
+// whose Transport.DialContext validates resolved addresses.
 func Fetch(ctx context.Context, u string, options ...FetchOption) (Set, error) {
 	var parseOptions []ParseOption
 	//nolint:revive // I want to keep the type of `wl` as `Whitelist` instead of `InsecureWhitelist`
