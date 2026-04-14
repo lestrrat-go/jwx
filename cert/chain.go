@@ -2,7 +2,9 @@ package cert
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v4/internal/tokens"
@@ -62,19 +64,20 @@ func (cc *Chain) Len() int {
 	return len(cc.certificates)
 }
 
-var pemStart = []byte("----- BEGIN CERTIFICATE -----")
-var pemEnd = []byte("----- END CERTIFICATE -----")
-
 func (cc *Chain) AddString(der string) error {
 	return cc.Add([]byte(der))
 }
 
 func (cc *Chain) Add(der []byte) error {
-	// We're going to be nice and remove marker lines if they
-	// give it to us
-	der = bytes.TrimPrefix(der, pemStart)
-	der = bytes.TrimSuffix(der, pemEnd)
 	der = bytes.TrimSpace(der)
+	// Accept a PEM-encoded CERTIFICATE block and convert it to the
+	// base64(DER) form that x5c requires.
+	if block, _ := pem.Decode(der); block != nil && block.Type == "CERTIFICATE" {
+		encoded := make([]byte, base64.StdEncoding.EncodedLen(len(block.Bytes)))
+		base64.StdEncoding.Encode(encoded, block.Bytes)
+		cc.certificates = append(cc.certificates, encoded)
+		return nil
+	}
 	cc.certificates = append(cc.certificates, der)
 	return nil
 }
