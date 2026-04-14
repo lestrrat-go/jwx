@@ -63,6 +63,59 @@ func TestRFC3394_Wrap(t *testing.T) {
 	}
 }
 
+// TestWrapRejectsShortInput pins RFC 3394 §2.2.1 — the plaintext must be
+// at least one 64-bit data block. Without this guard Wrap silently returns
+// an 8-byte buffer containing only the default IV for a zero-length CEK.
+func TestWrapRejectsShortInput(t *testing.T) {
+	kek := mustHexDecode("000102030405060708090A0B0C0D0E0F")
+	block, err := aes.NewCipher(kek)
+	require.NoError(t, err, "NewCipher should succeed")
+
+	testcases := []struct {
+		name string
+		cek  []byte
+	}{
+		{"nil", nil},
+		{"empty", []byte{}},
+		{"seven bytes", make([]byte, 7)},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := jwebb.Wrap(block, tc.cek)
+			require.Error(t, err, `jwebb.Wrap must reject sub-minimum input`)
+		})
+	}
+}
+
+// TestUnwrapRejectsShortInput pins RFC 3394 §2.2.2 — ciphertext is IV plus
+// at least one 64-bit data block (≥ 16 bytes). Without this guard Unwrap
+// panics on empty input (negative make length) and silently returns []byte{}
+// when given the 8-byte default IV alone, because the decrypt loop is
+// skipped and the IV check trivially passes.
+func TestUnwrapRejectsShortInput(t *testing.T) {
+	kek := mustHexDecode("000102030405060708090A0B0C0D0E0F")
+	block, err := aes.NewCipher(kek)
+	require.NoError(t, err, "NewCipher should succeed")
+
+	testcases := []struct {
+		name string
+		ct   []byte
+	}{
+		{"nil", nil},
+		{"empty", []byte{}},
+		{"default IV alone", []byte{0xa6, 0xa6, 0xa6, 0xa6, 0xa6, 0xa6, 0xa6, 0xa6}},
+		{"fifteen bytes", make([]byte, 15)},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.NotPanics(t, func() {
+				_, err := jwebb.Unwrap(block, tc.ct)
+				require.Error(t, err, `jwebb.Unwrap must reject sub-minimum input`)
+			})
+		})
+	}
+}
+
 func TestKeyWrap(t *testing.T) {
 	// Test vectors from: http://csrc.nist.gov/groups/ST/toolkit/documents/kms/key-wrap.pdf
 	for i, v := range rfc3394Vectors {
