@@ -610,6 +610,25 @@ func TestEncode(t *testing.T) {
 			})
 		}
 	})
+	t.Run("SplitCompactReaderNonFiniteSizeCap", func(t *testing.T) {
+		t.Parallel()
+		_, _, _, err := jwsbb.SplitCompactReader(&endlessReader{b: 'X'})
+		require.Error(t, err, "SplitCompactReader should fail on oversized non-finite input")
+		require.ErrorIs(t, err, jwsbb.InputTooLargeError(), "error should be InputTooLargeError")
+	})
+}
+
+// endlessReader is a non-finite io.Reader that fills buf with b indefinitely
+// and never returns EOF. It is intentionally not a
+// *bytes.Reader/*bytes.Buffer/*strings.Reader so that
+// jwxio.ReadAllFromFiniteSource classifies it as non-finite.
+type endlessReader struct{ b byte }
+
+func (r *endlessReader) Read(p []byte) (int, error) {
+	for i := range p {
+		p[i] = r.b
+	}
+	return len(p), nil
 }
 
 func TestReadFile(t *testing.T) {
