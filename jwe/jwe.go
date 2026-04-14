@@ -593,10 +593,6 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 		return nil, fmt.Errorf(`jwe.Decrypt: failed to decrypt key: %w`, err)
 	}
 
-	if dc.cek != nil {
-		*dc.cek = cek
-	}
-
 	// Decrypt the payload
 	computedAadFull := computedAad
 	if aad != nil {
@@ -614,6 +610,13 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 			return nil, fmt.Errorf(`jwe.Decrypt: failed to uncompress payload: %w`, err)
 		}
 		plaintext = buf
+	}
+
+	// Expose the CEK only after the content cipher has authenticated it.
+	// Writing earlier would hand the caller an unverified CEK on AEAD
+	// failure (JWE-021).
+	if dc.cek != nil {
+		*dc.cek = cek
 	}
 
 	return plaintext, nil
