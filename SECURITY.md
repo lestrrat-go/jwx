@@ -6,6 +6,7 @@ Most recent two major versions will receive security updates
 
 | Version  | Supported          |
 | -------- | ------------------ |
+| v4.x.x   | :white_check_mark: (preview) |
 | v3.x.x   | :white_check_mark: |
 | v2.x.x   | :white_check_mark: |
 | < v2.0.0 | :x:                |
