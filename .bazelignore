@@ -5,3 +5,4 @@ ext
 internal/jwxcodegen
 tools
 .tmp
+.companions

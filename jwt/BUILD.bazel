@@ -44,8 +44,10 @@ go_test(
     name = "jwt_test",
     srcs = [
         "bench_parse_test.go",
+        "fastpath_test.go",
         "filter_test.go",
         "fuzz_test.go",
+        "jwt_crit_test.go",
         "jwt_test.go",
         "options_gen_test.go",
         "structured_errors_test.go",

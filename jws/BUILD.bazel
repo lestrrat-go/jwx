@@ -45,6 +45,7 @@ go_test(
         "bench_serialize_test.go",
         "filter_test.go",
         "fuzz_test.go",
+        "headers_nil_test.go",
         "headers_test.go",
         "jws_crit_test.go",
         "jws_test.go",

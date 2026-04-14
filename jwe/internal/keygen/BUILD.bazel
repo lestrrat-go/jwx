@@ -8,12 +8,7 @@ go_library(
     ],
     importpath = "github.com/lestrrat-go/jwx/v4/jwe/internal/keygen",
     visibility = ["//:__subpackages__"],
-    deps = [
-        "//internal/ecutil",
-        "//internal/tokens",
-        "//jwe/internal/concatkdf",
-        "//jwk",
-    ],
+    deps = ["//jwk"],
 )
 
 alias(

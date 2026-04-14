@@ -40,11 +40,13 @@ go_test(
     srcs = [
         "decrypt_test.go",
         "ecdh_es_ext_test.go",
+        "export_test.go",
+        "hpke_ext_test.go",
         "jwebb_test.go",
         "keywrap_test.go",
     ],
+    embed = [":jwebb"],
     deps = [
-        ":jwebb",
         "//internal/jwxtest",
         "//internal/tokens",
         "//jwa",
