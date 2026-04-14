@@ -998,6 +998,57 @@ func TestPBES2CountEncrypt(t *testing.T) {
 	})
 }
 
+// TestCEKNotExposedOnFailure pins the invariant that jwe.WithCEK() only
+// writes to the caller's pointer after the content cipher has authenticated
+// the message. Regression test for JWE-021: earlier v4 code wrote the CEK
+// immediately after key unwrap, which leaked an unverified CEK on AEAD
+// failure even though Decrypt returned an error.
+func TestCEKNotExposedOnFailure(t *testing.T) {
+	rawKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)
+
+	payload := []byte(`hello world`)
+	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.RSA_OAEP(), rawKey.PublicKey))
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	t.Run("happy path writes CEK", func(t *testing.T) {
+		var cek []byte
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), rawKey), jwe.WithCEK(&cek))
+		require.NoError(t, err, `jwe.Decrypt should succeed`)
+		require.Equal(t, payload, decrypted)
+		require.Len(t, cek, 32, `A256GCM CEK should be 32 bytes`)
+	})
+
+	t.Run("tampered tag must not populate CEK", func(t *testing.T) {
+		// Compact form: header.enckey.iv.ciphertext.tag
+		// Flip the last byte of the tag segment so that key unwrap still
+		// succeeds but the content AEAD verification fails. Work in raw
+		// base64url text — no need to base64-decode/re-encode.
+		segs := bytes.Split(encrypted, []byte{'.'})
+		require.Len(t, segs, 5, `compact JWE should have 5 segments`)
+		require.NotEmpty(t, segs[4], `tag segment should not be empty`)
+		tagged := make([]byte, len(segs[4]))
+		copy(tagged, segs[4])
+		// Flip the first base64url character of the tag. The first char
+		// encodes high bits of the first tag byte, so the change is
+		// guaranteed to alter the decoded tag (unlike the trailing char,
+		// whose low bits are padding and may be discarded).
+		if tagged[0] == 'A' {
+			tagged[0] = 'B'
+		} else {
+			tagged[0] = 'A'
+		}
+		segs[4] = tagged
+		tampered := bytes.Join(segs, []byte{'.'})
+		require.NotEqual(t, string(encrypted), string(tampered), `tampering should change the bytes`)
+
+		cek := []byte{0xAA, 0xBB, 0xCC} // sentinel — must NOT be overwritten
+		_, err := jwe.Decrypt(tampered, jwe.WithKey(jwa.RSA_OAEP(), rawKey), jwe.WithCEK(&cek))
+		require.Error(t, err, `jwe.Decrypt should fail on tampered tag`)
+		require.Equal(t, []byte{0xAA, 0xBB, 0xCC}, cek, `WithCEK pointer must not be written on decrypt failure (JWE-021)`)
+	})
+}
+
 func TestCBCBufferSize(t *testing.T) {
 	// NOTE: This has GLOBAL EFFECT
 	jwe.Settings(jwe.WithCBCBufferSize(1))
