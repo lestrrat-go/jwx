@@ -13,7 +13,7 @@ import (
 
 // encryptKey dispatches key encryption to the appropriate algorithm-specific
 // function. This is a standalone function to avoid allocating an encrypter struct.
-func encryptKey(cek []byte, keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryptionAlgorithm, key any, apu, apv []byte) (keygen.ByteSource, error) {
+func encryptKey(cek []byte, keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.ContentEncryptionAlgorithm, key any, apu, apv []byte, pbes2Count int) (keygen.ByteSource, error) {
 	algStr := keyalg.String()
 	ctalgStr := ctalg.String()
 
@@ -29,7 +29,7 @@ func encryptKey(cek []byte, keyalg jwa.KeyEncryptionAlgorithm, ctalg jwa.Content
 		if err != nil {
 			return nil, err
 		}
-		return jwebb.KeyEncryptPBES2(cek, algStr, password)
+		return jwebb.KeyEncryptPBES2(cek, algStr, password, pbes2Count)
 	case jwebb.IsAESGCMKW(algStr):
 		sharedkey, err := requireByteKey(key, algStr)
 		if err != nil {
