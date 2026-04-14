@@ -1582,6 +1582,51 @@ func TestGH1007(t *testing.T) {
 	require.NoError(t, err, `jwt.ParseInsecure with jwt.WithKey() should succeed`)
 }
 
+func TestParseInsecureStripsKeyOptions(t *testing.T) {
+	key, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+	tok, err := jwt.NewBuilder().Issuer(`me`).Build()
+	require.NoError(t, err, `jwt.NewBuilder should succeed`)
+
+	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256(), key))
+	require.NoError(t, err, `jwt.Sign should succeed`)
+
+	wrongKey, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+	// WithKeySet: a set that contains no matching key must not cause a
+	// verification error, because ParseInsecure strips the option.
+	wrongSet := jwk.NewSet()
+	require.NoError(t, wrongSet.AddKey(wrongKey), `set.AddKey should succeed`)
+
+	got, err := jwt.ParseInsecure(signed, jwt.WithKeySet(wrongSet))
+	require.NoError(t, err, `jwt.ParseInsecure with jwt.WithKeySet() should succeed`)
+	iss, ok := got.Issuer()
+	require.True(t, ok)
+	require.Equal(t, `me`, iss)
+
+	// WithKeyProvider: a provider that always errors must not be invoked.
+	failProvider := jws.KeyProviderFunc(func(_ context.Context, _ jws.KeySink, _ *jws.Signature, _ *jws.Message) error {
+		return fmt.Errorf(`should not be called`)
+	})
+	got, err = jwt.ParseInsecure(signed, jwt.WithKeyProvider(failProvider))
+	require.NoError(t, err, `jwt.ParseInsecure with jwt.WithKeyProvider() should succeed`)
+	iss, ok = got.Issuer()
+	require.True(t, ok)
+	require.Equal(t, `me`, iss)
+
+	// WithVerifyAuto: a fetcher that always fails must not be invoked.
+	failFetcher := jwk.FetchFunc(func(_ context.Context, _ string, _ ...jwk.FetchOption) (jwk.Set, error) {
+		return nil, fmt.Errorf(`should not be called`)
+	})
+	got, err = jwt.ParseInsecure(signed, jwt.WithVerifyAuto(failFetcher))
+	require.NoError(t, err, `jwt.ParseInsecure with jwt.WithVerifyAuto() should succeed`)
+	iss, ok = got.Issuer()
+	require.True(t, ok)
+	require.Equal(t, `me`, iss)
+}
+
 func TestParseJSON(t *testing.T) {
 	// NOTE: Unlike in v2, there is no setting for CompactOnly
 	privKey, err := jwxtest.GenerateRsaJwk()
