@@ -435,13 +435,14 @@ func WithLegacySigners() GlobalOption {
 	return &globalOption{option.New(identLegacySigners{}, true)}
 }
 
-// WithMaxParseInputSize specifies the maximum number of bytes read from an
-// io.Reader in `jws.ParseReader`. If the input exceeds this size,
-// `jws.ParseReader` will return an error. The default value is 10MB.
+// WithMaxParseInputSize specifies the maximum byte length of input
+// accepted by every `jws.Parse*` entry point (`jws.Parse`,
+// `jws.ParseString`, and `jws.ParseReader`). Inputs exceeding this
+// size are rejected before decoding. The default value is 10MB.
 //
 // This option can be passed to `jws.Settings()` to change the default
-// globally, or to `jws.ParseReader()` / `jws.ReadFile()` for a per-call
-// override.
+// globally, or to any `jws.Parse*` call / `jws.ReadFile()` for a
+// per-call override.
 func WithMaxParseInputSize(v int64) GlobalParseOption {
 	return &globalParseOption{option.New(identMaxParseInputSize{}, v)}
 }
