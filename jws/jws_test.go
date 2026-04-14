@@ -1893,6 +1893,45 @@ func TestMaxParseInputSize(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), `greater than zero`)
 	})
+	t.Run("Parse rejects oversized byte slice (global setting)", func(t *testing.T) {
+		jws.Settings(jws.WithMaxParseInputSize(50))
+		defer jws.Settings(jws.WithMaxParseInputSize(10 * 1024 * 1024))
+
+		_, err := jws.Parse(make([]byte, 100))
+		require.Error(t, err, `jws.Parse should reject oversized input`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("ParseString inherits the cap", func(t *testing.T) {
+		jws.Settings(jws.WithMaxParseInputSize(50))
+		defer jws.Settings(jws.WithMaxParseInputSize(10 * 1024 * 1024))
+
+		_, err := jws.ParseString(strings.Repeat("a", 100))
+		require.Error(t, err, `jws.ParseString should inherit the size cap`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("Parse honors per-call override", func(t *testing.T) {
+		_, err := jws.Parse(make([]byte, 200), jws.WithMaxParseInputSize(100))
+		require.Error(t, err, `jws.Parse should reject input exceeding per-call cap`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("Parse per-call override can raise above global", func(t *testing.T) {
+		jws.Settings(jws.WithMaxParseInputSize(50))
+		defer jws.Settings(jws.WithMaxParseInputSize(10 * 1024 * 1024))
+
+		// Input exceeds the global cap but is within the per-call override;
+		// the size check must pass (payload is still invalid JWS, but the
+		// returned error must not be about the size cap).
+		data := make([]byte, 100)
+		_, err := jws.Parse(data, jws.WithMaxParseInputSize(1024))
+		if err != nil {
+			require.NotContains(t, err.Error(), `exceeded max size`)
+		}
+	})
+	t.Run("Parse negative per-call value returns error", func(t *testing.T) {
+		_, err := jws.Parse([]byte(`test`), jws.WithMaxParseInputSize(-1))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `greater than zero`)
+	})
 }
 
 func TestMaxSignatures(t *testing.T) {
