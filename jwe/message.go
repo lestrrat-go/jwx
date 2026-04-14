@@ -249,8 +249,7 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	if aad := m.AuthenticatedData(); len(aad) > 0 {
 		aad = base64.Encode(aad)
 		if encodedProtectedHeaders != nil {
-			tmp := append(encodedProtectedHeaders, tokens.Period)
-			aad = append(tmp, aad...)
+			aad = concatAAD(encodedProtectedHeaders, aad)
 		}
 
 		v, err := marshalField(aad)
