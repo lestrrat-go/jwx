@@ -37,9 +37,15 @@ var maxDecompressBufferSize atomic.Int64
 var maxParseInputSize atomic.Int64
 
 func init() {
-	maxPBES2Count.Store(10000)
+	// maxPBES2Count: 1_000_000 covers OWASP 2023's 600k HS256 floor with
+	// headroom for peers that ship higher. PBES2 decrypt is only reachable
+	// when the caller explicitly configures a password key, so this cap
+	// gates per-attempt cost, not exposure.
+	maxPBES2Count.Store(1_000_000)
 	minPBES2Count.Store(1000)
-	pbes2Count.Store(int64(tokens.PBES2DefaultIterations))
+	// pbes2Count: 0 means "no global override" — the per-variant default
+	// in jwebb.KeyEncryptPBES2 applies.
+	pbes2Count.Store(0)
 	maxRecipients.Store(100)
 	maxDecompressBufferSize.Store(10 * 1024 * 1024) // 10MB
 	maxParseInputSize.Store(10 * 1024 * 1024)       // 10MB
@@ -53,10 +59,8 @@ func Settings(options ...GlobalOption) {
 		case identMinPBES2Count{}:
 			minPBES2Count.Store(int64(option.MustGet[int](opt)))
 		case identPBES2Count{}:
-			v := option.MustGet[int](opt)
-			if v <= 0 {
-				v = tokens.PBES2DefaultIterations
-			}
+			// 0 means "reset to per-variant defaults"; clamp negatives.
+			v := max(option.MustGet[int](opt), 0)
 			pbes2Count.Store(int64(v))
 		case identMaxRecipients{}:
 			maxRecipients.Store(int64(option.MustGet[int](opt)))

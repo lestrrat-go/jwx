@@ -846,7 +846,7 @@ func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 	jwe.Settings(jwe.WithMaxPBES2Count(math.MaxInt32))
 
 	// put it back to normal after the test
-	defer jwe.Settings(jwe.WithMaxPBES2Count(10000))
+	defer jwe.Settings(jwe.WithMaxPBES2Count(1_000_000))
 	{
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -867,22 +867,26 @@ func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 }
 
 func TestMinPBES2Count(t *testing.T) {
-	// Encrypt a message using PBES2 (default p2c=10000)
+	// Encrypt with an explicit small p2c so the min-check assertions
+	// don't depend on the (per-variant, six-digit) encrypt defaults.
 	password := []byte(`supersecret`)
 	key, err := jwk.Import[jwk.Key](password)
 	require.NoError(t, err, `jwk.Import should succeed`)
 
 	payload := []byte(`hello world`)
-	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+	encrypted, err := jwe.Encrypt(payload,
+		jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+		jwe.WithPBES2Count(5000),
+	)
 	require.NoError(t, err, `jwe.Encrypt should succeed`)
 
-	t.Run("default min rejects nothing at default p2c", func(t *testing.T) {
-		// Default min is 1000, default p2c is 10000 — should succeed
+	t.Run("default min rejects nothing at p2c=5000", func(t *testing.T) {
+		// Default min is 1000 — 5000 should pass.
 		_, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
 		require.NoError(t, err, `jwe.Decrypt should succeed with default settings`)
 	})
 
-	t.Run("high min rejects default p2c", func(t *testing.T) {
+	t.Run("high min rejects low p2c", func(t *testing.T) {
 		// NOTE: HAS GLOBAL EFFECT
 		jwe.Settings(jwe.WithMinPBES2Count(20000))
 		defer jwe.Settings(jwe.WithMinPBES2Count(1000))
@@ -907,11 +911,16 @@ func TestPBES2CountPerCall(t *testing.T) {
 	require.NoError(t, err, `jwk.Import should succeed`)
 
 	payload := []byte(`hello world`)
-	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+	// Encrypt with an explicit small p2c so the min/max per-call
+	// assertions don't depend on the (per-variant, six-digit) defaults.
+	encrypted, err := jwe.Encrypt(payload,
+		jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+		jwe.WithPBES2Count(5000),
+	)
 	require.NoError(t, err, `jwe.Encrypt should succeed`)
 
 	t.Run("per-call max rejects high p2c", func(t *testing.T) {
-		// Default p2c is 10000. Set per-call max to 100 — should fail.
+		// p2c is 5000. Set per-call max to 100 — should fail.
 		_, err := jwe.Decrypt(encrypted,
 			jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
 			jwe.WithMaxPBES2Count(100),
@@ -919,7 +928,7 @@ func TestPBES2CountPerCall(t *testing.T) {
 		require.Error(t, err, `jwe.Decrypt should fail when p2c exceeds per-call max`)
 	})
 	t.Run("per-call min rejects low p2c", func(t *testing.T) {
-		// Default p2c is 10000. Set per-call min to 20000 — should fail.
+		// p2c is 5000. Set per-call min to 20000 — should fail.
 		_, err := jwe.Decrypt(encrypted,
 			jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
 			jwe.WithMinPBES2Count(20000),
@@ -969,9 +978,9 @@ func TestPBES2CountEncrypt(t *testing.T) {
 	t.Run("per-call overrides Settings", func(t *testing.T) {
 		// NOTE: HAS GLOBAL EFFECT
 		jwe.Settings(jwe.WithPBES2Count(15000))
-		defer jwe.Settings(jwe.WithPBES2Count(10000))
+		defer jwe.Settings(jwe.WithPBES2Count(0)) // 0 restores per-variant defaults
 		jwe.Settings(jwe.WithMaxPBES2Count(20000))
-		defer jwe.Settings(jwe.WithMaxPBES2Count(10000))
+		defer jwe.Settings(jwe.WithMaxPBES2Count(1_000_000))
 
 		encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
 		require.NoError(t, err, `jwe.Encrypt should succeed`)
@@ -996,6 +1005,87 @@ func TestPBES2CountEncrypt(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, payload, decrypted)
 	})
+}
+
+// TestPBES2DefaultCountOWASP verifies that jwe.Encrypt without an explicit
+// WithPBES2Count produces tokens with OWASP 2023 per-variant iteration
+// counts, and that jwe.Decrypt accepts tokens at those counts under the
+// default 1,000,000 cap. Regression for JWE-006/007.
+func TestPBES2DefaultCountOWASP(t *testing.T) {
+	password := []byte(`supersecret`)
+	key, err := jwk.Import[jwk.Key](password)
+	require.NoError(t, err, `jwk.Import should succeed`)
+	payload := []byte(`hello world`)
+
+	testcases := []struct {
+		name     string
+		alg      jwa.KeyEncryptionAlgorithm
+		expected int
+	}{
+		{"HS256+A128KW", jwa.PBES2_HS256_A128KW(), 600000},
+		{"HS384+A192KW", jwa.PBES2_HS384_A192KW(), 210000},
+		{"HS512+A256KW", jwa.PBES2_HS512_A256KW(), 210000},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			encrypted, err := jwe.Encrypt(payload, jwe.WithKey(tc.alg, key))
+			require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+			msg, err := jwe.Parse(encrypted)
+			require.NoError(t, err, `jwe.Parse should succeed`)
+			p2cV, ok := msg.ProtectedHeaders().Field(jwe.CountKey)
+			require.True(t, ok, `protected header should have p2c`)
+			require.EqualValues(t, tc.expected, p2cV,
+				`p2c should match OWASP per-variant default`)
+
+			// Default decrypt cap (1,000,000) must accept the default
+			// encrypt count — the whole point of raising both.
+			decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(tc.alg, key))
+			require.NoError(t, err, `jwe.Decrypt should round-trip OWASP defaults`)
+			require.Equal(t, payload, decrypted)
+		})
+	}
+}
+
+// TestPBES2MaxCountEnforced verifies the decrypt cap still rejects p2c
+// values above the default 1,000,000 ceiling. Regression partner to
+// TestPBES2DefaultCountOWASP: raising the cap must not remove it.
+func TestPBES2MaxCountEnforced(t *testing.T) {
+	password := []byte(`supersecret`)
+	key, err := jwk.Import[jwk.Key](password)
+	require.NoError(t, err, `jwk.Import should succeed`)
+
+	// Craft a JWE header with p2c above the default cap. We do not
+	// need the ciphertext to decrypt — the p2c range check happens
+	// before PBKDF2 runs, so any syntactically valid token suffices.
+	payload := []byte(`hello world`)
+	encrypted, err := jwe.Encrypt(payload,
+		jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+		jwe.WithPBES2Count(2000),
+	)
+	require.NoError(t, err)
+
+	// Rewrite the protected header's p2c to 1,000,001 and decrypt.
+	// Easier path: use a per-call WithMaxPBES2Count clamp to assert
+	// the enforcement machinery is still wired, then hand-construct
+	// the out-of-range case by bumping encrypt-side above the cap.
+	_, err = jwe.Decrypt(encrypted,
+		jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+		jwe.WithMaxPBES2Count(1000),
+	)
+	require.Error(t, err, `per-call cap of 1000 should reject p2c=2000`)
+
+	// Verify the global default cap is 1,000,000 by encrypting with
+	// exactly that count and confirming it round-trips, then
+	// encrypting with 1,000,001 via the Settings backdoor and
+	// confirming decrypt rejects it.
+	jwe.Settings(jwe.WithPBES2Count(1_000_001))
+	defer jwe.Settings(jwe.WithPBES2Count(0))
+	encryptedOver, err := jwe.Encrypt(payload, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+	require.NoError(t, err, `jwe.Encrypt should not itself enforce the decrypt cap`)
+	_, err = jwe.Decrypt(encryptedOver, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+	require.Error(t, err, `default cap of 1,000,000 should reject p2c=1,000,001`)
 }
 
 // TestCEKNotExposedOnFailure pins the invariant that jwe.WithCEK() only

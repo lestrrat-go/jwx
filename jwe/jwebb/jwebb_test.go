@@ -208,7 +208,9 @@ func TestKeyEncryptPBES2(t *testing.T) {
 	cek := testCEK
 	password := testPassword
 
-	result, err := jwebb.KeyEncryptPBES2(cek, tokens.PBES2_HS256_A128KW, password, tokens.PBES2DefaultIterations)
+	// Use a small explicit count to keep the test fast; KeyEncryptPBES2's
+	// production defaults are in the six-digit range.
+	result, err := jwebb.KeyEncryptPBES2(cek, tokens.PBES2_HS256_A128KW, password, 1000)
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	require.NotEqual(t, cek, result.Bytes())

@@ -352,7 +352,20 @@ func EncryptJweFile(ctx context.Context, dir string, payload []byte, keyalg jwa.
 		keyif = rawkey
 	}
 
-	buf, err := jwe.Encrypt(payload, jwe.WithKey(keyalg, keyif), jwe.WithContentEncryption(contentalg), jwe.WithCompress(compressalg))
+	encOpts := []jwe.EncryptOption{
+		jwe.WithKey(keyalg, keyif),
+		jwe.WithContentEncryption(contentalg),
+		jwe.WithCompress(compressalg),
+	}
+	// The latchset jose CLI rejects PBES2 tokens with p2c above 32768.
+	// jwx's own defaults follow OWASP 2023 (six-digit counts) which jose
+	// refuses. Downgrade explicitly here so interop roundtrips pass;
+	// real-world producers should not use this helper.
+	switch keyalg {
+	case jwa.PBES2_HS256_A128KW(), jwa.PBES2_HS384_A192KW(), jwa.PBES2_HS512_A256KW():
+		encOpts = append(encOpts, jwe.WithPBES2Count(32768))
+	}
+	buf, err := jwe.Encrypt(payload, encOpts...)
 	if err != nil {
 		return "", nil, fmt.Errorf(`failed to encrypt payload: %w`, err)
 	}

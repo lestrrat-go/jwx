@@ -159,6 +159,43 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   spec-compliant: per-recipient headers are not merged into the protected header
   during flattened JSON serialization.
 
+* **PBES2 iteration count defaults raised to OWASP 2023 levels.** v3 shipped
+  `p2c=10000` on both the encrypt and decrypt sides, which is ~60x below
+  current OWASP guidance for PBKDF2-HMAC-SHA256. v4 changes:
+
+  - `jwe.Encrypt` with a PBES2 key now emits per-variant defaults:
+    600,000 for `PBES2-HS256+A128KW`, 210,000 for `PBES2-HS384+A192KW`,
+    and 210,000 for `PBES2-HS512+A256KW`. Override per call with
+    `jwe.WithPBES2Count`; override globally with
+    `jwe.Settings(jwe.WithPBES2Count(...))`. Passing `0` to `Settings`
+    restores the per-variant defaults.
+  - `jwe.Decrypt` accepts `p2c` up to 1,000,000 by default (v3 was 10,000).
+    This lets jwx interop with modern producers (go-jose, jose.js,
+    python-jose) configured to current guidance. Clamp lower with
+    `jwe.WithMaxPBES2Count` if your deployment needs tighter latency.
+
+  **Migration note.** These changes are v4-only — v3 is not being updated.
+  Interop consequences:
+
+  - v4 encrypt → v3 decrypt: v3's 10,000 cap will reject v4 output.
+    Either bump v3's cap (`jwe.Settings(jwe.WithMaxPBES2Count(600000))`)
+    or have v4 produce a lower count explicitly via
+    `jwe.WithPBES2Count(10000)` during the rollout window.
+  - v3 encrypt → v4 decrypt: unaffected — v4's cap is higher, not lower.
+  - v3→v4 upgrade at rest: tokens sitting in storage with `p2c=10000`
+    still decrypt under v4 defaults.
+
+  **Security note on DoS.** PBES2 decryption runs PBKDF2 over a
+  caller-controlled iteration count. v4's higher cap does *not* widen
+  who can force PBKDF2 work: `jwe.Decrypt` only reaches the PBES2 code
+  path when the caller explicitly configures a password key via
+  `jwe.WithKey(jwa.PBES2_*..., passwordBytes)`. Callers who don't use
+  PBES2 are unaffected. Callers who *do* accept PBES2 on an untrusted
+  input surface have exposed a password-check-equivalent cost per
+  request (tens of milliseconds of CPU at the default cap) and MUST
+  rate-limit accordingly — the library cannot do this for them. Use
+  `jwe.WithMaxPBES2Count` to clamp the cap lower if needed.
+
 * ML-KEM (FIPS 203) key encapsulation for JWE is provided as a companion
   module at [`github.com/jwx-go/mlkem`](https://github.com/jwx-go/mlkem).
   Importing it for side effects registers `ML-KEM-768`, `ML-KEM-1024`,

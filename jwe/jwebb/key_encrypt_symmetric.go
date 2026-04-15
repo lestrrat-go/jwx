@@ -36,29 +36,34 @@ func KeyEncryptDirect(_ []byte, _ string, sharedkey []byte) (keygen.ByteSource, 
 }
 
 // KeyEncryptPBES2 encrypts the CEK using PBES2 password-based encryption.
-// count is the PBKDF2 iteration count. If count <= 0, tokens.PBES2DefaultIterations
-// is used as a safety fallback; public callers go through jwe.Encrypt / jwe.Settings
-// and always provide a positive value via the WithPBES2Count option.
+// count is the PBKDF2 iteration count. If count <= 0, the OWASP 2023
+// per-variant default is used as a safety fallback; public callers go
+// through jwe.Encrypt / jwe.Settings and can override via the
+// WithPBES2Count option.
 func KeyEncryptPBES2(cek []byte, alg string, password []byte, count int) (keygen.ByteSource, error) {
 	var hashFunc func() hash.Hash
 	var keylen int
+	var defaultCount int
 
 	switch alg {
 	case tokens.PBES2_HS256_A128KW:
 		hashFunc = sha256.New
 		keylen = tokens.KeySize16
+		defaultCount = tokens.PBES2DefaultIterationsHS256
 	case tokens.PBES2_HS384_A192KW:
 		hashFunc = sha512.New384
 		keylen = tokens.KeySize24
+		defaultCount = tokens.PBES2DefaultIterationsHS384
 	case tokens.PBES2_HS512_A256KW:
 		hashFunc = sha512.New
 		keylen = tokens.KeySize32
+		defaultCount = tokens.PBES2DefaultIterationsHS512
 	default:
 		return nil, fmt.Errorf(`unsupported PBES2 algorithm: %s`, alg)
 	}
 
 	if count <= 0 {
-		count = tokens.PBES2DefaultIterations
+		count = defaultCount
 	}
 	salt := make([]byte, keylen)
 	_, err := io.ReadFull(rand.Reader, salt)
