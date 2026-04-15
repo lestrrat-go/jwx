@@ -72,7 +72,16 @@ func Import(raw any) (Key, error) {
 		return nil, importerr(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}
 
-	return conv.Import(raw)
+	key, err := conv.Import(raw)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := key.(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return nil, importerr(`key validation failed: %w`, err)
+		}
+	}
+	return key, nil
 }
 
 // PublicSetOf returns a new jwk.Set consisting of
