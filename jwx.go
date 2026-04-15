@@ -28,6 +28,12 @@ import (
 )
 
 // Settings configures global settings for the jwx package.
+//
+// All options accepted here have process-global effect and are intended
+// to be applied exactly once at program startup, before any goroutine
+// begins parsing JWx payloads. See the godoc on individual GlobalOption
+// constructors (e.g. [WithUseNumber]) for the concurrency contract of
+// each setting.
 func Settings(options ...GlobalOption) {
 	for _, opt := range options {
 		switch opt.Ident() {
