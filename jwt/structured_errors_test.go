@@ -258,4 +258,40 @@ func TestCollectErrors(t *testing.T) {
 		)
 		require.NoError(t, err)
 	})
+
+	t.Run("Get returns ClaimNotFoundError when claim is missing", func(t *testing.T) {
+		t.Parallel()
+
+		tok, err := jwt.NewBuilder().Issuer("me").Build()
+		require.NoError(t, err)
+
+		_, err = jwt.Get[string](tok, "absent")
+		require.Error(t, err)
+		require.ErrorContains(t, err, `jwt.Get`)
+		require.ErrorIs(t, err, jwt.ClaimNotFoundError{})
+		require.False(t, errors.Is(err, jwt.ClaimTypeMismatchError{}))
+
+		notFound, ok := errors.AsType[jwt.ClaimNotFoundError](err)
+		require.True(t, ok, `errors.AsType should find ClaimNotFoundError`)
+		require.Equal(t, `absent`, notFound.Name)
+	})
+
+	t.Run("Get returns ClaimTypeMismatchError when claim is wrong type", func(t *testing.T) {
+		t.Parallel()
+
+		tok, err := jwt.NewBuilder().Issuer("me").Build()
+		require.NoError(t, err)
+
+		_, err = jwt.Get[int](tok, jwt.IssuerKey)
+		require.Error(t, err)
+		require.ErrorContains(t, err, `jwt.Get`)
+		require.ErrorIs(t, err, jwt.ClaimTypeMismatchError{})
+		require.False(t, errors.Is(err, jwt.ClaimNotFoundError{}))
+
+		mismatch, ok := errors.AsType[jwt.ClaimTypeMismatchError](err)
+		require.True(t, ok, `errors.AsType should find ClaimTypeMismatchError`)
+		require.Equal(t, jwt.IssuerKey, mismatch.Name)
+		require.IsType(t, "", mismatch.Got, `Got should carry the stored string value`)
+		require.IsType(t, 0, mismatch.Want, `Want should carry a zero int`)
+	})
 }

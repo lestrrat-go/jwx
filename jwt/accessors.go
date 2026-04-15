@@ -6,6 +6,14 @@ import "fmt"
 // It returns the value and an error if the claim does not exist or cannot be
 // converted to type T.
 //
+// The returned error can be inspected with errors.Is / errors.AsType:
+//
+//   - ClaimNotFoundError is returned when the claim is absent.
+//   - ClaimTypeMismatchError is returned when the claim is present
+//     but its stored value is not assignable to T.
+//
+// Both errors are wrapped with a "jwt.Get:" prefix.
+//
 // Usage:
 //
 //	issuer, err := jwt.Get[string](token, jwt.IssuerKey)
@@ -14,11 +22,11 @@ func Get[T any](token Token, key string) (T, error) {
 	var zero T
 	v, ok := token.Field(key)
 	if !ok {
-		return zero, fmt.Errorf(`jwt.Get: field %q not found`, key)
+		return zero, fmt.Errorf(`jwt.Get: %w`, ClaimNotFoundError{Name: key})
 	}
 	result, ok := v.(T)
 	if !ok {
-		return zero, fmt.Errorf(`jwt.Get: field %q is %T, not %T`, key, v, zero)
+		return zero, fmt.Errorf(`jwt.Get: %w`, ClaimTypeMismatchError{Name: key, Got: v, Want: zero})
 	}
 	return result, nil
 }

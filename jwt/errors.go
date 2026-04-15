@@ -38,6 +38,37 @@ func (e ClaimNotFoundError) Is(target error) bool {
 }
 
 //-------------------------------------------------------------------
+// ClaimTypeMismatchError
+//-------------------------------------------------------------------
+
+// ClaimTypeMismatchError is returned when jwt.Get finds the requested
+// claim but the stored value cannot be converted to the requested type.
+//
+// Callers that need to distinguish "claim missing" from "claim present
+// but wrong type" should use errors.Is with ClaimNotFoundError{} /
+// ClaimTypeMismatchError{}, or errors.AsType to recover the Name, Got,
+// and Want fields.
+type ClaimTypeMismatchError struct {
+	// Name is the name of the claim whose value could not be converted.
+	Name string
+	// Got is the value currently stored under the claim. Use %T to
+	// inspect its concrete type.
+	Got any
+	// Want is a zero value of the requested type T. Use %T to inspect
+	// its concrete type.
+	Want any
+}
+
+func (e ClaimTypeMismatchError) Error() string {
+	return fmt.Sprintf(`field "%s" is %T, not %T`, e.Name, e.Got, e.Want)
+}
+
+func (e ClaimTypeMismatchError) Is(target error) bool {
+	_, ok := target.(ClaimTypeMismatchError)
+	return ok
+}
+
+//-------------------------------------------------------------------
 // ClaimAssignmentFailedError
 //-------------------------------------------------------------------
 
