@@ -22,7 +22,7 @@ func TestAKPThumbprintIncludesAlg(t *testing.T) {
 	b64Pub := base64.EncodeToString(pub)
 	alg := jwa.RS256()
 
-	expected := sha256.Sum256([]byte(fmt.Sprintf(`{"alg":%q,"kty":"AKP","pub":%q}`, alg.String(), b64Pub)))
+	expected := sha256.Sum256(fmt.Appendf(nil, `{"alg":%q,"kty":"AKP","pub":%q}`, alg.String(), b64Pub))
 
 	t.Run("public key", func(t *testing.T) {
 		k := newAKPPublicKey()
