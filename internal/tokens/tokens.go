@@ -39,10 +39,18 @@ const (
 	GCMTagSize = 16 // GCM tag size in bytes (128 bits)
 )
 
-// PBES2 constants
+// PBES2 constants.
+//
+// Per-variant default iteration counts follow OWASP 2023 guidance for
+// PBKDF2. HS256 takes the 600k baseline; HS384/HS512 take 210k because
+// the larger output reduces the brute-force advantage per iteration.
+// These are decrypt-accepted too — the global max cap (maxPBES2Count,
+// default 1,000,000) stays above all of them.
 const (
-	PBES2DefaultIterations = 10000 // Default PBKDF2 iteration count
-	PBES2NullByteSeparator = 0     // Null byte separator for PBES2
+	PBES2DefaultIterationsHS256 = 600000
+	PBES2DefaultIterationsHS384 = 210000
+	PBES2DefaultIterationsHS512 = 210000
+	PBES2NullByteSeparator      = 0 // Null byte separator for PBES2
 )
 
 // RSA key generation constants

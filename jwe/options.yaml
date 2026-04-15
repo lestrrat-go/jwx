@@ -146,8 +146,21 @@ options:
     argument_type: int
     comment: |
       WithMaxPBES2Count specifies the maximum number of PBES2 iterations
-      to use when decrypting a message. If not specified, the default
-      value of 10,000 is used.
+      to accept when decrypting a message. If not specified, the default
+      value of 1,000,000 is used. This covers OWASP 2023's 600k baseline
+      for PBKDF2-HMAC-SHA256 with headroom for peers that ship higher
+      counts.
+
+      Decrypting a PBES2-wrapped JWE runs PBKDF2 over a caller-supplied
+      iteration count. jwe.Decrypt only reaches the PBES2 code path when
+      the caller explicitly configures a password key via
+      jwe.WithKey(jwa.PBES2_*..., passwordBytes); callers that never
+      configure PBES2 are unaffected. Callers that do configure PBES2
+      decryption on an untrusted input surface have exposed a
+      password-check-equivalent cost per request (on the order of tens
+      of milliseconds of CPU at the default cap) and MUST rate-limit
+      accordingly. Use this option to clamp the cap lower if your
+      deployment cannot tolerate the default worst case.
 
       This option can be used for `jwe.Settings()`, which changes the behavior
       globally, or for `jwe.Decrypt()`, which changes the behavior for that
@@ -169,8 +182,9 @@ options:
     comment: |
       WithPBES2Count specifies the number of PBKDF2 iterations to use when
       encrypting a key with the PBES2 family of algorithms. If not specified,
-      the default value of 10,000 is used. Modern guidance (OWASP 2023)
-      recommends 600,000 or more for PBKDF2-HMAC-SHA256.
+      OWASP 2023 per-variant defaults are used: 600,000 for PBES2-HS256+A128KW,
+      210,000 for PBES2-HS384+A192KW, and 210,000 for PBES2-HS512+A256KW.
+      Setting a count of 0 via jwe.Settings() restores the per-variant defaults.
 
       This option only affects encryption. Iteration counts on incoming
       messages are validated separately on decrypt via WithMinPBES2Count
