@@ -181,6 +181,7 @@ func (*resourceOption) resourceOption() {}
 type identAllowSymmetric struct{}
 type identFS struct{}
 type identFetchWhitelist struct{}
+type identForceAssign struct{}
 type identHTTPClient struct{}
 type identIgnoreParseError struct{}
 type identLocalRegistry struct{}
@@ -202,6 +203,10 @@ func (identFS) String() string {
 
 func (identFetchWhitelist) String() string {
 	return "WithFetchWhitelist"
+}
+
+func (identForceAssign) String() string {
+	return "WithForceAssign"
 }
 
 func (identHTTPClient) String() string {
@@ -286,6 +291,16 @@ func WithFS(v fs.FS) ReadFileOption {
 // `Transport.DialContext` validates resolved addresses.
 func WithFetchWhitelist(v Whitelist) FetchOption {
 	return &fetchOption{option.New(identFetchWhitelist{}, v)}
+}
+
+// WithForceAssign forces `jwk.AssignKeyID` to recompute and overwrite
+// the `kid` header even when the key already has one. The default
+// behavior preserves any existing `kid`; use this option to upgrade
+// the thumbprint hash (e.g. with `jwk.WithThumbprintHash`) or to
+// refresh a `kid` after mutating a key field that invalidates the
+// cached thumbprint.
+func WithForceAssign(v bool) AssignKeyIDOption {
+	return &assignKeyIDOption{option.New(identForceAssign{}, v)}
 }
 
 // WithHTTPClient allows users to specify the "net/http".Client object that

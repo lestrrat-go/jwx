@@ -430,20 +430,30 @@ func ParseString(s string, options ...ParseOption) (Set, error) {
 
 // AssignKeyID is a convenience function to automatically assign the "kid"
 // section of the key, if it already doesn't have one. It uses Key.Thumbprint
-// method with crypto.SHA256 as the default hashing algorithm
+// method with crypto.SHA256 as the default hashing algorithm.
+//
+// By default, if the key already carries a `kid`, `AssignKeyID` leaves it
+// alone and returns nil. Pass `jwk.WithForceAssign(true)` to force
+// recomputation (for example, when upgrading to a stronger thumbprint hash
+// via `jwk.WithThumbprintHash`).
 func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
-	if key.Has(KeyIDKey) {
-		return nil
-	}
-
 	hash := crypto.SHA256
+	var force bool
 	for _, option := range options {
 		switch option.Ident() {
 		case identThumbprintHash{}:
 			if err := option.Value(&hash); err != nil {
 				return fmt.Errorf(`failed to retrieve thumbprint hash option value: %w`, err)
 			}
+		case identForceAssign{}:
+			if err := option.Value(&force); err != nil {
+				return fmt.Errorf(`failed to retrieve force assign option value: %w`, err)
+			}
 		}
+	}
+
+	if !force && key.Has(KeyIDKey) {
+		return nil
 	}
 
 	h, err := key.Thumbprint(hash)
