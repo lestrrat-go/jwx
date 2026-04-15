@@ -186,7 +186,7 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 
 	protectedB64, decodedSig, err := extractDetachedParts(compact, format)
 	if err != nil {
-		return makeVerifyError(`%w`, err)
+		return makeVerifyError(`failed to extract detached parts: %w`, err)
 	}
 
 	rawHeaders, err := internbase64.Decode(protectedB64)
