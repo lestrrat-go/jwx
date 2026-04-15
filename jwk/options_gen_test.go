@@ -9,6 +9,7 @@ import (
 )
 
 func TestOptionIdent(t *testing.T) {
+	require.Equal(t, "WithAllowSymmetric", identAllowSymmetric{}.String())
 	require.Equal(t, "WithFS", identFS{}.String())
 	require.Equal(t, "WithFetchWhitelist", identFetchWhitelist{}.String())
 	require.Equal(t, "WithHTTPClient", identHTTPClient{}.String())

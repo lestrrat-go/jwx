@@ -82,9 +82,29 @@ func Import(raw any) (Key, error) {
 // you want to generate the corresponding public versions for the
 // users to verify with.
 //
-// Be aware that all fields will be copied onto the new public key. It is the caller's
-// responsibility to remove any fields, if necessary.
-func PublicSetOf(v Set) (Set, error) {
+// By default, if the input set contains a symmetric (oct) key, this
+// function returns an error: a symmetric key has no public form, and
+// its "public" representation would be the secret itself. Publishing
+// such a set (e.g. as `/.well-known/jwks.json`) would leak secret
+// material. This is a behavior change from earlier v3.0.x releases,
+// where symmetric keys were silently passed through. Callers who
+// explicitly want the legacy pass-through behavior can opt in with
+// `jwk.WithAllowSymmetric(true)`.
+//
+// Be aware that for asymmetric private keys, all fields will be
+// copied onto the new public key. It is the caller's responsibility
+// to remove any fields, if necessary.
+func PublicSetOf(v Set, options ...PublicSetOption) (Set, error) {
+	var allowSymmetric bool
+	for _, option := range options {
+		switch option.Ident() {
+		case identAllowSymmetric{}:
+			if err := option.Value(&allowSymmetric); err != nil {
+				return nil, fmt.Errorf(`failed to retrieve AllowSymmetric option value: %w`, err)
+			}
+		}
+	}
+
 	newSet := NewSet()
 
 	n := v.Len()
@@ -92,6 +112,10 @@ func PublicSetOf(v Set) (Set, error) {
 		k, ok := v.Key(i)
 		if !ok {
 			return nil, fmt.Errorf(`key not found`)
+		}
+		if _, isSymmetric := k.(SymmetricKey); isSymmetric && !allowSymmetric {
+			kid, _ := k.KeyID()
+			return nil, fmt.Errorf(`jwk.PublicSetOf: input set contains a symmetric key (kid=%q, index=%d); symmetric keys have no public form and would leak secret material if published. Remove symmetric keys from the set before calling PublicSetOf, or pass jwk.WithAllowSymmetric(true) to opt into legacy pass-through behavior`, kid, i)
 		}
 		pubKey, err := PublicKeyOf(k)
 		if err != nil {
