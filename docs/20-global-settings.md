@@ -14,6 +14,14 @@ func init() {
 Do be aware that this has *global* effect. All code that calls in to `encoding/json`
 within `jwx` *will* use your settings.
 
+**Apply this once at program startup** — from `func init()` or early in `main()`,
+before any goroutine begins parsing JWx payloads. The underlying flag is
+read atomically, so toggling it at runtime will not race, but any decoders
+already running (or started after the flip) will produce a mix of `float64`
+and `json.Number` values in concurrently-decoded custom fields, and callers
+that type-assert on those values will break non-deterministically. There is
+no per-call override.
+
 ## Decode private fields to objects
 
 Packages within `github.com/lestrrat-go/jwx/v4` parses known fields into pre-defined types,
