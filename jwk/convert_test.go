@@ -14,6 +14,7 @@ import (
 // registered in the test never touches the other Key methods.
 type keyKinderMock struct {
 	jwk.Key
+
 	kty  jwa.KeyType
 	kind jwk.KeyKind
 }
