@@ -143,10 +143,7 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	for _, name := range cookiekeys {
 		tok, err := ParseCookie(req, name, parseOptions...)
 		if err != nil {
-			if err == http.ErrNoCookie {
-				// not fatal
-				mcookies[name] = err
-			}
+			mcookies[name] = err
 			continue
 		}
 		return tok, nil
