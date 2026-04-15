@@ -34,13 +34,20 @@ func Example_jwt_parse_with_key_set() {
 		realKey.Set(jwk.KeyIDKey, `mykey`)
 		realKey.Set(jwk.AlgorithmKey, jwa.RS256())
 
-		// For demonstration purposes, we also create a bogus key
-		bogusKey, err := jwk.Import([]byte("bogus"))
+		// For demonstration purposes, we also create a second RSA key
+		// that is not the one used to sign the token. This shows that
+		// `jwt.Parse` picks the correct key from a multi-key set by kid.
+		bogusPrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			fmt.Printf("failed to generate bogus private key: %s\n", err)
+			return
+		}
+		bogusKey, err := jwk.Import(bogusPrivKey)
 		if err != nil {
 			fmt.Printf("failed to create bogus JWK: %s\n", err)
 			return
 		}
-		bogusKey.Set(jwk.AlgorithmKey, jwa.NoSignature())
+		bogusKey.Set(jwk.AlgorithmKey, jwa.RS256())
 		bogusKey.Set(jwk.KeyIDKey, "otherkey")
 
 		// Now create a key set that users will use to verity the signed serialized against
