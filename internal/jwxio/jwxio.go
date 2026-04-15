@@ -17,7 +17,7 @@ func NonFiniteSourceError() error {
 // finite source.
 func ReadAllFromFiniteSource(rdr io.Reader) ([]byte, error) {
 	switch rdr.(type) {
-	case *bytes.Reader, *bytes.Buffer, *strings.Reader:
+	case *bytes.Reader, *bytes.Buffer, *io.LimitedReader, *strings.Reader:
 		data, err := io.ReadAll(rdr)
 		if err != nil {
 			return nil, err
