@@ -325,11 +325,20 @@ func TestVerifyDetached(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	// Note: jws.Sign + WithDetachedPayload + WithJSON emits the
-	// full payload in the "payload" field (the detached flag is
-	// ignored on the JSON path). VerifyDetached correctly rejects
-	// such input — the non-streaming JSON+detached path is broken
-	// upstream and is tracked as a separate follow-up.
+	t.Run("JSON input from jws.Sign+WithDetachedPayload+WithJSON", func(t *testing.T) {
+		privkey, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err)
+
+		signed, err := jws.Sign(nil,
+			jws.WithKey(jwa.RS256(), privkey),
+			jws.WithDetachedPayload(payload),
+			jws.WithJSON(),
+		)
+		require.NoError(t, err)
+
+		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+		require.NoError(t, err)
+	})
 
 	t.Run("JSON input with wrong key fails verification", func(t *testing.T) {
 		privkey, err := jwxtest.GenerateRsaKey()

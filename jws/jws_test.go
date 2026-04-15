@@ -1419,6 +1419,84 @@ func TestGH681(t *testing.T) {
 	require.NoError(t, err, "failed to verify JWS message")
 }
 
+func TestSignDetachedJSON(t *testing.T) {
+	payload := []byte("Lorem ipsum dolor sit amet")
+	privkey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+
+	t.Run("flattened omits payload member", func(t *testing.T) {
+		signed, err := jws.Sign(nil,
+			jws.WithKey(jwa.RS256(), privkey),
+			jws.WithDetachedPayload(payload),
+			jws.WithJSON(),
+		)
+		require.NoError(t, err)
+
+		var m map[string]any
+		require.NoError(t, json.Unmarshal(signed, &m))
+		_, hasPayload := m["payload"]
+		require.False(t, hasPayload, `detached JSON output must omit "payload" member per RFC 7515 Appendix F`)
+
+		_, err = jws.Verify(signed, jws.WithKey(jwa.RS256(), &privkey.PublicKey), jws.WithDetachedPayload(payload))
+		require.NoError(t, err, `detached JSON output should still be verifiable with WithDetachedPayload`)
+	})
+
+	t.Run("pretty flattened omits payload member", func(t *testing.T) {
+		signed, err := jws.Sign(nil,
+			jws.WithKey(jwa.RS256(), privkey),
+			jws.WithDetachedPayload(payload),
+			jws.WithJSON(jws.WithPretty(true)),
+		)
+		require.NoError(t, err)
+
+		var m map[string]any
+		require.NoError(t, json.Unmarshal(signed, &m))
+		_, hasPayload := m["payload"]
+		require.False(t, hasPayload, `pretty detached JSON output must omit "payload" member`)
+	})
+
+	t.Run("general omits payload member", func(t *testing.T) {
+		privkey2, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err)
+
+		signed, err := jws.Sign(nil,
+			jws.WithKey(jwa.RS256(), privkey),
+			jws.WithKey(jwa.RS256(), privkey2),
+			jws.WithDetachedPayload(payload),
+			jws.WithJSON(),
+		)
+		require.NoError(t, err)
+
+		var m map[string]any
+		require.NoError(t, json.Unmarshal(signed, &m))
+		_, hasPayload := m["payload"]
+		require.False(t, hasPayload, `detached general JSON output must omit "payload" member`)
+
+		_, err = jws.Verify(signed, jws.WithKey(jwa.RS256(), &privkey.PublicKey), jws.WithDetachedPayload(payload))
+		require.NoError(t, err)
+	})
+
+	t.Run("parse then re-marshal preserves detached shape", func(t *testing.T) {
+		signed, err := jws.Sign(nil,
+			jws.WithKey(jwa.RS256(), privkey),
+			jws.WithDetachedPayload(payload),
+			jws.WithJSON(),
+		)
+		require.NoError(t, err)
+
+		msg, err := jws.Parse(signed)
+		require.NoError(t, err)
+
+		roundtripped, err := json.Marshal(msg)
+		require.NoError(t, err)
+
+		var m map[string]any
+		require.NoError(t, json.Unmarshal(roundtripped, &m))
+		_, hasPayload := m["payload"]
+		require.False(t, hasPayload, `re-marshaled detached message must still omit "payload" member`)
+	})
+}
+
 func TestGH840(t *testing.T) {
 	// Go 1.19+ panics if elliptic curve operations are called against
 	// a point that's _NOT_ on the curve

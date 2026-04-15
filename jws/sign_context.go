@@ -119,6 +119,7 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 
 func (sc *signContext) PopulateMessage(m *Message) error {
 	m.payload = sc.payload
+	m.detached = sc.detached
 	m.signatures = make([]*Signature, 0, len(sc.sigbuilders))
 
 	for i, sb := range sc.sigbuilders {

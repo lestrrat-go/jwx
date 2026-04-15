@@ -75,6 +75,7 @@ type Message struct {
 	payload    []byte
 	signatures []*Signature
 	b64        bool // true if payload should be base64 encoded
+	detached   bool // true if the JWS is a detached-payload form: JSON output omits the "payload" member per RFC 7515 Appendix F
 }
 
 type Signature struct {
