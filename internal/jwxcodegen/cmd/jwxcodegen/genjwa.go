@@ -185,6 +185,9 @@ func generateAlgInit(o *codegen.Output, t Algorithm) {
 	o.LL("if err := Register%s(algorithms...); err != nil {", t.Name)
 	o.L("panic(fmt.Sprintf(%q, err))", fmt.Sprintf("jwa: failed to register builtin %s: %%s", t.Name))
 	o.L("}")
+	o.L("for _, alg := range algorithms {")
+	o.L("builtin%s[alg.String()] = struct{}{}", t.Name)
+	o.L("}")
 	o.L("}") // end init
 }
 

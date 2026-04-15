@@ -31,6 +31,9 @@ func init() {
 	if err := RegisterEllipticCurveAlgorithm(algorithms...); err != nil {
 		panic(fmt.Sprintf("jwa: failed to register builtin EllipticCurveAlgorithm: %s", err))
 	}
+	for _, alg := range algorithms {
+		builtinEllipticCurveAlgorithm[alg.String()] = struct{}{}
+	}
 }
 
 // Ed25519 returns an object representing Ed25519 algorithm for EdDSA operations.

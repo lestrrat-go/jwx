@@ -40,6 +40,9 @@ func init() {
 	if err := RegisterSignatureAlgorithm(algorithms...); err != nil {
 		panic(fmt.Sprintf("jwa: failed to register builtin SignatureAlgorithm: %s", err))
 	}
+	for _, alg := range algorithms {
+		builtinSignatureAlgorithm[alg.String()] = struct{}{}
+	}
 }
 
 // ES256 returns an object representing ECDSA signature algorithm using P-256 curve and SHA-256.

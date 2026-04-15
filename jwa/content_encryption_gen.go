@@ -32,6 +32,9 @@ func init() {
 	if err := RegisterContentEncryptionAlgorithm(algorithms...); err != nil {
 		panic(fmt.Sprintf("jwa: failed to register builtin ContentEncryptionAlgorithm: %s", err))
 	}
+	for _, alg := range algorithms {
+		builtinContentEncryptionAlgorithm[alg.String()] = struct{}{}
+	}
 }
 
 // A128CBC_HS256 returns an object representing A128CBC-HS256. Using this value specifies that the content should be encrypted using AES-CBC + HMAC-SHA256 (128).

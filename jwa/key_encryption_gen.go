@@ -51,6 +51,9 @@ func init() {
 	if err := RegisterKeyEncryptionAlgorithm(algorithms...); err != nil {
 		panic(fmt.Sprintf("jwa: failed to register builtin KeyEncryptionAlgorithm: %s", err))
 	}
+	for _, alg := range algorithms {
+		builtinKeyEncryptionAlgorithm[alg.String()] = struct{}{}
+	}
 }
 
 // A128GCMKW returns an object representing AES-GCM key wrap (128) key encryption algorithm.
