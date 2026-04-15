@@ -231,20 +231,51 @@ func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) VerifyOption {
 // WithVerifyAuto enables automatic verification of the signature using
 // the JWKS specified in the `jku` header, via the provided jwk.Fetcher.
 //
-// The fetcher is responsible for all transport and policy concerns
-// (HTTP client, whitelist, body-size limits). The main jwx module is
-// transport-agnostic — use a companion such as
-// github.com/jwx-go/jwkfetch to construct a concrete fetcher:
+// The core jwx module is transport-agnostic: it defines the
+// jwk.Fetcher interface but has no implementation. The canonical
+// implementation is [github.com/jwx-go/jwkfetch]. Use it — that is
+// the shape this option is designed for, and the shape the security
+// guidance below is written against.
 //
-//	client := &jwkfetch.Client{
-//	    Whitelist: jwkfetch.NewMapWhitelist().Add("https://issuer.example/jwks.json"),
-//	}
-//	jws.WithVerifyAuto(client)
+// # Security
 //
-// A nil fetcher is not permitted: jku verification will fail with an
-// error at use time. This is intentional — there is no secure default
-// for fetching attacker-controllable URLs, so callers must explicitly
-// wire a fetcher (and its whitelist) at construction time.
+// The `jku` header comes from the JWS you are verifying, which is
+// (at the moment you are about to verify it) untrusted input. A
+// hostile peer who controls the header can point the library at any
+// network destination the fetcher can reach (SSRF), or hand you a
+// JWKS their own server controls and have their keys accepted as
+// "the issuer's keys". jwx itself does NOT prepend a default-deny
+// wrapper around the fetcher — the fetcher is used as-is, and jwx
+// has no way to inspect a jwk.Fetcher implementation to check
+// whether it restricts URLs.
+//
+// **The expected pattern is to pass a jwkfetch.Client with a
+// restrictive Whitelist.** jwkfetch.Client enforces the whitelist
+// on the initial URL AND every redirect hop, so a hostile JWKS host
+// cannot bypass the allowlist by responding with a 302 into an
+// off-list URL. It is the only Fetcher implementation that jwx's
+// authors test end-to-end against this option.
+//
+//	import "github.com/jwx-go/jwkfetch/v4"
+//
+//	client := jwkfetch.NewClient(
+//	    jwkfetch.WithWhitelist(
+//	        jwkfetch.NewMapWhitelist().Add("https://issuer.example/jwks.json"),
+//	    ),
+//	)
+//	jws.Verify(signed, jws.WithVerifyAuto(client))
+//
+// If you pass a jwkfetch.Client with no WithWhitelist, it permits
+// every URL — that is correct for fetching a compile-time-constant
+// URL, wrong for jku verification. See jwkfetch.WithWhitelist +
+// jwkfetch.NewMapWhitelist / jwkfetch.NewRegexpWhitelist for the
+// common allowlist patterns.
+//
+// If you pass a different jwk.Fetcher implementation, YOU own the
+// whitelist semantics. jwx will not and cannot check.
+//
+// A nil fetcher is not permitted: jku verification errors at use
+// time rather than silently falling back to any default.
 func WithVerifyAuto(f jwk.Fetcher) VerifyOption {
 	return WithKeyProvider(jkuProvider{fetcher: f})
 }

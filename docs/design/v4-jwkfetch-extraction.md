@@ -38,19 +38,17 @@ Both types are **closed structs** (all fields unexported). Configuration is via 
 
 `WithWhitelist` is a `ClientOption` only — `Cache` treats `Register` as the trust boundary for cached URLs, so passing `WithWhitelist(...)` to `NewCache` is a compile-time error. This is structural enforcement of the "Cache trusts what you registered" design without a foot-gun field.
 
-### Safety defaults, deliberately tightened
+### Safety defaults
 
-v3's `jwk.Fetch()` defaulted to `jwk.InsecureWhitelist{}` — allow every URL. That default was documented as "right for URLs hard-coded in your program," but it also meant that calls like `jwk.Fetch(ctx, untrustedURL)` with no options would happily contact anything. jws's `WithVerifyAuto` partially compensated by prepending its own deny-all whitelist to the fetcher's options, but that compensation depended on the exact option layering in jws/options.go and the variadic being threaded end-to-end — the very mechanism that the silent-drop bug broke.
+`jwkfetch.NewClient()` with no `WithWhitelist` permits every URL. This is the right default for the overwhelming common case — a Client fetching a compile-time-constant or trusted-config JWKS URL — where the trust decision is already made at the call site and a whitelist would be redundant. Forcing every such call site to opt in via `WithWhitelist(InsecureWhitelist{})` would trade a minor-safety win at one call-site class for a friction cost at every call site, and would train users to reach for `InsecureWhitelist` reflexively, which is functionally equivalent to the permissive default.
 
-In v4, `jwkfetch.NewClient()` with no `WithWhitelist` returns a Client whose internal `whitelist` field is nil, and `Client.Fetch` treats nil as `BlockAllWhitelist{}` — deny every URL. Callers with fixed, trusted JWKS URLs must now opt in explicitly:
+For `jku`-style verification, where the URL comes from an untrusted JWS header, the caller MUST pass `WithWhitelist` with a restrictive `MapWhitelist` / `RegexpWhitelist` / `WhitelistFunc`. jwx does not prepend a default deny around the fetcher. A restrictive `Whitelist` on a Client is applied to both the initial URL and every redirect target — `Client.Fetch` wraps the `*http.Client`'s `CheckRedirect` at construction time so a hostile JWKS host cannot 302 into an off-allowlist URL.
 
-```go
-c := jwkfetch.NewClient(jwkfetch.WithWhitelist(jwkfetch.InsecureWhitelist{}))
-```
+`jws.WithVerifyAuto(nil)` and `jwt.WithVerifyAuto(nil)` are not supported — both error at jku-verification time rather than silently using any default. The variadic `...jwk.FetchOption` that v3 had on both signatures is gone. All policy is baked into the fetcher at construction time.
 
-`jws.WithVerifyAuto(nil)` and `jwt.WithVerifyAuto(nil)` are no longer supported — both error at use time instead of silently falling back to `jwk.Fetch`. The variadic `...jwk.FetchOption` on both signatures is gone. All policy is baked into the fetcher at its construction site.
+The silent-drop bug class from `REV-CMP-20260414T114515Z-002` (where v3's `jwkcache.Fetcher.Fetch` discarded `...jwk.FetchOption` values, letting a caller's whitelist silently no-op) is structurally impossible: there is no per-call option variadic on `jwk.Fetcher`, so there is no variadic to drop. Per-call policy lives on the `jwk.Fetcher` implementation that the caller constructed, and that implementation's behavior is entirely determined at construction time.
 
-The net effect: the silent-drop bug class from `REV-CMP-...002` is structurally impossible. There are no per-call `FetchOption` values to silently drop, because there are no per-call options at all. Per-call policy lives on the `jwk.Fetcher` implementation you constructed, and that implementation's behavior is entirely determined at construction time.
+For `Cache`, there is no separate `Whitelist` concept. `Cache` is a cache — the set of URLs it will ever contact is exactly the set passed to `Register`, and `Fetch`/`Lookup` return an error for anything else. Passing `WithWhitelist` to `NewCache` is a compile-time error (the option type doesn't satisfy `CacheOption`), so the "Cache has its own allowlist concept you need to configure" footgun is structurally prevented.
 
 ## Why one companion instead of two
 
@@ -72,8 +70,8 @@ v3 had `jwkcache` separate from `jwk.Fetch`. v4 collapses both into `jwkfetch`. 
 
 See `MIGRATION.md` Recipe 6 for the user-facing migration. The non-trivial surprises for existing code:
 
-- `jwk.Fetch(ctx, url)` with no options (v3 allowed this) becomes `jwkfetch.NewClient(jwkfetch.WithWhitelist(jwkfetch.InsecureWhitelist{})).Fetch(ctx, url)`. The explicit whitelist is mandatory; forgetting it produces a whitelist error at runtime instead of a silently-permissive fetch.
-- `jws.WithVerifyAuto(nil, jwk.WithFetchWhitelist(...))` is gone — no nil fetcher, no per-call fetch options. Build the fetcher, pass it.
+- `jwk.Fetch(ctx, url)` with no options becomes `jwkfetch.NewClient().Fetch(ctx, url)`. Both default to allow-all, so a trusted-URL call site migrates cleanly without adding a whitelist.
+- `jws.WithVerifyAuto(nil, jwk.WithFetchWhitelist(wl))` → `jws.WithVerifyAuto(jwkfetch.NewClient(jwkfetch.WithWhitelist(wl)))`. No nil fetcher, no per-call fetch options. This is the one place v3's implicit safety is NOT carried forward: v3's `jws.WithVerifyAuto` prepended a deny-all in front of the caller's options, so a jku caller who forgot to set a whitelist got rejected URLs. v4 has no such wrapper — the whitelist has to be on the fetcher the caller built, or the fetch is permissive. Audit every jku-style call site accordingly.
 - `jwk.Configure(jwk.WithHTTPClient(...))` is gone — no global HTTP client for jwk. Put your `*http.Client` on the `jwkfetch.Client` or `jwkfetch.Cache` that needs it.
 - `github.com/jwx-go/jwkcache/v4` is superseded by `github.com/jwx-go/jwkfetch/v4`. Same conceptual model (httprc-backed, per-URL registration, background refresh), different module path, different construction (closed struct + functional options).
 

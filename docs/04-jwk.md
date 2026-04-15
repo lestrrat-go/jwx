@@ -525,7 +525,7 @@ source: [examples/jwk_import_example_test.go](https://github.com/jwx-go/examples
 
 # Fetching JWK Sets
 
-HTTP-based JWK Set retrieval has moved out of the core `jwk` package in v4. The main jwx module no longer depends on `net/http` or [`httprc`](https://github.com/lestrrat-go/httprc), and there is no `jwk.Fetch` function. All HTTP fetching lives in the [`github.com/jwx-go/jwkfetch/v4`](https://github.com/jwx-go/jwkfetch) companion, which supersedes the v3 `jwk.Fetch` / `jwk.WithHTTPClient` / `jwk.Whitelist` surface **and** the standalone `jwx-go/jwkcache` companion.
+HTTP-based JWK Set retrieval has moved out of the core `jwk` package. The main jwx module no longer depends on `net/http` or [`httprc`](https://github.com/lestrrat-go/httprc), and there is no `jwk.Fetch` function. All HTTP fetching lives in the [`github.com/jwx-go/jwkfetch/v4`](https://github.com/jwx-go/jwkfetch) companion.
 
 The `jwk` package still defines the minimal `jwk.Fetcher` interface:
 
@@ -537,10 +537,10 @@ type Fetcher interface {
 
 …but there is no in-package implementation. You get a concrete implementation from `jwkfetch`, which offers two complementary types:
 
-- **`jwkfetch.Client`** — one-shot HTTPS fetch with whitelist, body-size cap, and parse options. Use for `jku`-style verification and any fetch where the URL may be attacker-controllable.
+- **`jwkfetch.Client`** — one-shot HTTPS fetch. Use for ad-hoc retrievals and for `jku`-style verification where the URL comes from an untrusted JWS header.
 - **`jwkfetch.Cache`** — background-refreshed JWKS store backed by [`httprc`](https://github.com/lestrrat-go/httprc). Use for a small, trusted set of issuer JWKS endpoints where amortizing fetch cost matters.
 
-Both implement `jwk.Fetcher` and are **closed structs** constructed via functional options. A `Client` built with no `WithWhitelist` denies every URL — a deliberate tightening over v3's `jwk.Fetch` which defaulted to allow-all.
+Both implement `jwk.Fetcher` and are **closed structs** constructed via functional options.
 
 ```go
 import (
@@ -548,13 +548,17 @@ import (
   "github.com/lestrrat-go/httprc/v3"
 )
 
-// --- one-shot fetch ---
-client := jwkfetch.NewClient(
+// --- one-shot fetch (trusted URL) ---
+client := jwkfetch.NewClient()
+set, err := client.Fetch(ctx, "https://issuer.example/jwks.json")
+
+// --- one-shot fetch (jku-style, URL is untrusted) ---
+jkuClient := jwkfetch.NewClient(
   jwkfetch.WithWhitelist(
     jwkfetch.NewMapWhitelist().Add("https://issuer.example/jwks.json"),
   ),
 )
-set, err := client.Fetch(ctx, "https://issuer.example/jwks.json")
+_, err := jws.Verify(signed, jws.WithVerifyAuto(jkuClient))
 
 // --- background-refreshed cache ---
 cache, _ := jwkfetch.NewCache(ctx, httprc.NewClient())
@@ -567,12 +571,19 @@ _, err = jws.Verify(signed, jws.WithVerifyAuto(cache))
 
 ## Default security behavior
 
-`jwkfetch.NewClient()` with no `WithWhitelist` returns a Client that denies every URL. This is the safe default for `jku`-style verification where the URL is attacker-controllable. Callers with a fixed trusted URL must opt in explicitly:
+`jwkfetch.NewClient()` with no `WithWhitelist` permits every URL. This is the right default when the URL you're fetching is a compile-time constant or comes from trusted configuration — the trust decision is already made at the call site, and a whitelist would be redundant.
+
+**For `jku`-style verification, or any fetch whose URL comes from an untrusted source, you MUST configure a restrictive `Whitelist` on the fetcher.** jwx itself does not prepend a default-deny wrapper around the fetcher — a hostile peer who controls the URL can otherwise point the library at any destination the fetcher can reach (SSRF) or hand you a JWKS their own server controls and have their keys accepted as "the issuer's keys":
 
 ```go
-// Permissive — only do this when the URL is hard-coded in trusted config.
-c := jwkfetch.NewClient(jwkfetch.WithWhitelist(jwkfetch.InsecureWhitelist{}))
+jkuClient := jwkfetch.NewClient(
+  jwkfetch.WithWhitelist(
+    jwkfetch.NewMapWhitelist().Add("https://issuer.example/jwks.json"),
+  ),
+)
 ```
+
+A restrictive `Whitelist` is applied to **every URL the Client contacts**, including the targets of 3xx redirects. A hostile JWKS host cannot bypass the allowlist by 302-ing into an off-list URL.
 
 The default HTTP client (`jwkfetch.DefaultHTTPClient()`) applies a 30-second timeout, a 5-redirect cap, and a redirect policy that blocks HTTPS→HTTP scheme downgrades. If you bring your own `*http.Client` via `jwkfetch.WithHTTPClient(...)`, wrap it with `jwkfetch.WrapHTTPClientDefaults(...)` first to keep those protections. For full SSRF defense (private-IP blocking, DNS rebinding prevention), supply a `*http.Client` whose `Transport.DialContext` validates resolved addresses.
 
@@ -580,15 +591,17 @@ The default HTTP client (`jwkfetch.DefaultHTTPClient()`) applies a 30-second tim
 
 Pass any implementation of `jwkfetch.Whitelist` to `jwkfetch.WithWhitelist`:
 
-- `jwkfetch.InsecureWhitelist{}` — allow every URL (opt-in permissive)
-- `jwkfetch.BlockAllWhitelist{}` — deny every URL (the nil default)
-- `jwkfetch.NewMapWhitelist().Add(url1).Add(url2)` — fixed allow-list
+- `jwkfetch.InsecureWhitelist{}` — allow every URL (the default when `WithWhitelist` isn't passed)
+- `jwkfetch.BlockAllWhitelist{}` — deny every URL (useful for tests, safety assertions)
+- `jwkfetch.NewMapWhitelist().Add(url1).Add(url2)` — fixed allow-list of exact URLs
 - `jwkfetch.NewRegexpWhitelist().Add(pattern)` — pattern-based allow-list
 - `jwkfetch.WhitelistFunc(func(string) bool)` — custom predicate
 
-Whitelist rejections can be detected with `errors.Is(err, jwkfetch.WhitelistError())`.
+All the restrictive types fail closed: a URL that doesn't match any listed entry / pattern / predicate is rejected with a `WhitelistError`, for both the initial URL and every redirect target. Whitelist rejections can be detected with `errors.Is(err, jwkfetch.WhitelistError())`.
 
-See the [`jwkfetch` section of the extensions doc](./10-extensions.md#http-jwk-set-retrieval-jwkfetch) for the full story and the [module README](https://github.com/jwx-go/jwkfetch) for the complete API reference.
+The `Whitelist` concept applies to `Client` only. `Cache` has no `Whitelist` field — it's a cache, and the set of URLs it will ever contact is exactly the set you passed to `Register`. Trying to pass `WithWhitelist` to `NewCache` is a compile-time error.
+
+See the [`jwkfetch` section of the extensions doc](./10-extensions.md#http-jwk-set-retrieval-jwkfetch) and the [module README](https://github.com/jwx-go/jwkfetch) for the full API reference, including allowlist patterns and the regex footguns to avoid.
 
 # Working with jwk.Key
 

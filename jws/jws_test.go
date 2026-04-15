@@ -1129,25 +1129,15 @@ func TestJKU(t *testing.T) {
 			Fetcher func() jwk.Fetcher
 		}{
 			{
-				Name:  "Fail without whitelist",
-				Error: true,
+				Name: "Succeeds without explicit allow",
 				Fetcher: func() jwk.Fetcher {
-					// nil Allow denies everything — the fetcher never
-					// even attempts the HTTP request.
+					// nil Allow permits every URL — matches
+					// jwkfetch.Client's permissive default.
 					return &jwxtest.JKUFetcher{Client: srv.Client()}
 				},
 			},
 			{
-				Name: "Success",
-				Fetcher: func() jwk.Fetcher {
-					return &jwxtest.JKUFetcher{
-						Client: srv.Client(),
-						Allow:  func(string) bool { return true },
-					}
-				},
-			},
-			{
-				Name:  "Rejected by whitelist",
+				Name:  "Rejected by restrictive allow",
 				Error: true,
 				Fetcher: func() jwk.Fetcher {
 					return &jwxtest.JKUFetcher{
@@ -1243,20 +1233,15 @@ func TestJKU(t *testing.T) {
 
 		testcases := []struct {
 			Name  string
-			Allow func(string) bool // nil = deny all
+			Allow func(string) bool // nil = permit all
 			Error bool
 		}{
 			{
-				Name:  "Fail without whitelist",
-				Error: true,
-				// nil Allow → fetcher denies everything.
+				Name: "Succeeds without explicit allow",
+				// nil Allow → fetcher permits every URL.
 			},
 			{
-				Name:  "Success",
-				Allow: func(string) bool { return true },
-			},
-			{
-				Name:  "Rejected by whitelist",
+				Name:  "Rejected by restrictive allow",
 				Error: true,
 				Allow: func(u string) bool {
 					return u == `https://github.com/lestrrat-go/jwx/v4`

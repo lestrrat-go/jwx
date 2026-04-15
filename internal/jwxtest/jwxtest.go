@@ -32,8 +32,9 @@ import (
 // graph.
 //
 // Allow is consulted on every Fetch call before any network request.
-// A nil Allow denies every URL, matching the safe default in the
-// production jwkfetch.Client.
+// A nil Allow permits every URL, matching jwkfetch.Client's default.
+// Set Allow to a restrictive predicate to simulate whitelist-driven
+// rejection.
 type JKUFetcher struct {
 	Client *http.Client
 	Allow  func(url string) bool
@@ -44,7 +45,7 @@ type JKUFetcher struct {
 // no redirect policy, no parse options — tests that need richer
 // behavior should declare their own fetcher.
 func (f *JKUFetcher) Fetch(ctx context.Context, url string) (jwk.Set, error) {
-	if f.Allow == nil || !f.Allow(url) {
+	if f.Allow != nil && !f.Allow(url) {
 		return nil, fmt.Errorf(`jwxtest.JKUFetcher: url %q not allowed`, url)
 	}
 	client := f.Client

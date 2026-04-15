@@ -1399,6 +1399,8 @@ func TestVerifyAuto(t *testing.T) {
 	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256(), key, jws.WithProtectedHeaders(hdrs)))
 	require.NoError(t, err, `jwt.Sign() should succeed`)
 
+	// Explicit restrictive Allow that matches the URL — permits the
+	// fetch, which in turn lets jku verification succeed.
 	good := &jwxtest.JKUFetcher{
 		Client: srv.Client(),
 		Allow:  func(u string) bool { return u == srv.URL },
@@ -1408,9 +1410,22 @@ func TestVerifyAuto(t *testing.T) {
 	require.NoError(t, err, `jwt.Parse should succeed`)
 	require.True(t, jwt.Equal(tok, parsed), `tokens should be equal`)
 
+	// Nil Allow permits every URL — this is the permissive default
+	// that matches jwkfetch.Client's default and jwt.Parse should
+	// accept it.
+	permissive := &jwxtest.JKUFetcher{Client: srv.Client()}
+	parsed, err = jwt.Parse(signed, jwt.WithVerifyAuto(permissive))
+	require.NoError(t, err, `jwt.Parse with permissive fetcher should succeed`)
+	require.True(t, jwt.Equal(tok, parsed), `tokens should be equal`)
+
+	// A nil fetcher is not permitted — WithVerifyAuto errors at jku
+	// verification time rather than silently falling back.
 	_, err = jwt.Parse(signed, jwt.WithVerifyAuto(nil))
 	require.Error(t, err, `jwt.Parse should fail with nil fetcher`)
 
+	// Explicit restrictive Allow that does not match the URL — the
+	// fetcher rejects the fetch, and jku verification surfaces the
+	// rejection.
 	bad := &jwxtest.JKUFetcher{
 		Client: srv.Client(),
 		Allow: func(u string) bool {
