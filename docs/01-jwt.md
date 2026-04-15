@@ -1535,7 +1535,7 @@ github.com/lestrrat-go/jwx is focused on usability / stable API. If you are worr
 
 <!-- INCLUDE(examples/jwt_raw_struct_example_test.go) -->
 ```go
-package examples
+package examples_test
 
 import (
   "encoding/json"
