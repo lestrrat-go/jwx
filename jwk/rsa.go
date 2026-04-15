@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"math/bits"
 	"reflect"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
@@ -102,9 +103,18 @@ func (k *rsaPublicKey) Import(rawKey *rsa.PublicKey) error {
 	return nil
 }
 
-func buildRSAPublicKey(key *rsa.PublicKey, n, e []byte) {
+func buildRSAPublicKey(key *rsa.PublicKey, n, e []byte) error {
+	bigE := new(big.Int).SetBytes(e)
+	// rsa.PublicKey.E is a Go int. Reject exponents that do not fit on the
+	// current platform (e.g. GOARCH=386). Without this guard, Int64()/int()
+	// silently truncates, causing the materialized key to disagree with the
+	// JSON bytes and breaking RFC 7638 thumbprint uniqueness.
+	if bigE.BitLen() >= bits.UintSize {
+		return fmt.Errorf(`rsa public exponent too large for this platform: %d bits (max %d)`, bigE.BitLen(), bits.UintSize-1)
+	}
 	key.N = new(big.Int).SetBytes(n)
-	key.E = int(new(big.Int).SetBytes(e).Int64())
+	key.E = int(bigE.Int64())
+	return nil
 }
 
 var rsaConvertibleKeys = []reflect.Type{
@@ -211,7 +221,9 @@ func rsaJWKToRaw(key Key, hint any) (any, error) {
 		}
 
 		var privkey rsa.PrivateKey
-		buildRSAPublicKey(&privkey.PublicKey, on, oe)
+		if err := buildRSAPublicKey(&privkey.PublicKey, on, oe); err != nil {
+			return nil, fmt.Errorf(`failed to build rsa.PublicKey: %w`, err)
+		}
 		privkey.D = &d
 		privkey.Primes = []*big.Int{&p, &q}
 
@@ -260,7 +272,9 @@ func rsaJWKToRaw(key Key, hint any) (any, error) {
 		}
 
 		var pubkey rsa.PublicKey
-		buildRSAPublicKey(&pubkey, n, e)
+		if err := buildRSAPublicKey(&pubkey, n, e); err != nil {
+			return nil, fmt.Errorf(`failed to build rsa.PublicKey: %w`, err)
+		}
 
 		return &pubkey, nil
 
@@ -305,32 +319,42 @@ func (k *rsaPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	var key rsa.PrivateKey
-	if err := Export(k, &key); err != nil {
-		return nil, fmt.Errorf(`failed to export RSA private key: %w`, err)
-	}
-	return rsaThumbprint(hash, &key.PublicKey)
+	return rsaThumbprint(hash, k.n, k.e)
 }
 
 func (k *rsaPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
-	var key rsa.PublicKey
-	if err := Export(k, &key); err != nil {
-		return nil, fmt.Errorf(`failed to export RSA public key: %w`, err)
-	}
-	return rsaThumbprint(hash, &key)
+	return rsaThumbprint(hash, k.n, k.e)
 }
 
-func rsaThumbprint(hash crypto.Hash, key *rsa.PublicKey) ([]byte, error) {
+// trimLeadingZeroBytes strips leading zero bytes. RFC 7638 requires the
+// minimal big-endian representation of n/e for canonical JSON.
+func trimLeadingZeroBytes(b []byte) []byte {
+	for len(b) > 0 && b[0] == 0 {
+		b = b[1:]
+	}
+	return b
+}
+
+func rsaThumbprint(hash crypto.Hash, n, e []byte) ([]byte, error) {
+	n = trimLeadingZeroBytes(n)
+	e = trimLeadingZeroBytes(e)
+	if len(n) == 0 {
+		return nil, fmt.Errorf(`failed to compute rsa thumbprint: missing "n" value`)
+	}
+	if len(e) == 0 {
+		return nil, fmt.Errorf(`failed to compute rsa thumbprint: missing "e" value`)
+	}
+
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
 
 	buf.WriteString(`{"e":"`)
-	buf.WriteString(base64.EncodeUint64ToString(uint64(key.E)))
+	buf.WriteString(base64.EncodeToString(e))
 	buf.WriteString(`","kty":"RSA","n":"`)
-	buf.WriteString(base64.EncodeToString(key.N.Bytes()))
+	buf.WriteString(base64.EncodeToString(n))
 	buf.WriteString(`"}`)
 
 	h := hash.New()
