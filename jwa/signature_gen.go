@@ -189,11 +189,11 @@ func LookupSignatureAlgorithm(name string) (SignatureAlgorithm, bool) {
 // forward-compatible.
 func RegisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) error {
 	muAllSignatureAlgorithm.Lock()
+	defer muAllSignatureAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		allSignatureAlgorithm[alg.String()] = alg
 	}
-	muAllSignatureAlgorithm.Unlock()
-	rebuildSignatureAlgorithm()
+	rebuildSignatureAlgorithmLocked()
 	return nil
 }
 
@@ -201,23 +201,21 @@ func RegisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) error {
 // Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
 	muAllSignatureAlgorithm.Lock()
+	defer muAllSignatureAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		if _, ok := builtinSignatureAlgorithm[alg.String()]; ok {
 			continue
 		}
 		delete(allSignatureAlgorithm, alg.String())
 	}
-	muAllSignatureAlgorithm.Unlock()
-	rebuildSignatureAlgorithm()
+	rebuildSignatureAlgorithmLocked()
 }
 
-func rebuildSignatureAlgorithm() {
+func rebuildSignatureAlgorithmLocked() {
 	list := make([]SignatureAlgorithm, 0, len(allSignatureAlgorithm))
-	muAllSignatureAlgorithm.RLock()
 	for _, v := range allSignatureAlgorithm {
 		list = append(list, v)
 	}
-	muAllSignatureAlgorithm.RUnlock()
 	slices.SortFunc(list, func(a, b SignatureAlgorithm) int {
 		return cmp.Compare(a.String(), b.String())
 	})

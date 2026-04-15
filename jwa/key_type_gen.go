@@ -127,11 +127,11 @@ func LookupKeyType(name string) (KeyType, bool) {
 // forward-compatible.
 func RegisterKeyType(algorithms ...KeyType) error {
 	muAllKeyType.Lock()
+	defer muAllKeyType.Unlock()
 	for _, alg := range algorithms {
 		allKeyType[alg.String()] = alg
 	}
-	muAllKeyType.Unlock()
-	rebuildKeyType()
+	rebuildKeyTypeLocked()
 	return nil
 }
 
@@ -139,23 +139,21 @@ func RegisterKeyType(algorithms ...KeyType) error {
 // Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterKeyType(algorithms ...KeyType) {
 	muAllKeyType.Lock()
+	defer muAllKeyType.Unlock()
 	for _, alg := range algorithms {
 		if _, ok := builtinKeyType[alg.String()]; ok {
 			continue
 		}
 		delete(allKeyType, alg.String())
 	}
-	muAllKeyType.Unlock()
-	rebuildKeyType()
+	rebuildKeyTypeLocked()
 }
 
-func rebuildKeyType() {
+func rebuildKeyTypeLocked() {
 	list := make([]KeyType, 0, len(allKeyType))
-	muAllKeyType.RLock()
 	for _, v := range allKeyType {
 		list = append(list, v)
 	}
-	muAllKeyType.RUnlock()
 	slices.SortFunc(list, func(a, b KeyType) int {
 		return cmp.Compare(a.String(), b.String())
 	})

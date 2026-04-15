@@ -102,11 +102,11 @@ func LookupCompressionAlgorithm(name string) (CompressionAlgorithm, bool) {
 // forward-compatible.
 func RegisterCompressionAlgorithm(algorithms ...CompressionAlgorithm) error {
 	muAllCompressionAlgorithm.Lock()
+	defer muAllCompressionAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		allCompressionAlgorithm[alg.String()] = alg
 	}
-	muAllCompressionAlgorithm.Unlock()
-	rebuildCompressionAlgorithm()
+	rebuildCompressionAlgorithmLocked()
 	return nil
 }
 
@@ -114,23 +114,21 @@ func RegisterCompressionAlgorithm(algorithms ...CompressionAlgorithm) error {
 // Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterCompressionAlgorithm(algorithms ...CompressionAlgorithm) {
 	muAllCompressionAlgorithm.Lock()
+	defer muAllCompressionAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		if _, ok := builtinCompressionAlgorithm[alg.String()]; ok {
 			continue
 		}
 		delete(allCompressionAlgorithm, alg.String())
 	}
-	muAllCompressionAlgorithm.Unlock()
-	rebuildCompressionAlgorithm()
+	rebuildCompressionAlgorithmLocked()
 }
 
-func rebuildCompressionAlgorithm() {
+func rebuildCompressionAlgorithmLocked() {
 	list := make([]CompressionAlgorithm, 0, len(allCompressionAlgorithm))
-	muAllCompressionAlgorithm.RLock()
 	for _, v := range allCompressionAlgorithm {
 		list = append(list, v)
 	}
-	muAllCompressionAlgorithm.RUnlock()
 	slices.SortFunc(list, func(a, b CompressionAlgorithm) int {
 		return cmp.Compare(a.String(), b.String())
 	})
