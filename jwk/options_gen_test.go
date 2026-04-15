@@ -9,6 +9,7 @@ import (
 )
 
 func TestOptionIdent(t *testing.T) {
+	require.Equal(t, "WithAllowSymmetric", identAllowSymmetric{}.String())
 	require.Equal(t, "WithIgnoreParseError", identIgnoreParseError{}.String())
 	require.Equal(t, "withLocalRegistry", identLocalRegistry{}.String())
 	require.Equal(t, "WithPEM", identPEM{}.String())
