@@ -244,6 +244,24 @@ func TestVerifyDetached(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("Format override mismatch returns clear error", func(t *testing.T) {
+		key := jwxtest.GenerateSymmetricKey()
+
+		compactSigned, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
+		require.NoError(t, err)
+
+		err = jws.VerifyDetached(compactSigned, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithJSON())
+		require.Error(t, err, `compact input with WithJSON override should fail`)
+		require.Contains(t, err.Error(), `format mismatch`, `error should call out the format mismatch`)
+
+		jsonSigned, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithJSON())
+		require.NoError(t, err)
+
+		err = jws.VerifyDetached(jsonSigned, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithCompact())
+		require.Error(t, err, `JSON input with WithCompact override should fail`)
+		require.Contains(t, err.Error(), `format mismatch`, `error should call out the format mismatch`)
+	})
+
 	t.Run("JSON input with explicit WithJSON", func(t *testing.T) {
 		privkey, err := jwxtest.GenerateEcdsaKey(jwa.P256())
 		require.NoError(t, err)

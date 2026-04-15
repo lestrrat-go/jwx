@@ -144,11 +144,14 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 		return makeVerifyError(`jws.WithKey() must be specified for VerifyDetached`)
 	}
 
-	if format == 0 {
-		format = detectDetachedFormat(compact)
+	detected := detectDetachedFormat(compact)
+	if detected == 0 {
+		return makeVerifyError(`input is empty or whitespace-only`)
 	}
 	if format == 0 {
-		return makeVerifyError(`input is empty or whitespace-only`)
+		format = detected
+	} else if format != detected {
+		return makeVerifyError(`input format mismatch: %s specified but input appears to be %s`, detachedFormatName(format), detachedFormatName(detected))
 	}
 
 	if validateKey {
@@ -239,6 +242,20 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 	}
 
 	return nil
+}
+
+// detachedFormatName returns a human-readable name for the internal
+// format constant, used to produce clear mismatch errors when the
+// caller-asserted format disagrees with auto-detection.
+func detachedFormatName(f int) string {
+	switch f {
+	case fmtCompact:
+		return `jws.WithCompact()`
+	case fmtJSON, fmtJSONPretty:
+		return `jws.WithJSON()`
+	default:
+		return fmt.Sprintf(`unknown(%d)`, f)
+	}
 }
 
 // detectDetachedFormat inspects the first non-whitespace byte to decide
