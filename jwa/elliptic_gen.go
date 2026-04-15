@@ -127,34 +127,32 @@ func LookupEllipticCurveAlgorithm(name string) (EllipticCurveAlgorithm, bool) {
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
 func RegisterEllipticCurveAlgorithm(algorithms ...EllipticCurveAlgorithm) {
 	muAllEllipticCurveAlgorithm.Lock()
+	defer muAllEllipticCurveAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		allEllipticCurveAlgorithm[alg.String()] = alg
 	}
-	muAllEllipticCurveAlgorithm.Unlock()
-	rebuildEllipticCurveAlgorithm()
+	rebuildEllipticCurveAlgorithmLocked()
 }
 
 // UnregisterEllipticCurveAlgorithm unregisters a EllipticCurveAlgorithm from its known database.
 // Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterEllipticCurveAlgorithm(algorithms ...EllipticCurveAlgorithm) {
 	muAllEllipticCurveAlgorithm.Lock()
+	defer muAllEllipticCurveAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		if _, ok := builtinEllipticCurveAlgorithm[alg.String()]; ok {
 			continue
 		}
 		delete(allEllipticCurveAlgorithm, alg.String())
 	}
-	muAllEllipticCurveAlgorithm.Unlock()
-	rebuildEllipticCurveAlgorithm()
+	rebuildEllipticCurveAlgorithmLocked()
 }
 
-func rebuildEllipticCurveAlgorithm() {
+func rebuildEllipticCurveAlgorithmLocked() {
 	list := make([]EllipticCurveAlgorithm, 0, len(allEllipticCurveAlgorithm))
-	muAllEllipticCurveAlgorithm.RLock()
 	for _, v := range allEllipticCurveAlgorithm {
 		list = append(list, v)
 	}
-	muAllEllipticCurveAlgorithm.RUnlock()
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].String() < list[j].String()
 	})

@@ -109,34 +109,32 @@ func LookupKeyType(name string) (KeyType, bool) {
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
 func RegisterKeyType(algorithms ...KeyType) {
 	muAllKeyType.Lock()
+	defer muAllKeyType.Unlock()
 	for _, alg := range algorithms {
 		allKeyType[alg.String()] = alg
 	}
-	muAllKeyType.Unlock()
-	rebuildKeyType()
+	rebuildKeyTypeLocked()
 }
 
 // UnregisterKeyType unregisters a KeyType from its known database.
 // Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterKeyType(algorithms ...KeyType) {
 	muAllKeyType.Lock()
+	defer muAllKeyType.Unlock()
 	for _, alg := range algorithms {
 		if _, ok := builtinKeyType[alg.String()]; ok {
 			continue
 		}
 		delete(allKeyType, alg.String())
 	}
-	muAllKeyType.Unlock()
-	rebuildKeyType()
+	rebuildKeyTypeLocked()
 }
 
-func rebuildKeyType() {
+func rebuildKeyTypeLocked() {
 	list := make([]KeyType, 0, len(allKeyType))
-	muAllKeyType.RLock()
 	for _, v := range allKeyType {
 		list = append(list, v)
 	}
-	muAllKeyType.RUnlock()
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].String() < list[j].String()
 	})

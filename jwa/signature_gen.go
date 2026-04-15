@@ -185,34 +185,32 @@ func LookupSignatureAlgorithm(name string) (SignatureAlgorithm, bool) {
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
 func RegisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
 	muAllSignatureAlgorithm.Lock()
+	defer muAllSignatureAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		allSignatureAlgorithm[alg.String()] = alg
 	}
-	muAllSignatureAlgorithm.Unlock()
-	rebuildSignatureAlgorithm()
+	rebuildSignatureAlgorithmLocked()
 }
 
 // UnregisterSignatureAlgorithm unregisters a SignatureAlgorithm from its known database.
 // Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
 	muAllSignatureAlgorithm.Lock()
+	defer muAllSignatureAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		if _, ok := builtinSignatureAlgorithm[alg.String()]; ok {
 			continue
 		}
 		delete(allSignatureAlgorithm, alg.String())
 	}
-	muAllSignatureAlgorithm.Unlock()
-	rebuildSignatureAlgorithm()
+	rebuildSignatureAlgorithmLocked()
 }
 
-func rebuildSignatureAlgorithm() {
+func rebuildSignatureAlgorithmLocked() {
 	list := make([]SignatureAlgorithm, 0, len(allSignatureAlgorithm))
-	muAllSignatureAlgorithm.RLock()
 	for _, v := range allSignatureAlgorithm {
 		list = append(list, v)
 	}
-	muAllSignatureAlgorithm.RUnlock()
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].String() < list[j].String()
 	})
