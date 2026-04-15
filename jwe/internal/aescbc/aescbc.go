@@ -108,7 +108,7 @@ type Hmac struct {
 	blockCipher  cipher.Block
 	hash         func() hash.Hash
 	keysize      int
-	tagsize      int
+	tlen         int
 	integrityKey []byte
 }
 
@@ -125,14 +125,23 @@ func New(key []byte, f BlockCipherFunc) (hmac *Hmac, err error) {
 		return
 	}
 
+	// Per RFC 7518 §5.2.2.1, T_LEN is the authentication tag length. For the
+	// three defined AES-CBC-HMAC variants (A128CBC-HS256, A192CBC-HS384,
+	// A256CBC-HS512) T_LEN happens to equal MAC_KEY_LEN (== keysize here),
+	// but we track it independently so a future variant with a different
+	// T_LEN won't silently mis-truncate the HMAC output.
 	var hfunc func() hash.Hash
+	var tlen int
 	switch keysize {
-	case 16:
+	case 16: // A128CBC-HS256
 		hfunc = sha256.New
-	case 24:
+		tlen = 16
+	case 24: // A192CBC-HS384
 		hfunc = sha512.New384
-	case 32:
+		tlen = 24
+	case 32: // A256CBC-HS512
 		hfunc = sha512.New
+		tlen = 32
 	default:
 		return nil, fmt.Errorf("unsupported key size %d", keysize)
 	}
@@ -142,11 +151,7 @@ func New(key []byte, f BlockCipherFunc) (hmac *Hmac, err error) {
 		hash:         hfunc,
 		integrityKey: ikey,
 		keysize:      keysize,
-		tagsize:      keysize, // NonceSize,
-		// While investigating GH #207, I stumbled upon another problem where
-		// the computed tags don't match on decrypt. After poking through the
-		// code using a bunch of debug statements, I've finally found out that
-		// tagsize = keysize makes the whole thing work.
+		tlen:         tlen,
 	}, nil
 }
 
@@ -157,7 +162,7 @@ func (c Hmac) NonceSize() int {
 
 // Overhead fulfills the crypto.AEAD interface
 func (c Hmac) Overhead() int {
-	return c.blockCipher.BlockSize() + c.tagsize
+	return c.blockCipher.BlockSize() + c.tlen
 }
 
 func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) ([]byte, error) {
@@ -176,7 +181,7 @@ func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) ([]byte, error) {
 	h.Write(ciphertext)
 	h.Write(buf[:])
 	s := h.Sum(nil)
-	return s[:c.tagsize], nil
+	return s[:c.tlen], nil
 }
 
 func ensureSize(dst []byte, n int) []byte {
@@ -240,11 +245,11 @@ func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 	if len(nonce) != c.blockCipher.BlockSize() {
 		return nil, fmt.Errorf(`invalid nonce (length %d, expected %d)`, len(nonce), c.blockCipher.BlockSize())
 	}
-	if len(ciphertext) < c.keysize {
+	if len(ciphertext) < c.tlen {
 		return nil, fmt.Errorf(`invalid ciphertext (too short)`)
 	}
 
-	tagOffset := len(ciphertext) - c.tagsize
+	tagOffset := len(ciphertext) - c.tlen
 	if tagOffset%c.blockCipher.BlockSize() != 0 {
 		return nil, fmt.Errorf(
 			"invalid ciphertext (invalid length: %d %% %d != 0)",
