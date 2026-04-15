@@ -116,34 +116,32 @@ func LookupContentEncryptionAlgorithm(name string) (ContentEncryptionAlgorithm, 
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
 func RegisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm) {
 	muAllContentEncryptionAlgorithm.Lock()
+	defer muAllContentEncryptionAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		allContentEncryptionAlgorithm[alg.String()] = alg
 	}
-	muAllContentEncryptionAlgorithm.Unlock()
-	rebuildContentEncryptionAlgorithm()
+	rebuildContentEncryptionAlgorithmLocked()
 }
 
 // UnregisterContentEncryptionAlgorithm unregisters a ContentEncryptionAlgorithm from its known database.
 // Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm) {
 	muAllContentEncryptionAlgorithm.Lock()
+	defer muAllContentEncryptionAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		if _, ok := builtinContentEncryptionAlgorithm[alg.String()]; ok {
 			continue
 		}
 		delete(allContentEncryptionAlgorithm, alg.String())
 	}
-	muAllContentEncryptionAlgorithm.Unlock()
-	rebuildContentEncryptionAlgorithm()
+	rebuildContentEncryptionAlgorithmLocked()
 }
 
-func rebuildContentEncryptionAlgorithm() {
+func rebuildContentEncryptionAlgorithmLocked() {
 	list := make([]ContentEncryptionAlgorithm, 0, len(allContentEncryptionAlgorithm))
-	muAllContentEncryptionAlgorithm.RLock()
 	for _, v := range allContentEncryptionAlgorithm {
 		list = append(list, v)
 	}
-	muAllContentEncryptionAlgorithm.RUnlock()
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].String() < list[j].String()
 	})

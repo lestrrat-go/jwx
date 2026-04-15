@@ -107,7 +107,7 @@ func Generate(t Algorithm) error {
 		"sort",
 		"sync",
 	}
-	
+
 	// Check if we need to import tokens package
 	needsTokens := false
 	for _, e := range t.Elements {
@@ -116,11 +116,11 @@ func Generate(t Algorithm) error {
 			break
 		}
 	}
-	
+
 	if needsTokens {
 		pkgs = append(pkgs, "github.com/lestrrat-go/jwx/v3/internal/tokens")
 	}
-	
+
 	for _, pkg := range pkgs {
 		o.L("%s", strconv.Quote(pkg))
 	}
@@ -283,34 +283,32 @@ func Generate(t Algorithm) error {
 	o.L("// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.")
 	o.L("func Register%[1]s(algorithms ...%[1]s) {", t.Name)
 	o.L("muAll%[1]s.Lock()", t.Name)
+	o.L("defer muAll%[1]s.Unlock()", t.Name)
 	o.L("for _, alg := range algorithms {")
 	o.L("all%[1]s[alg.String()] = alg", t.Name)
 	o.L("}")
-	o.L("muAll%[1]s.Unlock()", t.Name)
-	o.L("rebuild%[1]s()", t.Name)
+	o.L("rebuild%[1]sLocked()", t.Name)
 	o.L("}")
 
 	o.LL("// Unregister%[1]s unregisters a %[1]s from its known database.", t.Name)
 	o.L("// Non-existent entries, as well as built-in algorithms will silently be ignored.")
 	o.L("func Unregister%[1]s(algorithms ...%[1]s) {", t.Name)
 	o.L("muAll%[1]s.Lock()", t.Name)
+	o.L("defer muAll%[1]s.Unlock()", t.Name)
 	o.L("for _, alg := range algorithms {")
 	o.L("if _, ok := builtin%[1]s[alg.String()]; ok {", t.Name)
 	o.L("continue")
 	o.L("}")
 	o.L("delete(all%[1]s, alg.String())", t.Name)
 	o.L("}")
-	o.L("muAll%[1]s.Unlock()", t.Name)
-	o.L("rebuild%[1]s()", t.Name)
+	o.L("rebuild%[1]sLocked()", t.Name)
 	o.L("}")
 
-	o.LL("func rebuild%[1]s() {", t.Name)
+	o.LL("func rebuild%[1]sLocked() {", t.Name)
 	o.L("list := make([]%[1]s, 0, len(all%[1]s))", t.Name)
-	o.L("muAll%[1]s.RLock()", t.Name)
 	o.L("for _, v := range all%[1]s {", t.Name)
 	o.L("list = append(list, v)")
 	o.L("}")
-	o.L("muAll%[1]s.RUnlock()", t.Name)
 	o.L("sort.Slice(list, func(i, j int) bool {")
 	o.L("return list[i].String() < list[j].String()")
 	o.L("})")
