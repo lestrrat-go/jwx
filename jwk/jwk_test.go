@@ -2282,12 +2282,14 @@ func TestECDSAPEM(t *testing.T) {
 }
 
 func TestGH947(t *testing.T) {
-	// AS OP described it. Below case will panic if the problem exists,
+	// GH947: parsing an OKP key with empty "x"/"d" strings used to panic
+	// inside the downstream Export path. The regression being guarded is
+	// that this input does not panic. Since defaultParseKey now calls
+	// Validate() on the freshly-unmarshaled key, the zero-length coordinate
+	// is rejected cleanly at parse time — no bad key is ever handed back.
 	raw := []byte(`{"crv":"Ed25519","d":"","x":"","kty":"OKP"}`)
-	k, err := jwk.ParseKey(raw)
-	require.NoError(t, err, `jwk.ParseKey should succeed`)
-	var exported []byte
-	require.Error(t, jwk.Export(k, &exported), `(okpkey).Raw with 0-length OKP key should fail`)
+	_, err := jwk.ParseKey(raw)
+	require.Error(t, err, `jwk.ParseKey must reject an OKP key with empty coordinates`)
 }
 
 func TestValidation(t *testing.T) {

@@ -26,13 +26,13 @@ func ecdsaPointJWK(t *testing.T, crv elliptic.Curve, crvName string, x, y *big.I
 	return []byte(body)
 }
 
-// TestECDSAInvalidPointsRejectedOnUse covers JWK-003: ParseKey stores raw
-// x/y bytes without curve checks, but any downstream use of the key —
-// Export (which constructs a *ecdsa.PublicKey) or an explicit Validate()
-// — must refuse points that are not on the declared curve and the
-// identity point (0, 0). Without validation, these feed invalid-curve
-// attacks to downstream ECDSA/ECDH consumers.
-func TestECDSAInvalidPointsRejectedOnUse(t *testing.T) {
+// TestECDSAInvalidPointsRejectedOnParse asserts that ParseKey / Parse are
+// the trust boundary for externally supplied ECDSA JWKs: off-curve (x, y)
+// and the identity point (0, 0) are rejected at parse time, not deferred
+// to a later Validate() / Export call. The defaultParseKey path calls
+// key.Validate() after UnmarshalKey, so invalid points never escape as a
+// Key value.
+func TestECDSAInvalidPointsRejectedOnParse(t *testing.T) {
 	cases := []struct {
 		name string
 		x, y *big.Int
@@ -45,13 +45,17 @@ func TestECDSAInvalidPointsRejectedOnUse(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			body := ecdsaPointJWK(t, elliptic.P256(), "P-256", tc.x, tc.y)
-			key, err := jwk.ParseKey(body)
-			require.NoError(t, err, `ParseKey stores raw bytes; it does not run curve checks yet`)
 
-			require.Error(t, key.Validate(), `Validate must reject invalid ECDSA point`)
+			_, err := jwk.ParseKey(body)
+			require.Error(t, err, `ParseKey must reject invalid ECDSA point at parse time`)
+			require.True(t, jwk.IsKeyValidationError(err), `ParseKey error must unwrap to a key-validation error: %v`, err)
 
-			var pub ecdsa.PublicKey
-			require.Error(t, jwk.Export(key, &pub), `Export to *ecdsa.PublicKey must reject invalid ECDSA point`)
+			// The Set-level entry point funnels individual keys through
+			// defaultParseKey too, so the same body wrapped in a JWKS must
+			// also be rejected.
+			setBody := []byte(`{"keys":[` + string(body) + `]}`)
+			_, err = jwk.Parse(setBody)
+			require.Error(t, err, `jwk.Parse must reject a JWKS containing an invalid ECDSA point`)
 		})
 	}
 
