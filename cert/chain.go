@@ -2,7 +2,9 @@ package cert
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
@@ -24,9 +26,11 @@ func (cc Chain) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteByte(tokens.Comma)
 		}
-		buf.WriteByte('"')
-		buf.Write(cert)
-		buf.WriteByte('"')
+		encoded, err := json.Marshal(string(cert))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode certificate at index %d: %w`, i, err)
+		}
+		buf.Write(encoded)
 	}
 	buf.WriteByte(tokens.CloseSquareBracket)
 	return buf.Bytes(), nil
@@ -62,19 +66,38 @@ func (cc *Chain) Len() int {
 	return len(cc.certificates)
 }
 
-var pemStart = []byte("----- BEGIN CERTIFICATE -----")
-var pemEnd = []byte("----- END CERTIFICATE -----")
-
 func (cc *Chain) AddString(der string) error {
 	return cc.Add([]byte(der))
 }
 
 func (cc *Chain) Add(der []byte) error {
-	// We're going to be nice and remove marker lines if they
-	// give it to us
-	der = bytes.TrimPrefix(der, pemStart)
-	der = bytes.TrimSuffix(der, pemEnd)
 	der = bytes.TrimSpace(der)
-	cc.certificates = append(cc.certificates, der)
+	// Accept a PEM-encoded CERTIFICATE block and convert it to the
+	// base64(DER) form that x5c requires.
+	if block, _ := pem.Decode(der); block != nil && block.Type == "CERTIFICATE" {
+		encoded := make([]byte, base64.StdEncoding.EncodedLen(len(block.Bytes)))
+		base64.StdEncoding.Encode(encoded, block.Bytes)
+		cc.certificates = append(cc.certificates, encoded)
+		return nil
+	}
+	// Non-PEM input must be base64(DER). Strip any internal whitespace
+	// (callers commonly pass multi-line base64 literals) and validate.
+	normalized := stripASCIIWhitespace(der)
+	if _, err := base64.StdEncoding.DecodeString(string(normalized)); err != nil {
+		return fmt.Errorf(`cert.Chain.Add: input is not a PEM CERTIFICATE block or valid base64(DER): %w`, err)
+	}
+	cc.certificates = append(cc.certificates, normalized)
 	return nil
+}
+
+func stripASCIIWhitespace(src []byte) []byte {
+	dst := make([]byte, 0, len(src))
+	for _, b := range src {
+		switch b {
+		case ' ', '\t', '\r', '\n', '\v', '\f':
+			continue
+		}
+		dst = append(dst, b)
+	}
+	return dst
 }

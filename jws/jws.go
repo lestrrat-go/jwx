@@ -26,6 +26,7 @@
 package jws
 
 import (
+	"crypto"
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -265,9 +266,15 @@ func getB64Value(hdr Headers) bool {
 // will attempt to autodetect the format. If one or the other is specified,
 // only the specified format will be attempted.
 //
+// Parse enforces the `WithMaxParseInputSize` cap on the length of src,
+// matching the behavior of ParseReader. Callers who pre-read bytes into
+// memory (e.g. HTTP middleware, database values) therefore get the same
+// hardening as the io.Reader path.
+//
 // On error, returns a jws.ParseError.
 func Parse(src []byte, options ...ParseOption) (*Message, error) {
 	maxSigs := int(maxSignatures.Load())
+	maxSize := maxParseInputSize.Load()
 
 	var formats int
 	for _, option := range options {
@@ -290,7 +297,18 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 			if maxSigs <= 0 {
 				return nil, makeParseError(`jws.Parse`, `WithMaxSignatures must be greater than zero`)
 			}
+		case identMaxParseInputSize{}:
+			if err := option.Value(&maxSize); err != nil {
+				return nil, makeParseError(`jws.Parse`, `invalid WithMaxParseInputSize: %w`, err)
+			}
+			if maxSize <= 0 {
+				return nil, makeParseError(`jws.Parse`, `WithMaxParseInputSize must be greater than zero`)
+			}
 		}
+	}
+
+	if maxSize > 0 && int64(len(src)) > maxSize {
+		return nil, makeParseError(`jws.Parse`, `input exceeded max size of %d bytes`, maxSize)
 	}
 
 	// if format is 0 or both JSON/Compact, auto detect
@@ -319,15 +337,10 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 		}
 		return msg, nil
 	} else if formats&fmtJSON == fmtJSON {
-		msg, err := parseJSON(src)
+		msg, err := parseJSON(src, maxSigs)
 		if err != nil {
 			return nil, makeParseError(`jws.Parse`, `failed to parse JSON format: %w`, err)
 		}
-
-		if maxSigs > 0 && len(msg.signatures) > maxSigs {
-			return nil, makeParseError(`jws.Parse`, `too many signatures in JWS message (%d > %d)`, len(msg.signatures), maxSigs)
-		}
-
 		return msg, nil
 	}
 
@@ -388,8 +401,9 @@ func ParseReader(src io.Reader, options ...ParseOption) (*Message, error) {
 	return Parse(buf, options...)
 }
 
-func parseJSON(data []byte) (result *Message, err error) {
+func parseJSON(data []byte, maxSigs int) (result *Message, err error) {
 	var m Message
+	m.maxSignatures = maxSigs
 	if err := json.Unmarshal(data, &m); err != nil {
 		return nil, fmt.Errorf(`failed to unmarshal jws message: %w`, err)
 	}
@@ -527,6 +541,11 @@ func RegisterCustomField(name string, object any) {
 	registry.Register(name, object)
 }
 
+// curver is implemented by jwk.Key types that carry curve information.
+type curver interface {
+	Crv() (jwa.EllipticCurveAlgorithm, bool)
+}
+
 // Helpers for signature verification
 var muAlgorithmMaps sync.RWMutex
 var keyTypeToAlgorithms = make(map[jwa.KeyType][]jwa.SignatureAlgorithm)
@@ -588,9 +607,6 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 	switch key := key.(type) {
 	case jwk.Key:
 		kty = key.KeyType()
-		type curver interface {
-			Crv() (jwa.EllipticCurveAlgorithm, bool)
-		}
 		if ck, ok := key.(curver); ok {
 			crv, hasCrv = ck.Crv()
 		}
@@ -603,21 +619,32 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 		crv = jwa.Ed25519()
 		hasCrv = true
 	case *ecdh.PublicKey, ecdh.PublicKey, *ecdh.PrivateKey, ecdh.PrivateKey:
-		kty = jwa.OKP()
 		// ecdh keys are for key agreement (X25519/X448), not signing.
-		// We still resolve kty so the caller gets a meaningful error
-		// or an empty curve-filtered result.
+		// Reject at the API boundary instead of returning a misleading
+		// algorithm list that would fail deeper in the signing stack.
+		return nil, fmt.Errorf(`key type %T cannot be used for signing (ecdh keys are key-agreement only)`, key)
 	case []byte:
 		kty = jwa.OctetSeq()
 	default:
+		// For crypto.Signer from external packages (e.g. KMS-backed signers),
+		// extract the underlying public key type via .Public().
+		// Standard library types (*rsa.PrivateKey, etc.) are already handled
+		// by the concrete cases above.
+		if signer, ok := key.(crypto.Signer); ok {
+			pub := signer.Public()
+			// Guard: only recurse if the public key is not itself a crypto.Signer,
+			// to prevent infinite recursion from pathological implementations.
+			if _, isSigner := pub.(crypto.Signer); !isSigner {
+				if algs, err := AlgorithmsForKey(pub); err == nil {
+					return algs, nil
+				}
+			}
+		}
 		imported, err := jwk.Import(key)
 		if err != nil {
 			return nil, fmt.Errorf(`unknown key type %T`, key)
 		}
 		kty = imported.KeyType()
-		type curver interface {
-			Crv() (jwa.EllipticCurveAlgorithm, bool)
-		}
 		if ck, ok := imported.(curver); ok {
 			crv, hasCrv = ck.Crv()
 		}
@@ -667,6 +694,21 @@ func isRegisteredUnderAnyCurve(alg jwa.SignatureAlgorithm) bool {
 		}
 	}
 	return false
+}
+
+// validateAlgorithmForKey checks that alg is compatible with key.
+// If the key type is not recognized (e.g. an opaque crypto.Signer whose
+// .Public() also returns an unrecognized type), validation is skipped
+// and the crypto layer will catch any real incompatibility.
+func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
+	algs, err := AlgorithmsForKey(key)
+	if err != nil {
+		return nil //nolint:nilerr // intentional: unrecognized key types skip validation
+	}
+	if !slices.Contains(algs, alg) {
+		return fmt.Errorf(`algorithm %q is not compatible with key type %T`, alg, key)
+	}
+	return nil
 }
 
 // Settings allows you to set global settings for this JWS operations.
@@ -720,24 +762,46 @@ func Settings(options ...GlobalOption) {
 //
 // Since this function avoids doing many checks that jws.Verify would perform,
 // you must ensure to perform the necessary checks including ensuring that algorithm is safe to use for your payload yourself.
+//
+// VerifyCompactFast refuses messages whose protected header carries a
+// "crit" list. RFC 7515 §4.1.11 requires every critical extension to be
+// understood by the recipient, and the fast path has no WithCritExtension
+// allowlist to consult. On crit-present input it returns a sentinel error
+// that callers can detect with errors.Is(err, jws.ErrCritPresent()) and
+// retry through jws.Verify, which enforces the full validateCritical rule
+// set. Applications that may legitimately receive "crit" headers should
+// call jws.Verify directly.
+//
+// VerifyCompactFast also assumes the JWS uses the default "b64":true
+// (base64url-encoded) payload encoding. A conforming RFC 7797 b64:false
+// JWS is required to list "b64" in "crit", so it is automatically routed
+// away from the fast path by the crit refusal above. Detached-payload
+// callers must use jws.Verify with jws.WithDetachedPayload regardless,
+// since VerifyCompactFast has no way to accept a detached payload.
 func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error) {
-	algstr := alg.String()
-
-	// Split the serialized JWT into its components
-	hdr, payload, encodedSig, err := jwsbb.SplitCompact(compact)
-	if err != nil {
-		return nil, fmt.Errorf("jwt.verifyFast: failed to split compact: %w", err)
+	if err := validateAlgorithmForKey(alg, key); err != nil {
+		return nil, makeVerifyError(`%w`, err)
 	}
 
-	// Validate the "crit" header per RFC 7515 Section 4.1.11
-	parsedHdr := jwsbb.HeaderParseCompact(hdr)
-	if err := validateCriticalFast(parsedHdr); err != nil {
-		return nil, err
+	algstr := alg.String()
+
+	// Split the serialized JWS into its components
+	hdr, payload, encodedSig, err := jwsbb.SplitCompact(compact)
+	if err != nil {
+		return nil, makeVerifyError("failed to split compact: %w", err)
+	}
+
+	// Refuse crit-bearing messages: the fast path has no WithCritExtension
+	// allowlist, so accepting them would silently violate RFC 7515 §4.1.11.
+	// Callers that wrap VerifyCompactFast can detect this via
+	// errors.Is(err, jws.ErrCritPresent()) and fall through to jws.Verify.
+	if jwsbb.HeaderHas(jwsbb.HeaderParseCompact(hdr), CriticalKey) {
+		return nil, errCritPresent
 	}
 
 	signature, err := base64.Decode(encodedSig)
 	if err != nil {
-		return nil, fmt.Errorf("jwt.verifyFast: failed to decode signature: %w", err)
+		return nil, makeVerifyError("failed to decode signature: %w", err)
 	}
 
 	// Instead of appending, copy the data from hdr/payload
@@ -752,21 +816,21 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// Verify the signature
 	if verifier2, err := VerifierFor(alg); err == nil {
 		if err := verifier2.Verify(key, verifyBuf, signature); err != nil {
-			return nil, verifyError{verificationError{fmt.Errorf("jwt.VerifyCompact: signature verification failed for %s: %w", algstr, err)}}
+			return nil, verifyError{verificationError{fmt.Errorf("signature verification failed for %s: %w", algstr, err)}}
 		}
 	} else {
 		legacyVerifier, err := NewVerifier(alg)
 		if err != nil {
-			return nil, makeVerifyError("jwt.VerifyCompact: failed to create verifier for %s: %w", algstr, err)
+			return nil, makeVerifyError("failed to create verifier for %s: %w", algstr, err)
 		}
 		if err := legacyVerifier.Verify(verifyBuf, signature, key); err != nil {
-			return nil, verifyError{verificationError{fmt.Errorf("jwt.VerifyCompact: signature verification failed for %s: %w", algstr, err)}}
+			return nil, verifyError{verificationError{fmt.Errorf("signature verification failed for %s: %w", algstr, err)}}
 		}
 	}
 
 	decoded, err := base64.Decode(payload)
 	if err != nil {
-		return nil, makeVerifyError("jwt.VerifyCompact: failed to decode payload: %w", err)
+		return nil, makeVerifyError("failed to decode payload: %w", err)
 	}
 	return decoded, nil
 }

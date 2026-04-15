@@ -6,6 +6,7 @@ package jwt
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -15,6 +16,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jws"
 	jwterrs "github.com/lestrrat-go/jwx/v3/jwt/internal/errors"
 	"github.com/lestrrat-go/jwx/v3/jwt/internal/types"
@@ -162,17 +164,27 @@ func Parse(s []byte, options ...ParseOption) (Token, error) {
 //
 // You cannot override `jwt.WithVerify()` or `jwt.WithValidate()`
 // using this function. Providing these options would result in
-// an error
+// an error.
+//
+// Key-related options (`jwt.WithKey`, `jwt.WithKeySet`,
+// `jwt.WithKeyProvider`, `jwt.WithVerifyAuto`) are silently ignored,
+// so callers may reuse an option slice across `Parse` and
+// `ParseInsecure` call sites without worrying about leaking a stray
+// verification step.
 func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
+	filtered := make([]ParseOption, 0, len(options)+2)
 	for _, option := range options {
 		switch option.Ident() {
 		case identVerify{}, identValidate{}:
 			return nil, jwterrs.ParseErrorf(`jwt.ParseInsecure`, `jwt.WithVerify() and jwt.WithValidate() may not be specified`)
+		case identKey{}, identKeySet{}, identKeyProvider{}, identVerifyAuto{}:
+			continue
 		}
+		filtered = append(filtered, option)
 	}
 
-	options = append(options, WithVerify(false), WithValidate(false))
-	tok, err := Parse(s, options...)
+	filtered = append(filtered, WithVerify(false), WithValidate(false))
+	tok, err := Parse(s, filtered...)
 	if err != nil {
 		return nil, jwterrs.ParseErrorf(`jwt.ParseInsecure`, `failed to parse token: %w`, err)
 	}
@@ -337,10 +349,20 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 		alg, ok := wk.alg.(jwa.SignatureAlgorithm)
 		if ok && len(wk.options) == 0 {
 			verified, err := jws.VerifyCompactFast(wk.key, payload, alg)
-			if err != nil {
-				return nil, _JwsVerifyDone, err
+			if err == nil {
+				return verified, _JwsVerifyDone, nil
 			}
-			return verified, _JwsVerifyDone, nil
+			// VerifyCompactFast refuses crit-bearing messages. In v3
+			// jws.Verify defaults critValidation=false, so the generic
+			// fall-through path would still silently accept "crit".
+			// Force the strict path here: jwt.Parse must not be laxer
+			// than jws.Verify + WithCritValidation.
+			if errors.Is(err, jws.ErrCritPresent()) {
+				verifyOpts := append(ctx.verifyOpts, jws.WithCompact(), jws.WithCritValidation(true))
+				verified, err := jws.Verify(payload, verifyOpts...)
+				return verified, _JwsVerifyDone, err
+			}
+			return nil, _JwsVerifyDone, err
 		}
 	}
 
@@ -510,10 +532,30 @@ func Sign(t Token, options ...SignOption) ([]byte, error) {
 				return nil, fmt.Errorf(`jwt.Sign: invalid algorithm type %T. jwa.SignatureAlgorithm is required`, wk.alg)
 			}
 
+			// Reject algorithm names that would require JSON escaping
+			// in the protected header. Unlike kid (which may be attacker-
+			// influenced and silently falls through to jws.Sign), an
+			// unsafe alg is almost certainly a caller bug or an injection
+			// attempt, so we fail fast rather than emit any signature.
+			if !fastPathAlgSafe(alg.String()) {
+				return nil, fmt.Errorf(`jwt.Sign: algorithm %q contains bytes that require JSON escaping`, alg.String())
+			}
+
 			// Check if option contains anything other than alg/key
 			if len(wk.options) == 0 {
-				// yay, we have something we can put in the FAST PATH!
-				return signFast(t, alg, wk.key)
+				// If the key carries a kid that would require JSON escaping,
+				// skip the fast path (which concatenates kid raw into the
+				// protected header) and fall through to jws.Sign.
+				fastSafe := true
+				if jwkKey, ok := wk.key.(jwk.Key); ok {
+					if v, ok := jwkKey.KeyID(); ok && !fastPathKidSafe(v) {
+						fastSafe = false
+					}
+				}
+				if fastSafe {
+					// yay, we have something we can put in the FAST PATH!
+					return signFast(t, alg, wk.key)
+				}
 			}
 			// fallthrough
 		}

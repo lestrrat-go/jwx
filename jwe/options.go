@@ -6,6 +6,44 @@ import (
 	"github.com/lestrrat-go/option/v2"
 )
 
+type identCritExtension struct{}
+
+// WithCritExtension declares that the caller understands and will process
+// the named "crit" (Critical) header parameter extension(s) per RFC 7516
+// Section 4.1.13 (which references RFC 7515 Section 4.1.11). The option
+// is variadic and accumulating: a single call may register any number
+// of extension names, and the option may be passed multiple times to add
+// more.
+//
+// This option only takes effect when jwe.WithCritValidation(true) is
+// also passed. With validation enabled, jwe.Decrypt() rejects any JWE
+// whose protected header lists a "crit" extension that has not been
+// declared via this option, satisfying the RFC's requirement that
+// recipients MUST reject any "crit" extension they do not understand.
+//
+// IMPORTANT: declaring an extension here is a promise to the library
+// that the caller knows what the extension means and will perform any
+// validation, side effect, or policy enforcement the extension requires
+// AFTER jwe.Decrypt() returns successfully. The library cannot inspect
+// or enforce the semantics of an extension; it only checks that every
+// "crit" entry in the message has been declared. If you register an
+// extension and then forget to act on its value, you have effectively
+// disabled the protection the producer was trying to obtain by listing
+// the extension as critical.
+//
+// Concretely, the post-decrypt code path for a declared extension must:
+//
+//  1. Read the value of the named header from the decrypted message.
+//  2. Apply whatever check or transformation the extension specifies
+//     (e.g. for an "x-tenant-binding" extension, refuse to act on the
+//     payload unless the binding matches the current tenant).
+//  3. Treat any failure of that check as a decryption failure for
+//     the application's purposes, even though jwe.Decrypt() returned
+//     no error.
+func WithCritExtension(names ...string) DecryptOption {
+	return &decryptOption{option.New(identCritExtension{}, names)}
+}
+
 // WithProtectedHeaders is used to specify contents of the protected header.
 // Some fields such as "enc" and "zip" will be overwritten when encryption is
 // performed.
@@ -35,7 +73,16 @@ func (*withKeySuboption) withKeySuboption() {}
 
 // WithPerRecipientHeaders is used to pass header values for each recipient.
 // Note that these headers are by definition _unprotected_.
+//
+// The supplied Headers is cloned before being stored in the option, so the
+// caller retains exclusive ownership of the original instance and the
+// library never mutates or pools it.
 func WithPerRecipientHeaders(hdr Headers) WithKeySuboption {
+	if hdr != nil {
+		if cloned, err := hdr.Clone(); err == nil {
+			hdr = cloned
+		}
+	}
 	return &withKeySuboption{option.New(identPerRecipientHeaders{}, hdr)}
 }
 

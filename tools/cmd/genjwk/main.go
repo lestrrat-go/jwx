@@ -281,7 +281,7 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 		}
 	}
 	o.L("privateParams map[string]any")
-	o.L("mu *sync.RWMutex")
+	o.L("mu sync.RWMutex")
 	o.L("dc json.DecodeCtx")
 	o.L("}")
 
@@ -290,25 +290,24 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 
 	o.LL("func new%s() *%s {", ifName, structName)
 	o.L("return &%s{", structName)
-	o.L("mu: &sync.RWMutex{},")
 	o.L("privateParams: make(map[string]any),")
 	o.L("}")
 	o.L("}")
 
-	o.LL("func (h %s) KeyType() jwa.KeyType {", structName)
+	o.LL("func (h *%s) KeyType() jwa.KeyType {", structName)
 	o.L("return %s", kt.KeyType)
 	o.L("}")
 
-	o.LL("func (h %s) rlock() {", structName)
+	o.LL("func (h *%s) rlock() {", structName)
 	o.L("h.mu.RLock()")
 	o.L("}")
 
-	o.LL("func (h %s) runlock() {", structName)
+	o.LL("func (h *%s) runlock() {", structName)
 	o.L("h.mu.RUnlock()")
 	o.L("}")
 
 	if objName == "PublicKey" || objName == "PrivateKey" {
-		o.LL("func (h %s) IsPrivate() bool {", structName)
+		o.LL("func (h *%s) IsPrivate() bool {", structName)
 		o.L("return %s", fmt.Sprint(objName == "PrivateKey"))
 		o.L("}")
 	}
@@ -323,6 +322,8 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 			o.R("%s", PointerElem(f))
 		}
 		o.R(", bool) {")
+		o.L("h.mu.RLock()")
+		o.L("defer h.mu.RUnlock()")
 
 		if f.Bool(`hasGet`) {
 			o.L("if h.%s != nil {", f.Name(false))
@@ -675,11 +676,18 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 	o.L("return nil")
 	o.L("}")
 
-	o.LL("func (h %s) MarshalJSON() ([]byte, error) {", structName)
-	o.L("data := make(map[string]any)")
-	o.L("fields := make([]string, 0, %d)", len(obj.Fields()))
-	o.L("data[KeyTypeKey] = %s", kt.KeyType)
-	o.L("fields = append(fields, KeyTypeKey)")
+	o.LL("func (h *%s) makePairs() ([]fieldPair, error) {", structName)
+	o.L("pairs := getFieldPairList()")
+	o.L("h.mu.RLock()")
+	o.L("defer h.mu.RUnlock()")
+	// KeyTypeKey is always present
+	o.L("{")
+	o.L("v, err := json.Marshal(%s)", kt.KeyType)
+	o.L("if err != nil {")
+	o.L("return nil, fmt.Errorf(`failed to marshal field %%q: %%w`, KeyTypeKey, err)")
+	o.L("}")
+	o.L("pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: v})")
+	o.L("}")
 	for _, f := range obj.Fields() {
 		var keyName string
 		if f.Bool(`is_std`) {
@@ -688,47 +696,66 @@ func generateObject(o *codegen.Output, kt *KeyType, obj *codegen.Object) error {
 			keyName = kt.Prefix + f.Name(true) + "Key"
 		}
 		o.L("if h.%s != nil {", f.Name(false))
-		if fieldStorageTypeIsIndirect(f.Type()) {
-			o.L("data[%s] = *(h.%s)", keyName, f.Name(false))
+		if f.Type() == "[]byte" {
+			o.L("v, err := json.Marshal(base64.EncodeToString(h.%s))", f.Name(false))
+		} else if fieldStorageTypeIsIndirect(f.Type()) {
+			o.L("v, err := json.Marshal(*(h.%s))", f.Name(false))
 		} else {
-			o.L("data[%s] = h.%s", keyName, f.Name(false))
+			o.L("v, err := json.Marshal(h.%s)", f.Name(false))
 		}
-		o.L("fields = append(fields, %s)", keyName)
+		o.L("if err != nil {")
+		o.L("return nil, fmt.Errorf(`failed to marshal field %%q: %%w`, %s, err)", keyName)
+		o.L("}")
+		o.L("pairs = append(pairs, fieldPair{Name: %s, Value: v})", keyName)
 		o.L("}")
 	}
 	o.L("for k, v := range h.privateParams {")
-	o.L("data[k] = v")
-	o.L("fields = append(fields, k)")
-	o.L("}")
-
-	o.LL("sort.Strings(fields)")
-	o.L("buf := pool.BytesBuffer().Get()")
-	o.L("defer pool.BytesBuffer().Put(buf)")
-	o.L("buf.WriteByte(tokens.OpenCurlyBracket)")
-	o.L("enc := json.NewEncoder(buf)")
-	o.L("for i, f := range fields {")
-	o.L("if i > 0 {")
-	o.L("buf.WriteRune(tokens.Comma)")
-	o.L("}")
-	o.L("buf.WriteRune(tokens.DoubleQuote)")
-	o.L("buf.WriteString(f)")
-	o.L("buf.WriteString(`\":`)")
-	o.L("v := data[f]")
+	o.L("var encoded []byte")
 	o.L("switch v := v.(type) {")
 	o.L("case []byte:")
-	o.L("buf.WriteRune(tokens.DoubleQuote)")
-	o.L("buf.WriteString(base64.EncodeToString(v))")
-	o.L("buf.WriteRune(tokens.DoubleQuote)")
+	o.L("var err error")
+	o.L("encoded, err = json.Marshal(base64.EncodeToString(v))")
+	o.L("if err != nil {")
+	o.L("return nil, fmt.Errorf(`failed to marshal field %%q: %%w`, k, err)")
+	o.L("}")
 	o.L("default:")
-	o.L("if err := enc.Encode(v); err != nil {")
-	o.L("return nil, fmt.Errorf(`failed to encode value for field %%s: %%w`, f, err)")
+	o.L("var err error")
+	o.L("encoded, err = json.Marshal(v)")
+	o.L("if err != nil {")
+	o.L("return nil, fmt.Errorf(`failed to marshal field %%q: %%w`, k, err)")
 	o.L("}")
-	o.L("buf.Truncate(buf.Len()-1)")
 	o.L("}")
+	o.L("pairs = append(pairs, fieldPair{Name: k, Value: encoded})")
+	o.L("}")
+
+	o.LL("sort.Slice(pairs, func(i, j int) bool {")
+	o.L("return pairs[i].Name < pairs[j].Name")
+	o.L("})")
+
+	o.LL("return pairs, nil")
+	o.L("}")
+
+	o.LL("func (h *%s) MarshalJSON() ([]byte, error) {", structName)
+	o.L("buf := pool.BytesBuffer().Get()")
+	o.L("defer pool.BytesBuffer().Put(buf)")
+	o.L("pairs, err := h.makePairs()")
+	o.L("if err != nil {")
+	o.L("return nil, fmt.Errorf(`failed to make pairs: %%w`, err)")
+	o.L("}")
+	o.L("buf.WriteByte(tokens.OpenCurlyBracket)")
+	o.LL("for i, pair := range pairs {")
+	o.L("if i > 0 {")
+	o.L("buf.WriteByte(tokens.Comma)")
+	o.L("}")
+	o.L(`buf.WriteByte('"')`)
+	o.L(`buf.WriteString(pair.Name)`)
+	o.L("buf.WriteString(`\": `)")
+	o.L(`buf.Write(pair.Value.([]byte))`)
 	o.L("}")
 	o.L("buf.WriteByte(tokens.CloseCurlyBracket)")
 	o.L("ret := make([]byte, buf.Len())")
 	o.L("copy(ret, buf.Bytes())")
+	o.L("putFieldPairList(pairs)")
 	o.L("return ret, nil")
 	o.L("}")
 
@@ -769,6 +796,7 @@ func generateGenericHeaders(fields codegen.FieldList, keyTypes []*KeyType) error
 	pkgs := []string{
 		"crypto/x509",
 		"fmt",
+		"sync",
 		"github.com/lestrrat-go/jwx/v3/jwa",
 	}
 	for _, pkg := range pkgs {
@@ -782,6 +810,37 @@ func generateGenericHeaders(fields codegen.FieldList, keyTypes []*KeyType) error
 		o.L("%sKey = %s", f.Name(true), strconv.Quote(f.JSON()))
 	}
 	o.L(")") // end const
+
+	// Compute the max field count across all key types (+ 1 for KeyTypeKey)
+	maxFields := 0
+	for _, kt := range keyTypes {
+		for _, obj := range kt.Objects {
+			if n := len(obj.Fields()); n > maxFields {
+				maxFields = n
+			}
+		}
+	}
+	maxFields++ // for KeyTypeKey
+
+	o.LL("type fieldPair struct {")
+	o.L("Name  string")
+	o.L("Value any")
+	o.L("}")
+
+	o.LL("var fieldPairPool = sync.Pool{")
+	o.L("New: func() any {")
+	o.L("return make([]fieldPair, 0, %d)", maxFields)
+	o.L("},")
+	o.L("}")
+
+	o.LL("func getFieldPairList() []fieldPair {")
+	o.L("return fieldPairPool.Get().([]fieldPair)")
+	o.L("}")
+
+	o.LL("func putFieldPairList(list []fieldPair) {")
+	o.L("clear(list) // zero fieldPair entries so pooled values don't retain references across Put/Get")
+	o.L("fieldPairPool.Put(list[:0])")
+	o.L("}")
 
 	o.LL("// Key defines the minimal interface for each of the")
 	o.L("// key types. Their use and implementation differ significantly")

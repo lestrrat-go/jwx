@@ -32,7 +32,7 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 - **Fetch(ctx, url, ...FetchOption) (Set, error)** — HTTP fetch with optional whitelist, body size limit (default 10 MB via `WithMaxFetchBodySize`)
 - **DefaultHTTPClient() \*http.Client** — returns a new http.Client with library defaults (30s timeout, redirect policy)
 - **Import(raw any) (Key, error)** / **Export(key Key, dst any) error** — convert between Go crypto types and JWK
-- **PublicKeyOf(v any) (Key, error)** / **PublicSetOf(v Set) (Set, error)** — extract public keys
+- **PublicKeyOf(v any) (Key, error)** / **PublicSetOf(v Set, ...PublicSetOption) (Set, error)** — extract public keys. `PublicSetOf` rejects sets containing symmetric (oct) keys by default; pass `WithAllowSymmetric(true)` for legacy pass-through.
 - **NewCache(ctx, client) (*Cache, error)** — auto-refreshing JWKS cache
 - **AssignKeyID(key Key, ...AssignKeyIDOption) error** — compute and set kid via thumbprint
 - **Pem(v any) ([]byte, error)** — PEM encode

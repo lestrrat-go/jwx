@@ -5,6 +5,7 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/lestrrat-go/dsig"
 	internbase64 "github.com/lestrrat-go/jwx/v3/internal/base64"
@@ -103,7 +104,7 @@ func SignDetached(payload io.Reader, options ...SignOption) ([]byte, error) {
 		case identDetachedPayload{}, identKeyProvider{}, identMessage{}, identInsecureNoSignature{}:
 			return nil, makeSignError(`option %T is not supported by SignDetached; use jws.WithKey() to specify a single key`, option)
 		default:
-			return nil, makeSignError(`invalid jws.SignOption %q passed`, fmt.Sprintf(`%T`, option.Ident()))
+			return nil, makeSignError(`invalid jws.SignOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
 	}
 

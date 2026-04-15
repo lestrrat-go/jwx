@@ -45,7 +45,7 @@ type ecdsaPublicKey struct {
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	y                      []byte
 	privateParams          map[string]any
-	mu                     *sync.RWMutex
+	mu                     sync.RWMutex
 	dc                     json.DecodeCtx
 }
 
@@ -54,28 +54,29 @@ var _ Key = &ecdsaPublicKey{}
 
 func newECDSAPublicKey() *ecdsaPublicKey {
 	return &ecdsaPublicKey{
-		mu:            &sync.RWMutex{},
 		privateParams: make(map[string]any),
 	}
 }
 
-func (h ecdsaPublicKey) KeyType() jwa.KeyType {
+func (h *ecdsaPublicKey) KeyType() jwa.KeyType {
 	return jwa.EC()
 }
 
-func (h ecdsaPublicKey) rlock() {
+func (h *ecdsaPublicKey) rlock() {
 	h.mu.RLock()
 }
 
-func (h ecdsaPublicKey) runlock() {
+func (h *ecdsaPublicKey) runlock() {
 	h.mu.RUnlock()
 }
 
-func (h ecdsaPublicKey) IsPrivate() bool {
+func (h *ecdsaPublicKey) IsPrivate() bool {
 	return false
 }
 
 func (h *ecdsaPublicKey) Algorithm() (jwa.KeyAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm != nil {
 		return *(h.algorithm), true
 	}
@@ -83,6 +84,8 @@ func (h *ecdsaPublicKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 }
 
 func (h *ecdsaPublicKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.crv != nil {
 		return *(h.crv), true
 	}
@@ -90,6 +93,8 @@ func (h *ecdsaPublicKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
 }
 
 func (h *ecdsaPublicKey) KeyID() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyID != nil {
 		return *(h.keyID), true
 	}
@@ -97,6 +102,8 @@ func (h *ecdsaPublicKey) KeyID() (string, bool) {
 }
 
 func (h *ecdsaPublicKey) KeyOps() (KeyOperationList, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyOps != nil {
 		return *(h.keyOps), true
 	}
@@ -104,6 +111,8 @@ func (h *ecdsaPublicKey) KeyOps() (KeyOperationList, bool) {
 }
 
 func (h *ecdsaPublicKey) KeyUsage() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyUsage != nil {
 		return *(h.keyUsage), true
 	}
@@ -111,6 +120,8 @@ func (h *ecdsaPublicKey) KeyUsage() (string, bool) {
 }
 
 func (h *ecdsaPublicKey) X() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x != nil {
 		return h.x, true
 	}
@@ -118,6 +129,8 @@ func (h *ecdsaPublicKey) X() ([]byte, bool) {
 }
 
 func (h *ecdsaPublicKey) X509CertChain() (*cert.Chain, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertChain != nil {
 		return h.x509CertChain, true
 	}
@@ -125,6 +138,8 @@ func (h *ecdsaPublicKey) X509CertChain() (*cert.Chain, bool) {
 }
 
 func (h *ecdsaPublicKey) X509CertThumbprint() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprint != nil {
 		return *(h.x509CertThumbprint), true
 	}
@@ -132,6 +147,8 @@ func (h *ecdsaPublicKey) X509CertThumbprint() (string, bool) {
 }
 
 func (h *ecdsaPublicKey) X509CertThumbprintS256() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprintS256 != nil {
 		return *(h.x509CertThumbprintS256), true
 	}
@@ -139,6 +156,8 @@ func (h *ecdsaPublicKey) X509CertThumbprintS256() (string, bool) {
 }
 
 func (h *ecdsaPublicKey) X509URL() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509URL != nil {
 		return *(h.x509URL), true
 	}
@@ -146,6 +165,8 @@ func (h *ecdsaPublicKey) X509URL() (string, bool) {
 }
 
 func (h *ecdsaPublicKey) Y() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.y != nil {
 		return h.y, true
 	}
@@ -586,88 +607,142 @@ LOOP:
 	return nil
 }
 
-func (h ecdsaPublicKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]any)
-	fields := make([]string, 0, 11)
-	data[KeyTypeKey] = jwa.EC()
-	fields = append(fields, KeyTypeKey)
+func (h *ecdsaPublicKey) makePairs() ([]fieldPair, error) {
+	pairs := getFieldPairList()
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	{
+		v, err := json.Marshal(jwa.EC())
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyTypeKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: v})
+	}
 	if h.algorithm != nil {
-		data[AlgorithmKey] = *(h.algorithm)
-		fields = append(fields, AlgorithmKey)
+		v, err := json.Marshal(*(h.algorithm))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, AlgorithmKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: AlgorithmKey, Value: v})
 	}
 	if h.crv != nil {
-		data[ECDSACrvKey] = *(h.crv)
-		fields = append(fields, ECDSACrvKey)
+		v, err := json.Marshal(*(h.crv))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, ECDSACrvKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: ECDSACrvKey, Value: v})
 	}
 	if h.keyID != nil {
-		data[KeyIDKey] = *(h.keyID)
-		fields = append(fields, KeyIDKey)
+		v, err := json.Marshal(*(h.keyID))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyIDKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: KeyIDKey, Value: v})
 	}
 	if h.keyOps != nil {
-		data[KeyOpsKey] = *(h.keyOps)
-		fields = append(fields, KeyOpsKey)
+		v, err := json.Marshal(*(h.keyOps))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyOpsKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: KeyOpsKey, Value: v})
 	}
 	if h.keyUsage != nil {
-		data[KeyUsageKey] = *(h.keyUsage)
-		fields = append(fields, KeyUsageKey)
+		v, err := json.Marshal(*(h.keyUsage))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyUsageKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: KeyUsageKey, Value: v})
 	}
 	if h.x != nil {
-		data[ECDSAXKey] = h.x
-		fields = append(fields, ECDSAXKey)
+		v, err := json.Marshal(base64.EncodeToString(h.x))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, ECDSAXKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: ECDSAXKey, Value: v})
 	}
 	if h.x509CertChain != nil {
-		data[X509CertChainKey] = h.x509CertChain
-		fields = append(fields, X509CertChainKey)
+		v, err := json.Marshal(h.x509CertChain)
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertChainKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: X509CertChainKey, Value: v})
 	}
 	if h.x509CertThumbprint != nil {
-		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
-		fields = append(fields, X509CertThumbprintKey)
+		v, err := json.Marshal(*(h.x509CertThumbprint))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertThumbprintKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintKey, Value: v})
 	}
 	if h.x509CertThumbprintS256 != nil {
-		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
-		fields = append(fields, X509CertThumbprintS256Key)
+		v, err := json.Marshal(*(h.x509CertThumbprintS256))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertThumbprintS256Key, err)
+		}
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: v})
 	}
 	if h.x509URL != nil {
-		data[X509URLKey] = *(h.x509URL)
-		fields = append(fields, X509URLKey)
+		v, err := json.Marshal(*(h.x509URL))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509URLKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: X509URLKey, Value: v})
 	}
 	if h.y != nil {
-		data[ECDSAYKey] = h.y
-		fields = append(fields, ECDSAYKey)
+		v, err := json.Marshal(base64.EncodeToString(h.y))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, ECDSAYKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: ECDSAYKey, Value: v})
 	}
 	for k, v := range h.privateParams {
-		data[k] = v
-		fields = append(fields, k)
-	}
-
-	sort.Strings(fields)
-	buf := pool.BytesBuffer().Get()
-	defer pool.BytesBuffer().Put(buf)
-	buf.WriteByte(tokens.OpenCurlyBracket)
-	enc := json.NewEncoder(buf)
-	for i, f := range fields {
-		if i > 0 {
-			buf.WriteRune(tokens.Comma)
-		}
-		buf.WriteRune(tokens.DoubleQuote)
-		buf.WriteString(f)
-		buf.WriteString(`":`)
-		v := data[f]
+		var encoded []byte
 		switch v := v.(type) {
 		case []byte:
-			buf.WriteRune(tokens.DoubleQuote)
-			buf.WriteString(base64.EncodeToString(v))
-			buf.WriteRune(tokens.DoubleQuote)
-		default:
-			if err := enc.Encode(v); err != nil {
-				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
+			var err error
+			encoded, err = json.Marshal(base64.EncodeToString(v))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, k, err)
 			}
-			buf.Truncate(buf.Len() - 1)
+		default:
+			var err error
+			encoded, err = json.Marshal(v)
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, k, err)
+			}
 		}
+		pairs = append(pairs, fieldPair{Name: k, Value: encoded})
+	}
+
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].Name < pairs[j].Name
+	})
+
+	return pairs, nil
+}
+
+func (h *ecdsaPublicKey) MarshalJSON() ([]byte, error) {
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
+	pairs, err := h.makePairs()
+	if err != nil {
+		return nil, fmt.Errorf(`failed to make pairs: %w`, err)
+	}
+	buf.WriteByte(tokens.OpenCurlyBracket)
+
+	for i, pair := range pairs {
+		if i > 0 {
+			buf.WriteByte(tokens.Comma)
+		}
+		buf.WriteByte('"')
+		buf.WriteString(pair.Name)
+		buf.WriteString(`": `)
+		buf.Write(pair.Value.([]byte))
 	}
 	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
+	putFieldPairList(pairs)
 	return ret, nil
 }
 
@@ -737,7 +812,7 @@ type ecdsaPrivateKey struct {
 	x509URL                *string     // https://tools.ietf.org/html/rfc7515#section-4.1.5
 	y                      []byte
 	privateParams          map[string]any
-	mu                     *sync.RWMutex
+	mu                     sync.RWMutex
 	dc                     json.DecodeCtx
 }
 
@@ -746,28 +821,29 @@ var _ Key = &ecdsaPrivateKey{}
 
 func newECDSAPrivateKey() *ecdsaPrivateKey {
 	return &ecdsaPrivateKey{
-		mu:            &sync.RWMutex{},
 		privateParams: make(map[string]any),
 	}
 }
 
-func (h ecdsaPrivateKey) KeyType() jwa.KeyType {
+func (h *ecdsaPrivateKey) KeyType() jwa.KeyType {
 	return jwa.EC()
 }
 
-func (h ecdsaPrivateKey) rlock() {
+func (h *ecdsaPrivateKey) rlock() {
 	h.mu.RLock()
 }
 
-func (h ecdsaPrivateKey) runlock() {
+func (h *ecdsaPrivateKey) runlock() {
 	h.mu.RUnlock()
 }
 
-func (h ecdsaPrivateKey) IsPrivate() bool {
+func (h *ecdsaPrivateKey) IsPrivate() bool {
 	return true
 }
 
 func (h *ecdsaPrivateKey) Algorithm() (jwa.KeyAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.algorithm != nil {
 		return *(h.algorithm), true
 	}
@@ -775,6 +851,8 @@ func (h *ecdsaPrivateKey) Algorithm() (jwa.KeyAlgorithm, bool) {
 }
 
 func (h *ecdsaPrivateKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.crv != nil {
 		return *(h.crv), true
 	}
@@ -782,6 +860,8 @@ func (h *ecdsaPrivateKey) Crv() (jwa.EllipticCurveAlgorithm, bool) {
 }
 
 func (h *ecdsaPrivateKey) D() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.d != nil {
 		return h.d, true
 	}
@@ -789,6 +869,8 @@ func (h *ecdsaPrivateKey) D() ([]byte, bool) {
 }
 
 func (h *ecdsaPrivateKey) KeyID() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyID != nil {
 		return *(h.keyID), true
 	}
@@ -796,6 +878,8 @@ func (h *ecdsaPrivateKey) KeyID() (string, bool) {
 }
 
 func (h *ecdsaPrivateKey) KeyOps() (KeyOperationList, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyOps != nil {
 		return *(h.keyOps), true
 	}
@@ -803,6 +887,8 @@ func (h *ecdsaPrivateKey) KeyOps() (KeyOperationList, bool) {
 }
 
 func (h *ecdsaPrivateKey) KeyUsage() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.keyUsage != nil {
 		return *(h.keyUsage), true
 	}
@@ -810,6 +896,8 @@ func (h *ecdsaPrivateKey) KeyUsage() (string, bool) {
 }
 
 func (h *ecdsaPrivateKey) X() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x != nil {
 		return h.x, true
 	}
@@ -817,6 +905,8 @@ func (h *ecdsaPrivateKey) X() ([]byte, bool) {
 }
 
 func (h *ecdsaPrivateKey) X509CertChain() (*cert.Chain, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertChain != nil {
 		return h.x509CertChain, true
 	}
@@ -824,6 +914,8 @@ func (h *ecdsaPrivateKey) X509CertChain() (*cert.Chain, bool) {
 }
 
 func (h *ecdsaPrivateKey) X509CertThumbprint() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprint != nil {
 		return *(h.x509CertThumbprint), true
 	}
@@ -831,6 +923,8 @@ func (h *ecdsaPrivateKey) X509CertThumbprint() (string, bool) {
 }
 
 func (h *ecdsaPrivateKey) X509CertThumbprintS256() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509CertThumbprintS256 != nil {
 		return *(h.x509CertThumbprintS256), true
 	}
@@ -838,6 +932,8 @@ func (h *ecdsaPrivateKey) X509CertThumbprintS256() (string, bool) {
 }
 
 func (h *ecdsaPrivateKey) X509URL() (string, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.x509URL != nil {
 		return *(h.x509URL), true
 	}
@@ -845,6 +941,8 @@ func (h *ecdsaPrivateKey) X509URL() (string, bool) {
 }
 
 func (h *ecdsaPrivateKey) Y() ([]byte, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
 	if h.y != nil {
 		return h.y, true
 	}
@@ -1326,92 +1424,149 @@ LOOP:
 	return nil
 }
 
-func (h ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
-	data := make(map[string]any)
-	fields := make([]string, 0, 12)
-	data[KeyTypeKey] = jwa.EC()
-	fields = append(fields, KeyTypeKey)
+func (h *ecdsaPrivateKey) makePairs() ([]fieldPair, error) {
+	pairs := getFieldPairList()
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	{
+		v, err := json.Marshal(jwa.EC())
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyTypeKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: KeyTypeKey, Value: v})
+	}
 	if h.algorithm != nil {
-		data[AlgorithmKey] = *(h.algorithm)
-		fields = append(fields, AlgorithmKey)
+		v, err := json.Marshal(*(h.algorithm))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, AlgorithmKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: AlgorithmKey, Value: v})
 	}
 	if h.crv != nil {
-		data[ECDSACrvKey] = *(h.crv)
-		fields = append(fields, ECDSACrvKey)
+		v, err := json.Marshal(*(h.crv))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, ECDSACrvKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: ECDSACrvKey, Value: v})
 	}
 	if h.d != nil {
-		data[ECDSADKey] = h.d
-		fields = append(fields, ECDSADKey)
+		v, err := json.Marshal(base64.EncodeToString(h.d))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, ECDSADKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: ECDSADKey, Value: v})
 	}
 	if h.keyID != nil {
-		data[KeyIDKey] = *(h.keyID)
-		fields = append(fields, KeyIDKey)
+		v, err := json.Marshal(*(h.keyID))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyIDKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: KeyIDKey, Value: v})
 	}
 	if h.keyOps != nil {
-		data[KeyOpsKey] = *(h.keyOps)
-		fields = append(fields, KeyOpsKey)
+		v, err := json.Marshal(*(h.keyOps))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyOpsKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: KeyOpsKey, Value: v})
 	}
 	if h.keyUsage != nil {
-		data[KeyUsageKey] = *(h.keyUsage)
-		fields = append(fields, KeyUsageKey)
+		v, err := json.Marshal(*(h.keyUsage))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, KeyUsageKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: KeyUsageKey, Value: v})
 	}
 	if h.x != nil {
-		data[ECDSAXKey] = h.x
-		fields = append(fields, ECDSAXKey)
+		v, err := json.Marshal(base64.EncodeToString(h.x))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, ECDSAXKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: ECDSAXKey, Value: v})
 	}
 	if h.x509CertChain != nil {
-		data[X509CertChainKey] = h.x509CertChain
-		fields = append(fields, X509CertChainKey)
+		v, err := json.Marshal(h.x509CertChain)
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertChainKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: X509CertChainKey, Value: v})
 	}
 	if h.x509CertThumbprint != nil {
-		data[X509CertThumbprintKey] = *(h.x509CertThumbprint)
-		fields = append(fields, X509CertThumbprintKey)
+		v, err := json.Marshal(*(h.x509CertThumbprint))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertThumbprintKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintKey, Value: v})
 	}
 	if h.x509CertThumbprintS256 != nil {
-		data[X509CertThumbprintS256Key] = *(h.x509CertThumbprintS256)
-		fields = append(fields, X509CertThumbprintS256Key)
+		v, err := json.Marshal(*(h.x509CertThumbprintS256))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509CertThumbprintS256Key, err)
+		}
+		pairs = append(pairs, fieldPair{Name: X509CertThumbprintS256Key, Value: v})
 	}
 	if h.x509URL != nil {
-		data[X509URLKey] = *(h.x509URL)
-		fields = append(fields, X509URLKey)
+		v, err := json.Marshal(*(h.x509URL))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, X509URLKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: X509URLKey, Value: v})
 	}
 	if h.y != nil {
-		data[ECDSAYKey] = h.y
-		fields = append(fields, ECDSAYKey)
+		v, err := json.Marshal(base64.EncodeToString(h.y))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to marshal field %q: %w`, ECDSAYKey, err)
+		}
+		pairs = append(pairs, fieldPair{Name: ECDSAYKey, Value: v})
 	}
 	for k, v := range h.privateParams {
-		data[k] = v
-		fields = append(fields, k)
-	}
-
-	sort.Strings(fields)
-	buf := pool.BytesBuffer().Get()
-	defer pool.BytesBuffer().Put(buf)
-	buf.WriteByte(tokens.OpenCurlyBracket)
-	enc := json.NewEncoder(buf)
-	for i, f := range fields {
-		if i > 0 {
-			buf.WriteRune(tokens.Comma)
-		}
-		buf.WriteRune(tokens.DoubleQuote)
-		buf.WriteString(f)
-		buf.WriteString(`":`)
-		v := data[f]
+		var encoded []byte
 		switch v := v.(type) {
 		case []byte:
-			buf.WriteRune(tokens.DoubleQuote)
-			buf.WriteString(base64.EncodeToString(v))
-			buf.WriteRune(tokens.DoubleQuote)
-		default:
-			if err := enc.Encode(v); err != nil {
-				return nil, fmt.Errorf(`failed to encode value for field %s: %w`, f, err)
+			var err error
+			encoded, err = json.Marshal(base64.EncodeToString(v))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, k, err)
 			}
-			buf.Truncate(buf.Len() - 1)
+		default:
+			var err error
+			encoded, err = json.Marshal(v)
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal field %q: %w`, k, err)
+			}
 		}
+		pairs = append(pairs, fieldPair{Name: k, Value: encoded})
+	}
+
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].Name < pairs[j].Name
+	})
+
+	return pairs, nil
+}
+
+func (h *ecdsaPrivateKey) MarshalJSON() ([]byte, error) {
+	buf := pool.BytesBuffer().Get()
+	defer pool.BytesBuffer().Put(buf)
+	pairs, err := h.makePairs()
+	if err != nil {
+		return nil, fmt.Errorf(`failed to make pairs: %w`, err)
+	}
+	buf.WriteByte(tokens.OpenCurlyBracket)
+
+	for i, pair := range pairs {
+		if i > 0 {
+			buf.WriteByte(tokens.Comma)
+		}
+		buf.WriteByte('"')
+		buf.WriteString(pair.Name)
+		buf.WriteString(`": `)
+		buf.Write(pair.Value.([]byte))
 	}
 	buf.WriteByte(tokens.CloseCurlyBracket)
 	ret := make([]byte, buf.Len())
 	copy(ret, buf.Bytes())
+	putFieldPairList(pairs)
 	return ret, nil
 }
 

@@ -111,6 +111,18 @@ func (*parseOption) registerOption() {}
 
 func (*parseOption) readFileOption() {}
 
+// PublicSetOption is a type of Option that can be passed to `jwk.PublicSetOf()`
+type PublicSetOption interface {
+	Option
+	publicSetOption()
+}
+
+type publicSetOption struct {
+	Option
+}
+
+func (*publicSetOption) publicSetOption() {}
+
 // ReadFileOption is a type of `Option` that can be passed to `jwk.ReadFile`
 type ReadFileOption interface {
 	Option
@@ -166,6 +178,7 @@ type resourceOption struct {
 
 func (*resourceOption) resourceOption() {}
 
+type identAllowSymmetric struct{}
 type identFS struct{}
 type identFetchWhitelist struct{}
 type identHTTPClient struct{}
@@ -178,6 +191,10 @@ type identStrictKeyUsage struct{}
 type identThumbprintHash struct{}
 type identWaitReady struct{}
 type identX509 struct{}
+
+func (identAllowSymmetric) String() string {
+	return "WithAllowSymmetric"
+}
 
 func (identFS) String() string {
 	return "WithFS"
@@ -227,14 +244,46 @@ func (identX509) String() string {
 	return "WithX509"
 }
 
+// WithAllowSymmetric controls whether `jwk.PublicSetOf` tolerates
+// symmetric (oct) keys in the input set.
+//
+// By default this option is false: a symmetric key in the input is
+// an error, because a symmetric key has no public form — its
+// "public" representation is the secret itself. Passing such a set
+// through `PublicSetOf` silently and then publishing the result
+// (e.g. as `/.well-known/jwks.json`) would leak HMAC secret material.
+//
+// Pass `WithAllowSymmetric(true)` only if you are certain the
+// resulting set will not be published. When true, symmetric keys
+// are passed through unchanged, matching the legacy behavior.
+func WithAllowSymmetric(v bool) PublicSetOption {
+	return &publicSetOption{option.New(identAllowSymmetric{}, v)}
+}
+
 // WithFS specifies the source `fs.FS` object to read the file from.
 func WithFS(v fs.FS) ReadFileOption {
 	return &readFileOption{option.New(identFS{}, v)}
 }
 
-// WithFetchWhitelist specifies the Whitelist object to use when
-// fetching JWKs from a remote source. This option can be passed
-// to both `jwk.Fetch()`
+// WithFetchWhitelist specifies the Whitelist applied to the URL passed
+// to `jwk.Fetch()` (and `(*jwk.Cache).Register()`).
+//
+// The default when this option is not supplied is `jwk.InsecureWhitelist{}`,
+// which allows every URL. That is the right default for URLs that are
+// hard-coded in your program or loaded from trusted configuration, and
+// keeps first-time usage free of boilerplate.
+//
+// It is NOT safe when the URL comes from an untrusted source — most
+// commonly the `jku` header of a JWS handed to you by a peer. For those
+// call sites you MUST supply a restrictive Whitelist: use
+// `jwk.NewMapWhitelist()` for a fixed allow-list, `jwk.RegexpWhitelist`
+// for pattern-based allow-lists, or implement the `jwk.Whitelist`
+// interface yourself.
+//
+// Note that a whitelist only constrains the initial URL. For defense
+// against redirect-to-private-IP and DNS-rebinding attacks, also supply
+// a custom `http.Client` via `jwk.WithHTTPClient` whose
+// `Transport.DialContext` validates resolved addresses.
 func WithFetchWhitelist(v Whitelist) FetchOption {
 	return &fetchOption{option.New(identFetchWhitelist{}, v)}
 }

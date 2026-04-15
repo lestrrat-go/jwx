@@ -130,7 +130,12 @@ func NewCache(ctx context.Context, client *httprc.Client) (*Cache, error) {
 // Register registers a URL to be managed by the cache. URLs must
 // be registered before issuing `Get`
 //
-// The `Register` method is a thin wrapper around `(httprc.Controller).Add`
+// The `Register` method is a thin wrapper around `(httprc.Controller).Add`.
+//
+// As with `jwk.Fetch`, the default whitelist is `jwk.InsecureWhitelist{}`
+// — every URL is allowed. Supply `jwk.WithFetchWhitelist()` when the URL
+// originates from untrusted input. See `jwk.Fetch` for the full security
+// rationale.
 func (c *Cache) Register(ctx context.Context, u string, options ...RegisterOption) error {
 	var parseOptions []ParseOption
 	var resourceOptions []httprc.NewResourceOption

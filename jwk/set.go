@@ -27,8 +27,8 @@ func NewSet() Set {
 }
 
 func (s *set) Set(n string, v any) error {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if n == keysKey {
 		vl, ok := v.([]Key)
@@ -144,6 +144,8 @@ func (s *set) Clear() error {
 }
 
 func (s *set) Keys() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	ret := make([]string, len(s.privateParams))
 	var i int
 	for k := range s.privateParams {

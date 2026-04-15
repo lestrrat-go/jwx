@@ -3,7 +3,6 @@ package jwe
 import (
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe/internal/content_crypt"
 	"github.com/lestrrat-go/jwx/v3/jwe/jwebb"
@@ -140,10 +139,11 @@ func (d *decrypter) Decrypt(recipient Recipient, ciphertext []byte, msg *Message
 		return
 	}
 
-	computedAad := d.computedAad
-	if d.aad != nil {
-		computedAad = append(append(computedAad, tokens.Period), d.aad...)
-	}
+	// When an external aad is present we must NOT append into
+	// d.computedAad's backing array: it aliases msg.rawProtectedHeaders
+	// in the caller, and appending would mutate bytes past its length
+	// in storage still referenced by the Message.
+	computedAad := concatAAD(d.computedAad, d.aad)
 
 	plaintext, err = cipher.Decrypt(cek, d.iv, ciphertext, d.tag, computedAad)
 	if err != nil {

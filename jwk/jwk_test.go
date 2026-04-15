@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -886,6 +887,83 @@ func TestPublicKeyOf(t *testing.T) {
 	})
 }
 
+func TestPublicSetOfSymmetricRejection(t *testing.T) {
+	t.Parallel()
+
+	makeRSA := func(t *testing.T, kid string) jwk.Key {
+		t.Helper()
+		rawRSA, err := rsa.GenerateKey(rand.Reader, 2048)
+		require.NoError(t, err, `rsa.GenerateKey should succeed`)
+		k, err := jwk.Import(rawRSA)
+		require.NoError(t, err, `jwk.Import RSA should succeed`)
+		require.NoError(t, k.Set(jwk.KeyIDKey, kid), `Set kid should succeed`)
+		return k
+	}
+	makeHMAC := func(t *testing.T, kid string) jwk.Key {
+		t.Helper()
+		k, err := jwk.Import([]byte("top-secret-hmac-material"))
+		require.NoError(t, err, `jwk.Import symmetric should succeed`)
+		require.NoError(t, k.Set(jwk.KeyIDKey, kid), `Set kid should succeed`)
+		return k
+	}
+
+	t.Run("mixed set rejects symmetric by default", func(t *testing.T) {
+		t.Parallel()
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(makeRSA(t, "rsa-1")))
+		require.NoError(t, set.AddKey(makeHMAC(t, "hmac-1")))
+
+		_, err := jwk.PublicSetOf(set)
+		require.Error(t, err, `PublicSetOf should reject a set containing a symmetric key`)
+		require.ErrorContains(t, err, "symmetric")
+		require.ErrorContains(t, err, `"hmac-1"`)
+	})
+
+	t.Run("mixed set passes through with WithAllowSymmetric(true)", func(t *testing.T) {
+		t.Parallel()
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(makeRSA(t, "rsa-1")))
+		require.NoError(t, set.AddKey(makeHMAC(t, "hmac-1")))
+
+		pub, err := jwk.PublicSetOf(set, jwk.WithAllowSymmetric(true))
+		require.NoError(t, err, `PublicSetOf with WithAllowSymmetric(true) should succeed`)
+		require.Equal(t, 2, pub.Len(), `resulting set should still contain both keys`)
+
+		buf, err := json.Marshal(pub)
+		require.NoError(t, err, `json.Marshal should succeed`)
+		// Pin the dangerous opt-in behavior: secret material is still present.
+		require.Contains(t, string(buf), `"k":`, `opt-in pass-through keeps the secret in the output`)
+	})
+
+	t.Run("pure symmetric set rejected by default", func(t *testing.T) {
+		t.Parallel()
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(makeHMAC(t, "hmac-only")))
+
+		_, err := jwk.PublicSetOf(set)
+		require.Error(t, err, `PublicSetOf should reject a purely symmetric set`)
+		require.ErrorContains(t, err, `"hmac-only"`)
+	})
+
+	t.Run("empty set succeeds", func(t *testing.T) {
+		t.Parallel()
+		pub, err := jwk.PublicSetOf(jwk.NewSet())
+		require.NoError(t, err, `PublicSetOf on empty set should succeed`)
+		require.Equal(t, 0, pub.Len(), `result should be empty`)
+	})
+
+	t.Run("pure asymmetric set is unaffected", func(t *testing.T) {
+		t.Parallel()
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(makeRSA(t, "rsa-a")))
+		require.NoError(t, set.AddKey(makeRSA(t, "rsa-b")))
+
+		pub, err := jwk.PublicSetOf(set)
+		require.NoError(t, err, `PublicSetOf on asymmetric-only set should succeed`)
+		require.Equal(t, 2, pub.Len())
+	})
+}
+
 func TestIssue207(t *testing.T) {
 	t.Parallel()
 	const src = `{"kty":"EC","alg":"ECMR","crv":"P-521","key_ops":["deriveKey"],"x":"AJwCS845x9VljR-fcrN2WMzIJHDYuLmFShhyu8ci14rmi2DMFp8txIvaxG8n7ZcODeKIs1EO4E_Bldm_pxxs8cUn","y":"ASjz754cIQHPJObihPV8D7vVNfjp_nuwP76PtbLwUkqTk9J1mzCDKM3VADEk-Z1tP-DHiwib6If8jxnb_FjNkiLJ"}`
@@ -1149,6 +1227,7 @@ func TestECDSA(t *testing.T) {
 }
 
 func TestSymmetric(t *testing.T) {
+	t.Parallel()
 	t.Run("Key", func(t *testing.T) {
 		VerifyKey(t, map[string]keyDef{
 			jwk.KeyTypeKey: {
@@ -1160,6 +1239,24 @@ func TestSymmetric(t *testing.T) {
 				Value:  "aGVsbG8K",
 			}),
 		})
+	})
+	t.Run("ImportCopiesCallerSlice", func(t *testing.T) {
+		t.Parallel()
+		buf := []byte("super-secret-hmac-key")
+		want := append([]byte(nil), buf...)
+
+		key, err := jwk.Import(buf)
+		require.NoError(t, err)
+
+		for i := range buf {
+			buf[i] = 0
+		}
+
+		sym, ok := key.(jwk.SymmetricKey)
+		require.True(t, ok)
+		got, ok := sym.Octets()
+		require.True(t, ok)
+		require.Equal(t, want, got, "JWK octets must not alias caller slice")
 	})
 }
 
@@ -1360,6 +1457,31 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 
 	require.Equal(t, N, pubkey.N, `value for N should match`)
 	require.Equal(t, 65537, pubkey.E, `value for E should amtch`)
+}
+
+// TestRSAExportIndependentN is a regression guard for JWK-INT-004:
+// buildRSAPublicKey used to assign a pool-borrowed *big.Int to
+// rsa.PublicKey.N. Any future "fix" that returned that pooled value via
+// defer Put would zero the caller's N on return. Each export must own
+// its own independent big.Int, and mutating one result must not affect
+// another.
+func TestRSAExportIndependentN(t *testing.T) {
+	priv, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+	key, err := priv.PublicKey()
+	require.NoError(t, err, `PublicKey should succeed`)
+
+	var pub1 rsa.PublicKey
+	require.NoError(t, jwk.Export(key, &pub1), `first Export should succeed`)
+	var pub2 rsa.PublicKey
+	require.NoError(t, jwk.Export(key, &pub2), `second Export should succeed`)
+
+	require.Equal(t, 0, pub1.N.Cmp(pub2.N), `both exports must decode to the same modulus`)
+	require.NotSame(t, pub1.N, pub2.N, `each export must own an independent *big.Int`)
+
+	original := new(big.Int).Set(pub1.N)
+	pub2.N.SetInt64(0)
+	require.Equal(t, 0, pub1.N.Cmp(original), `mutating pub2.N must not corrupt pub1.N`)
 }
 
 type typedField struct {
@@ -2501,6 +2623,144 @@ func TestUnregisterX509Decoder_NotRegistered(t *testing.T) {
 	require.NotPanics(t, func() {
 		jwk.UnregisterX509Decoder("non-existent-decoder")
 	})
+}
+
+// registerTrioDecoders registers three decoders that each recognize a
+// distinct PEM block type. Callers receive the idents and a function
+// that builds a PEM body for one of the types. Cleanup is registered
+// via t.Cleanup so leftover decoders never leak across tests.
+func registerTrioDecoders(t *testing.T) (identA, identB, identC string, pemFor func(string) []byte) {
+	t.Helper()
+	testKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+
+	mk := func(wantType string) jwk.X509Decoder {
+		return jwk.X509DecodeFunc(func(dst any, block *pem.Block) error {
+			if block.Type == wantType {
+				return blackmagic.AssignIfCompatible(dst, testKey)
+			}
+			return fmt.Errorf("unsupported type")
+		})
+	}
+
+	identA = "test-trio-A"
+	identB = "test-trio-B"
+	identC = "test-trio-C"
+	jwk.RegisterX509Decoder(identA, mk("TRIO A"))
+	jwk.RegisterX509Decoder(identB, mk("TRIO B"))
+	jwk.RegisterX509Decoder(identC, mk("TRIO C"))
+
+	t.Cleanup(func() {
+		jwk.UnregisterX509Decoder(identA)
+		jwk.UnregisterX509Decoder(identB)
+		jwk.UnregisterX509Decoder(identC)
+	})
+
+	pemFor = func(typ string) []byte {
+		return []byte("-----BEGIN " + typ + "-----\ndGVzdCBkYXRh\n-----END " + typ + "-----")
+	}
+	return identA, identB, identC, pemFor
+}
+
+// TestUnregisterX509Decoder_StaleIndexMiddle exercises JWK-003: after
+// removing a decoder from the middle of the list, a subsequent
+// unregister of a later-registered ident must not panic and must
+// remove the correct decoder.
+func TestUnregisterX509Decoder_StaleIndexMiddle(t *testing.T) {
+	identA, identB, identC, pemFor := registerTrioDecoders(t)
+
+	jwk.UnregisterX509Decoder(identB)
+
+	_, err := jwk.ParseKey(pemFor("TRIO B"), jwk.WithPEM(true))
+	require.Error(t, err, "TRIO B should fail after unregister")
+
+	_, err = jwk.ParseKey(pemFor("TRIO A"), jwk.WithPEM(true))
+	require.NoError(t, err, "TRIO A should still decode")
+	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
+	require.NoError(t, err, "TRIO C should still decode")
+
+	require.NotPanics(t, func() {
+		jwk.UnregisterX509Decoder(identC)
+	})
+
+	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
+	require.Error(t, err, "TRIO C should fail after second unregister")
+	_, err = jwk.ParseKey(pemFor("TRIO A"), jwk.WithPEM(true))
+	require.NoError(t, err, "TRIO A must survive unrelated unregister")
+
+	_ = identA
+}
+
+// TestUnregisterX509Decoder_StaleIndexFirst exercises the case where
+// the removed element is at index 0 of the user-registered portion of
+// the list. A later unregister for a surviving ident must still hit
+// the correct decoder.
+func TestUnregisterX509Decoder_StaleIndexFirst(t *testing.T) {
+	identA, identB, identC, pemFor := registerTrioDecoders(t)
+
+	jwk.UnregisterX509Decoder(identA)
+
+	_, err := jwk.ParseKey(pemFor("TRIO A"), jwk.WithPEM(true))
+	require.Error(t, err)
+	_, err = jwk.ParseKey(pemFor("TRIO B"), jwk.WithPEM(true))
+	require.NoError(t, err)
+	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
+	require.NoError(t, err)
+
+	require.NotPanics(t, func() {
+		jwk.UnregisterX509Decoder(identC)
+	})
+
+	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
+	require.Error(t, err)
+	_, err = jwk.ParseKey(pemFor("TRIO B"), jwk.WithPEM(true))
+	require.NoError(t, err, "TRIO B must survive unrelated unregister")
+
+	_ = identB
+}
+
+// TestX509DecoderConcurrent runs parsers and register/unregister
+// concurrently. Under -race this catches the in-place slice mutation
+// that was racing with snapshot-then-iterate readers in decodeX509.
+func TestX509DecoderConcurrent(t *testing.T) {
+	testKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+
+	pemData := []byte("-----BEGIN TRIO CONCURRENT-----\ndGVzdCBkYXRh\n-----END TRIO CONCURRENT-----")
+	decoder := jwk.X509DecodeFunc(func(dst any, block *pem.Block) error {
+		if block.Type == "TRIO CONCURRENT" {
+			return blackmagic.AssignIfCompatible(dst, testKey)
+		}
+		return fmt.Errorf("unsupported type")
+	})
+
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+
+	for range 8 {
+		wg.Go(func() {
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+				}
+				// Best-effort parse; error is fine (decoder may be
+				// unregistered at this moment). The point is that
+				// the read path must not race on the decoder slice.
+				_, _ = jwk.ParseKey(pemData, jwk.WithPEM(true))
+			}
+		})
+	}
+
+	for i := range 200 {
+		ident := fmt.Sprintf("test-concurrent-%d", i)
+		jwk.RegisterX509Decoder(ident, decoder)
+		jwk.UnregisterX509Decoder(ident)
+	}
+
+	close(stop)
+	wg.Wait()
 }
 
 func TestGH1529(t *testing.T) {

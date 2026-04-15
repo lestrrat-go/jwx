@@ -204,6 +204,7 @@ func (*withKeySuboption) withKeySuboption() {}
 
 type identBase64Encoder struct{}
 type identContext struct{}
+type identCritValidation struct{}
 type identDetached struct{}
 type identDetachedPayload struct{}
 type identFS struct{}
@@ -221,7 +222,6 @@ type identProtectedHeaders struct{}
 type identPublicHeaders struct{}
 type identRequireKid struct{}
 type identSerialization struct{}
-type identStrictCriticalHeaders struct{}
 type identUseDefault struct{}
 type identValidateKey struct{}
 
@@ -231,6 +231,10 @@ func (identBase64Encoder) String() string {
 
 func (identContext) String() string {
 	return "WithContext"
+}
+
+func (identCritValidation) String() string {
+	return "WithCritValidation"
 }
 
 func (identDetached) String() string {
@@ -301,10 +305,6 @@ func (identSerialization) String() string {
 	return "WithSerialization"
 }
 
-func (identStrictCriticalHeaders) String() string {
-	return "WithStrictCriticalHeaders"
-}
-
 func (identUseDefault) String() string {
 	return "WithUseDefault"
 }
@@ -324,6 +324,38 @@ func WithContext(v context.Context) VerifyOption {
 	return &verifyOption{option.New(identContext{}, v)}
 }
 
+// WithCritValidation enables RFC 7515 Section 4.1.11 validation of the
+// "crit" (Critical) header parameter during verification. The default
+// is false, matching the behavior of v3.0.13 and earlier (the "crit"
+// header is silently ignored).
+//
+// When enabled, jws.Verify() will reject any JWS whose protected
+// header lists "crit" entries that the recipient has not declared
+// support for via jws.WithCritExtension(). It will also reject
+// structurally invalid "crit" lists: empty arrays, duplicate names,
+// empty extension names, names of standard JOSE header parameters,
+// and names that do not appear as header parameters in the protected
+// header.
+//
+// Per RFC 7515 Section 4.1.11, recipients MUST reject a JWS whose
+// "crit" list names extensions they do not understand. Enabling this
+// option together with one or more jws.WithCritExtension() calls is
+// the only way to satisfy that requirement with this library.
+//
+// IMPORTANT: enabling this option makes the library check that every
+// "crit" entry has been declared via jws.WithCritExtension(), but the
+// library cannot perform the actual extension-specific processing on
+// your behalf. After jws.Verify() returns successfully, your code
+// MUST read each declared extension header and apply whatever check
+// or side effect the extension semantics demand. If you declare an
+// extension and then forget to act on its value, you have defeated
+// the protection the producer was trying to obtain by marking that
+// extension critical. See the documentation on jws.WithCritExtension
+// for details.
+func WithCritValidation(v bool) VerifyOption {
+	return &verifyOption{option.New(identCritValidation{}, v)}
+}
+
 // WithDetached specifies that the `jws.Message` should be serialized in
 // JWS compact serialization with detached payload. The resulting octet
 // sequence will not contain the payload section.
@@ -338,6 +370,14 @@ func WithDetached(v bool) CompactOption {
 //
 // When this option is used for `jws.Sign()`, the first parameter (normally the payload)
 // must be set to `nil`.
+//
+// When passed to `jws.Verify()` together with `jws.WithCritValidation(true)`,
+// the RFC 7797 `"b64"` extension is automatically added to the
+// caller's allowlist as if `jws.WithCritExtension("b64")` had also
+// been passed. Detached-payload verification is the canonical
+// pairing for `b64=false`, and the jws package implements `b64=false`
+// handling natively, so there is no need to declare it explicitly.
+// Other crit extensions still require explicit declaration.
 //
 // If you have to verify using this option, you should know exactly how and why this works.
 func WithDetachedPayload(v []byte) SignVerifyOption {
@@ -395,13 +435,14 @@ func WithLegacySigners() GlobalOption {
 	return &globalOption{option.New(identLegacySigners{}, true)}
 }
 
-// WithMaxParseInputSize specifies the maximum number of bytes read from an
-// io.Reader in `jws.ParseReader`. If the input exceeds this size,
-// `jws.ParseReader` will return an error. The default value is 10MB.
+// WithMaxParseInputSize specifies the maximum byte length of input
+// accepted by every `jws.Parse*` entry point (`jws.Parse`,
+// `jws.ParseString`, and `jws.ParseReader`). Inputs exceeding this
+// size are rejected before decoding. The default value is 10MB.
 //
 // This option can be passed to `jws.Settings()` to change the default
-// globally, or to `jws.ParseReader()` / `jws.ReadFile()` for a per-call
-// override.
+// globally, or to any `jws.Parse*` call / `jws.ReadFile()` for a
+// per-call override.
 func WithMaxParseInputSize(v int64) GlobalParseOption {
 	return &globalParseOption{option.New(identMaxParseInputSize{}, v)}
 }
@@ -472,16 +513,6 @@ func WithRequireKid(v bool) WithKeySetSuboption {
 // do not need to specify this option other than to be explicit about it
 func WithCompact() SignVerifyParseOption {
 	return &signVerifyParseOption{option.New(identSerialization{}, fmtCompact)}
-}
-
-// WithStrictCriticalHeaders specifies whether the "crit" (Critical)
-// header parameter should be validated per RFC 7515 Section 4.1.11
-// during verification. The default is true.
-//
-// When set to false, the "crit" header is silently ignored during
-// jws.Verify(), matching the behavior of v3.0.13 and earlier.
-func WithStrictCriticalHeaders(v bool) VerifyOption {
-	return &verifyOption{option.New(identStrictCriticalHeaders{}, v)}
 }
 
 // WithUseDefault specifies that if and only if a jwk.Key contains

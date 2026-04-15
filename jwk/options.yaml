@@ -45,6 +45,9 @@ interfaces:
     comment: |
       GlobalOption is a type of Option that can be passed to the `jwk.Configure()` to
       change the global configuration of the jwk package.
+  - name: PublicSetOption
+    comment: |
+      PublicSetOption is a type of Option that can be passed to `jwk.PublicSetOf()`
   - name: GlobalFetchOption
     methods:
       - globalOption
@@ -125,9 +128,25 @@ options:
     interface: FetchOption
     argument_type: Whitelist
     comment: |
-      WithFetchWhitelist specifies the Whitelist object to use when
-      fetching JWKs from a remote source. This option can be passed
-      to both `jwk.Fetch()`
+      WithFetchWhitelist specifies the Whitelist applied to the URL passed
+      to `jwk.Fetch()` (and `(*jwk.Cache).Register()`).
+
+      The default when this option is not supplied is `jwk.InsecureWhitelist{}`,
+      which allows every URL. That is the right default for URLs that are
+      hard-coded in your program or loaded from trusted configuration, and
+      keeps first-time usage free of boilerplate.
+
+      It is NOT safe when the URL comes from an untrusted source — most
+      commonly the `jku` header of a JWS handed to you by a peer. For those
+      call sites you MUST supply a restrictive Whitelist: use
+      `jwk.NewMapWhitelist()` for a fixed allow-list, `jwk.RegexpWhitelist`
+      for pattern-based allow-lists, or implement the `jwk.Whitelist`
+      interface yourself.
+
+      Note that a whitelist only constrains the initial URL. For defense
+      against redirect-to-private-IP and DNS-rebinding attacks, also supply
+      a custom `http.Client` via `jwk.WithHTTPClient` whose
+      `Transport.DialContext` validates resolved addresses.
   - ident: IgnoreParseError
     interface: ParseOption
     argument_type: bool
@@ -180,3 +199,19 @@ options:
       value. If this options is set to true, then the "use" field must
       be one of the registered values, and otherwise an error will be
       reported during parsing / assignment to `jwk.KeyUsageType`
+  - ident: AllowSymmetric
+    interface: PublicSetOption
+    argument_type: bool
+    comment: |
+      WithAllowSymmetric controls whether `jwk.PublicSetOf` tolerates
+      symmetric (oct) keys in the input set.
+
+      By default this option is false: a symmetric key in the input is
+      an error, because a symmetric key has no public form — its
+      "public" representation is the secret itself. Passing such a set
+      through `PublicSetOf` silently and then publishing the result
+      (e.g. as `/.well-known/jwks.json`) would leak HMAC secret material.
+
+      Pass `WithAllowSymmetric(true)` only if you are certain the
+      resulting set will not be published. When true, symmetric keys
+      are passed through unchanged, matching the legacy behavior.

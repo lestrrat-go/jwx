@@ -71,11 +71,12 @@ type DecodeCtx interface {
 //
 // To sign and verify, use the appropriate `Sign()` and `Verify()` functions.
 type Message struct {
-	dc         DecodeCtx
-	payload    []byte
-	signatures []*Signature
-	b64        bool // true if payload should be base64 encoded
-	detached   bool // true if the JWS is a detached-payload form: JSON output omits the "payload" member per RFC 7515 Appendix F
+	dc            DecodeCtx
+	payload       []byte
+	signatures    []*Signature
+	b64           bool // true if payload should be base64 encoded
+	detached      bool // true if the JWS is a detached-payload form: JSON output omits the "payload" member per RFC 7515 Appendix F
+	maxSignatures int  // scratch cap enforced during UnmarshalJSON; 0 means use global default
 }
 
 type Signature struct {

@@ -120,6 +120,20 @@ func InvalidNumberOfSegmentsError() error {
 	return errInvalidNumberOfSegments
 }
 
+// maxSplitCompactReaderSize caps the number of bytes SplitCompactReader will
+// consume from a non-finite io.Reader. It matches the default
+// jws.maxParseInputSize (10 MiB). Callers that need a different limit should
+// wrap their reader with io.LimitReader before calling SplitCompactReader.
+const maxSplitCompactReaderSize = 10 * 1024 * 1024
+
+var errInputTooLarge = errors.New(`jwsbb: input exceeds maximum size`)
+
+// InputTooLargeError returns the sentinel error used when SplitCompactReader
+// reads more than its internal size cap from a non-finite source.
+func InputTooLargeError() error {
+	return errInputTooLarge
+}
+
 // SplitCompact parses a compact JWS serialization into its three components.
 // This function validates that the input has exactly 3 segments separated by periods
 // and returns the base64-encoded components without decoding them.
@@ -187,15 +201,24 @@ func SplitCompactReader(rdr io.Reader) (protected, payload, signature []byte, er
 		return nil, nil, nil, err
 	}
 
+	// Cap total bytes read from a non-finite source. Read one extra byte so
+	// we can distinguish "exactly at the limit" from "over".
+	limited := io.LimitReader(rdr, maxSplitCompactReaderSize+1)
+
 	var periods int
 	var state int
+	var total int64
 
 	buf := make([]byte, 4096)
 	var sofar []byte
 
 	for {
 		// read next bytes
-		n, err := rdr.Read(buf)
+		n, err := limited.Read(buf)
+		total += int64(n)
+		if total > maxSplitCompactReaderSize {
+			return nil, nil, nil, InputTooLargeError()
+		}
 		// return on unexpected read error
 		if err != nil && err != io.EOF {
 			return nil, nil, nil, io.ErrUnexpectedEOF

@@ -2,6 +2,7 @@ package jws
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
@@ -77,6 +78,10 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 				return makeSignError(`"none" (jwa.NoSignature) cannot be used with jws.WithKey`)
 			}
 
+			if err := validateAlgorithmForKey(alg, data.key); err != nil {
+				return makeSignError(`%w`, err)
+			}
+
 			sb := signatureBuilderPool.Get()
 			sb.alg = alg
 			sb.protected = data.protected
@@ -98,7 +103,7 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			sc.sigbuilders = append(sc.sigbuilders, sb)
 		case identDetachedPayload{}:
 			if sc.payload != nil {
-				return makeSignError(`payload must be nil when jws.WithDetachedPayload() is specified`)
+				return makeSignError(`the first argument to jws.Sign() must be nil when jws.WithDetachedPayload() is used`)
 			}
 			if err := option.Value(&sc.payload); err != nil {
 				return makeSignError(`failed to retrieve detached payload option value: %w`, err)
@@ -112,6 +117,8 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			if err := option.Value(&sc.encoder); err != nil {
 				return makeSignError(`failed to retrieve base64-encoder option value: %w`, err)
 			}
+		default:
+			return makeSignError(`invalid jws.SignOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
 	}
 	return nil

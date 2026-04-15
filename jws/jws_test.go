@@ -7,6 +7,7 @@ import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/asn1"
@@ -1368,11 +1369,6 @@ func TestAlgorithmsForKey(t *testing.T) {
 			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA(), jwa.EdDSAEd25519()},
 		},
 		{
-			Name:     "ecdh.PublicKey (no curve filtering)",
-			Key:      &ecdh.PublicKey{},
-			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA()},
-		},
-		{
 			Name:     "jwk.OKPPublicKey (X25519)",
 			Key:      x25519pubkey,
 			Expected: []jwa.SignatureAlgorithm{jwa.EdDSA()},
@@ -1402,6 +1398,35 @@ func TestAlgorithmsForKey(t *testing.T) {
 				return algs[i].String() < algs[j].String()
 			})
 			require.Equal(t, tc.Expected, algs, `results should match`)
+		})
+	}
+}
+
+// TestAlgorithmsForKeyECDHRejects is a regression test for JWS-004:
+// ecdh.{Public,Private}Key values are for key agreement (X25519/X448),
+// not signing. AlgorithmsForKey must reject them instead of handing back
+// the generic OKP algorithm list and deferring the type error to the
+// signing stack.
+func TestAlgorithmsForKeyECDHRejects(t *testing.T) {
+	x25519priv, err := ecdh.X25519().GenerateKey(rand.Reader)
+	require.NoError(t, err, `ecdh.X25519().GenerateKey should succeed`)
+	x25519pub := x25519priv.PublicKey()
+
+	testcases := []struct {
+		Name string
+		Key  any
+	}{
+		{Name: "*ecdh.PrivateKey", Key: x25519priv},
+		{Name: "ecdh.PrivateKey (value)", Key: *x25519priv},
+		{Name: "*ecdh.PublicKey", Key: x25519pub},
+		{Name: "ecdh.PublicKey (value)", Key: *x25519pub},
+		{Name: "empty *ecdh.PublicKey", Key: &ecdh.PublicKey{}},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.Name, func(t *testing.T) {
+			_, err := jws.AlgorithmsForKey(tc.Key)
+			require.Error(t, err, `AlgorithmsForKey should reject ecdh keys`)
 		})
 	}
 }
@@ -1927,6 +1952,45 @@ func TestMaxParseInputSize(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), `greater than zero`)
 	})
+	t.Run("Parse rejects oversized byte slice (global setting)", func(t *testing.T) {
+		jws.Settings(jws.WithMaxParseInputSize(50))
+		defer jws.Settings(jws.WithMaxParseInputSize(10 * 1024 * 1024))
+
+		_, err := jws.Parse(make([]byte, 100))
+		require.Error(t, err, `jws.Parse should reject oversized input`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("ParseString inherits the cap", func(t *testing.T) {
+		jws.Settings(jws.WithMaxParseInputSize(50))
+		defer jws.Settings(jws.WithMaxParseInputSize(10 * 1024 * 1024))
+
+		_, err := jws.ParseString(strings.Repeat("a", 100))
+		require.Error(t, err, `jws.ParseString should inherit the size cap`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("Parse honors per-call override", func(t *testing.T) {
+		_, err := jws.Parse(make([]byte, 200), jws.WithMaxParseInputSize(100))
+		require.Error(t, err, `jws.Parse should reject input exceeding per-call cap`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("Parse per-call override can raise above global", func(t *testing.T) {
+		jws.Settings(jws.WithMaxParseInputSize(50))
+		defer jws.Settings(jws.WithMaxParseInputSize(10 * 1024 * 1024))
+
+		// Input exceeds the global cap but is within the per-call override;
+		// the size check must pass (payload is still invalid JWS, but the
+		// returned error must not be about the size cap).
+		data := make([]byte, 100)
+		_, err := jws.Parse(data, jws.WithMaxParseInputSize(1024))
+		if err != nil {
+			require.NotContains(t, err.Error(), `exceeded max size`)
+		}
+	})
+	t.Run("Parse negative per-call value returns error", func(t *testing.T) {
+		_, err := jws.Parse([]byte(`test`), jws.WithMaxParseInputSize(-1))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `greater than zero`)
+	})
 }
 
 func TestMaxSignatures(t *testing.T) {
@@ -2010,6 +2074,23 @@ func TestMaxSignatures(t *testing.T) {
 		require.NoError(t, err, `jws.Parse should succeed with per-call limit of 10`)
 	})
 
+	t.Run("rejects before decoding entries", func(t *testing.T) {
+		// Build a payload with many tiny signature stubs. If the cap were
+		// enforced only after Message.UnmarshalJSON finished decoding every
+		// entry, this would allocate hundreds of thousands of Headers before
+		// rejection.
+		const n = 200000
+		parts := make([]string, n)
+		for i := range parts {
+			parts[i] = `{"protected":"","signature":""}`
+		}
+		body := []byte(`{"payload":"","signatures":[` + strings.Join(parts, ",") + `]}`)
+
+		_, err := jws.Parse(body, jws.WithMaxSignatures(16))
+		require.Error(t, err, `jws.Parse should reject oversized signatures array`)
+		require.Contains(t, err.Error(), `too many signatures`)
+	})
+
 	t.Run("verify inherits limit", func(t *testing.T) {
 		jws.Settings(jws.WithMaxSignatures(5))
 		defer jws.Settings(jws.WithMaxSignatures(100))
@@ -2019,4 +2100,110 @@ func TestMaxSignatures(t *testing.T) {
 		_, err := jws.Verify(msg, jws.WithKey(jwa.RS256(), &key1.PublicKey))
 		require.Error(t, err, `jws.Verify should fail when signatures exceed limit`)
 	})
+}
+
+func TestAlgorithmKeyMismatch(t *testing.T) {
+	rsaKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+
+	ecKey, err := jwxtest.GenerateEcdsaKey(jwa.P256())
+	require.NoError(t, err)
+
+	edKey, err := jwxtest.GenerateEd25519Key()
+	require.NoError(t, err)
+
+	hmacKey := jwxtest.GenerateSymmetricKey()
+
+	// Sign a valid HMAC message to use in Verify/VerifyCompactFast tests
+	validCompact, err := jws.Sign([]byte("test"), jws.WithKey(jwa.HS256(), hmacKey))
+	require.NoError(t, err)
+
+	testcases := []struct {
+		Name string
+		Alg  jwa.SignatureAlgorithm
+		Key  any
+	}{
+		{"RS256 with ECDSA key", jwa.RS256(), ecKey},
+		{"RS256 with Ed25519 key", jwa.RS256(), edKey},
+		{"RS256 with HMAC key", jwa.RS256(), hmacKey},
+		{"ES256 with RSA key", jwa.ES256(), rsaKey},
+		{"ES256 with Ed25519 key", jwa.ES256(), edKey},
+		{"ES256 with HMAC key", jwa.ES256(), hmacKey},
+		{"EdDSA with RSA key", jwa.EdDSA(), rsaKey},
+		{"EdDSA with ECDSA key", jwa.EdDSA(), ecKey},
+		{"EdDSA with HMAC key", jwa.EdDSA(), hmacKey},
+		{"HS256 with RSA key", jwa.HS256(), rsaKey},
+		{"HS256 with ECDSA key", jwa.HS256(), ecKey},
+		{"HS256 with Ed25519 key", jwa.HS256(), edKey},
+	}
+
+	for _, tc := range testcases {
+		t.Run("Sign/"+tc.Name, func(t *testing.T) {
+			_, err := jws.Sign([]byte("payload"), jws.WithKey(tc.Alg, tc.Key))
+			require.Error(t, err)
+			require.True(t, errors.Is(err, jws.SignError()), `error should be SignError`)
+			require.Contains(t, err.Error(), "not compatible")
+		})
+		t.Run("Verify/"+tc.Name, func(t *testing.T) {
+			_, err := jws.Verify(validCompact, jws.WithKey(tc.Alg, tc.Key))
+			require.Error(t, err)
+			require.True(t, errors.Is(err, jws.VerifyError()), `error should be VerifyError`)
+			require.Contains(t, err.Error(), "not compatible")
+		})
+		t.Run("VerifyCompactFast/"+tc.Name, func(t *testing.T) {
+			_, err := jws.VerifyCompactFast(tc.Key, validCompact, tc.Alg)
+			require.Error(t, err)
+			require.True(t, errors.Is(err, jws.VerifyError()), `error should be VerifyError`)
+			require.Contains(t, err.Error(), "not compatible")
+		})
+	}
+}
+
+// testCryptoSigner wraps a crypto.Signer so that AlgorithmsForKey
+// doesn't match it as a concrete standard library type.
+type testCryptoSigner struct {
+	crypto.Signer
+}
+
+func TestAlgorithmsForKeyCryptoSigner(t *testing.T) {
+	rsaKey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+
+	signer := testCryptoSigner{rsaKey}
+
+	t.Run("AlgorithmsForKey resolves via Public()", func(t *testing.T) {
+		algs, err := jws.AlgorithmsForKey(signer)
+		require.NoError(t, err, `AlgorithmsForKey should succeed for crypto.Signer wrapping RSA`)
+
+		require.Contains(t, algs, jwa.RS256())
+		require.Contains(t, algs, jwa.PS256())
+	})
+
+	t.Run("matching algorithm passes validation", func(t *testing.T) {
+		signed, err := jws.Sign([]byte("payload"), jws.WithKey(jwa.RS256(), signer))
+		require.NoError(t, err, `Sign with matching crypto.Signer should succeed`)
+
+		_, err = jws.Verify(signed, jws.WithKey(jwa.RS256(), &rsaKey.PublicKey))
+		require.NoError(t, err, `Verify should succeed`)
+	})
+
+	t.Run("mismatching algorithm is rejected early", func(t *testing.T) {
+		_, err := jws.Sign([]byte("payload"), jws.WithKey(jwa.ES256(), signer))
+		require.Error(t, err)
+		require.True(t, errors.Is(err, jws.SignError()))
+		require.Contains(t, err.Error(), "not compatible")
+	})
+}
+
+func TestVerifyWithNonSignatureAlgorithm(t *testing.T) {
+	hmacKey := jwxtest.GenerateSymmetricKey()
+	signed, err := jws.Sign([]byte("test"), jws.WithKey(jwa.HS256(), hmacKey))
+	require.NoError(t, err)
+
+	// jwa.A128KW is a KeyEncryptionAlgorithm, not a SignatureAlgorithm.
+	// Previously the unchecked type assertion in verify_context would panic.
+	_, err = jws.Verify(signed, jws.WithKey(jwa.A128KW(), hmacKey))
+	require.Error(t, err)
+	require.True(t, errors.Is(err, jws.VerifyError()))
+	require.Contains(t, err.Error(), "SignatureAlgorithm")
 }

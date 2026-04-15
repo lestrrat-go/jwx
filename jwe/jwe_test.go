@@ -934,6 +934,66 @@ func TestPBES2CountPerCall(t *testing.T) {
 	})
 }
 
+func TestPBES2CountEncrypt(t *testing.T) {
+	password := []byte(`supersecret`)
+	key, err := jwk.Import(password)
+	require.NoError(t, err, `jwk.Import should succeed`)
+
+	payload := []byte(`hello world`)
+
+	t.Run("per-call WithPBES2Count reflected in p2c header and round-trips", func(t *testing.T) {
+		encrypted, err := jwe.Encrypt(payload,
+			jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+			jwe.WithPBES2Count(2000),
+		)
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+		msg, err := jwe.Parse(encrypted)
+		require.NoError(t, err, `jwe.Parse should succeed`)
+		var p2c float64
+		require.NoError(t, msg.ProtectedHeaders().Get("p2c", &p2c), `protected header should have p2c`)
+		require.Equal(t, float64(2000), p2c, `p2c should match WithPBES2Count value`)
+
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.NoError(t, err, `jwe.Decrypt should succeed`)
+		require.Equal(t, payload, decrypted, `decrypted payload should match`)
+	})
+
+	t.Run("per-call overrides Settings", func(t *testing.T) {
+		// NOTE: HAS GLOBAL EFFECT
+		jwe.Settings(jwe.WithPBES2Count(15000))
+		defer jwe.Settings(jwe.WithPBES2Count(10000))
+		// Decrypt with a raised max so both 15000 and 3000 round-trip.
+		jwe.Settings(jwe.WithMaxPBES2Count(20000))
+		defer jwe.Settings(jwe.WithMaxPBES2Count(10000))
+
+		// With only the global set, encrypt should use 15000.
+		encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+		msg, err := jwe.Parse(encrypted)
+		require.NoError(t, err)
+		var p2c float64
+		require.NoError(t, msg.ProtectedHeaders().Get("p2c", &p2c))
+		require.Equal(t, float64(15000), p2c, `p2c should match global setting`)
+
+		// Per-call option should win over global.
+		encrypted2, err := jwe.Encrypt(payload,
+			jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+			jwe.WithPBES2Count(3000),
+		)
+		require.NoError(t, err)
+		msg2, err := jwe.Parse(encrypted2)
+		require.NoError(t, err)
+		var p2c2 float64
+		require.NoError(t, msg2.ProtectedHeaders().Get("p2c", &p2c2))
+		require.Equal(t, float64(3000), p2c2, `per-call WithPBES2Count should override global`)
+
+		decrypted, err := jwe.Decrypt(encrypted2, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.NoError(t, err)
+		require.Equal(t, payload, decrypted)
+	})
+}
+
 func TestCBCBufferSize(t *testing.T) {
 	// NOTE: This has GLOBAL EFFECT
 	jwe.Settings(jwe.WithCBCBufferSize(1))
@@ -1289,6 +1349,42 @@ func TestMaxParseInputSize(t *testing.T) {
 		require.Error(t, err)
 		require.NotContains(t, err.Error(), `exceeded max size`)
 	})
+	t.Run("Parse rejects oversized byte slice (global setting)", func(t *testing.T) {
+		jwe.Settings(jwe.WithMaxParseInputSize(50))
+		defer jwe.Settings(jwe.WithMaxParseInputSize(10 * 1024 * 1024))
+
+		_, err := jwe.Parse(make([]byte, 100))
+		require.Error(t, err, `jwe.Parse should reject oversized input`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("ParseString inherits the cap", func(t *testing.T) {
+		jwe.Settings(jwe.WithMaxParseInputSize(50))
+		defer jwe.Settings(jwe.WithMaxParseInputSize(10 * 1024 * 1024))
+
+		_, err := jwe.ParseString(strings.Repeat("a", 100))
+		require.Error(t, err, `jwe.ParseString should inherit the size cap`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("Parse honors per-call override", func(t *testing.T) {
+		_, err := jwe.Parse(make([]byte, 200), jwe.WithMaxParseInputSize(100))
+		require.Error(t, err, `jwe.Parse should reject input exceeding per-call cap`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("Parse per-call override can raise above global", func(t *testing.T) {
+		jwe.Settings(jwe.WithMaxParseInputSize(50))
+		defer jwe.Settings(jwe.WithMaxParseInputSize(10 * 1024 * 1024))
+
+		data := make([]byte, 100)
+		_, err := jwe.Parse(data, jwe.WithMaxParseInputSize(1024))
+		if err != nil {
+			require.NotContains(t, err.Error(), `exceeded max size`)
+		}
+	})
+	t.Run("Parse negative per-call value returns error", func(t *testing.T) {
+		_, err := jwe.Parse([]byte(`test`), jwe.WithMaxParseInputSize(-1))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `greater than zero`)
+	})
 }
 
 func TestMaxRecipients(t *testing.T) {
@@ -1382,4 +1478,61 @@ func TestMaxRecipients(t *testing.T) {
 		_, err = jwe.Decrypt(msg, jwe.WithKey(jwa.RSA_OAEP(), privkey), jwe.WithMaxRecipients(10))
 		require.NoError(t, err, `jwe.Decrypt should succeed with per-call limit of 10`)
 	})
+}
+
+// TestDecryptIgnoresUnprotectedHeader pins PR #1770 — per RFC 7516 §5.3
+// only the protected header is integrity-checked, so algorithm parameters
+// (alg, enc, epk, p2s, p2c, iv, tag) MUST be sourced from the
+// protected/per-recipient header. Before the fix jwe.Decrypt merged the
+// unprotected header into the protected copy, so a tampered JWE whose
+// unprotected header overrode the real alg with a garbage value would
+// cause decryption to fail (the merged alg no longer matched the key).
+// After the fix the unprotected header is ignored and decrypt succeeds,
+// recovering the original plaintext.
+//
+// Tampering leaves `protected` byte-identical so that AAD/tag verification
+// is unaffected — this isolates the merge bug from incidental AEAD failures.
+func TestDecryptIgnoresUnprotectedHeader(t *testing.T) {
+	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, `rsa.GenerateKey should succeed`)
+
+	const payload = `lorem ipsum dolor sit amet`
+	encrypted, err := jwe.Encrypt(
+		[]byte(payload),
+		jwe.WithKey(jwa.RSA_OAEP(), &privkey.PublicKey),
+		jwe.WithContentEncryption(jwa.A128GCM()),
+		jwe.WithJSON(),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), privkey))
+	require.NoError(t, err, `baseline jwe.Decrypt should succeed`)
+	require.Equal(t, []byte(payload), decrypted, `baseline plaintext should round-trip`)
+
+	var parsed map[string]any
+	require.NoError(t, json.Unmarshal(encrypted, &parsed), `freshly encrypted JWE should parse as JSON`)
+	// Inject an unprotected header whose values contradict the real
+	// protected-header parameters. Leave `protected` untouched so AAD
+	// verification is unaffected — only the merge path under test can
+	// surface these bogus values.
+	// Use a valid-but-different registered algorithm. The real JWE was
+	// encrypted with RSA-OAEP; claim RSA1_5 in the unprotected header.
+	// Under the buggy merge this would clobber the real alg and
+	// decryptContent's algMatched loop would reject the mismatch. The
+	// fix ignores the unprotected header, so decrypt still succeeds.
+	parsed["unprotected"] = map[string]any{
+		"alg": jwa.RSA1_5().String(),
+	}
+	// Flattened JSON mirrors alg into a top-level per-recipient "header".
+	// Decrypt's alg-match loop checks recipient.Headers() first — if that
+	// still carries alg=RSA-OAEP the merged protected-header path never
+	// runs. Strip it so the alg lookup must reach the protected header.
+	delete(parsed, "header")
+
+	tampered, err := json.Marshal(parsed)
+	require.NoError(t, err, `re-marshaling tampered JWE should succeed`)
+
+	decrypted, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.RSA_OAEP(), privkey))
+	require.NoError(t, err, `jwe.Decrypt must ignore unprotected-header overrides`)
+	require.Equal(t, []byte(payload), decrypted, `plaintext should still round-trip through the tampered JWE`)
 }

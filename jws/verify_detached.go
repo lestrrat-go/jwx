@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"hash"
 	"io"
+	"strings"
 
 	"github.com/lestrrat-go/blackmagic"
 	"github.com/lestrrat-go/dsig"
@@ -67,7 +68,11 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 	var key any
 	var keyFound bool
 	var validateKey bool
-	var strictCritical = true
+	var critValidation bool
+	// VerifyDetached is always detached, so "b64" is pre-declared
+	// in the allowlist — matches the auto-declaration that
+	// verifyContext does for jws.Verify + WithDetachedPayload.
+	criticalExtensions := []string{"b64"}
 	var keyUsed any
 	format := 0
 
@@ -92,10 +97,16 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 			if err := option.Value(&validateKey); err != nil {
 				return makeVerifyError(`failed to retrieve validate-key option value: %w`, err)
 			}
-		case identStrictCriticalHeaders{}:
-			if err := option.Value(&strictCritical); err != nil {
-				return makeVerifyError(`failed to retrieve strict-critical-headers option value: %w`, err)
+		case identCritValidation{}:
+			if err := option.Value(&critValidation); err != nil {
+				return makeVerifyError(`failed to retrieve crit-validation option value: %w`, err)
 			}
+		case identCritExtension{}:
+			var names []string
+			if err := option.Value(&names); err != nil {
+				return makeVerifyError(`failed to retrieve crit-extension option value: %w`, err)
+			}
+			criticalExtensions = append(criticalExtensions, names...)
 		case identKeyUsed{}:
 			if err := option.Value(&keyUsed); err != nil {
 				return makeVerifyError(`failed to retrieve key-used option value: %w`, err)
@@ -124,7 +135,7 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 		case identKeyProvider{}, identDetachedPayload{}, identMessage{}:
 			return makeVerifyError(`option %T is not supported by VerifyDetached; use jws.WithKey() to specify a single key`, option)
 		default:
-			return makeVerifyError(`invalid jws.VerifyOption %q passed`, fmt.Sprintf(`%T`, option.Ident()))
+			return makeVerifyError(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
 	}
 
@@ -187,8 +198,8 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 
 	encodePayload := getB64Value(hdr)
 
-	if strictCritical {
-		if err := validateCritical(hdr); err != nil {
+	if critValidation {
+		if err := validateCritical(hdr, criticalExtensions); err != nil {
 			return makeVerifyError(`invalid "crit" header: %w`, err)
 		}
 	}

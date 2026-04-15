@@ -17,6 +17,7 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
 * [Fetching JWK Sets](#fetching-jwk-sets)
   * [Parse a key from a remote resource](#parse-a-key-from-a-remote-resource)
   * [Auto-refreshing remote keys](#auto-refreshing-remote-keys)
+  * [Default Fetch Security Behavior](#default-fetch-security-behavior)
   * [Using Whitelists](#using-whitelists)
 * [Working with jwk.Key](#working-with-jwkkey)
   * [Working with key-specific methods](#working-with-key-specific-methods)
@@ -756,6 +757,25 @@ func Example_jwk_cached_set() {
 ```
 source: [examples/jwk_cached_set_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_cached_set_example_test.go)
 <!-- END INCLUDE -->
+
+## Default Fetch Security Behavior
+
+`jwk.Fetch()` does not apply a URL whitelist by default — it uses
+`jwk.InsecureWhitelist{}`, which allows every URL. This keeps the
+zero-config path short for the common case where the URL is a constant
+in your own code or a value loaded from trusted configuration.
+
+**If the URL comes from an untrusted source** — most commonly the `jku`
+header of a JWS handed to you by a peer — you **must** pass a
+`jwk.WithFetchWhitelist()` option that restricts which destinations the
+library will contact. See [Using Whitelists](#using-whitelists) below for
+the concrete whitelist types and an example.
+
+Note that even with a whitelist, the default HTTP client will follow
+redirects and does not inspect the resolved destination IP. For defense
+against redirect-to-private-IP and DNS-rebinding attacks, combine the
+whitelist with a custom `http.Client` (via `jwk.WithHTTPClient`) whose
+`Transport.DialContext` validates addresses.
 
 ## Using Whitelists
 

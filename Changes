@@ -4,7 +4,33 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
-v3.0.14 UNRELEASED
+v3.1.0 UNRELEASED
+  * [jwk] BREAKING: `jwk.PublicSetOf` now returns an error when the input
+    set contains a symmetric (oct) key. Previously, symmetric keys were
+    silently passed through — which meant callers following the documented
+    "publish my public JWKS" pattern could leak HMAC secret material.
+    Callers who genuinely want the legacy pass-through behavior can opt in
+    with `jwk.WithAllowSymmetric(true)`. The signature is now variadic
+    (`PublicSetOf(v Set, options ...PublicSetOption)`), so existing call
+    sites compile unchanged. The minor version is bumped from v3.0.x →
+    v3.1.0 to reflect this deliberate behavior change.
+
+    `jwk.PublicKeyOf` on a single symmetric key is unchanged — it still
+    returns the key as-is, matching its documented behavior.
+
+  * [jws][jwe][jwk] Replace intermediate map[string]any allocation in
+    MarshalJSON with a pair-slice + sync.Pool pattern, matching the approach
+    already used in jwt. Eliminates per-call map and key-slice allocations
+    in the serialization hot path.
+
+  * [jwt][jwe][jws][jwk] Fix inconsistent mutex locking across main data
+    structures. Named getters on JWK key types, MarshalJSON on JWK keys,
+    UnmarshalJSON on JWE headers, makePairs/MarshalJSON on JWT tokens,
+    rawBuffer on JWS headers, and Set/Keys on jwk.Set were missing proper
+    lock protection. Switch all mutex fields from *sync.RWMutex (pointer)
+    to sync.RWMutex (value) so go vet -copylocks catches accidental copies,
+    and convert affected value-receiver methods to pointer receivers.
+
   * [jwt][jwe][jws] Add `WithMaxParseInputSize(int64)` to limit bytes read from
     an `io.Reader` in `ParseReader` and `ReadFile`. Default is 10 MB. Can be set
     globally via `Settings()` or per-call. (#1630, #1632)
@@ -123,6 +149,14 @@ v3.0.14 UNRELEASED
 
   * [jwt/openid] `openid.Birthdate` now accepts year `0000` as a valid value per
     the OpenID Connect Core specification. (#1628)
+
+  * [jwk][jws][jwe] Generated `Set()` methods now deep-copy slice and byte-slice
+    values so callers cannot mutate internal header or key state after setting
+    a field. (#1659)
+
+  * [jwk] When `UnmarshalJSON` fails on a private key (RSA, EC, OKP, Symmetric),
+    all sensitive fields are now zeroed before the error is returned. This
+    prevents leaking partial key material through half-constructed objects. (#1660)
 
 v3.0.13 12 Jan 2026
   * [jwt] The `jwt.WithContext()` option is now properly being passed to `jws.Verify()` from

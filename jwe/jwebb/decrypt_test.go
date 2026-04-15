@@ -41,7 +41,7 @@ func TestKeyDecryptPBES2(t *testing.T) {
 	cek := testCEK
 	password := testPassword
 
-	encrypted, err := jwebb.KeyEncryptPBES2(cek, tokens.PBES2_HS256_A128KW, password)
+	encrypted, err := jwebb.KeyEncryptPBES2(cek, tokens.PBES2_HS256_A128KW, password, tokens.PBES2DefaultIterations)
 	require.NoError(t, err)
 	require.NotNil(t, encrypted)
 
@@ -67,6 +67,33 @@ func TestKeyDecryptAESGCMKW(t *testing.T) {
 	decrypted, err := jwebb.KeyDecryptAESGCMKW(encryptedWithIVTag.Bytes(), encryptedWithIVTag.Bytes(), tokens.A128GCMKW, sharedkey, encryptedWithIVTag.IV, encryptedWithIVTag.Tag)
 	require.NoError(t, err)
 	require.Equal(t, cek, decrypted)
+}
+
+func TestKeyDecryptAESGCMKW_DoesNotMutateRecipientKey(t *testing.T) {
+	cek := testCEK
+	sharedkey := testSharedKey16
+
+	encrypted, err := jwebb.KeyEncryptAESGCMKW(cek, tokens.A128GCMKW, sharedkey)
+	require.NoError(t, err)
+	encryptedWithIVTag, ok := encrypted.(keygen.ByteWithIVAndTag)
+	require.True(t, ok, "encrypted result should have IV and tag")
+
+	// Put the encrypted key in a backing array with spare capacity and
+	// fill the tail with a sentinel pattern. The buggy
+	// append(recipientKey[:], tag...) would overwrite the tail.
+	src := encryptedWithIVTag.Bytes()
+	backing := make([]byte, len(src)+len(encryptedWithIVTag.Tag)+16)
+	copy(backing, src)
+	for i := len(src); i < len(backing); i++ {
+		backing[i] = 0xAB
+	}
+	recipientKey := backing[:len(src):len(backing)]
+	snapshot := append([]byte(nil), backing...)
+
+	decrypted, err := jwebb.KeyDecryptAESGCMKW(recipientKey, recipientKey, tokens.A128GCMKW, sharedkey, encryptedWithIVTag.IV, encryptedWithIVTag.Tag)
+	require.NoError(t, err)
+	require.Equal(t, cek, decrypted)
+	require.Equal(t, snapshot, backing, "recipientKey backing array must not be mutated")
 }
 
 func TestKeyDecryptRSA15(t *testing.T) {
