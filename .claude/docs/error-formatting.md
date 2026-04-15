@@ -34,7 +34,8 @@ Only `jwt.UnknownPayloadTypeError()` remains a sentinel function (no struct type
 | `ValidationError` | *(wraps inner)* | Blanket validation failure |
 | `ParseError` | *(wraps inner)* | Parse failed |
 | `MissingRequiredClaimError` | `Claim` | Required claim missing |
-| `ClaimNotFoundError` | `Name` | Claim not present |
+| `ClaimNotFoundError` | `Name` | Claim not present (`jwt.Get` miss) |
+| `ClaimTypeMismatchError` | `Name`, `Got`, `Want` | Claim present but wrong type (`jwt.Get` type assertion failed) |
 | `ClaimAssignmentFailedError` | `Err` | Claim value assignment failed |
 
 ## Sentinel Function Registry
