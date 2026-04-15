@@ -14,13 +14,22 @@ import (
 
 // buildAlgHeaderJSON constructs the JSON for a protected header containing
 // only the "alg" field. This is used by the precomputed header fast path.
-func buildAlgHeaderJSON(alg string) []byte {
+//
+// The fast path hand-builds the JSON rather than calling json.Marshal,
+// so any algorithm name that would require escaping (control bytes, `"`,
+// `\`, or non-ASCII) must be rejected up front. Callers that hit this
+// error cannot silently fall back to the slow path because the same
+// unsafe name would still appear in the emitted header.
+func buildAlgHeaderJSON(alg string) ([]byte, error) {
+	if !tokens.IsJSONSafeASCII(alg) {
+		return nil, fmt.Errorf(`jws: algorithm name %q contains characters that would require JSON escaping`, alg)
+	}
 	// Construct {"alg":"<alg>"} without going through json.Marshal
 	buf := make([]byte, 0, 9+len(alg))
 	buf = append(buf, `{"alg":"`...)
 	buf = append(buf, alg...)
 	buf = append(buf, `"}`...)
-	return buf
+	return buf, nil
 }
 
 var signatureBuilderPool = pool.New[*signatureBuilder](allocSignatureBuilder, freeSignatureBuilder)

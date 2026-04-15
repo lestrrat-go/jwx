@@ -71,6 +71,7 @@ type withKey struct {
 	protected       Headers
 	public          Headers
 	cachedHdrJSON   []byte // precomputed header JSON when no custom headers and no kid
+	cachedHdrErr    error  // deferred precompute error, surfaced at Sign() time
 	keyPrevalidated bool   // true if algorithm-key validation was done at construction time
 }
 
@@ -84,6 +85,7 @@ func (w *withKey) Protected(v Headers) Headers {
 		// Invalidate the precomputed header JSON because the caller
 		// will likely modify the headers (e.g., jwt sets "typ").
 		w.cachedHdrJSON = nil
+		w.cachedHdrErr = nil
 	}
 	return w.protected
 }
@@ -174,7 +176,11 @@ func WithKey(alg jwa.KeyAlgorithm, key any, options ...WithKeySuboption) SignVer
 				}
 			}
 			if !needsKid {
-				wk.cachedHdrJSON = buildAlgHeaderJSON(salg.String())
+				// WithKey cannot return an error, so defer any validation
+				// failure (unsafe alg characters) to Sign() time via
+				// cachedHdrErr. The sign path checks this before using
+				// the cached bytes.
+				wk.cachedHdrJSON, wk.cachedHdrErr = buildAlgHeaderJSON(salg.String())
 			}
 		}
 	}
