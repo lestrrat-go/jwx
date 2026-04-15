@@ -60,11 +60,14 @@ func (k *akpPrivateKey) PublicKey() (Key, error) {
 	return makeAKPPublicKey(k)
 }
 
-func akpThumbprint(hash crypto.Hash, pub string) []byte {
+// akpThumbprint hashes the canonical JSON form defined by RFC 7638 §3.2
+// for AKP keys: the required members {alg, kty, pub} in lexicographic order.
+// RFC 9802 makes alg a required thumbprint input for AKP because pub is
+// algorithm-scoped — omitting alg would break cross-implementation kid
+// lookup.
+func akpThumbprint(hash crypto.Hash, alg, pub string) []byte {
 	h := hash.New()
-	fmt.Fprint(h, `{"kty":"AKP","pub":"`)
-	fmt.Fprint(h, pub)
-	fmt.Fprint(h, `"}`)
+	fmt.Fprintf(h, `{"alg":%q,"kty":"AKP","pub":%q}`, alg, pub)
 	return h.Sum(nil)
 }
 
@@ -75,7 +78,10 @@ func (k *akpPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	if k.pub == nil {
 		return nil, fmt.Errorf(`missing "pub" field`)
 	}
-	return akpThumbprint(hash, base64.EncodeToString(k.pub)), nil
+	if k.algorithm == nil {
+		return nil, fmt.Errorf(`missing "alg" field (required for AKP thumbprint)`)
+	}
+	return akpThumbprint(hash, (*k.algorithm).String(), base64.EncodeToString(k.pub)), nil
 }
 
 func (k *akpPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
@@ -85,7 +91,10 @@ func (k *akpPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	if k.pub == nil {
 		return nil, fmt.Errorf(`missing "pub" field`)
 	}
-	return akpThumbprint(hash, base64.EncodeToString(k.pub)), nil
+	if k.algorithm == nil {
+		return nil, fmt.Errorf(`missing "alg" field (required for AKP thumbprint)`)
+	}
+	return akpThumbprint(hash, (*k.algorithm).String(), base64.EncodeToString(k.pub)), nil
 }
 
 func (k *akpPublicKey) Validate() error {
