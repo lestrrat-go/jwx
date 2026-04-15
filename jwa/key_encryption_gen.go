@@ -250,11 +250,11 @@ func LookupKeyEncryptionAlgorithm(name string) (KeyEncryptionAlgorithm, bool) {
 // forward-compatible.
 func RegisterKeyEncryptionAlgorithm(algorithms ...KeyEncryptionAlgorithm) error {
 	muAllKeyEncryptionAlgorithm.Lock()
+	defer muAllKeyEncryptionAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		allKeyEncryptionAlgorithm[alg.String()] = alg
 	}
-	muAllKeyEncryptionAlgorithm.Unlock()
-	rebuildKeyEncryptionAlgorithm()
+	rebuildKeyEncryptionAlgorithmLocked()
 	return nil
 }
 
@@ -262,23 +262,21 @@ func RegisterKeyEncryptionAlgorithm(algorithms ...KeyEncryptionAlgorithm) error 
 // Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterKeyEncryptionAlgorithm(algorithms ...KeyEncryptionAlgorithm) {
 	muAllKeyEncryptionAlgorithm.Lock()
+	defer muAllKeyEncryptionAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		if _, ok := builtinKeyEncryptionAlgorithm[alg.String()]; ok {
 			continue
 		}
 		delete(allKeyEncryptionAlgorithm, alg.String())
 	}
-	muAllKeyEncryptionAlgorithm.Unlock()
-	rebuildKeyEncryptionAlgorithm()
+	rebuildKeyEncryptionAlgorithmLocked()
 }
 
-func rebuildKeyEncryptionAlgorithm() {
+func rebuildKeyEncryptionAlgorithmLocked() {
 	list := make([]KeyEncryptionAlgorithm, 0, len(allKeyEncryptionAlgorithm))
-	muAllKeyEncryptionAlgorithm.RLock()
 	for _, v := range allKeyEncryptionAlgorithm {
 		list = append(list, v)
 	}
-	muAllKeyEncryptionAlgorithm.RUnlock()
 	slices.SortFunc(list, func(a, b KeyEncryptionAlgorithm) int {
 		return cmp.Compare(a.String(), b.String())
 	})
