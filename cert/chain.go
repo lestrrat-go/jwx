@@ -26,9 +26,11 @@ func (cc Chain) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteByte(tokens.Comma)
 		}
-		buf.WriteByte('"')
-		buf.Write(cert)
-		buf.WriteByte('"')
+		encoded, err := json.Marshal(string(cert))
+		if err != nil {
+			return nil, fmt.Errorf(`failed to encode certificate at index %d: %w`, i, err)
+		}
+		buf.Write(encoded)
 	}
 	buf.WriteByte(tokens.CloseSquareBracket)
 	return buf.Bytes(), nil
@@ -78,6 +80,24 @@ func (cc *Chain) Add(der []byte) error {
 		cc.certificates = append(cc.certificates, encoded)
 		return nil
 	}
-	cc.certificates = append(cc.certificates, der)
+	// Non-PEM input must be base64(DER). Strip any internal whitespace
+	// (callers commonly pass multi-line base64 literals) and validate.
+	normalized := stripASCIIWhitespace(der)
+	if _, err := base64.StdEncoding.DecodeString(string(normalized)); err != nil {
+		return fmt.Errorf(`cert.Chain.Add: input is not a PEM CERTIFICATE block or valid base64(DER): %w`, err)
+	}
+	cc.certificates = append(cc.certificates, normalized)
 	return nil
+}
+
+func stripASCIIWhitespace(src []byte) []byte {
+	dst := make([]byte, 0, len(src))
+	for _, b := range src {
+		switch b {
+		case ' ', '\t', '\r', '\n', '\v', '\f':
+			continue
+		}
+		dst = append(dst, b)
+	}
+	return dst
 }

@@ -1,6 +1,8 @@
 package cert_test
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v4/cert"
@@ -65,5 +67,46 @@ func TestChain(t *testing.T) {
 	for _, i := range []int{-1, chain.Len()} {
 		_, ok := chain.Get(i)
 		require.False(t, ok, `out of bounds should properly error`)
+	}
+
+	t.Run(`MarshalJSON round-trip`, func(t *testing.T) {
+		// Regression for CERT-002: MarshalJSON must produce valid JSON
+		// even when Add was called with a multi-line base64 literal.
+		encoded, err := json.Marshal(&chain)
+		require.NoError(t, err, `json.Marshal(chain) should succeed`)
+
+		var back []string
+		require.NoError(t, json.Unmarshal(encoded, &back), `marshaled chain must be valid JSON`)
+		require.Equal(t, chain.Len(), len(back), `round-trip should preserve length`)
+
+		for i, s := range back {
+			// The serialized string must be single-line base64 with no whitespace.
+			der, err := base64.StdEncoding.DecodeString(s)
+			require.NoError(t, err, `entry %d must be valid base64`, i)
+			parsed, err := cert.Parse([]byte(s))
+			require.NoError(t, err, `entry %d must round-trip through cert.Parse`, i)
+			require.True(t, parsed.Equal(goldenCert), `entry %d must match golden cert`, i)
+			require.NotEmpty(t, der)
+		}
+	})
+}
+
+func TestChainAddRejectsInvalid(t *testing.T) {
+	// Regression for CERT-002: Add must reject input that would produce
+	// invalid JSON or enable JSON injection when later marshaled.
+	testcases := []struct {
+		Name string
+		Data []byte
+	}{
+		{Name: `quote injection`, Data: []byte(`abc","injected":"x`)},
+		{Name: `raw garbage`, Data: []byte(`not base64 at all !!!`)},
+		{Name: `control characters`, Data: []byte("ab\x00cd")},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.Name, func(t *testing.T) {
+			var chain cert.Chain
+			require.Error(t, chain.Add(tc.Data), `Add should reject invalid input`)
+			require.Equal(t, 0, chain.Len(), `failed Add must not mutate chain`)
+		})
 	}
 }
