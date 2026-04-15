@@ -278,7 +278,7 @@ LOOP:
 	if !sawKeysField {
 		key, err := ParseKey(data, options...)
 		if err != nil {
-			return fmt.Errorf(`failed to parse sole key in key set`)
+			return fmt.Errorf(`failed to parse sole key in key set: %w`, err)
 		}
 		s.keys = append(s.keys, key)
 	}
