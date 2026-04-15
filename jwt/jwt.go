@@ -532,6 +532,15 @@ func Sign(t Token, options ...SignOption) ([]byte, error) {
 				return nil, fmt.Errorf(`jwt.Sign: invalid algorithm type %T. jwa.SignatureAlgorithm is required`, wk.alg)
 			}
 
+			// Reject algorithm names that would require JSON escaping
+			// in the protected header. Unlike kid (which may be attacker-
+			// influenced and silently falls through to jws.Sign), an
+			// unsafe alg is almost certainly a caller bug or an injection
+			// attempt, so we fail fast rather than emit any signature.
+			if !fastPathAlgSafe(alg.String()) {
+				return nil, fmt.Errorf(`jwt.Sign: algorithm %q contains bytes that require JSON escaping`, alg.String())
+			}
+
 			// Check if option contains anything other than alg/key
 			if len(wk.options) == 0 {
 				// If the key carries a kid that would require JSON escaping,

@@ -27,6 +27,21 @@ func fastPathKidSafe(kid string) bool {
 	return true
 }
 
+// fastPathAlgSafe reports whether alg can be concatenated into a
+// hand-built JSON header literal without escaping. The byte set
+// mirrors fastPathKidSafe: any control byte, `"`, `\`, or non-ASCII
+// byte disqualifies the value. Unlike kid, an unsafe alg is rejected
+// outright by jwt.Sign rather than silently falling through.
+func fastPathAlgSafe(alg string) bool {
+	for i := range len(alg) {
+		c := alg[i]
+		if c < 0x20 || c >= 0x7f || c == '"' || c == '\\' {
+			return false
+		}
+	}
+	return true
+}
+
 // signFast reinvents the wheel a bit to avoid the overhead of
 // going through the entire jws.Sign() machinery.
 func signFast(t Token, alg jwa.SignatureAlgorithm, key any) ([]byte, error) {
