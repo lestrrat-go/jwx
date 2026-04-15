@@ -53,6 +53,7 @@ func TestKeySetProviderFetchAllKeysAlgPrefilter(t *testing.T) {
 	}
 
 	t.Run("alg=ES256 skips RSA key", func(t *testing.T) {
+		t.Parallel()
 		sig := NewSignature()
 		hdr := NewHeaders()
 		require.NoError(t, hdr.Set(AlgorithmKey, jwa.ES256()))
@@ -65,6 +66,7 @@ func TestKeySetProviderFetchAllKeysAlgPrefilter(t *testing.T) {
 	})
 
 	t.Run("alg=RS256 skips EC key", func(t *testing.T) {
+		t.Parallel()
 		sig := NewSignature()
 		hdr := NewHeaders()
 		require.NoError(t, hdr.Set(AlgorithmKey, jwa.RS256()))
@@ -77,6 +79,7 @@ func TestKeySetProviderFetchAllKeysAlgPrefilter(t *testing.T) {
 	})
 
 	t.Run("no alg header still tries every key", func(t *testing.T) {
+		t.Parallel()
 		// Pre-existing opt-in behavior: without an alg in the header,
 		// inferAlgorithm=true sinks every compatible alg for every key.
 		// This test pins the documented fan-out so a future change is
