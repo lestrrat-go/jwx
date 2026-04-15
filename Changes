@@ -5,6 +5,21 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.1.0 UNRELEASED
+  * [jws] Add `jws.SignDetached` and `jws.VerifyDetached` for streaming
+    detached payloads via `io.Reader`. Unlike `jws.Sign` /
+    `jws.Verify` with `WithDetachedPayload`, these never materialize
+    the payload in memory — the payload is streamed through the hash
+    function, making them suitable for payloads that do not fit in
+    memory. Compact and flattened JSON serializations are both
+    supported; the format is auto-detected on verify. EdDSA and custom
+    algorithms are not supported because they require the full payload
+    at sign/verify time. (#1663)
+
+  * [jws] Fix `jws.Sign` with `WithDetachedPayload` + `WithJSON` to
+    omit the `"payload"` member from the output per RFC 7515
+    Appendix F. Previously the payload was still emitted, producing
+    non-detached JSON. (#1663)
+
   * [jwk] BREAKING: `jwk.PublicSetOf` now returns an error when the input
     set contains a symmetric (oct) key. Previously, symmetric keys were
     silently passed through — which meant callers following the documented
