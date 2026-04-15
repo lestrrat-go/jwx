@@ -852,3 +852,48 @@ func TestClaimValidator(t *testing.T) {
 		})
 	}
 }
+
+// countingClock returns successive samples from a fixed sequence and
+// records how many times Now was called. Used to lock in the invariant
+// that jwt.Validate samples the clock exactly once per call, so that
+// every default validator observes the same "now".
+type countingClock struct {
+	samples []time.Time
+	Count   int
+}
+
+func (c *countingClock) Now() time.Time {
+	t := c.samples[c.Count]
+	if c.Count < len(c.samples)-1 {
+		c.Count++
+	}
+	return t
+}
+
+func TestValidateClockSnapshottedOnce(t *testing.T) {
+	t.Parallel()
+
+	// iat/nbf == t0 and exp == t0+1s makes the token valid at exactly
+	// t0. The stepped clock's second sample is deliberately past exp
+	// so that any validator re-sampling the clock would observe an
+	// expired token and fail.
+	t0 := time.Unix(1_700_000_000, 0)
+	clock := &countingClock{
+		samples: []time.Time{t0, t0.Add(2 * time.Second), t0.Add(4 * time.Second)},
+	}
+
+	tok, err := jwt.NewBuilder().
+		IssuedAt(t0).
+		NotBefore(t0).
+		Expiration(t0.Add(time.Second)).
+		Build()
+	require.NoError(t, err, `jwt.NewBuilder should succeed`)
+
+	require.NoError(t,
+		jwt.Validate(tok, jwt.WithClock(clock)),
+		`jwt.Validate should pass when clock.Now() is sampled once`,
+	)
+	require.Equal(t, 1, clock.Count,
+		`jwt.Validate should call clock.Now() exactly once per call`,
+	)
+}
