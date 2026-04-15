@@ -837,6 +837,52 @@ func TestKeyEncrypterFuncAdapter(t *testing.T) {
 	require.Equal(t, payload, decrypted)
 }
 
+// recordingKeyDecrypter captures the *Message passed by decryptCEK so
+// tests can assert that HSM-style callers get access to protected headers.
+type recordingKeyDecrypter struct {
+	alg jwa.KeyEncryptionAlgorithm
+	cek []byte
+	got *jwe.Message
+}
+
+func (r *recordingKeyDecrypter) Algorithm() jwa.KeyEncryptionAlgorithm { return r.alg }
+func (r *recordingKeyDecrypter) EncryptKey(_ []byte) ([]byte, error)   { return r.cek, nil }
+func (r *recordingKeyDecrypter) DecryptKey(_ jwa.KeyEncryptionAlgorithm, _ []byte, _ jwe.Recipient, msg *jwe.Message) ([]byte, error) {
+	r.got = msg
+	return r.cek, nil
+}
+
+func TestKeyDecrypterReceivesMessage(t *testing.T) {
+	// Regression: decryptCEK must thread the *Message through to
+	// user-supplied KeyDecrypter implementations so HSM callers can see
+	// protected-header fields (typ, cty, etc.) they were promised by the
+	// interface doc.
+	cek := make([]byte, 16)
+	_, err := rand.Read(cek)
+	require.NoError(t, err, `rand.Read should succeed`)
+
+	kd := &recordingKeyDecrypter{alg: jwa.DIRECT(), cek: cek}
+
+	hdrs := jwe.NewHeaders()
+	require.NoError(t, hdrs.Set(jwe.TypeKey, "example+jwt"))
+
+	encrypted, err := jwe.Encrypt(
+		[]byte("Lorem Ipsum"),
+		jwe.WithKey(jwa.DIRECT(), cek),
+		jwe.WithContentEncryption(jwa.A128GCM()),
+		jwe.WithProtectedHeaders(hdrs),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	_, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.DIRECT(), kd))
+	require.NoError(t, err, `jwe.Decrypt should succeed`)
+
+	require.NotNil(t, kd.got, `KeyDecrypter should receive a non-nil *Message`)
+	typ, ok := kd.got.ProtectedHeaders().Type()
+	require.True(t, ok, `protected 'typ' header should be visible`)
+	require.Equal(t, "example+jwt", typ)
+}
+
 func TestGH1001(t *testing.T) {
 	rawKey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)

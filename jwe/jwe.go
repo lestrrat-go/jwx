@@ -610,7 +610,7 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 		ctalg:         ce,
 		contentCipher: contentCipher,
 	}
-	cek, err := decryptCEK(alg, key, recipient, h2, cekCtx)
+	cek, err := decryptCEK(alg, key, msg, recipient, h2, cekCtx)
 	if err != nil {
 		return nil, fmt.Errorf(`jwe.Decrypt: failed to decrypt key: %w`, err)
 	}

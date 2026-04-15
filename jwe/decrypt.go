@@ -23,12 +23,12 @@ type decryptCEKContext struct {
 // decryptCEK dispatches key decryption to the appropriate per-family
 // function based on the algorithm. Each function extracts its own
 // algorithm-specific parameters from the merged headers.
-func decryptCEK(alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, headers Headers, ctx *decryptCEKContext) ([]byte, error) {
+func decryptCEK(alg jwa.KeyEncryptionAlgorithm, key any, msg *Message, recipient Recipient, headers Headers, ctx *decryptCEKContext) ([]byte, error) {
 	algStr := alg.String()
 	recipientKey := recipient.EncryptedKey()
 
 	if kd, ok := key.(KeyDecrypter); ok {
-		return kd.DecryptKey(alg, recipientKey, recipient, nil)
+		return kd.DecryptKey(alg, recipientKey, recipient, msg)
 	}
 
 	switch {
