@@ -47,6 +47,47 @@ func TestVectorsAESCBC128(t *testing.T) {
 	require.Equal(t, plaintext, out, "Open should get us original text")
 }
 
+// TestOpenOpaqueErrors locks in the guarantee that Hmac.Open returns a
+// single opaque error value for every failure mode: malformed nonce,
+// ciphertext shorter than the tag, ciphertext whose tag offset is not
+// block-aligned, and post-MAC tag mismatch. Distinguishable error
+// strings on these paths would create a structural-vs-cryptographic
+// oracle on any decrypt endpoint that forwards the error text.
+func TestOpenOpaqueErrors(t *testing.T) {
+	key := make([]byte, 32) // A128CBC-HS256 uses 32-byte key (16 mac + 16 enc)
+	enc, err := New(key, aes.NewCipher)
+	require.NoError(t, err, "aescbc.New")
+
+	aad := []byte("aad")
+	plaintext := []byte("hello world")
+	nonce := make([]byte, enc.blockCipher.BlockSize())
+	sealed := enc.Seal(nil, nonce, plaintext, aad)
+
+	t.Run("nonce wrong length", func(t *testing.T) {
+		_, err := enc.Open(nil, make([]byte, enc.blockCipher.BlockSize()-1), sealed, aad)
+		require.EqualError(t, err, "invalid ciphertext")
+	})
+
+	t.Run("ciphertext shorter than tag", func(t *testing.T) {
+		_, err := enc.Open(nil, nonce, make([]byte, enc.keysize-1), aad)
+		require.EqualError(t, err, "invalid ciphertext")
+	})
+
+	t.Run("ciphertext length not block-aligned", func(t *testing.T) {
+		bad := make([]byte, enc.keysize+7)
+		_, err := enc.Open(nil, nonce, bad, aad)
+		require.EqualError(t, err, "invalid ciphertext")
+	})
+
+	t.Run("mac mismatch", func(t *testing.T) {
+		tampered := make([]byte, len(sealed))
+		copy(tampered, sealed)
+		tampered[len(tampered)-1] ^= 0xFF
+		_, err := enc.Open(nil, nonce, tampered, aad)
+		require.EqualError(t, err, "invalid ciphertext")
+	})
+}
+
 func TestPad(t *testing.T) {
 	for i := range 256 {
 		buf := make([]byte, i)
