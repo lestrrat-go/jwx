@@ -40,8 +40,10 @@ func ParseCookie(req *http.Request, name string, options ...ParseOption) (Token,
 
 // ParseHeader parses a JWT stored in a http.Header.
 //
-// For the header "Authorization", it will strip the prefix "Bearer " and will
-// treat the remaining value as a JWT.
+// For the header "Authorization", it will strip the "Bearer" scheme per
+// RFC 6750 §2.1 (case-insensitive scheme token; space or tab separator
+// required) and treat the remainder as a JWT. If the value does not begin
+// with a well-formed "Bearer <token>", the full value is parsed as-is.
 func ParseHeader(hdr http.Header, name string, options ...ParseOption) (Token, error) {
 	key := http.CanonicalHeaderKey(name)
 	v := strings.TrimSpace(hdr.Get(key))
@@ -50,9 +52,9 @@ func ParseHeader(hdr http.Header, name string, options ...ParseOption) (Token, e
 	}
 
 	if key == "Authorization" {
-		// Authorization header is an exception. We strip the "Bearer " from
-		// the prefix
-		v = strings.TrimSpace(strings.TrimPrefix(v, "Bearer"))
+		if len(v) >= 7 && strings.EqualFold(v[:6], "Bearer") && (v[6] == ' ' || v[6] == '\t') {
+			v = strings.TrimSpace(v[7:])
+		}
 	}
 
 	tok, err := ParseString(v, options...)
