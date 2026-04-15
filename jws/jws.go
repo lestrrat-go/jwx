@@ -701,18 +701,62 @@ func isRegisteredUnderAnyCurve(alg jwa.SignatureAlgorithm) bool {
 }
 
 // validateAlgorithmForKey checks that alg is compatible with key.
-// If the key type is not recognized (e.g. an opaque crypto.Signer whose
-// .Public() also returns an unrecognized type), validation is skipped
-// and the crypto layer will catch any real incompatibility.
+// Three classification failures are intentionally allowed through:
+// (a) a nil key, used by keyless algorithms (see GH910);
+// (b) any key handed to an algorithm with a user-registered custom
+// Signer2/Verifier2 — custom implementations may accept arbitrary key
+// types that AlgorithmsForKey cannot classify; and
+// (c) an opaque crypto.Signer whose .Public() is itself a crypto.Signer,
+// the one case AlgorithmsForKey refuses to recurse into.
+// Every other classification failure is surfaced so callers get a crisp
+// option-boundary rejection instead of a deep-stack error.
 func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
+	if key == nil {
+		return nil
+	}
 	algs, err := AlgorithmsForKey(key)
 	if err != nil {
-		return nil //nolint:nilerr // intentional: unrecognized key types skip validation
+		if hasCustomSigVerifier(alg) {
+			return nil
+		}
+		if signer, ok := key.(crypto.Signer); ok {
+			if _, isSigner := signer.Public().(crypto.Signer); isSigner {
+				return nil
+			}
+		}
+		return err
 	}
 	if !slices.Contains(algs, alg) {
+		if hasCustomSigVerifier(alg) {
+			return nil
+		}
 		return fmt.Errorf(`algorithm %q is not compatible with key type %T`, alg, key)
 	}
 	return nil
+}
+
+// hasCustomSigVerifier reports whether a non-default Signer2 or
+// Verifier2 has been registered for alg. When this is true, key-type
+// validation must be skipped: the custom implementation decides what
+// key types it accepts.
+func hasCustomSigVerifier(alg jwa.SignatureAlgorithm) bool {
+	muSigner2DB.RLock()
+	s, sok := signer2DB[alg]
+	muSigner2DB.RUnlock()
+	if sok {
+		if _, isDefault := s.(defaultSigner); !isDefault {
+			return true
+		}
+	}
+	muVerifier2DB.RLock()
+	v, vok := verifier2DB[alg]
+	muVerifier2DB.RUnlock()
+	if vok {
+		if _, isDefault := v.(defaultVerifier); !isDefault {
+			return true
+		}
+	}
+	return false
 }
 
 // Settings allows you to set global settings for this JWS operations.
