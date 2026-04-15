@@ -675,7 +675,6 @@ import (
   "net/http"
   "net/http/httptest"
 
-  "github.com/jwx-go/jwkfetch/v4"
   "github.com/lestrrat-go/jwx/v4/jwa"
   "github.com/lestrrat-go/jwx/v4/jwk"
   "github.com/lestrrat-go/jwx/v4/jws"
@@ -735,15 +734,10 @@ func Example_jwt_parse_with_jku() {
     return
   }
 
-  // The fetcher is built from the jwkfetch companion. We pass srv.Client()
-  // because httptest uses a custom certificate, and we explicitly opt into
-  // the permissive whitelist — a jwkfetch.Client with no whitelist denies
-  // every URL by default.
-  fetcher := jwkfetch.NewClient(
-    jwkfetch.WithHTTPClient(srv.Client()),
-    jwkfetch.WithWhitelist(jwkfetch.InsecureWhitelist{}),
-  )
-  tok, err := jwt.Parse(serialized, jwt.WithVerifyAuto(fetcher))
+  // We need to pass jwk.WithHTTPClient because we are using HTTPS,
+  // and we need the certificates setup
+  // We also need to explicitly set up the whitelist, this is required
+  tok, err := jwt.Parse(serialized, jwt.WithVerifyAuto(nil, jwk.WithHTTPClient(srv.Client()), jwk.WithFetchWhitelist(jwk.InsecureWhitelist{})))
   if err != nil {
     fmt.Printf("failed to verify token: %s\n", err)
     return
