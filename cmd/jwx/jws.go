@@ -16,6 +16,22 @@ func init() {
 	topLevelCommands = append(topLevelCommands, makeJwsCmd())
 }
 
+// resolveSignatureAlgorithm looks up a JWS signature algorithm by name and
+// refuses "none". Accepting alg=none at a CLI boundary is the canonical JWT
+// footgun (RFC 7518 §3.6): sign would emit an unsigned blob, verify would
+// accept any unsigned token. There is no legitimate CLI use case, so we
+// reject unconditionally.
+func resolveSignatureAlgorithm(name string) (jwa.SignatureAlgorithm, error) {
+	alg, ok := jwa.LookupSignatureAlgorithm(name)
+	if !ok {
+		return jwa.SignatureAlgorithm{}, fmt.Errorf(`invalid algorithm %s`, name)
+	}
+	if alg == jwa.NoSignature() {
+		return jwa.SignatureAlgorithm{}, fmt.Errorf(`alg "none" is not permitted for jws sign/verify (RFC 7518 §3.6); refusing to produce or accept unsigned JWS`)
+	}
+	return alg, nil
+}
+
 func jwsAlgorithmFlag(use string) cli.Flag {
 	return &cli.StringFlag{
 		Name:    "alg",
@@ -165,13 +181,9 @@ func makeJwsVerifyCmd() *cli.Command {
 				return nil
 			}
 		} else {
-			var alg jwa.SignatureAlgorithm
-			{
-				v, ok := jwa.LookupSignatureAlgorithm(c.String("alg"))
-				if !ok {
-					return fmt.Errorf(`invalid algorithm %s`, c.String("alg"))
-				}
-				alg = v
+			alg, err := resolveSignatureAlgorithm(c.String("alg"))
+			if err != nil {
+				return err
 			}
 
 			for i := 0; i < keyset.Len(); i++ {
@@ -238,13 +250,9 @@ func makeJwsSignCmd() *cli.Command {
 			return fmt.Errorf(`failed to read data from source: %w`, err)
 		}
 
-		var alg jwa.SignatureAlgorithm
-		{
-			v, ok := jwa.LookupSignatureAlgorithm(c.String("alg"))
-			if !ok {
-				return fmt.Errorf(`invalid algorithm %s`, c.String("alg"))
-			}
-			alg = v
+		alg, err := resolveSignatureAlgorithm(c.String("alg"))
+		if err != nil {
+			return err
 		}
 
 		// headers must go to WithKeySuboptions
