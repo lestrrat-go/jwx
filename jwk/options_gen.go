@@ -111,6 +111,18 @@ func (*parseOption) registerOption() {}
 
 func (*parseOption) readFileOption() {}
 
+// PublicSetOption is a type of Option that can be passed to `jwk.PublicSetOf()`
+type PublicSetOption interface {
+	Option
+	publicSetOption()
+}
+
+type publicSetOption struct {
+	Option
+}
+
+func (*publicSetOption) publicSetOption() {}
+
 // ReadFileOption is a type of `Option` that can be passed to `jwk.ReadFile`
 type ReadFileOption interface {
 	Option
@@ -166,6 +178,7 @@ type resourceOption struct {
 
 func (*resourceOption) resourceOption() {}
 
+type identAllowSymmetric struct{}
 type identFS struct{}
 type identFetchWhitelist struct{}
 type identHTTPClient struct{}
@@ -178,6 +191,10 @@ type identStrictKeyUsage struct{}
 type identThumbprintHash struct{}
 type identWaitReady struct{}
 type identX509 struct{}
+
+func (identAllowSymmetric) String() string {
+	return "WithAllowSymmetric"
+}
 
 func (identFS) String() string {
 	return "WithFS"
@@ -225,6 +242,22 @@ func (identWaitReady) String() string {
 
 func (identX509) String() string {
 	return "WithX509"
+}
+
+// WithAllowSymmetric controls whether `jwk.PublicSetOf` tolerates
+// symmetric (oct) keys in the input set.
+//
+// By default this option is false: a symmetric key in the input is
+// an error, because a symmetric key has no public form — its
+// "public" representation is the secret itself. Passing such a set
+// through `PublicSetOf` silently and then publishing the result
+// (e.g. as `/.well-known/jwks.json`) would leak HMAC secret material.
+//
+// Pass `WithAllowSymmetric(true)` only if you are certain the
+// resulting set will not be published. When true, symmetric keys
+// are passed through unchanged, matching the legacy behavior.
+func WithAllowSymmetric(v bool) PublicSetOption {
+	return &publicSetOption{option.New(identAllowSymmetric{}, v)}
 }
 
 // WithFS specifies the source `fs.FS` object to read the file from.

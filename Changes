@@ -4,7 +4,20 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
-v3.0.14 UNRELEASED
+v3.1.0 UNRELEASED
+  * [jwk] BREAKING: `jwk.PublicSetOf` now returns an error when the input
+    set contains a symmetric (oct) key. Previously, symmetric keys were
+    silently passed through — which meant callers following the documented
+    "publish my public JWKS" pattern could leak HMAC secret material.
+    Callers who genuinely want the legacy pass-through behavior can opt in
+    with `jwk.WithAllowSymmetric(true)`. The signature is now variadic
+    (`PublicSetOf(v Set, options ...PublicSetOption)`), so existing call
+    sites compile unchanged. The minor version is bumped from v3.0.x →
+    v3.1.0 to reflect this deliberate behavior change.
+
+    `jwk.PublicKeyOf` on a single symmetric key is unchanged — it still
+    returns the key as-is, matching its documented behavior.
+
   * [jws][jwe][jwk] Replace intermediate map[string]any allocation in
     MarshalJSON with a pair-slice + sync.Pool pattern, matching the approach
     already used in jwt. Eliminates per-call map and key-slice allocations

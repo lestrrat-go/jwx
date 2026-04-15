@@ -136,7 +136,7 @@ func makeJwsVerifyCmd() *cli.Command {
 			return err
 		}
 
-		keyset, err = jwk.PublicSetOf(keyset)
+		keyset, err = jwk.PublicSetOf(keyset, jwk.WithAllowSymmetric(true))
 		if err != nil {
 			return fmt.Errorf(`failed to retrieve public key: %w`, err)
 		}
