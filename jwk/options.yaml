@@ -16,6 +16,16 @@ options:
   - ident: ThumbprintHash
     interface: AssignKeyIDOption
     argument_type: crypto.Hash
+  - ident: ForceAssign
+    interface: AssignKeyIDOption
+    argument_type: bool
+    comment: |
+      WithForceAssign forces `jwk.AssignKeyID` to recompute and overwrite
+      the `kid` header even when the key already has one. The default
+      behavior preserves any existing `kid`; use this option to upgrade
+      the thumbprint hash (e.g. with `jwk.WithThumbprintHash`) or to
+      refresh a `kid` after mutating a key field that invalidates the
+      cached thumbprint.
   - ident: LocalRegistry
     option_name: withLocalRegistry
     interface: ParseOption

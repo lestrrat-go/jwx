@@ -826,26 +826,68 @@ func TestAccept(t *testing.T) {
 
 func TestAssignKeyID(t *testing.T) {
 	t.Parallel()
-	generators := []func() (jwk.Key, error){
-		jwxtest.GenerateRsaJwk,
-		jwxtest.GenerateRsaPublicJwk,
-		jwxtest.GenerateEcdsaJwk,
-		jwxtest.GenerateEcdsaPublicJwk,
-		jwxtest.GenerateSymmetricJwk,
-		jwxtest.GenerateEd25519Jwk,
-	}
 
-	for _, generator := range generators {
-		k, err := generator()
+	t.Run("assigns kid when missing", func(t *testing.T) {
+		generators := []func() (jwk.Key, error){
+			jwxtest.GenerateRsaJwk,
+			jwxtest.GenerateRsaPublicJwk,
+			jwxtest.GenerateEcdsaJwk,
+			jwxtest.GenerateEcdsaPublicJwk,
+			jwxtest.GenerateSymmetricJwk,
+			jwxtest.GenerateEd25519Jwk,
+		}
+
+		for _, generator := range generators {
+			k, err := generator()
+			require.NoError(t, err, `jwk generation should be successful`)
+			kid, ok := k.KeyID()
+			require.False(t, ok, `k.KeyID should be empty`)
+			require.Empty(t, kid, `k.KeyID should be non-empty`)
+			require.NoError(t, jwk.AssignKeyID(k), `AssignKeyID shuld be successful`)
+			kid, ok = k.KeyID()
+			require.True(t, ok, `k.KeyID should be non-empty`)
+			require.NotEmpty(t, kid, `k.KeyID should be non-empty`)
+		}
+	})
+
+	t.Run("preserves existing kid without force", func(t *testing.T) {
+		k, err := jwxtest.GenerateRsaJwk()
 		require.NoError(t, err, `jwk generation should be successful`)
+		require.NoError(t, k.Set(jwk.KeyIDKey, "preset"), `pre-setting kid should succeed`)
+		require.NoError(t, jwk.AssignKeyID(k, jwk.WithThumbprintHash(crypto.SHA512)), `AssignKeyID should succeed`)
 		kid, ok := k.KeyID()
-		require.False(t, ok, `k.KeyID should be empty`)
-		require.Empty(t, kid, `k.KeyID should be non-empty`)
-		require.NoError(t, jwk.AssignKeyID(k), `AssignKeyID shuld be successful`)
-		kid, ok = k.KeyID()
-		require.True(t, ok, `k.KeyID should be non-empty`)
-		require.NotEmpty(t, kid, `k.KeyID should be non-empty`)
-	}
+		require.True(t, ok, `kid should still be set`)
+		require.Equal(t, "preset", kid, `kid should be preserved when not forced`)
+	})
+
+	t.Run("overwrites existing kid with force", func(t *testing.T) {
+		k, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwk generation should be successful`)
+		require.NoError(t, k.Set(jwk.KeyIDKey, "preset"), `pre-setting kid should succeed`)
+		require.NoError(t, jwk.AssignKeyID(k, jwk.WithForceAssign(true)), `AssignKeyID with force should succeed`)
+		kid, ok := k.KeyID()
+		require.True(t, ok, `kid should be set`)
+		require.NotEqual(t, "preset", kid, `kid should be recomputed`)
+
+		tp, err := k.Thumbprint(crypto.SHA256)
+		require.NoError(t, err, `thumbprint should compute`)
+		require.Equal(t, base64.EncodeToString(tp), kid, `kid should equal base64(sha256 thumbprint)`)
+	})
+
+	t.Run("force honors WithThumbprintHash", func(t *testing.T) {
+		k, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwk generation should be successful`)
+		require.NoError(t, k.Set(jwk.KeyIDKey, "preset"), `pre-setting kid should succeed`)
+		require.NoError(t,
+			jwk.AssignKeyID(k, jwk.WithForceAssign(true), jwk.WithThumbprintHash(crypto.SHA512)),
+			`AssignKeyID with force+sha512 should succeed`)
+		kid, ok := k.KeyID()
+		require.True(t, ok, `kid should be set`)
+
+		tp, err := k.Thumbprint(crypto.SHA512)
+		require.NoError(t, err, `thumbprint should compute`)
+		require.Equal(t, base64.EncodeToString(tp), kid, `kid should equal base64(sha512 thumbprint)`)
+	})
 }
 
 func TestPublicKeyOf(t *testing.T) {

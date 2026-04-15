@@ -60,6 +60,7 @@ type publicSetOption struct {
 func (*publicSetOption) publicSetOption() {}
 
 type identAllowSymmetric struct{}
+type identForceAssign struct{}
 type identIgnoreParseError struct{}
 type identLocalRegistry struct{}
 type identPEM struct{}
@@ -70,6 +71,10 @@ type identX509 struct{}
 
 func (identAllowSymmetric) String() string {
 	return "WithAllowSymmetric"
+}
+
+func (identForceAssign) String() string {
+	return "WithForceAssign"
 }
 
 func (identIgnoreParseError) String() string {
@@ -114,6 +119,16 @@ func (identX509) String() string {
 // are passed through unchanged, matching the legacy behavior.
 func WithAllowSymmetric(v bool) PublicSetOption {
 	return &publicSetOption{option.New(identAllowSymmetric{}, v)}
+}
+
+// WithForceAssign forces `jwk.AssignKeyID` to recompute and overwrite
+// the `kid` header even when the key already has one. The default
+// behavior preserves any existing `kid`; use this option to upgrade
+// the thumbprint hash (e.g. with `jwk.WithThumbprintHash`) or to
+// refresh a `kid` after mutating a key field that invalidates the
+// cached thumbprint.
+func WithForceAssign(v bool) AssignKeyIDOption {
+	return &assignKeyIDOption{option.New(identForceAssign{}, v)}
 }
 
 // WithIgnoreParseError is only applicable when used with `jwk.Parse()`
