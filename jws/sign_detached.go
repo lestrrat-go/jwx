@@ -17,10 +17,17 @@ import (
 )
 
 // SignDetached signs a detached payload provided as an io.Reader and
-// returns a compact JWS with an empty payload segment. Unlike jws.Sign
-// with jws.WithDetachedPayload, this function never materializes the
-// payload in memory — it streams the payload through the hash function
-// used by the signature algorithm.
+// returns a JWS with an omitted payload in either compact or flattened
+// JSON serialization. Unlike jws.Sign with jws.WithDetachedPayload, this
+// function never materializes the payload in memory — it streams the
+// payload through the hash function used by the signature algorithm.
+//
+// The output format is controlled by `jws.WithCompact()` or
+// `jws.WithJSON()`. The default is compact. `jws.WithJSON(jws.WithPretty(true))`
+// emits indented JSON. For JSON output the result is always the
+// flattened form with the `"payload"` member omitted per
+// RFC 7515 Appendix F; multi-signature JSON is not supported because
+// the payload reader can only be consumed once.
 //
 // The payload must be the raw, unencoded payload — not base64url-encoded.
 //
@@ -53,6 +60,7 @@ func SignDetached(payload io.Reader, options ...SignOption) ([]byte, error) {
 	var protected Headers
 	var public Headers
 	var encoder Base64Encoder = internbase64.DefaultEncoder()
+	format := fmtCompact
 
 	for _, option := range options {
 		switch option.Ident() {
@@ -81,7 +89,18 @@ func SignDetached(payload io.Reader, options ...SignOption) ([]byte, error) {
 			if err := option.Value(&encoder); err != nil {
 				return nil, makeSignError(`failed to retrieve base64-encoder option value: %w`, err)
 			}
-		case identDetachedPayload{}, identKeyProvider{}, identMessage{}, identSerialization{}, identInsecureNoSignature{}:
+		case identSerialization{}:
+			var v int
+			if err := option.Value(&v); err != nil {
+				return nil, makeSignError(`failed to retrieve serialization option value: %w`, err)
+			}
+			switch v {
+			case fmtCompact, fmtJSON, fmtJSONPretty:
+				format = v
+			default:
+				return nil, makeSignError(`invalid serialization format value %d`, v)
+			}
+		case identDetachedPayload{}, identKeyProvider{}, identMessage{}, identInsecureNoSignature{}:
 			return nil, makeSignError(`option %T is not supported by SignDetached; use jws.WithKey() to specify a single key`, option)
 		default:
 			return nil, makeSignError(`invalid jws.SignOption %q passed`, fmt.Sprintf(`%T`, option.Ident()))
@@ -143,17 +162,26 @@ func SignDetached(payload io.Reader, options ...SignOption) ([]byte, error) {
 		}
 	}
 
-	hdrs, err := mergeHeaders(public, protected)
-	if err != nil {
-		return nil, makeSignError(`failed to merge headers: %w`, err)
+	// For compact, unprotected headers have nowhere to live separately,
+	// so merge them into protected before marshaling. For JSON, keep them
+	// separate — protected goes into the signed input, public goes into
+	// the "header" field of the output.
+	var signingHeaders Headers
+	if format == fmtCompact {
+		signingHeaders, err = mergeHeaders(public, protected)
+		if err != nil {
+			return nil, makeSignError(`failed to merge headers: %w`, err)
+		}
+	} else {
+		signingHeaders = protected
 	}
 
-	hdrbuf, err := json.Marshal(hdrs)
+	hdrbuf, err := json.Marshal(signingHeaders)
 	if err != nil {
 		return nil, makeSignError(`failed to marshal headers: %w`, err)
 	}
 
-	encodePayload := getB64Value(hdrs)
+	encodePayload := getB64Value(signingHeaders)
 
 	// Create the hasher
 	hasher, err := createHasher(dsigInfo, rawKey)
@@ -179,18 +207,61 @@ func SignDetached(payload io.Reader, options ...SignOption) ([]byte, error) {
 		return nil, makeSignError(`failed to sign digest: %w`, err)
 	}
 
-	// Assemble compact output: base64url(header) + "." + "" + "." + base64url(signature)
 	hdrEncoded := encoder.EncodeToString(hdrbuf)
 	sigEncoded := encoder.EncodeToString(signature)
 
-	buf := make([]byte, 0, len(hdrEncoded)+1+1+len(sigEncoded))
-	buf = append(buf, hdrEncoded...)
-	buf = append(buf, tokens.Period)
-	// empty payload
-	buf = append(buf, tokens.Period)
-	buf = append(buf, sigEncoded...)
+	switch format {
+	case fmtCompact:
+		// base64url(header) + "." + "" + "." + base64url(signature)
+		buf := make([]byte, 0, len(hdrEncoded)+2+len(sigEncoded))
+		buf = append(buf, hdrEncoded...)
+		buf = append(buf, tokens.Period, tokens.Period)
+		buf = append(buf, sigEncoded...)
+		return buf, nil
+	case fmtJSON, fmtJSONPretty:
+		return assembleDetachedJSON(public, hdrEncoded, sigEncoded, format == fmtJSONPretty)
+	}
+	return nil, makeSignError(`unexpected serialization format %d`, format)
+}
 
-	return buf, nil
+// detachedJSONEnvelope is the flattened JSON shape produced by
+// SignDetached when WithJSON() is requested. The payload member is
+// intentionally absent — RFC 7515 Appendix F specifies that the JSON
+// Serialization signals detached content by deleting the payload member.
+// Field order matches the struct declaration order and is stable across
+// encoders.
+type detachedJSONEnvelope struct {
+	Header    json.RawMessage `json:"header,omitempty"`
+	Protected string          `json:"protected"`
+	Signature string          `json:"signature"`
+}
+
+// assembleDetachedJSON builds a flattened JSON serialization with the
+// payload member omitted per RFC 7515 Appendix F. Single-signature only.
+func assembleDetachedJSON(public Headers, hdrEncoded, sigEncoded string, pretty bool) ([]byte, error) {
+	env := detachedJSONEnvelope{
+		Protected: hdrEncoded,
+		Signature: sigEncoded,
+	}
+	if public != nil {
+		hdrjs, err := json.Marshal(public)
+		if err != nil {
+			return nil, makeSignError(`failed to marshal unprotected header: %w`, err)
+		}
+		env.Header = hdrjs
+	}
+	if pretty {
+		out, err := json.MarshalIndent(env, "", "  ")
+		if err != nil {
+			return nil, makeSignError(`failed to marshal JSON output: %w`, err)
+		}
+		return out, nil
+	}
+	out, err := json.Marshal(env)
+	if err != nil {
+		return nil, makeSignError(`failed to marshal JSON output: %w`, err)
+	}
+	return out, nil
 }
 
 // convertKeyForSign converts a jwk.Key (or raw key) to the raw key type

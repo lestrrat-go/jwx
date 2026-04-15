@@ -3,6 +3,7 @@ package jws_test
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"testing"
@@ -212,6 +213,144 @@ func TestVerifyDetached(t *testing.T) {
 		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key1), jws.WithKey(jwa.HS256(), key2))
 		require.Error(t, err, `should reject multiple keys`)
 	})
+
+	t.Run("Explicit WithCompact with compact input", func(t *testing.T) {
+		key := jwxtest.GenerateSymmetricKey()
+		signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
+		require.NoError(t, err)
+
+		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithCompact())
+		require.NoError(t, err)
+	})
+
+	t.Run("JSON input auto-detect", func(t *testing.T) {
+		privkey, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err)
+
+		signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
+		require.NoError(t, err)
+
+		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+		require.NoError(t, err)
+	})
+
+	t.Run("JSON input with explicit WithJSON", func(t *testing.T) {
+		privkey, err := jwxtest.GenerateEcdsaKey(jwa.P256())
+		require.NoError(t, err)
+
+		signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.ES256(), privkey), jws.WithJSON())
+		require.NoError(t, err)
+
+		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.ES256(), &privkey.PublicKey), jws.WithJSON())
+		require.NoError(t, err)
+	})
+
+	t.Run("JSON input accepts general form with single signature", func(t *testing.T) {
+		// jws.Sign with WithJSON currently emits flattened JSON for a
+		// single signer, so we build a general-form wrapper manually.
+		privkey, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err)
+
+		flat, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
+		require.NoError(t, err)
+
+		var fm map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(flat, &fm))
+
+		general := map[string]json.RawMessage{
+			"signatures": json.RawMessage(`[` + string(mustMarshal(t, map[string]json.RawMessage{
+				"protected": fm["protected"],
+				"signature": fm["signature"],
+			})) + `]`),
+		}
+		generalBytes := mustMarshal(t, general)
+
+		err = jws.VerifyDetached(generalBytes, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+		require.NoError(t, err)
+	})
+
+	t.Run("JSON input rejects multi-signature", func(t *testing.T) {
+		privkey, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err)
+
+		// Build a JSON with two signatures — identical so the structure
+		// parses but the count check fires first.
+		flat, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
+		require.NoError(t, err)
+
+		var fm map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(flat, &fm))
+
+		one := mustMarshal(t, map[string]json.RawMessage{
+			"protected": fm["protected"],
+			"signature": fm["signature"],
+		})
+		multi := []byte(`{"signatures":[` + string(one) + `,` + string(one) + `]}`)
+
+		err = jws.VerifyDetached(multi, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `single-signature`)
+	})
+
+	t.Run("JSON input rejects non-empty payload", func(t *testing.T) {
+		privkey, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err)
+
+		flat, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
+		require.NoError(t, err)
+
+		var fm map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(flat, &fm))
+		fm["payload"] = json.RawMessage(`"bm90LWVtcHR5"`) // "not-empty" base64url
+		tampered := mustMarshal(t, fm)
+
+		err = jws.VerifyDetached(tampered, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `payload`)
+	})
+
+	t.Run("JSON input accepts empty payload member", func(t *testing.T) {
+		privkey, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err)
+
+		flat, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
+		require.NoError(t, err)
+
+		var fm map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(flat, &fm))
+		fm["payload"] = json.RawMessage(`""`)
+		withEmpty := mustMarshal(t, fm)
+
+		err = jws.VerifyDetached(withEmpty, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+		require.NoError(t, err)
+	})
+
+	// Note: jws.Sign + WithDetachedPayload + WithJSON emits the
+	// full payload in the "payload" field (the detached flag is
+	// ignored on the JSON path). VerifyDetached correctly rejects
+	// such input — the non-streaming JSON+detached path is broken
+	// upstream and is tracked as a separate follow-up.
+
+	t.Run("JSON input with wrong key fails verification", func(t *testing.T) {
+		privkey, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err)
+		wrongKey, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err)
+
+		signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
+		require.NoError(t, err)
+
+		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &wrongKey.PublicKey))
+		require.Error(t, err)
+		require.True(t, errors.Is(err, jws.VerificationError()))
+	})
+}
+
+func mustMarshal(t *testing.T, v any) []byte {
+	t.Helper()
+	b, err := json.Marshal(v)
+	require.NoError(t, err)
+	return b
 }
 
 // failingReader reads from data up to failAt bytes, then returns failErr.

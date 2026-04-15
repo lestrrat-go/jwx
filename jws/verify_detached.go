@@ -14,16 +14,22 @@ import (
 	internbase64 "github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
-// VerifyDetached verifies a JWS compact serialization against a detached
-// payload provided as an io.Reader. Unlike jws.Verify with
-// jws.WithDetachedPayload, this function never materializes the payload
-// in memory — it streams the payload through the hash function used by
-// the signature algorithm.
+// VerifyDetached verifies a JWS against a detached payload provided as
+// an io.Reader. The input may be a compact serialization with an empty
+// payload segment, or a flattened JSON serialization with the "payload"
+// member omitted or empty. Unlike jws.Verify with jws.WithDetachedPayload,
+// this function never materializes the payload in memory — it streams
+// the payload through the hash function used by the signature algorithm.
+//
+// The input format is auto-detected by the first non-whitespace byte
+// (`{` → JSON, otherwise compact). Passing jws.WithCompact() or
+// jws.WithJSON() overrides auto-detection.
 //
 // The payload must be the raw, unencoded payload — not base64url-encoded.
 //
@@ -42,8 +48,10 @@ import (
 // the entire payload to be available at signing and verification time
 // and therefore do not support streaming.
 //
-// The compact parameter must be a JWS compact serialization with an
-// empty payload segment (detached).
+// For JSON input, only flattened or single-entry general serialization
+// is supported; multi-signature JSON is rejected because the payload
+// reader can only be consumed once. Unprotected ("header") fields are
+// not surfaced to the caller.
 //
 // This function requires exactly one key via jws.WithKey(). Key sets
 // and key providers are not supported because the payload reader can
@@ -61,7 +69,7 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 	var validateKey bool
 	var strictCritical = true
 	var keyUsed any
-	var encoder Base64Encoder = internbase64.DefaultEncoder()
+	format := 0
 
 	for _, option := range options {
 		switch option.Ident() {
@@ -93,10 +101,27 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 				return makeVerifyError(`failed to retrieve key-used option value: %w`, err)
 			}
 		case identBase64Encoder{}:
-			if err := option.Value(&encoder); err != nil {
+			// Accepted for option-slice compatibility with jws.Verify,
+			// but the streaming path uses encoding/base64 directly
+			// and does not honor a custom encoder.
+			var enc Base64Encoder
+			if err := option.Value(&enc); err != nil {
 				return makeVerifyError(`failed to retrieve base64-encoder option value: %w`, err)
 			}
-		case identKeyProvider{}, identDetachedPayload{}, identMessage{}, identSerialization{}:
+		case identSerialization{}:
+			var v int
+			if err := option.Value(&v); err != nil {
+				return makeVerifyError(`failed to retrieve serialization option value: %w`, err)
+			}
+			switch v {
+			case fmtCompact:
+				format = fmtCompact
+			case fmtJSON, fmtJSONPretty:
+				format = fmtJSON
+			default:
+				return makeVerifyError(`invalid serialization format value %d`, v)
+			}
+		case identKeyProvider{}, identDetachedPayload{}, identMessage{}:
 			return makeVerifyError(`option %T is not supported by VerifyDetached; use jws.WithKey() to specify a single key`, option)
 		default:
 			return makeVerifyError(`invalid jws.VerifyOption %q passed`, fmt.Sprintf(`%T`, option.Ident()))
@@ -105,6 +130,13 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 
 	if !keyFound {
 		return makeVerifyError(`jws.WithKey() must be specified for VerifyDetached`)
+	}
+
+	if format == 0 {
+		format = detectDetachedFormat(compact)
+	}
+	if format == 0 {
+		return makeVerifyError(`input is empty or whitespace-only`)
 	}
 
 	if validateKey {
@@ -137,18 +169,12 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 		return makeVerifyError(`failed to convert key: %w`, err)
 	}
 
-	// Parse the compact token — header and signature are small
-	protected, payloadSegment, signatureSegment, err := jwsbb.SplitCompact(compact)
+	protectedB64, decodedSig, err := extractDetachedParts(compact, format)
 	if err != nil {
-		return makeVerifyError(`failed to split compact: %w`, err)
+		return makeVerifyError(`%w`, err)
 	}
 
-	if len(payloadSegment) != 0 {
-		return makeVerifyError(`compact token must have an empty payload segment for VerifyDetached`)
-	}
-
-	// Decode the protected header
-	rawHeaders, err := internbase64.Decode(protected)
+	rawHeaders, err := internbase64.Decode(protectedB64)
 	if err != nil {
 		return makeVerifyError(`failed to decode protected header: %w`, err)
 	}
@@ -167,22 +193,20 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 		}
 	}
 
-	// Decode the signature
-	decodedSig, err := internbase64.Decode(signatureSegment)
-	if err != nil {
-		return makeVerifyError(`failed to decode signature: %w`, err)
-	}
-
 	// Create the hasher
 	hasher, err := createHasher(dsigInfo, rawKey)
 	if err != nil {
 		return makeVerifyError(`failed to create hasher: %w`, err)
 	}
 
-	// Build the signing prefix: base64url(header) + "."
-	signingPrefix := jwsbb.SigningPrefix(nil, rawHeaders, encoder)
-
-	if _, err := hasher.Write(signingPrefix); err != nil {
+	// Write the signing prefix: base64url(header) + "." — use the
+	// original protected bytes verbatim so the recomputed signing input
+	// matches what was signed (re-encoding parsed headers is not
+	// guaranteed to produce identical bytes).
+	if _, err := hasher.Write(protectedB64); err != nil {
+		return makeVerifyError(`failed to write signing prefix: %w`, err)
+	}
+	if _, err := hasher.Write([]byte{tokens.Period}); err != nil {
 		return makeVerifyError(`failed to write signing prefix: %w`, err)
 	}
 
@@ -203,6 +227,118 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 	}
 
 	return nil
+}
+
+// detectDetachedFormat inspects the first non-whitespace byte to decide
+// whether the input is a compact or JSON JWS. Returns 0 if the input is
+// empty or whitespace-only. Mirrors jws.Parse auto-detection.
+func detectDetachedFormat(src []byte) int {
+	for _, b := range src {
+		if b == ' ' || b == '\t' || b == '\n' || b == '\r' {
+			continue
+		}
+		if b == tokens.OpenCurlyBracket {
+			return fmtJSON
+		}
+		return fmtCompact
+	}
+	return 0
+}
+
+// extractDetachedParts routes to the compact or JSON parser and returns
+// the raw base64url-encoded protected header and the decoded signature
+// bytes. The protected header is returned as-is (not decoded) so the
+// signing input can be reconstructed byte-for-byte.
+func extractDetachedParts(src []byte, format int) ([]byte, []byte, error) {
+	switch format {
+	case fmtCompact:
+		protectedB64, payloadSegment, signatureSegment, err := jwsbb.SplitCompact(src)
+		if err != nil {
+			return nil, nil, fmt.Errorf(`failed to split compact: %w`, err)
+		}
+		if len(payloadSegment) != 0 {
+			return nil, nil, fmt.Errorf(`compact token must have an empty payload segment for VerifyDetached`)
+		}
+		decodedSig, err := internbase64.Decode(signatureSegment)
+		if err != nil {
+			return nil, nil, fmt.Errorf(`failed to decode signature: %w`, err)
+		}
+		return protectedB64, decodedSig, nil
+	case fmtJSON, fmtJSONPretty:
+		protectedB64, signatureB64, err := parseDetachedJSON(src)
+		if err != nil {
+			return nil, nil, err
+		}
+		decodedSig, err := internbase64.Decode(signatureB64)
+		if err != nil {
+			return nil, nil, fmt.Errorf(`failed to decode signature: %w`, err)
+		}
+		return protectedB64, decodedSig, nil
+	}
+	return nil, nil, fmt.Errorf(`unexpected serialization format %d`, format)
+}
+
+// detachedJSONProbe is a probe struct used to parse a flattened or
+// single-signature general JSON-serialized JWS for VerifyDetached.
+// Fields are pointers so we can distinguish "absent" from "empty".
+type detachedJSONProbe struct {
+	Payload    *string           `json:"payload,omitempty"`
+	Protected  *string           `json:"protected,omitempty"`
+	Header     json.RawMessage   `json:"header,omitempty"`
+	Signature  *string           `json:"signature,omitempty"`
+	Signatures []json.RawMessage `json:"signatures,omitempty"`
+}
+
+// detachedJSONSignatureProbe is used to parse an entry in the
+// "signatures" array of a general-form JWS.
+type detachedJSONSignatureProbe struct {
+	Protected *string         `json:"protected,omitempty"`
+	Header    json.RawMessage `json:"header,omitempty"`
+	Signature *string         `json:"signature,omitempty"`
+}
+
+// parseDetachedJSON extracts the base64url-encoded protected header and
+// signature from a JSON-serialized JWS with an omitted or empty payload.
+// Accepts the flattened form and the general form with exactly one
+// signature entry. Rejects multi-signature JSON.
+func parseDetachedJSON(src []byte) ([]byte, []byte, error) {
+	var probe detachedJSONProbe
+	if err := json.Unmarshal(src, &probe); err != nil {
+		return nil, nil, fmt.Errorf(`failed to parse JSON serialization: %w`, err)
+	}
+
+	if probe.Payload != nil && *probe.Payload != "" {
+		return nil, nil, fmt.Errorf(`JSON input must have an omitted or empty "payload" member for VerifyDetached`)
+	}
+
+	var protectedB64, signatureB64 *string
+	switch {
+	case probe.Signature != nil:
+		if len(probe.Signatures) > 0 {
+			return nil, nil, fmt.Errorf(`JSON input has both "signature" and "signatures"`)
+		}
+		protectedB64 = probe.Protected
+		signatureB64 = probe.Signature
+	case len(probe.Signatures) == 1:
+		var sig detachedJSONSignatureProbe
+		if err := json.Unmarshal(probe.Signatures[0], &sig); err != nil {
+			return nil, nil, fmt.Errorf(`failed to parse signatures[0]: %w`, err)
+		}
+		protectedB64 = sig.Protected
+		signatureB64 = sig.Signature
+	case len(probe.Signatures) > 1:
+		return nil, nil, fmt.Errorf(`VerifyDetached supports only single-signature JSON input, got %d`, len(probe.Signatures))
+	default:
+		return nil, nil, fmt.Errorf(`JSON input has no signature`)
+	}
+
+	if protectedB64 == nil {
+		return nil, nil, fmt.Errorf(`JSON input is missing "protected" member`)
+	}
+	if signatureB64 == nil {
+		return nil, nil, fmt.Errorf(`JSON input is missing "signature" member`)
+	}
+	return []byte(*protectedB64), []byte(*signatureB64), nil
 }
 
 // createHasher returns the appropriate hash.Hash for the given algorithm info and key.

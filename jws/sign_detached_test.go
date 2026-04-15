@@ -3,8 +3,10 @@ package jws_test
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
@@ -232,5 +234,149 @@ func TestSignDetached(t *testing.T) {
 
 		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), pubkey))
 		require.NoError(t, err, `jws.VerifyDetached with jwk.Key should succeed`)
+	})
+
+	t.Run("WithCompact is accepted as no-op", func(t *testing.T) {
+		key := jwxtest.GenerateSymmetricKey()
+
+		plain, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
+		require.NoError(t, err)
+
+		explicit, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithCompact())
+		require.NoError(t, err)
+
+		require.Equal(t, string(plain), string(explicit), `WithCompact should produce byte-identical output to default`)
+	})
+
+	t.Run("JSON output round-trip", func(t *testing.T) {
+		algorithms := []struct {
+			alg     jwa.SignatureAlgorithm
+			privkey any
+			pubkey  any
+		}{
+			func() struct {
+				alg     jwa.SignatureAlgorithm
+				privkey any
+				pubkey  any
+			} {
+				k := jwxtest.GenerateSymmetricKey()
+				return struct {
+					alg     jwa.SignatureAlgorithm
+					privkey any
+					pubkey  any
+				}{jwa.HS256(), k, k}
+			}(),
+			func() struct {
+				alg     jwa.SignatureAlgorithm
+				privkey any
+				pubkey  any
+			} {
+				k, _ := jwxtest.GenerateRsaKey()
+				return struct {
+					alg     jwa.SignatureAlgorithm
+					privkey any
+					pubkey  any
+				}{jwa.RS256(), k, &k.PublicKey}
+			}(),
+			func() struct {
+				alg     jwa.SignatureAlgorithm
+				privkey any
+				pubkey  any
+			} {
+				k, _ := jwxtest.GenerateEcdsaKey(jwa.P256())
+				return struct {
+					alg     jwa.SignatureAlgorithm
+					privkey any
+					pubkey  any
+				}{jwa.ES256(), k, &k.PublicKey}
+			}(),
+		}
+
+		for _, tc := range algorithms {
+			t.Run(tc.alg.String(), func(t *testing.T) {
+				signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(tc.alg, tc.privkey), jws.WithJSON())
+				require.NoError(t, err, `jws.SignDetached with WithJSON should succeed`)
+				require.True(t, bytes.HasPrefix(bytes.TrimSpace(signed), []byte{'{'}), `output should begin with "{"`)
+
+				err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(tc.alg, tc.pubkey))
+				require.NoError(t, err, `jws.VerifyDetached should auto-detect JSON input`)
+
+				err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(tc.alg, tc.pubkey), jws.WithJSON())
+				require.NoError(t, err, `jws.VerifyDetached with explicit WithJSON should succeed`)
+			})
+		}
+	})
+
+	t.Run("JSON output omits payload member (RFC 7515 App F)", func(t *testing.T) {
+		key := jwxtest.GenerateSymmetricKey()
+
+		signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithJSON())
+		require.NoError(t, err)
+
+		var m map[string]any
+		require.NoError(t, json.Unmarshal(signed, &m))
+
+		_, hasPayload := m["payload"]
+		require.False(t, hasPayload, `JSON output must not contain a "payload" member per RFC 7515 Appendix F`)
+
+		_, hasProtected := m["protected"]
+		require.True(t, hasProtected, `JSON output must contain a "protected" member`)
+
+		_, hasSignature := m["signature"]
+		require.True(t, hasSignature, `JSON output must contain a "signature" member`)
+
+		_, hasHeader := m["header"]
+		require.False(t, hasHeader, `JSON output must not contain a "header" member when no unprotected headers are set`)
+	})
+
+	t.Run("JSON pretty output", func(t *testing.T) {
+		key := jwxtest.GenerateSymmetricKey()
+
+		signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithJSON(jws.WithPretty(true)))
+		require.NoError(t, err)
+
+		require.True(t, strings.Contains(string(signed), "\n"), `pretty JSON should contain newlines`)
+
+		// Still verifies correctly after pretty formatting
+		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
+		require.NoError(t, err)
+	})
+
+	t.Run("JSON with unprotected header", func(t *testing.T) {
+		key := jwxtest.GenerateSymmetricKey()
+
+		public := jws.NewHeaders()
+		require.NoError(t, public.Set("kid", "unprotected-kid"))
+
+		signed, err := jws.SignDetached(
+			bytes.NewReader(payload),
+			jws.WithKey(jwa.HS256(), key, jws.WithPublicHeaders(public)),
+			jws.WithJSON(),
+		)
+		require.NoError(t, err)
+
+		var m map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(signed, &m))
+
+		headerJSON, ok := m["header"]
+		require.True(t, ok, `JSON output should contain "header" when unprotected headers are set`)
+		require.Contains(t, string(headerJSON), `"kid":"unprotected-kid"`, `unprotected header should appear under "header"`)
+
+		// Verify the signature is still valid.
+		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
+		require.NoError(t, err)
+	})
+
+	t.Run("JSON output verifiable by jws.Verify", func(t *testing.T) {
+		privkey, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err)
+
+		signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
+		require.NoError(t, err)
+
+		// The non-streaming Verify should accept the streaming JSON output
+		// when given the original payload via WithDetachedPayload.
+		_, err = jws.Verify(signed, jws.WithKey(jwa.RS256(), &privkey.PublicKey), jws.WithDetachedPayload(payload))
+		require.NoError(t, err, `jws.Verify should accept SignDetached+WithJSON output`)
 	})
 }
