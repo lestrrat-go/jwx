@@ -77,8 +77,8 @@ func (k *okpPublicKey) Import(rawKeyIf any) error {
 	default:
 		muOKPRawKeyImporters.RLock()
 		defer muOKPRawKeyImporters.RUnlock()
-		for _, fn := range okpRawKeyImporters {
-			c, x, _, ok := fn(rawKeyIf)
+		for _, imp := range okpRawKeyImporters {
+			c, x, _, ok := imp.ImportOKPRawKey(rawKeyIf)
 			if ok {
 				k.x = x
 				crv = c
@@ -112,8 +112,8 @@ func (k *okpPrivateKey) Import(rawKeyIf any) error {
 	default:
 		muOKPRawKeyImporters.RLock()
 		defer muOKPRawKeyImporters.RUnlock()
-		for _, fn := range okpRawKeyImporters {
-			c, x, d, ok := fn(rawKeyIf)
+		for _, imp := range okpRawKeyImporters {
+			c, x, d, ok := imp.ImportOKPRawKey(rawKeyIf)
 			if ok {
 				k.x = x
 				k.d = d
@@ -128,23 +128,44 @@ func (k *okpPrivateKey) Import(rawKeyIf any) error {
 	return nil
 }
 
-// OKPRawKeyImporter tries to import a raw key as an OKP key.
-// Returns the curve, x, d (nil for public), and true if handled.
-type OKPRawKeyImporter func(key any) (crv jwa.EllipticCurveAlgorithm, x, d []byte, ok bool)
+// OKPRawKeyImporter is an extension point for importing raw keys as OKP
+// JWK fields. Extension modules (for example ed448, x448) register an
+// implementation via RegisterOKPRawKeyImporter; the default OKP import
+// path consults every registered importer when it encounters an unknown
+// raw key type.
+//
+// ImportOKPRawKey inspects key and, if it recognises the concrete type,
+// returns the corresponding curve, the x component, the d component
+// (nil for public keys), and ok=true. Implementations must return
+// ok=false for unrecognised types so the next importer can be tried.
+type OKPRawKeyImporter interface {
+	ImportOKPRawKey(key any) (crv jwa.EllipticCurveAlgorithm, x, d []byte, ok bool)
+}
+
+// OKPRawKeyImporterFunc is a function adapter for OKPRawKeyImporter,
+// letting callers register a plain function without defining a
+// dedicated type.
+type OKPRawKeyImporterFunc func(key any) (crv jwa.EllipticCurveAlgorithm, x, d []byte, ok bool)
+
+func (f OKPRawKeyImporterFunc) ImportOKPRawKey(key any) (jwa.EllipticCurveAlgorithm, []byte, []byte, bool) {
+	return f(key)
+}
 
 var muOKPRawKeyImporters sync.RWMutex
 var okpRawKeyImporters []OKPRawKeyImporter
 
-// RegisterOKPRawKeyImporter registers a function that can import raw keys as OKP keys.
+// RegisterOKPRawKeyImporter registers an OKPRawKeyImporter consulted by
+// the OKP import path for unknown raw key types. To register a plain
+// function, wrap it with OKPRawKeyImporterFunc.
 //
 // The error return is reserved for future validation. The current
 // implementation always returns nil, but callers — especially extension
 // modules calling this from init() — must check the return value and panic
 // on failure to stay forward-compatible.
-func RegisterOKPRawKeyImporter(fn OKPRawKeyImporter) error {
+func RegisterOKPRawKeyImporter(imp OKPRawKeyImporter) error {
 	muOKPRawKeyImporters.Lock()
 	defer muOKPRawKeyImporters.Unlock()
-	okpRawKeyImporters = append(okpRawKeyImporters, fn)
+	okpRawKeyImporters = append(okpRawKeyImporters, imp)
 	return nil
 }
 

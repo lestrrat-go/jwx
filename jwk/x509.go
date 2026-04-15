@@ -22,6 +22,14 @@ type PEMDecoder interface {
 	Decode([]byte) (any, []byte, error)
 }
 
+// PEMDecodeFunc is a function adapter that implements PEMDecoder,
+// mirroring PEMEncodeFunc for symmetry.
+type PEMDecodeFunc func([]byte) (any, []byte, error)
+
+func (f PEMDecodeFunc) Decode(src []byte) (any, []byte, error) {
+	return f(src)
+}
+
 // PEMEncoder is an interface to describe an object that can encode
 // a key into PEM encoded ASN.1 DER format.
 //

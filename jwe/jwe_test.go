@@ -790,6 +790,36 @@ func TestGH924(t *testing.T) {
 	require.Equal(t, payload, decrypted, `decrypt messages match`)
 }
 
+func TestKeyEncrypterFuncAdapter(t *testing.T) {
+	// KeyEncryptFunc / KeyDecryptFunc should round-trip a JWE using a
+	// plain function on both sides, verifying that the adapters satisfy
+	// the KeyEncrypter / KeyDecrypter interfaces end-to-end.
+	sharedKey := []byte("abra-kadabra")
+
+	enc := jwe.KeyEncryptFunc{
+		Alg: jwa.A128GCMKW(),
+		Encrypt: func(cek []byte) ([]byte, error) {
+			return append(cek, sharedKey...), nil
+		},
+	}
+	dec := jwe.KeyDecryptFunc(func(_ jwa.KeyEncryptionAlgorithm, cek []byte, _ jwe.Recipient, _ *jwe.Message) ([]byte, error) {
+		return bytes.TrimSuffix(cek, sharedKey), nil
+	})
+
+	payload := []byte("Lorem Ipsum")
+	encrypted, err := jwe.Encrypt(
+		payload,
+		jwe.WithJSON(),
+		jwe.WithKey(jwa.A128GCMKW(), enc),
+		jwe.WithContentEncryption(jwa.A128GCM()),
+	)
+	require.NoError(t, err)
+
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.A128GCMKW(), dec))
+	require.NoError(t, err)
+	require.Equal(t, payload, decrypted)
+}
+
 func TestGH1001(t *testing.T) {
 	rawKey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)

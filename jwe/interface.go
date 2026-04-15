@@ -23,6 +23,21 @@ type KeyEncrypter interface {
 	EncryptKey([]byte) ([]byte, error)
 }
 
+// KeyEncryptFunc is a function adapter for KeyEncrypter. Because a
+// KeyEncrypter must report its Algorithm in addition to doing the
+// encryption, KeyEncryptFunc carries the algorithm alongside a plain
+// encrypt function.
+//
+// This API is experimental and may change without notice, even
+// in minor releases.
+type KeyEncryptFunc struct {
+	Alg     jwa.KeyEncryptionAlgorithm
+	Encrypt func([]byte) ([]byte, error)
+}
+
+func (f KeyEncryptFunc) Algorithm() jwa.KeyEncryptionAlgorithm { return f.Alg }
+func (f KeyEncryptFunc) EncryptKey(cek []byte) ([]byte, error) { return f.Encrypt(cek) }
+
 // KeyIDer is an interface for things that can return a key ID.
 //
 // As of this writing, this is solely used to identify KeyEncrypter
@@ -56,6 +71,17 @@ type KeyDecrypter interface {
 	// When checking a header value, you can decide to use either one, or both, but you
 	// must be aware that there are multiple places to look for.
 	DecryptKey(alg jwa.KeyEncryptionAlgorithm, encryptedKey []byte, recipient Recipient, message *Message) ([]byte, error)
+}
+
+// KeyDecryptFunc is a function adapter that implements KeyDecrypter for
+// a plain function with the same signature as DecryptKey.
+//
+// This API is experimental and may change without notice, even
+// in minor releases.
+type KeyDecryptFunc func(alg jwa.KeyEncryptionAlgorithm, encryptedKey []byte, recipient Recipient, message *Message) ([]byte, error)
+
+func (f KeyDecryptFunc) DecryptKey(alg jwa.KeyEncryptionAlgorithm, encryptedKey []byte, recipient Recipient, message *Message) ([]byte, error) {
+	return f(alg, encryptedKey, recipient, message)
 }
 
 // Recipient holds the encrypted key and hints to decrypt the key
