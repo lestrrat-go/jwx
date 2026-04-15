@@ -745,7 +745,9 @@ func TestGH803(t *testing.T) {
 
 func TestGH840(t *testing.T) {
 	// Go 1.19+ panics if elliptic curve operations are called against
-	// a point that's _NOT_ on the curve
+	// a point that's _NOT_ on the curve. defaultParseKey calls Validate()
+	// on the imported key so an untrusted JWK with an off-curve point is
+	// rejected at the trust boundary — no bad key ever reaches jwe.Encrypt.
 	untrustedJWK := []byte(`{
 		"kty": "EC",
 		"crv": "P-256",
@@ -754,15 +756,8 @@ func TestGH840(t *testing.T) {
 		"d": "870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE"
 	}`)
 
-	privkey, err := jwk.ParseKey[jwk.Key](untrustedJWK)
-	require.NoError(t, err, `jwk.ParseKey should succeed`)
-
-	pubkey, err := privkey.PublicKey()
-	require.NoError(t, err, `privkey.PublicKey should succeed`)
-
-	const payload = `Lorem ipsum`
-	_, err = jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.ECDH_ES_A128KW(), pubkey))
-	require.Error(t, err, `jwe.Encrypt should fail (instead of panic)`)
+	_, err := jwk.ParseKey[jwk.Key](untrustedJWK)
+	require.Error(t, err, `jwk.ParseKey must reject an off-curve ECDSA JWK`)
 }
 
 type dummyKeyEncrypterDecrypter struct {
