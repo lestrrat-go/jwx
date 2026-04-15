@@ -1269,6 +1269,27 @@ func TestJKU(t *testing.T) {
 			})
 		}
 	})
+	t.Run("KidNotInJWKS", func(t *testing.T) {
+		// Sign with a key whose kid is NOT present in the remote JWKS.
+		// The fetched set only contains a key with a different kid.
+		// jkuProvider used to return nil in this case, collapsing the
+		// failure into a generic "could not verify" error and hiding
+		// the root cause from operators. It must now surface an
+		// explicit kid-not-found error.
+		signerKey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+		require.NoError(t, signerKey.Set(jwk.KeyIDKey, `signer-kid`), `Set kid should succeed`)
+
+		hdr := jws.NewHeaders()
+		require.NoError(t, hdr.Set(jws.JWKSetURLKey, srv.URL), `Set jku should succeed`)
+		signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256(), signerKey, jws.WithProtectedHeaders(hdr)))
+		require.NoError(t, err, `jws.Sign should succeed`)
+
+		_, err = jws.Verify(signed, jws.WithVerifyAuto(&jwxtest.JKUFetcher{Client: srv.Client()}))
+		require.Error(t, err, `jws.Verify should fail when jku JWKS has no matching kid`)
+		require.Contains(t, err.Error(), `signer-kid`, `error should name the missing kid`)
+		require.Contains(t, err.Error(), `not found`, `error should say the kid was not found`)
+	})
 }
 
 func TestAlgorithmsForKey(t *testing.T) {
