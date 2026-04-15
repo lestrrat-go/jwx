@@ -1026,6 +1026,24 @@ func TestParseRequest(t *testing.T) {
 		require.NoError(t, err, `jwt.ParseRequest should succeed`)
 		require.NotNil(t, dst, `cookie should be extracted`)
 	})
+
+	// Regression: cookie-branch used to drop every error except http.ErrNoCookie,
+	// so an expired/invalid JWT in the cookie was reported as "missing cookie".
+	t.Run("cookie with expired token surfaces real error", func(t *testing.T) {
+		expiredTok := jwt.New()
+		require.NoError(t, expiredTok.Set(jwt.IssuerKey, u))
+		require.NoError(t, expiredTok.Set(jwt.ExpirationKey, time.Now().Add(-time.Hour)))
+		expiredSigned, err := jwt.Sign(expiredTok, jwt.WithKey(jwa.ES256(), privkey))
+		require.NoError(t, err, `jwt.Sign should succeed`)
+
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, u, nil)
+		req.AddCookie(&http.Cookie{Name: "cookie", Value: string(expiredSigned)})
+
+		_, err = jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithKey(jwa.ES256(), pubkey))
+		require.Error(t, err, `jwt.ParseRequest should fail`)
+		require.ErrorIs(t, err, jwt.TokenExpiredError{}, `error should report token expiration, not missing cookie`)
+		require.NotErrorIs(t, err, http.ErrNoCookie, `error must not masquerade as missing cookie`)
+	})
 }
 
 func TestGHIssue368(t *testing.T) {
