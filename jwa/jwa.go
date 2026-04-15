@@ -8,6 +8,8 @@ import (
 	"fmt"
 )
 
+const maxKeyAlgorithmErrorPreview = 64
+
 // KeyAlgorithm is a workaround for jwk.Key being able to contain different
 // types of algorithms in its `alg` field.
 //
@@ -28,6 +30,15 @@ var errInvalidKeyAlgorithm = errors.New(`invalid key algorithm`)
 
 func ErrInvalidKeyAlgorithm() error {
 	return errInvalidKeyAlgorithm
+}
+
+func formatInvalidKeyAlgorithmValue(v string) string {
+	runes := []rune(v)
+	if len(runes) <= maxKeyAlgorithmErrorPreview {
+		return fmt.Sprintf("%q", v)
+	}
+
+	return fmt.Sprintf("%q", string(runes[:maxKeyAlgorithmErrorPreview])+`...`)
 }
 
 // KeyAlgorithmFrom takes either a string, `jwa.SignatureAlgorithm`,
@@ -61,7 +72,7 @@ func KeyAlgorithmFrom(v any) (KeyAlgorithm, error) {
 			return calg, nil
 		}
 
-		return nil, fmt.Errorf(`invalid key value: %q: %w`, v, errInvalidKeyAlgorithm)
+		return nil, fmt.Errorf(`invalid key value: %s: %w`, formatInvalidKeyAlgorithmValue(v), errInvalidKeyAlgorithm)
 	default:
 		return nil, fmt.Errorf(`invalid key type: %T: %w`, v, errInvalidKeyAlgorithm)
 	}
