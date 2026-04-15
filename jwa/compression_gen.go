@@ -27,6 +27,9 @@ func init() {
 	if err := RegisterCompressionAlgorithm(algorithms...); err != nil {
 		panic(fmt.Sprintf("jwa: failed to register builtin CompressionAlgorithm: %s", err))
 	}
+	for _, alg := range algorithms {
+		builtinCompressionAlgorithm[alg.String()] = struct{}{}
+	}
 }
 
 // Deflate returns an object representing the "DEF" content compression algorithm value. Using this value specifies that the content should be compressed using DEFLATE (RFC 1951).

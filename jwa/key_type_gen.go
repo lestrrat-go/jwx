@@ -30,6 +30,9 @@ func init() {
 	if err := RegisterKeyType(algorithms...); err != nil {
 		panic(fmt.Sprintf("jwa: failed to register builtin KeyType: %s", err))
 	}
+	for _, alg := range algorithms {
+		builtinKeyType[alg.String()] = struct{}{}
+	}
 }
 
 // AKP returns an object representing AKP. Algorithm Key Pair (post-quantum KEM/signature keys)
