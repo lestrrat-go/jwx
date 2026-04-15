@@ -41,6 +41,13 @@ func SignBuffer(buf, hdr, payload []byte, encoder base64.Encoder, encodePayload 
 
 // SigningPrefix returns base64url(hdr) + "." — the portion of the signing
 // input that precedes the (possibly base64-encoded) payload.
+//
+// Parameters:
+//   - buf: Reusable scratch buffer (can be nil for automatic allocation);
+//     any prior contents are discarded, matching [SignBuffer]. This is not
+//     an append-style API.
+//   - hdr: Raw header bytes (will be base64-encoded)
+//   - encoder: Base64 encoder to use for encoding the header
 func SigningPrefix(buf, hdr []byte, encoder base64.Encoder) []byte {
 	l := encoder.EncodedLen(len(hdr)) + 1
 	if cap(buf) < l {
