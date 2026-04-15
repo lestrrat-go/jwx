@@ -79,6 +79,13 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 				}
 			}
 
+			// Surface any deferred error captured while precomputing the
+			// fast-path header JSON (e.g. an algorithm name that would
+			// require JSON escaping).
+			if data.cachedHdrErr != nil {
+				return makeSignError(`%w`, data.cachedHdrErr)
+			}
+
 			sb := signatureBuilderPool.Get()
 			sb.alg = alg
 			sb.protected = data.protected

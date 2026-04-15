@@ -6,6 +6,7 @@ import (
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/jwx/v4/internal/pool"
+	"github.com/lestrrat-go/jwx/v4/internal/tokens"
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/lestrrat-go/jwx/v4/jws"
@@ -13,24 +14,24 @@ import (
 )
 
 // fastPathKidSafe reports whether kid can be concatenated into a
-// hand-built JSON header literal without escaping. Any byte that would
-// require a JSON escape (control bytes, `"`, `\`) or any non-ASCII
-// byte disqualifies the fast path; such kids fall through to the
-// regular jws.Sign path where encoding/json handles escaping.
+// hand-built JSON header literal without escaping. Callers that
+// receive false fall through to jws.Sign where encoding/json handles
+// the escaping.
 func fastPathKidSafe(kid string) bool {
-	for i := range len(kid) {
-		c := kid[i]
-		if c < 0x20 || c >= 0x7f || c == '"' || c == '\\' {
-			return false
-		}
-	}
-	return true
+	return tokens.IsJSONSafeASCII(kid)
 }
 
 // signFast reinvents the wheel a bit to avoid the overhead of
 // going through the entire jws.Sign() machinery.
 func signFast(t Token, alg jwa.SignatureAlgorithm, key any) ([]byte, error) {
 	algstr := alg.String()
+	// Unlike kid, an unsafe alg name cannot silently fall back to
+	// jws.Sign: a caller that registered an algorithm with a name
+	// containing JSON-special bytes is misconfigured, and slow-path
+	// encoding would still produce output under that rogue alg.
+	if !tokens.IsJSONSafeASCII(algstr) {
+		return nil, fmt.Errorf(`jwt.signFast: algorithm name %q contains characters that would require JSON escaping`, algstr)
+	}
 
 	var kid string
 	if jwkKey, ok := key.(jwk.Key); ok {
