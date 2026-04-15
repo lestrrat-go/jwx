@@ -696,36 +696,11 @@ func IsKeyValidationError(err error) bool {
 
 // Configure is used to configure global behavior of the jwk package.
 func Configure(options ...GlobalOption) {
-	var strictKeyUsagePtr *bool
-	var maxFetchBodySizePtr *int64
-	var httpClientPtr *HTTPClient
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identStrictKeyUsage{}:
-			v := option.MustGet[bool](opt)
-			strictKeyUsagePtr = &v
-		case identMaxFetchBodySize{}:
-			v := option.MustGet[int64](opt)
-			if v <= 0 {
-				continue
-			}
-			maxFetchBodySizePtr = &v
-		case identHTTPClient{}:
-			v := option.MustGet[HTTPClient](opt)
-			httpClientPtr = &v
+			strictKeyUsage.Store(option.MustGet[bool](opt))
 		}
-	}
-
-	if strictKeyUsagePtr != nil {
-		strictKeyUsage.Store(*strictKeyUsagePtr)
-	}
-
-	if maxFetchBodySizePtr != nil {
-		maxFetchBodySize.Store(*maxFetchBodySizePtr)
-	}
-
-	if httpClientPtr != nil {
-		setFetchHTTPClient(*httpClientPtr)
 	}
 }
 

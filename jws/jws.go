@@ -205,10 +205,6 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	}
 }
 
-var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
-	return false
-})
-
 // Verify checks if the given JWS message is verifiable using `alg` and `key`.
 // `key` may be a "raw" key (e.g. rsa.PublicKey) or a jwk.Key
 //

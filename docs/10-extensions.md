@@ -25,7 +25,7 @@ In v4, optional features are provided as standalone modules under [`github.com/j
 
 | Module | Capability |
 |:-------|:-----------|
-| [`github.com/jwx-go/jwkcache/v4`](https://github.com/jwx-go/jwkcache) | JWK Set caching backed by [`httprc`](https://github.com/lestrrat-go/httprc) (extracted from the v3 `jwk` package) |
+| [`github.com/jwx-go/jwkfetch/v4`](https://github.com/jwx-go/jwkfetch) | HTTP JWK Set retrieval — one-shot `Client` and background-refreshed `Cache` (backed by [`httprc`](https://github.com/lestrrat-go/httprc)). Holds the HTTP fetch surface so the core jwx module doesn't depend on `net/http` or `httprc`. |
 | [`github.com/jwx-go/asmbase64/v4`](https://github.com/jwx-go/asmbase64) | Assembly-optimized base64 backend via [`segmentio/asm`](https://github.com/segmentio/asm) |
 
 * [ML-DSA (Post-Quantum Signatures)](#ml-dsa-post-quantum-signatures)
@@ -40,7 +40,7 @@ In v4, optional features are provided as standalone modules under [`github.com/j
   * [HPKE-6-KE (ChaCha20Poly1305)](#hpke-6-ke-chacha20poly1305)
 * [ML-KEM](#ml-kem)
 * [Hybrid PQ HPKE (reddy-pqchpke)](#hybrid-pq-hpke-reddy-pqchpke)
-* [JWK Set Caching (jwkcache)](#jwk-set-caching-jwkcache)
+* [HTTP JWK Set Retrieval (jwkfetch)](#http-jwk-set-retrieval-jwkfetch)
 * [Assembly base64 (asmbase64)](#assembly-base64-asmbase64)
 
 ---
@@ -758,35 +758,46 @@ The module intentionally implements only the X25519+ML-KEM-768 ciphersuite (the 
 
 ---
 
-# JWK Set Caching (jwkcache)
+# HTTP JWK Set Retrieval (jwkfetch)
 
-`jwkcache` provides background-refreshing JWK Set caching backed by [`httprc`](https://github.com/lestrrat-go/httprc). It was extracted from the v3 `jwk` package to keep the core jwx/v4 module free of the `httprc` dependency.
+`jwkfetch` is the home for all HTTP-based JWK Set retrieval. It holds the HTTP fetch surface so the core jwx `jwk` package depends on neither `net/http` nor [`httprc`](https://github.com/lestrrat-go/httprc).
 
-To use it, add the module as a regular (non-side-effect) import:
+It offers two complementary types, both of which implement `jwk.Fetcher`:
+
+- **`Client`** — one-shot HTTPS fetch. Use for ad-hoc retrievals and for `jku`-style verification where the URL comes from an untrusted JWS header.
+- **`Cache`** — background-refreshed JWKS store backed by `httprc`. Use for a small, trusted set of issuer JWKS endpoints where amortizing fetch cost matters.
+
+Both are **closed structs** constructed via functional options.
 
 ```go
-import "github.com/jwx-go/jwkcache/v4"
+import "github.com/jwx-go/jwkfetch/v4"
 
-cache, _ := jwkcache.NewCache(ctx, httprc.NewClient())
-_ = cache.Register(ctx, "https://example.com/.well-known/jwks.json",
-    jwkcache.WithMinInterval(15*time.Minute),
+// --- one-shot fetch of a hard-coded / trusted-config URL ---
+client := jwkfetch.NewClient()
+set, err := client.Fetch(ctx, "https://issuer.example/jwks.json")
+
+// --- one-shot fetch of a jku-header URL (untrusted source) ---
+jkuClient := jwkfetch.NewClient(
+    jwkfetch.WithWhitelist(
+        jwkfetch.NewMapWhitelist().Add("https://issuer.example/jwks.json"),
+    ),
 )
+_, err := jws.Verify(signed, jws.WithVerifyAuto(jkuClient))
 
-set, _ := cache.CachedSet("https://example.com/.well-known/jwks.json")
-// Pass `set` anywhere a jwk.Set is accepted (jws.WithKeySet, jwt.WithKeySet, ...).
+// --- background-refreshed cache ---
+cache, _ := jwkfetch.NewCache(ctx, httprc.NewClient())
+_ = cache.Register(ctx, "https://issuer.example/jwks.json",
+    jwkfetch.WithMinInterval(15*time.Minute),
+)
+// Cache also implements jwk.Fetcher:
+_, err = jws.Verify(signed, jws.WithVerifyAuto(cache))
 ```
 
-`Cache.CachedSet(url)` returns a read-only `jwk.Set` that always reflects the latest cached data. `jwkcache.NewFetcher(cache)` wraps a cache as a `jwk.Fetcher` for APIs that accept one. Available register options:
+A `Client` built with no `WithWhitelist` permits every URL, which is the right default when the URL is a compile-time constant or comes from trusted configuration. When the URL comes from an untrusted source (typically the `jku` header of a JWS) you MUST pass `WithWhitelist` with a restrictive allowlist — jwx does not wrap the fetcher in a default-deny. A restrictive `Whitelist` is applied to the initial URL and every redirect target.
 
-| Option | Purpose |
-|:-------|:--------|
-| `WithConstantInterval(d)` | Use a fixed refresh interval |
-| `WithMinInterval(d)` / `WithMaxInterval(d)` | Bounds for adaptive refresh |
-| `WithHTTPClient(c)` | Override the HTTP client for this resource |
-| `WithWaitReady(bool)` | Whether `Register` blocks until the first fetch completes (default: true) |
-| `WithMaxFetchBodySize(n)` | Override the max response body size (default: 10 MB) |
+Policy options (`WithHTTPClient`, `WithMaxBodySize`, `WithParseOptions`) work for both `NewClient` and `NewCache`. `WithWhitelist` is `Client`-only — `Cache` has no `Whitelist` concept because the URLs it will ever contact are exactly the ones you passed to `Register`. Passing `WithWhitelist` to `NewCache` is a compile-time error. Per-URL knobs passed to `Cache.Register` cover refresh interval (`WithConstantInterval` / `WithMinInterval` / `WithMaxInterval`) and `WithWaitReady`.
 
-See the [module README](https://github.com/jwx-go/jwkcache) for the full API reference.
+See the [module README](https://github.com/jwx-go/jwkfetch) for the full API reference and whitelist types (`InsecureWhitelist`, `BlockAllWhitelist`, `MapWhitelist`, `RegexpWhitelist`, `WhitelistFunc`).
 
 ---
 

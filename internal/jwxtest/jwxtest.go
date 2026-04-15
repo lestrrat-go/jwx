@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"testing"
@@ -23,6 +24,52 @@ import (
 	"github.com/lestrrat-go/jwx/v4/jws"
 	"github.com/stretchr/testify/require"
 )
+
+// JKUFetcher is a minimal jwk.Fetcher for tests that exercise
+// jws.WithVerifyAuto / jwt.WithVerifyAuto. It mirrors enough of the
+// jwkfetch.Client contract to cover the jku verification paths without
+// pulling the jwkfetch companion into the core module's dependency
+// graph.
+//
+// Allow is consulted on every Fetch call before any network request.
+// A nil Allow permits every URL, matching jwkfetch.Client's default.
+// Set Allow to a restrictive predicate to simulate whitelist-driven
+// rejection.
+type JKUFetcher struct {
+	Client *http.Client
+	Allow  func(url string) bool
+}
+
+// Fetch implements jwk.Fetcher. It applies Allow, GETs url via
+// Client, and parses the response body as a jwk.Set. No body-size cap,
+// no redirect policy, no parse options — tests that need richer
+// behavior should declare their own fetcher.
+func (f *JKUFetcher) Fetch(ctx context.Context, url string) (jwk.Set, error) {
+	if f.Allow != nil && !f.Allow(url) {
+		return nil, fmt.Errorf(`jwxtest.JKUFetcher: url %q not allowed`, url)
+	}
+	client := f.Client
+	if client == nil {
+		client = http.DefaultClient
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf(`jwxtest.JKUFetcher: status %d`, res.StatusCode)
+	}
+	buf, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	return jwk.Parse(buf)
+}
 
 func GenerateRsaKey() (*rsa.PrivateKey, error) {
 	return rsa.GenerateKey(rand.Reader, 2048)

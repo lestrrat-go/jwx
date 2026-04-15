@@ -1123,40 +1123,32 @@ func TestJKU(t *testing.T) {
 
 	t.Run("Compact", func(t *testing.T) {
 		testcases := []struct {
-			Name         string
-			Error        bool
-			Query        string
-			Fetcher      func() jwk.Fetcher
-			FetchOptions func() []jwk.FetchOption
+			Name    string
+			Error   bool
+			Query   string
+			Fetcher func() jwk.Fetcher
 		}{
 			{
-				Name:  "Fail without whitelist",
-				Error: true,
-				FetchOptions: func() []jwk.FetchOption {
-					return []jwk.FetchOption{jwk.WithHTTPClient(srv.Client())}
+				Name: "Succeeds without explicit allow",
+				Fetcher: func() jwk.Fetcher {
+					// nil Allow permits every URL — matches
+					// jwkfetch.Client's permissive default.
+					return &jwxtest.JKUFetcher{Client: srv.Client()}
 				},
 			},
 			{
-				Name: "Success",
-				FetchOptions: func() []jwk.FetchOption {
-					return []jwk.FetchOption{
-						jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
-						jwk.WithHTTPClient(srv.Client()),
-					}
-				},
-			},
-			{
-				Name:  "Rejected by whitelist",
+				Name:  "Rejected by restrictive allow",
 				Error: true,
-				FetchOptions: func() []jwk.FetchOption {
-					wl := jwk.NewMapWhitelist().Add(`https://github.com/lestrrat-go/jwx/v4`)
-					return []jwk.FetchOption{
-						jwk.WithFetchWhitelist(wl),
-						jwk.WithHTTPClient(srv.Client()),
+				Fetcher: func() jwk.Fetcher {
+					return &jwxtest.JKUFetcher{
+						Client: srv.Client(),
+						Allow: func(u string) bool {
+							return u == `https://github.com/lestrrat-go/jwx/v4`
+						},
 					}
 				},
 			},
-			// Cache test case moved to ext/jwkcache
+			// Cache test case moved to ext/jwkfetch
 		}
 
 		for _, tc := range testcases {
@@ -1170,16 +1162,11 @@ func TestJKU(t *testing.T) {
 				signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256(), key, jws.WithProtectedHeaders(hdr)))
 				require.NoError(t, err, `jws.Sign should succeed`)
 
-				var options []jwk.FetchOption
-				if f := tc.FetchOptions; f != nil {
-					options = append(options, f()...)
-				}
-
 				var fetcher jwk.Fetcher
 				if f := tc.Fetcher; f != nil {
 					fetcher = f()
 				}
-				decoded, err := jws.Verify(signed, jws.WithVerifyAuto(fetcher, options...))
+				decoded, err := jws.Verify(signed, jws.WithVerifyAuto(fetcher))
 				if tc.Error {
 					require.Error(t, err, `jws.Verify should fail`)
 				} else {
@@ -1245,30 +1232,19 @@ func TestJKU(t *testing.T) {
 		require.NoError(t, err, `jws.SignMulti should succeed`)
 
 		testcases := []struct {
-			Name         string
-			FetchOptions func() []jwk.FetchOption
-			Error        bool
+			Name  string
+			Allow func(string) bool // nil = permit all
+			Error bool
 		}{
 			{
-				Name:  "Fail without whitelist",
-				Error: true,
+				Name: "Succeeds without explicit allow",
+				// nil Allow → fetcher permits every URL.
 			},
 			{
-				Name: "Success",
-				FetchOptions: func() []jwk.FetchOption {
-					return []jwk.FetchOption{
-						jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
-					}
-				},
-			},
-			{
-				Name:  "Rejected by whitelist",
+				Name:  "Rejected by restrictive allow",
 				Error: true,
-				FetchOptions: func() []jwk.FetchOption {
-					wl := jwk.NewMapWhitelist().Add(`https://github.com/lestrrat-go/jwx/v4`)
-					return []jwk.FetchOption{
-						jwk.WithFetchWhitelist(wl),
-					}
+				Allow: func(u string) bool {
+					return u == `https://github.com/lestrrat-go/jwx/v4`
 				},
 			},
 		}
@@ -1276,13 +1252,12 @@ func TestJKU(t *testing.T) {
 		for _, tc := range testcases {
 			t.Run(tc.Name, func(t *testing.T) {
 				m := jws.NewMessage()
-				var options []jwk.FetchOption
-				if fn := tc.FetchOptions; fn != nil {
-					options = fn()
+				fetcher := &jwxtest.JKUFetcher{
+					Client: srv.Client(),
+					Allow:  tc.Allow,
 				}
-				options = append(options, jwk.WithHTTPClient(srv.Client()))
 
-				decoded, err := jws.Verify(signed, jws.WithVerifyAuto(nil, options...), jws.WithMessage(m))
+				decoded, err := jws.Verify(signed, jws.WithVerifyAuto(fetcher), jws.WithMessage(m))
 				if tc.Error {
 					require.Error(t, err, `jws.Verify should fail`)
 				} else {

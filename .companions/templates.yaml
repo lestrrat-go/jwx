@@ -28,7 +28,7 @@ templates:
     dest: .github/auto-assign-pr.yml
   fuzz.yml:
     dest: .github/workflows/fuzz.yml
-    skip: [benchmarks, examples, jwkcache, jwxmigrate, x448]
+    skip: [benchmarks, examples, jwkfetch, jwxmigrate, x448]
   fuzz-pr.yml:
     dest: .github/workflows/fuzz-pr.yml
-    skip: [benchmarks, examples, jwkcache, jwxmigrate, x448]
+    skip: [benchmarks, examples, jwkfetch, jwxmigrate, x448]

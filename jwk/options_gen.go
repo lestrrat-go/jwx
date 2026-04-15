@@ -22,40 +22,6 @@ type assignKeyIDOption struct {
 
 func (*assignKeyIDOption) assignKeyIDOption() {}
 
-// FetchOption is a type of Option that can be passed to `jwk.Fetch()`
-type FetchOption interface {
-	Option
-	fetchOption()
-	parseOption()
-}
-
-type fetchOption struct {
-	Option
-}
-
-func (*fetchOption) fetchOption() {}
-
-func (*fetchOption) parseOption() {}
-
-// GlobalFetchOption describes an Option that can be passed to `jwk.Configure()`
-// and `jwk.Fetch()`.
-type GlobalFetchOption interface {
-	Option
-	globalOption()
-	fetchOption()
-	parseOption()
-}
-
-type globalFetchOption struct {
-	Option
-}
-
-func (*globalFetchOption) globalOption() {}
-
-func (*globalFetchOption) fetchOption() {}
-
-func (*globalFetchOption) parseOption() {}
-
 // GlobalOption is a type of Option that can be passed to the `jwk.Configure()` to
 // change the global configuration of the jwk package.
 type GlobalOption interface {
@@ -72,33 +38,22 @@ func (*globalOption) globalOption() {}
 // ParseOption is a type of Option that can be passed to `jwk.Parse()`
 type ParseOption interface {
 	Option
-	fetchOption()
+	parseOption()
 }
 
 type parseOption struct {
 	Option
 }
 
-func (*parseOption) fetchOption() {}
+func (*parseOption) parseOption() {}
 
-type identFetchWhitelist struct{}
-type identHTTPClient struct{}
 type identIgnoreParseError struct{}
 type identLocalRegistry struct{}
-type identMaxFetchBodySize struct{}
 type identPEM struct{}
 type identPEMDecoder struct{}
 type identStrictKeyUsage struct{}
 type identThumbprintHash struct{}
 type identX509 struct{}
-
-func (identFetchWhitelist) String() string {
-	return "WithFetchWhitelist"
-}
-
-func (identHTTPClient) String() string {
-	return "WithHTTPClient"
-}
 
 func (identIgnoreParseError) String() string {
 	return "WithIgnoreParseError"
@@ -106,10 +61,6 @@ func (identIgnoreParseError) String() string {
 
 func (identLocalRegistry) String() string {
 	return "withLocalRegistry"
-}
-
-func (identMaxFetchBodySize) String() string {
-	return "WithMaxFetchBodySize"
 }
 
 func (identPEM) String() string {
@@ -130,53 +81,6 @@ func (identThumbprintHash) String() string {
 
 func (identX509) String() string {
 	return "WithX509"
-}
-
-// WithFetchWhitelist specifies the Whitelist applied to the URL passed
-// to `jwk.Fetch()`.
-//
-// The default when this option is not supplied is `jwk.InsecureWhitelist{}`,
-// which allows every URL. That is the right default for URLs that are
-// hard-coded in your program or loaded from trusted configuration, and
-// keeps first-time usage free of boilerplate.
-//
-// It is NOT safe when the URL comes from an untrusted source — most
-// commonly the `jku` header of a JWS handed to you by a peer. For those
-// call sites you MUST supply a restrictive Whitelist: use
-// `jwk.NewMapWhitelist()` for a fixed allow-list, `jwk.RegexpWhitelist`
-// for pattern-based allow-lists, or implement the `jwk.Whitelist`
-// interface yourself.
-//
-// Note that a whitelist only constrains the initial URL. For defense
-// against redirect-to-private-IP and DNS-rebinding attacks, also supply
-// a custom `http.Client` via `jwk.WithHTTPClient` whose
-// `Transport.DialContext` validates resolved addresses.
-func WithFetchWhitelist(v Whitelist) FetchOption {
-	return &fetchOption{option.New(identFetchWhitelist{}, v)}
-}
-
-// WithHTTPClient allows users to specify the "net/http".Client object that
-// is used when fetching jwk.Set objects.
-//
-// When passed to `jwk.Configure()`, it sets the global default HTTP client
-// used by `jwk.Fetch()`. By default, `jwk.Fetch()` uses an HTTP client with
-// a 30-second timeout and a redirect policy that blocks HTTPS-to-HTTP
-// scheme downgrades (with a maximum of 5 redirects) instead of
-// `http.DefaultClient` (which has no timeout and allows up to 10 redirects).
-//
-// The client is used as-is: the library does NOT automatically apply its
-// default timeout or redirect policy to a user-supplied client. If you want
-// to bring your own client (e.g. for custom TLS or proxy settings) while
-// retaining the library's defaults, wrap it with `jwk.WrapHTTPClientDefaults()`
-// before passing it to this option.
-//
-// For full SSRF protection (blocking redirects to private IPs, DNS
-// rebinding prevention), provide a custom http.Client with an appropriate
-// Transport.DialContext that validates resolved IP addresses.
-//
-// Users can override the client per-call via `jwk.Fetch()`.
-func WithHTTPClient(v HTTPClient) GlobalFetchOption {
-	return &globalFetchOption{option.New(identHTTPClient{}, v)}
 }
 
 // WithIgnoreParseError is only applicable when used with `jwk.Parse()`
@@ -205,16 +109,6 @@ func WithIgnoreParseError(v bool) ParseOption {
 // This option is only available for internal code. Users don't get to play with it
 func withLocalRegistry(v *json.Registry) ParseOption {
 	return &parseOption{option.New(identLocalRegistry{}, v)}
-}
-
-// WithMaxFetchBodySize specifies the maximum number of bytes to read from
-// an HTTP response body when fetching a JWKS. If the response body exceeds
-// this size, the fetch returns an error. The default value is 10MB (10485760).
-//
-// This option can be passed to `jwk.Configure()` to change the default
-// globally, or to `jwk.Fetch()` for a per-call override.
-func WithMaxFetchBodySize(v int64) GlobalFetchOption {
-	return &globalFetchOption{option.New(identMaxFetchBodySize{}, v)}
 }
 
 // WithPEM specifies that the input to `Parse()` is a PEM encoded key.

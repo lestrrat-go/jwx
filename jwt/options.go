@@ -285,13 +285,38 @@ func WithMinDelta(dur time.Duration, c1, c2 string) ValidateOption {
 }
 
 // WithVerifyAuto specifies that the JWS verification should be attempted
-// by using the data available in the JWS message. Currently only verification
-// method available is to use the keys available in the JWKS URL pointed
-// in the `jku` field.
+// by using the data available in the JWS message. Currently the only
+// verification method available is to use the keys at the JWKS URL
+// specified in the `jku` field, via the provided jwk.Fetcher.
 //
-// Please read the documentation for `jws.VerifyAuto` for more details.
-func WithVerifyAuto(f jwk.Fetcher, options ...jwk.FetchOption) ParseOption {
-	return &parseOption{option.New(identVerifyAuto{}, jws.WithVerifyAuto(f, options...))}
+// # Security
+//
+// The `jku` header comes from the JWT's JWS envelope, which is
+// untrusted input at the moment you are about to verify it. The
+// expected pattern is to pass a jwkfetch.Client with a restrictive
+// Whitelist:
+//
+//	import "github.com/jwx-go/jwkfetch/v4"
+//
+//	client := jwkfetch.NewClient(
+//	    jwkfetch.WithWhitelist(
+//	        jwkfetch.NewMapWhitelist().Add("https://issuer.example/jwks.json"),
+//	    ),
+//	)
+//	jwt.Parse(signed, jwt.WithVerifyAuto(client))
+//
+// jwkfetch.Client enforces the whitelist on the initial URL AND
+// every redirect hop, so a hostile JWKS host cannot bypass the
+// allowlist via 302. jwx itself has no way to enforce this from its
+// side — if you pass a fetcher with no whitelist, a hostile peer
+// can point the library at any URL the fetcher can reach (SSRF) and
+// have their own keys accepted as "the issuer's keys".
+//
+// See jws.WithVerifyAuto for the full contract, including the
+// behavior of a nil fetcher (it errors at use time rather than
+// silently falling back to any default).
+func WithVerifyAuto(f jwk.Fetcher) ParseOption {
+	return &parseOption{option.New(identVerifyAuto{}, jws.WithVerifyAuto(f))}
 }
 
 func WithInsecureNoSignature() SignOption {
