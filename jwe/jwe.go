@@ -59,11 +59,8 @@ func Settings(options ...GlobalOption) {
 		case identMinPBES2Count{}:
 			minPBES2Count.Store(int64(option.MustGet[int](opt)))
 		case identPBES2Count{}:
-			v := option.MustGet[int](opt)
-			if v < 0 {
-				v = 0
-			}
-			// 0 means "reset to per-variant defaults".
+			// 0 means "reset to per-variant defaults"; clamp negatives.
+			v := max(option.MustGet[int](opt), 0)
 			pbes2Count.Store(int64(v))
 		case identMaxRecipients{}:
 			maxRecipients.Store(int64(option.MustGet[int](opt)))
