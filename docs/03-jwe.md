@@ -429,8 +429,8 @@ func Example_jwe_verify_with_jwk_set() {
   k3.Set(jwk.AlgorithmKey, jwa.RSA_OAEP())
   set.AddKey(k3)
 
-  // Up to this point, you would typically replace with a jwkfetch.Client
-  // or Cache to obtain the JWKS over HTTP. See docs/10-extensions.md.
+  // Up to this point, you probably will replace with a simple
+  // jwkfetch.NewClient().Fetch() or similar to obtain the JWKS
 
   if _, err := jwe.Decrypt(encrypted, jwe.WithKeySet(set, jwe.WithRequireKid(false))); err != nil {
     fmt.Printf("Failed to decrypt using jwk.Set: %s", err)

@@ -735,15 +735,26 @@ func Example_jwt_parse_with_jku() {
     return
   }
 
-  // The fetcher is built from the jwkfetch companion. We pass srv.Client()
-  // because httptest uses a custom certificate, and we explicitly opt into
-  // the permissive whitelist — a jwkfetch.Client with no whitelist denies
-  // every URL by default.
-  fetcher := jwkfetch.NewClient(
+  // jku verification uses a jwk.Fetcher to retrieve the JWKS
+  // referenced in the JWS protected header. Use jwkfetch.Client —
+  // it is the canonical implementation and the one this option is
+  // designed around.
+  //
+  // IMPORTANT: the `jku` URL comes from the JWS protected header,
+  // which is untrusted input. A real application MUST pass
+  // jwkfetch.WithWhitelist with a MapWhitelist / RegexpWhitelist
+  // restricted to its known issuer set — otherwise a hostile peer
+  // can point the fetcher at any URL it can reach (SSRF) and have
+  // its own keys accepted as "the issuer's keys". This example uses
+  // srv.URL as a "known issuer" because httptest picks a random
+  // port each run.
+  client := jwkfetch.NewClient(
+    // httptest serves HTTPS with a self-signed cert, so the
+    // Client needs srv.Client() to validate it.
     jwkfetch.WithHTTPClient(srv.Client()),
-    jwkfetch.WithWhitelist(jwkfetch.InsecureWhitelist{}),
+    jwkfetch.WithWhitelist(jwkfetch.NewMapWhitelist().Add(srv.URL)),
   )
-  tok, err := jwt.Parse(serialized, jwt.WithVerifyAuto(fetcher))
+  tok, err := jwt.Parse(serialized, jwt.WithVerifyAuto(client))
   if err != nil {
     fmt.Printf("failed to verify token: %s\n", err)
     return

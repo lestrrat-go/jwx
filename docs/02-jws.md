@@ -462,8 +462,8 @@ func Example_jws_verify_with_jwk_set() {
   k3, _ := jwk.PublicKeyOf(privkey)
   _ = set.AddKey(k3)
 
-  // Up to this point, you would typically replace with a jwkfetch.Client
-  // or Cache to obtain the JWKS over HTTP. See docs/10-extensions.md.
+  // Up to this point, you probably will replace with a simple
+  // jwkfetch.NewClient().Fetch() or similar to obtain the JWKS
 
   // Sign with a key that has a Key ID. This forces jws.Sign() to include its
   // key ID in the JWS header.
