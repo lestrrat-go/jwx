@@ -144,6 +144,10 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 		return makeVerifyError(`jws.WithKey() must be specified for VerifyDetached`)
 	}
 
+	if alg == jwa.NoSignature() {
+		return makeVerifyError(`"none" (jwa.NoSignature) cannot be used with VerifyDetached`)
+	}
+
 	detected := detectDetachedFormat(compact)
 	if detected == 0 {
 		return makeVerifyError(`input is empty or whitespace-only`)

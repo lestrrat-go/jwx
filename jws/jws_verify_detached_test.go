@@ -59,6 +59,12 @@ func TestVerifyDetached(t *testing.T) {
 		})
 	})
 
+	t.Run("Rejects jwa.NoSignature", func(t *testing.T) {
+		err := jws.VerifyDetached([]byte(`eyJhbGciOiJub25lIn0..`), bytes.NewReader(payload), jws.WithKey(jwa.NoSignature(), nil))
+		require.Error(t, err, `jws.VerifyDetached should fail for NoSignature`)
+		require.Contains(t, err.Error(), `"none"`, `error should clearly identify "none" algorithm`)
+	})
+
 	t.Run("EdDSA returns error", func(t *testing.T) {
 		privkey, err := jwxtest.GenerateEd25519Key()
 		require.NoError(t, err, `key generation should succeed`)
