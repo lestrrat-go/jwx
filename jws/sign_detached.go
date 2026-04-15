@@ -60,7 +60,7 @@ func SignDetached(payload io.Reader, options ...SignOption) ([]byte, error) {
 	var validateKey bool
 	var protected Headers
 	var public Headers
-	var encoder Base64Encoder = internbase64.DefaultEncoder()
+	encoder := internbase64.DefaultEncoder()
 	format := fmtCompact
 
 	for _, option := range options {
@@ -87,9 +87,15 @@ func SignDetached(payload io.Reader, options ...SignOption) ([]byte, error) {
 				return nil, makeSignError(`failed to retrieve validate-key option value: %w`, err)
 			}
 		case identBase64Encoder{}:
-			if err := option.Value(&encoder); err != nil {
-				return nil, makeSignError(`failed to retrieve base64-encoder option value: %w`, err)
-			}
+			// The header and signature segments go through this custom
+			// encoder, but streamPayload uses encoding/base64 directly
+			// for the b64-encoded payload path. Honoring the option on
+			// two of the three segments would produce signatures that
+			// only verify when the custom encoder happens to match
+			// RawURLEncoding. Reject the option rather than ship a
+			// silent half-use. v4 will extend Base64Encoder with a
+			// streaming interface and thread it through streamPayload.
+			return nil, makeSignError(`jws.WithBase64Encoder() is not supported by SignDetached; the streaming payload path uses RawURLEncoding`)
 		case identSerialization{}:
 			var v int
 			if err := option.Value(&v); err != nil {

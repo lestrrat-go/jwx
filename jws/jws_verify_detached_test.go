@@ -3,6 +3,7 @@ package jws_test
 import (
 	"bytes"
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -202,6 +203,15 @@ func TestVerifyDetached(t *testing.T) {
 	t.Run("Rejects no key", func(t *testing.T) {
 		err := jws.VerifyDetached([]byte("eyJhbGciOiJIUzI1NiJ9..sig"), bytes.NewReader(payload))
 		require.Error(t, err, `should reject missing key`)
+	})
+
+	t.Run("Rejects WithBase64Encoder option", func(t *testing.T) {
+		key := jwxtest.GenerateSymmetricKey()
+		signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
+		require.NoError(t, err)
+
+		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithBase64Encoder(base64.RawURLEncoding))
+		require.Error(t, err, `should reject WithBase64Encoder`)
 	})
 
 	t.Run("Rejects multiple keys", func(t *testing.T) {

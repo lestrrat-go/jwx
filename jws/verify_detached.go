@@ -112,13 +112,14 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 				return makeVerifyError(`failed to retrieve key-used option value: %w`, err)
 			}
 		case identBase64Encoder{}:
-			// Accepted for option-slice compatibility with jws.Verify,
-			// but the streaming path uses encoding/base64 directly
-			// and does not honor a custom encoder.
-			var enc Base64Encoder
-			if err := option.Value(&enc); err != nil {
-				return makeVerifyError(`failed to retrieve base64-encoder option value: %w`, err)
-			}
+			// streamPayload uses encoding/base64 directly for the
+			// b64-encoded payload path, so honoring a custom encoder
+			// would silently apply to the protected-header decode but
+			// not the payload. Reject symmetrically with SignDetached
+			// rather than ship a half-use. v4 will extend
+			// Base64Encoder with a streaming interface and thread it
+			// through streamPayload.
+			return makeVerifyError(`jws.WithBase64Encoder() is not supported by VerifyDetached; the streaming payload path uses RawURLEncoding`)
 		case identSerialization{}:
 			var v int
 			if err := option.Value(&v); err != nil {
