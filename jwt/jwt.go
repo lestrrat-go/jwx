@@ -147,14 +147,19 @@ func Parse(s []byte, options ...ParseOption) (Token, error) {
 // ParseInsecure is exactly the same as Parse(), but it disables
 // signature verification and token validation.
 //
-// You cannot override `jwt.WithVerify()` or `jwt.WithValidate()`
-// using this function. Providing these options would result in
-// an error
+// `jwt.WithVerify()` and `jwt.WithValidate()` may not be specified
+// because they would conflict with the function's purpose. Likewise,
+// the key-bearing options `jwt.WithKey()`, `jwt.WithKeySet()`,
+// `jwt.WithKeyProvider()`, and `jwt.WithVerifyAuto()` are rejected so
+// that typos like `jwt.ParseInsecure(data, jwt.WithKey(...))` cannot
+// silently skip verification. Use `jwt.Parse` when a key is available.
 func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identVerify{}, identValidate{}:
 			return nil, parseErrorf(`jwt.ParseInsecure`, `jwt.WithVerify() and jwt.WithValidate() may not be specified`)
+		case identKey{}, identKeySet{}, identKeyProvider{}, identVerifyAuto{}:
+			return nil, parseErrorf(`jwt.ParseInsecure`, `key-bearing options (jwt.WithKey, jwt.WithKeySet, jwt.WithKeyProvider, jwt.WithVerifyAuto) may not be specified; use jwt.Parse to verify with a key`)
 		}
 	}
 
