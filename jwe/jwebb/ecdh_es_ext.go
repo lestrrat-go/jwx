@@ -9,7 +9,6 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/lestrrat-go/jwx/v4/internal/ecutil"
 	"github.com/lestrrat-go/jwx/v4/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v4/internal/tokens"
 	"github.com/lestrrat-go/jwx/v4/jwe/internal/concatkdf"
@@ -143,16 +142,35 @@ func NewECDHESKeyGenerator(key any) (ECDHESKeyGenerator, error) {
 	case ecdh.PrivateKey:
 		return &ecdhGenerator{key: k.PublicKey()}, nil
 	case *ecdsa.PublicKey:
-		return &ecdsaGenerator{key: k}, nil
+		return ecdhGeneratorFromECDSAPublic(k)
 	case ecdsa.PublicKey:
-		return &ecdsaGenerator{key: &k}, nil
+		return ecdhGeneratorFromECDSAPublic(&k)
 	case *ecdsa.PrivateKey:
-		return &ecdsaGenerator{key: &k.PublicKey}, nil
+		return ecdhGeneratorFromECDSAPublic(&k.PublicKey)
 	case ecdsa.PrivateKey:
-		return &ecdsaGenerator{key: &k.PublicKey}, nil
+		return ecdhGeneratorFromECDSAPublic(&k.PublicKey)
 	default:
 		return nil, fmt.Errorf(`unsupported key type for ECDH-ES key generation: %T`, key)
 	}
+}
+
+// ecdhGeneratorFromECDSAPublic converts an *ecdsa.PublicKey into an
+// *ecdh.PublicKey via stdlib (*ecdsa.PublicKey).ECDH() and wraps it in
+// ecdhGenerator. This routes every ecdsa-input ECDH-ES path through
+// crypto/ecdh, which uses identity matching on named NIST curves and
+// refuses anything else — including the generic elliptic.CurveParams
+// big-int path. That closes the invalid-curve attack surface that a
+// caller-controlled ecdsa.PublicKey.Curve field would otherwise expose
+// via the deprecated crypto/elliptic.Curve.ScalarMult.
+func ecdhGeneratorFromECDSAPublic(pub *ecdsa.PublicKey) (ECDHESKeyGenerator, error) {
+	if pub == nil || pub.X == nil || pub.Y == nil {
+		return nil, fmt.Errorf(`invalid ecdsa public key: nil X or Y`)
+	}
+	ecdhPub, err := pub.ECDH()
+	if err != nil {
+		return nil, fmt.Errorf(`failed to convert ecdsa public key to *ecdh.PublicKey: %w`, err)
+	}
+	return &ecdhGenerator{key: ecdhPub}, nil
 }
 
 // NewECDHESKeyDeriver normalizes a raw key into an ECDHESKeyDeriver.
@@ -197,33 +215,6 @@ func (g *ecdhGenerator) GenerateECDHES(alg string, keysize int, apu, apv []byte)
 	}
 
 	return derived, priv.PublicKey(), nil
-}
-
-// ecdsaGenerator wraps *ecdsa.PublicKey to implement ECDHESKeyGenerator.
-type ecdsaGenerator struct {
-	key *ecdsa.PublicKey
-}
-
-func (g *ecdsaGenerator) GenerateECDHES(alg string, keysize int, apu, apv []byte) ([]byte, any, error) {
-	priv, err := ecdsa.GenerateKey(g.key.Curve, rand.Reader)
-	if err != nil {
-		return nil, nil, fmt.Errorf(`failed to generate ephemeral key: %w`, err)
-	}
-
-	if !priv.PublicKey.Curve.IsOnCurve(g.key.X, g.key.Y) {
-		return nil, nil, fmt.Errorf(`public key used does not contain a point (X,Y) on the curve`)
-	}
-
-	z, _ := priv.PublicKey.Curve.ScalarMult(g.key.X, g.key.Y, priv.D.Bytes())
-	zBytes := ecutil.AllocECPointBuffer(z, priv.PublicKey.Curve)
-	defer ecutil.ReleaseECPointBuffer(zBytes)
-
-	derived, err := DeriveECDHESRaw(alg, zBytes, apu, apv, keysize)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return derived, &priv.PublicKey, nil
 }
 
 // ecdhDeriver wraps *ecdh.PrivateKey to implement ECDHESKeyDeriver.
