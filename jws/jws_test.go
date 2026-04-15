@@ -1434,6 +1434,47 @@ func TestAlgorithmsForKeyECDHRejects(t *testing.T) {
 	}
 }
 
+// unclassifiableSigner is a crypto.Signer whose Public() is itself a
+// crypto.Signer, so AlgorithmsForKey cannot classify it — the documented
+// "opaque KMS-backed signer" escape hatch in validateAlgorithmForKey.
+type unclassifiableSigner struct{}
+
+func (unclassifiableSigner) Public() crypto.PublicKey { return unclassifiableSigner{} }
+func (unclassifiableSigner) Sign(_ io.Reader, _ []byte, _ crypto.SignerOpts) ([]byte, error) {
+	return nil, errors.New("unclassifiableSigner.Sign not implemented")
+}
+
+// TestValidateAlgorithmForKeyBoundary is a regression test for JWS-054:
+// validateAlgorithmForKey must reject unrecognized key types at the option
+// boundary, while still allowing the narrow opaque-crypto.Signer escape
+// hatch so KMS-style signers reach the crypto layer.
+func TestValidateAlgorithmForKeyBoundary(t *testing.T) {
+	t.Run("unknown struct rejected at option boundary", func(t *testing.T) {
+		type bogusKey struct{}
+		_, err := jws.Sign([]byte("payload"), jws.WithKey(jwa.RS256(), bogusKey{}))
+		require.Error(t, err, `jws.Sign must reject unknown key types`)
+		require.Contains(t, err.Error(), "unknown key type",
+			`error must come from AlgorithmsForKey, not the signing stack`)
+	})
+	t.Run("opaque crypto.Signer still accepted", func(t *testing.T) {
+		// Not expected to actually sign — we only assert the boundary
+		// check does not short-circuit before the signing stack.
+		_, err := jws.Sign([]byte("payload"), jws.WithKey(jwa.RS256(), unclassifiableSigner{}))
+		require.Error(t, err, `signing must ultimately fail`)
+		require.NotContains(t, err.Error(), "unknown key type",
+			`opaque crypto.Signer must bypass the option-boundary check`)
+		require.NotContains(t, err.Error(), "is not compatible with key type",
+			`opaque crypto.Signer must bypass the compatibility check`)
+	})
+	t.Run("rsa key with incompatible alg still rejected", func(t *testing.T) {
+		privkey, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err, `GenerateRsaKey should succeed`)
+		_, err = jws.Sign([]byte("payload"), jws.WithKey(jwa.ES256(), privkey))
+		require.Error(t, err, `jws.Sign must reject incompatible alg`)
+		require.Contains(t, err.Error(), "is not compatible with key type")
+	})
+}
+
 func TestGH681(t *testing.T) {
 	privkey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err, "failed to create private key")
