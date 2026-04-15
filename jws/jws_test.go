@@ -2163,3 +2163,46 @@ func TestVerifyWithNonSignatureAlgorithm(t *testing.T) {
 	require.True(t, errors.Is(err, jws.VerifyError()))
 	require.Contains(t, err.Error(), "SignatureAlgorithm")
 }
+
+func TestVerifyCompactFastHeaderAlgCrossCheck(t *testing.T) {
+	hmacKey := jwxtest.GenerateSymmetricKey()
+
+	t.Run("Match", func(t *testing.T) {
+		signed, err := jws.Sign([]byte("payload"), jws.WithKey(jwa.HS256(), hmacKey))
+		require.NoError(t, err)
+
+		payload, err := jws.VerifyCompactFast(hmacKey, signed, jwa.HS256())
+		require.NoError(t, err)
+		require.Equal(t, []byte("payload"), payload)
+	})
+
+	t.Run("Mismatch/HS256 signed verified as HS384", func(t *testing.T) {
+		// HS256 and HS384 both accept symmetric []byte keys, so
+		// validateAlgorithmForKey passes and the new header cross-check
+		// is the discipline that catches the divergence.
+		signed, err := jws.Sign([]byte("payload"), jws.WithKey(jwa.HS256(), hmacKey))
+		require.NoError(t, err)
+
+		_, err = jws.VerifyCompactFast(hmacKey, signed, jwa.HS384())
+		require.Error(t, err)
+		require.True(t, errors.Is(err, jws.VerifyError()), `error should be VerifyError`)
+		require.True(t, errors.Is(err, jws.VerificationError()), `error should be VerificationError`)
+		require.Contains(t, err.Error(), `"alg"`)
+		require.Contains(t, err.Error(), "HS256")
+		require.Contains(t, err.Error(), "HS384")
+	})
+
+	t.Run("Missing alg in header", func(t *testing.T) {
+		// Hand-assemble a compact JWS whose protected header omits "alg".
+		hdr := base64.EncodeToString([]byte(`{"typ":"JWT"}`))
+		payload := base64.EncodeToString([]byte("payload"))
+		sig := base64.EncodeToString([]byte("not-a-real-signature"))
+		compact := []byte(hdr + "." + payload + "." + sig)
+
+		_, err := jws.VerifyCompactFast(hmacKey, compact, jwa.HS256())
+		require.Error(t, err)
+		require.True(t, errors.Is(err, jws.VerifyError()), `error should be VerifyError`)
+		require.True(t, errors.Is(err, jws.VerificationError()), `error should be VerificationError`)
+		require.Contains(t, err.Error(), `"alg"`)
+	})
+}
