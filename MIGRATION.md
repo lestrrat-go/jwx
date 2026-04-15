@@ -202,9 +202,37 @@ type Fetcher interface {
 }
 ```
 
-**Default behavior is equivalent to v3 for trusted URLs.** Both v3's `jwk.Fetch()` and v4's `jwkfetch.NewClient().Fetch()` permit every URL by default — the right choice when the URL is a compile-time constant or comes from trusted configuration. You generally do not need to pass `WithWhitelist` to migrate a hard-coded-URL call site.
+> **⚠️ SECURITY: jku migration can introduce SSRF if you forget the whitelist.**
+>
+> In v3, `jws.WithVerifyAuto` prepended an implicit deny-all whitelist in front of the caller's fetch options. A v3 call site that passed `jws.WithVerifyAuto(nil, opts...)` *without* an explicit whitelist was rejected at verification time — the library failed closed.
+>
+> In v4, there is no implicit wrapper. `jws.WithVerifyAuto` / `jwt.WithVerifyAuto` take only a `jwk.Fetcher`, and `jwkfetch.NewClient()` with no `WithWhitelist` **permits every URL**. The naive migration
+>
+> ```go
+> // v3
+> jws.Verify(signed, jws.WithVerifyAuto(nil, jwk.WithFetchWhitelist(wl)))
+>
+> // v4 — LOOKS RIGHT, IS NOT: the whitelist is gone
+> jws.Verify(signed, jws.WithVerifyAuto(jwkfetch.NewClient()))
+> ```
+>
+> compiles, runs, and silently turns the verifier into an SSRF primitive: the `jku` header is attacker-controlled, so the library will happily fetch any URL an attacker puts there, and accept the returned keys as "the issuer's keys." The jwx library cannot detect this at runtime — the permissive-`Client` case is a valid configuration for trusted hard-coded URLs, and jwx has no way to tell the two use cases apart.
+>
+> **You MUST audit every `jws.WithVerifyAuto` / `jwt.WithVerifyAuto` call site during migration** and ensure the `jwkfetch.Client` you pass has a restrictive `WithWhitelist` (a `MapWhitelist`, `RegexpWhitelist`, or custom `WhitelistFunc` constrained to your known issuer set):
+>
+> ```go
+> // v4 — correct
+> client := jwkfetch.NewClient(
+>     jwkfetch.WithWhitelist(jwkfetch.NewMapWhitelist().Add("https://issuer.example/jwks.json")),
+> )
+> jws.Verify(signed, jws.WithVerifyAuto(client))
+> ```
+>
+> `jwkfetch.Client` applies the whitelist to both the initial URL and every HTTP redirect target, so a hostile JWKS host cannot 302 into an off-allowlist URL. This redirect-hop enforcement only applies when the configured `HTTPClient` is a `*http.Client`; if you supply a custom transport, you are responsible for policing redirects yourself.
+>
+> `jws.WithVerifyAuto(nil)` / `jwt.WithVerifyAuto(nil)` is no longer supported — both error at jku-verification time rather than silently using any default.
 
-**Behavior differs for jku-style verification.** In v3, `jws.WithVerifyAuto` prepended an implicit deny-all wrapper in front of the caller's fetch options, forcing every jku caller to pass `jwk.WithFetchWhitelist(...)` to explicitly override. In v4, `jws.WithVerifyAuto` / `jwt.WithVerifyAuto` take only a `jwk.Fetcher` — no variadic options, no implicit wrapper — so any whitelist enforcement has to live on the fetcher you build. If you have a v3 `jws.WithVerifyAuto(nil, opts...)` call site you MUST migrate to an explicit `jwkfetch.NewClient(jwkfetch.WithWhitelist(...))` at construction time. `jws.WithVerifyAuto(nil)` / `jwt.WithVerifyAuto(nil)` is no longer supported — both error at jku-verification time rather than silently using a default.
+**Default behavior is equivalent to v3 for trusted, hard-coded URLs.** Both v3's `jwk.Fetch()` and v4's `jwkfetch.NewClient().Fetch()` permit every URL by default — the right choice when the URL is a compile-time constant or comes from trusted configuration. You generally do not need to pass `WithWhitelist` to migrate a hard-coded-URL call site. The SSRF risk above is specific to `jku`-style verification, where the URL originates in the untrusted JWS header.
 
 ```go
 // Before — one-shot jwk.Fetch
