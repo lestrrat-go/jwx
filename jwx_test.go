@@ -145,8 +145,6 @@ func TestJoseCompatibility(t *testing.T) {
 		return
 	}
 
-	jwe.Settings(jwe.WithMaxPBES2Count(32768))
-	t.Cleanup(func() { jwe.WithMaxPBES2Count(10000) })
 
 	t.Run("jwk", func(t *testing.T) {
 		testcases := []struct {
