@@ -89,6 +89,15 @@ func defaultParseKey(probe *KeyProbe, unmarshaler KeyUnmarshaler, data []byte) (
 	if err := unmarshaler.UnmarshalKey(data, key); err != nil {
 		return nil, fmt.Errorf(`failed to unmarshal JSON into key (%T): %w`, key, err)
 	}
+	// Enforce the trust boundary: a key that fails its own Validate() must
+	// never escape Parse/ParseKey. All built-in key types implement this
+	// interface via NewKeyValidationError, so callers can still use
+	// jwk.IsKeyValidationError on the wrapped error.
+	if v, ok := key.(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return nil, fmt.Errorf(`jwk.Parse: key validation failed: %w`, err)
+		}
+	}
 	return key, nil
 }
 
