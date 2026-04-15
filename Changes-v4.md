@@ -16,11 +16,14 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   Users opt in by importing the modules they need:
 
   - `github.com/jwx-go/asmbase64/v4` — assembly-optimized base64 backend (was `jwx_asmbase64` build tag)
+  - `github.com/jwx-go/compsig/v4` — hybrid composite signatures pairing ML-DSA with classical algorithms (new, draft-ietf-jose-pq-composite-sigs)
   - `github.com/jwx-go/ed448/v4` — EdDSA with Ed448 curve (was `jwa.EdDSAEd448()` / `jwa.Ed448()` in the main module)
   - `github.com/jwx-go/es256k/v4` — ES256K/secp256k1 support (was `jwx_es256k` build tag)
   - `github.com/jwx-go/examples/v4` — examples (was `examples/` directory in the main repo)
-  - `github.com/jwx-go/jwkcache/v4` — JWK Set caching via HTTP (was `jwk.Cache` in the main module)
+  - `github.com/jwx-go/jwkfetch/v4` — all HTTP-based JWKS retrieval: one-shot fetching, whitelists, and background-refreshed caches (replaces `jwk.Fetch` / `jwk.Cache` and removes the `net/http`/`httprc` dependency from core jwx)
   - `github.com/jwx-go/mldsa/v4` — ML-DSA signature support (new, FIPS 204)
+  - `github.com/jwx-go/mlkem/v4` — ML-KEM key encapsulation for JWE (new, FIPS 203, draft-ietf-jose-pqc-kem)
+  - `github.com/jwx-go/reddy-pqchpke/v4` — hybrid PQ HPKE (X25519 + ML-KEM-768 via X-Wing; draft-reddy-cose-jose-pqc-hybrid-hpke, very early)
   - `github.com/jwx-go/x448/v4` — X448 ECDH-ES key agreement and HPKE with DHKEM(X448) (new)
 
   In addition, `github.com/jwx-go/jwxmigrate` provides a CLI tool that applies
@@ -70,8 +73,11 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 * `jwk.ParseKey()` is now generic: `jwk.ParseKey[T Key](data []byte, ...options) (T, error)`.
 
-* `jwk.Cache` has been removed from the main module. Use `github.com/jwx-go/jwkcache/v4`
-  instead.
+* `jwk.Fetch()` and `jwk.Cache` have both been removed from the main module, along
+  with every other HTTP-touching entry point. The core `jwk` package no longer
+  depends on `net/http` or `httprc`. All HTTP-backed JWKS retrieval — one-shot
+  fetching, whitelists, and background-refreshed caches — now lives in
+  `github.com/jwx-go/jwkfetch/v4`.
 
 * `jwk.RegisterProbeField()` is now generic: `jwk.RegisterProbeField[T any](name, jsonKey string)`.
   This replaces the previous `reflect.StructField`-based API:
@@ -164,6 +170,8 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 * HPKE key encryption (draft-ietf-jose-hpke-encrypt-16) is now supported for JWE.
   Six algorithms are available: `HPKE-0-KE` through `HPKE-7-KE`, covering
   DHKEM(P-256), DHKEM(P-384), DHKEM(P-521), and DHKEM(X25519) with various
-  KDF/AEAD combinations. Uses Go 1.26 `crypto/hpke`. X448 variants will be
-  provided by a companion module. **This is based on a draft specification and
-  the API is not yet stable.**
+  KDF/AEAD combinations. Uses Go 1.26 `crypto/hpke`. X448-based HPKE is
+  available via the `github.com/jwx-go/x448/v4` companion module. A very early
+  hybrid PQ HPKE variant (X25519 + ML-KEM-768) is available via
+  `github.com/jwx-go/reddy-pqchpke/v4`. **These are based on draft specifications
+  and the APIs are not yet stable.**
