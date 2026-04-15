@@ -106,7 +106,7 @@ type keySetProvider struct {
 	requireKid bool
 }
 
-func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, _ Recipient, _ *Message) error {
+func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, r Recipient, msg *Message) error {
 	if usage, ok := key.KeyUsage(); ok {
 		if usage != "" && usage != jwk.ForEncryption.String() {
 			return nil
@@ -123,7 +123,30 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, _ Recipient, _ *M
 		return nil
 	}
 
-	return nil
+	// The JWK has no "alg" — common for IdP-published encryption keys.
+	// Fall back to the recipient's declared "alg" (per-recipient header,
+	// then protected header), matching the preference order used when
+	// jwe.Decrypt verifies the chosen key's algorithm against the message.
+	// jwe.Decrypt re-checks agreement before use, so trusting the header
+	// alg here does not widen the attack surface.
+	for _, hdr := range []Headers{r.Headers(), msg.ProtectedHeaders()} {
+		if hdr == nil {
+			continue
+		}
+		v, ok := hdr.Algorithm()
+		if !ok {
+			continue
+		}
+		kalg, ok := jwa.LookupKeyEncryptionAlgorithm(v.String())
+		if !ok {
+			continue
+		}
+		sink.Key(kalg, key)
+		return nil
+	}
+
+	kid, _ := key.KeyID()
+	return fmt.Errorf(`key %q in set has no "alg" field and the JWE message has no recoverable "alg" header; declare "alg" on the JWK or use jwe.WithKey(alg, key) directly`, kid)
 }
 
 func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, r Recipient, msg *Message) error {
