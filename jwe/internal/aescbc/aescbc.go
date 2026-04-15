@@ -23,6 +23,12 @@ const defaultBufSize int64 = 256 * 1024 * 1024
 
 var maxBufSize atomic.Int64
 
+// errInvalidCiphertext is the single opaque error returned by Hmac.Open for
+// every failure mode (pre-MAC structural checks and post-MAC tag mismatch).
+// Keeping one value across all paths prevents a structural-vs-cryptographic
+// oracle on remote decrypt endpoints.
+var errInvalidCiphertext = errors.New("invalid ciphertext")
+
 func init() {
 	SetMaxBufferSize(defaultBufSize)
 }
@@ -242,20 +248,22 @@ func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 	// invariants we don't currently enforce). Removing either layer would
 	// mean relying on the other — this way a regression in one is still
 	// caught by the other. See JWE-005 in the v4 security review.
+	// All pre-MAC structural failures return the exact same error value
+	// as the post-MAC failure below. Distinguishing "malformed nonce",
+	// "ciphertext too short", "ciphertext length not block-aligned", and
+	// "MAC mismatch" at the caller would leak whether an attacker probe
+	// is block-aligned vs cryptographically invalid — a structural-vs-MAC
+	// oracle that composes with other leaks. Keep all four paths opaque.
 	if len(nonce) != c.blockCipher.BlockSize() {
-		return nil, fmt.Errorf(`invalid nonce (length %d, expected %d)`, len(nonce), c.blockCipher.BlockSize())
+		return nil, errInvalidCiphertext
 	}
 	if len(ciphertext) < c.tlen {
-		return nil, fmt.Errorf(`invalid ciphertext (too short)`)
+		return nil, errInvalidCiphertext
 	}
 
 	tagOffset := len(ciphertext) - c.tlen
 	if tagOffset%c.blockCipher.BlockSize() != 0 {
-		return nil, fmt.Errorf(
-			"invalid ciphertext (invalid length: %d %% %d != 0)",
-			tagOffset,
-			c.blockCipher.BlockSize(),
-		)
+		return nil, errInvalidCiphertext
 	}
 	tag := ciphertext[tagOffset:]
 	ciphertext = ciphertext[:tagOffset]
@@ -274,7 +282,7 @@ func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 	toRemove, good := extractPadding(buf)
 	cmp := subtle.ConstantTimeCompare(expectedTag, tag) & int(good)
 	if cmp != 1 {
-		return nil, errors.New(`invalid ciphertext`)
+		return nil, errInvalidCiphertext
 	}
 
 	plaintext := buf[:len(buf)-toRemove]
