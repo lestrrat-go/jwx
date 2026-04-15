@@ -293,8 +293,7 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 
 	key, ok := set.LookupKeyID(kid)
 	if !ok {
-		// It is not an error if the key with the kid doesn't exist
-		return nil
+		return fmt.Errorf(`jku: key with "kid" %q not found in JWKS fetched from %q`, kid, u)
 	}
 
 	algs, err := AlgorithmsForKey(key)
