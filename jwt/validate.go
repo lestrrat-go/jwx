@@ -117,6 +117,11 @@ func Validate(t Token, options ...ValidateOption) error {
 	ctx = SetValidationCtxSkew(ctx, skew)
 	ctx = SetValidationCtxClock(ctx, clock)
 	ctx = SetValidationCtxTruncation(ctx, trunc)
+	// Snapshot "now" once so all default validators observe the same
+	// instant — matches the fast path in validateDefault and avoids
+	// second-boundary inconsistency when a custom Clock is stepped
+	// between validator calls.
+	ctx = setValidationCtxNow(ctx, clock.Now().Truncate(trunc))
 
 	var validators []Validator
 	if !resetValidators {
@@ -252,6 +257,22 @@ func (vf ValidatorFunc) Validate(ctx context.Context, tok Token) error {
 type identValidationCtxClock struct{}
 type identValidationCtxSkew struct{}
 type identValidationCtxTruncation struct{}
+type identValidationCtxNow struct{}
+
+func setValidationCtxNow(ctx context.Context, now time.Time) context.Context {
+	return context.WithValue(ctx, identValidationCtxNow{}, now)
+}
+
+// validationCtxNow returns the "now" snapshotted by [Validate] for this
+// validation run. If the context was not initialized by [Validate]
+// (e.g. a custom validator invoked with a bare context), it falls back
+// to sampling the supplied clock.
+func validationCtxNow(ctx context.Context, clock Clock, trunc time.Duration) time.Time {
+	if v, ok := ctx.Value(identValidationCtxNow{}).(time.Time); ok {
+		return v
+	}
+	return clock.Now().Truncate(trunc)
+}
 
 func SetValidationCtxClock(ctx context.Context, cl Clock) context.Context {
 	return context.WithValue(ctx, identValidationCtxClock{}, cl)
@@ -319,7 +340,7 @@ func isExpirationValid(ctx context.Context, t Token) error {
 	skew := ValidationCtxSkew(ctx)        // MUST be populated
 	trunc := ValidationCtxTruncation(ctx) // MUST be populated
 
-	now := clock.Now().Truncate(trunc)
+	now := validationCtxNow(ctx, clock, trunc)
 	ttv := tv.Truncate(trunc)
 
 	// expiration date must be after NOW
@@ -350,7 +371,7 @@ func isIssuedAtValid(ctx context.Context, t Token) error {
 	skew := ValidationCtxSkew(ctx)        // MUST be populated
 	trunc := ValidationCtxTruncation(ctx) // MUST be populated
 
-	now := clock.Now().Truncate(trunc)
+	now := validationCtxNow(ctx, clock, trunc)
 	ttv := tv.Truncate(trunc)
 
 	if now.Before(ttv.Add(-1 * skew)) {
@@ -382,7 +403,7 @@ func isNbfValid(ctx context.Context, t Token) error {
 
 	// Truncation always happens even for trunc = 0 because
 	// we also use this to strip monotonic clocks
-	now := clock.Now().Truncate(trunc)
+	now := validationCtxNow(ctx, clock, trunc)
 	ttv := tv.Truncate(trunc)
 
 	// "now" cannot be before t - skew, so we check for now > t - skew
