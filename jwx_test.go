@@ -145,7 +145,6 @@ func TestJoseCompatibility(t *testing.T) {
 		return
 	}
 
-
 	t.Run("jwk", func(t *testing.T) {
 		testcases := []struct {
 			Name      string
