@@ -675,13 +675,14 @@ func isRegisteredUnderAnyCurve(alg jwa.SignatureAlgorithm) bool {
 }
 
 // validateAlgorithmForKey checks that alg is compatible with key.
-// Two classification failures are intentionally allowed through so the
-// crypto layer can handle them: (a) a nil key, used by custom
-// keyless algorithms registered via RegisterSigner (see GH910), and
-// (b) an opaque crypto.Signer whose .Public() is itself a crypto.Signer
-// — the one case AlgorithmsForKey refuses to recurse into (see the
-// guard in the default branch of AlgorithmsForKey). Every other
-// classification failure is surfaced so callers get a crisp
+// Three classification failures are intentionally allowed through:
+// (a) a nil key, used by keyless algorithms (see GH910);
+// (b) any key handed to an algorithm with a user-registered custom
+// Signer2/Verifier2 — custom implementations may accept arbitrary key
+// types that AlgorithmsForKey cannot classify; and
+// (c) an opaque crypto.Signer whose .Public() is itself a crypto.Signer,
+// the one case AlgorithmsForKey refuses to recurse into.
+// Every other classification failure is surfaced so callers get a crisp
 // option-boundary rejection instead of a deep-stack error.
 func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
 	if key == nil {
@@ -689,6 +690,9 @@ func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
 	}
 	algs, err := AlgorithmsForKey(key)
 	if err != nil {
+		if hasCustomSigVerifier(alg) {
+			return nil
+		}
 		if signer, ok := key.(crypto.Signer); ok {
 			if _, isSigner := signer.Public().(crypto.Signer); isSigner {
 				return nil
@@ -697,9 +701,30 @@ func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
 		return err
 	}
 	if !slices.Contains(algs, alg) {
+		if hasCustomSigVerifier(alg) {
+			return nil
+		}
 		return fmt.Errorf(`algorithm %q is not compatible with key type %T`, alg, key)
 	}
 	return nil
+}
+
+// hasCustomSigVerifier reports whether a non-default Signer or
+// Verifier has been registered for alg. When this is true, key-type
+// validation must be skipped: the custom implementation decides what
+// key types it accepts.
+func hasCustomSigVerifier(alg jwa.SignatureAlgorithm) bool {
+	if s, ok := signerDB.Load(alg); ok {
+		if _, isDefault := s.(defaultSigner); !isDefault {
+			return true
+		}
+	}
+	if v, ok := verifierDB.Load(alg); ok {
+		if _, isDefault := v.(defaultVerifier); !isDefault {
+			return true
+		}
+	}
+	return false
 }
 
 // Settings allows you to set global settings for JWS operations.
