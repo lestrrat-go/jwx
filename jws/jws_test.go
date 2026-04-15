@@ -34,7 +34,6 @@ import (
 	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/lestrrat-go/jwx/v4/jws"
 	"github.com/lestrrat-go/jwx/v4/jws/jwsbb"
-	"github.com/lestrrat-go/jwx/v4/jwt"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1450,7 +1449,10 @@ func TestGH681(t *testing.T) {
 
 func TestGH840(t *testing.T) {
 	// Go 1.19+ panics if elliptic curve operations are called against
-	// a point that's _NOT_ on the curve
+	// a point that's _NOT_ on the curve. defaultParseKey calls Validate()
+	// on the imported key so an untrusted JWK with an off-curve point is
+	// rejected at the trust boundary — no bad key ever reaches jws.Sign
+	// / jwt.Parse / jwk.PublicKeyOf.
 	untrustedJWK := []byte(`{
 		"kty": "EC",
 		"crv": "P-256",
@@ -1459,32 +1461,8 @@ func TestGH840(t *testing.T) {
 		"d": "870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE"
 	}`)
 
-	// Parse, serialize, slice and dice JWKs!
-	privkey, err := jwk.ParseKey[jwk.Key](untrustedJWK)
-	require.NoError(t, err, `jwk.ParseKey should succeed`)
-
-	pubkey, err := jwk.PublicKeyOf(privkey)
-	require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
-
-	tok, err := jwt.NewBuilder().
-		Issuer(`github.com/lestrrat-go/jwx`).
-		IssuedAt(time.Now()).
-		Build()
-	require.NoError(t, err, `jwt.NewBuilder should succeed`)
-
-	// As of go1.24.0, generating a signature with a private key that has
-	// X/Y that's not on the curve will fail, but all go < 1.24 will succeed.
-	// Instead of checking the version, we'll just check if the operation fails,
-	// and if it does we won't run the check for jwt.Parse
-	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.ES256(), privkey))
-	if err != nil {
-		require.Error(t, err, `jwt.Sign should fail`)
-		return
-	}
-	require.NoError(t, err, `jwt.Sign should succeed`)
-
-	_, err = jwt.Parse(signed, jwt.WithKey(jwa.ES256(), pubkey))
-	require.Error(t, err, `jwt.Parse should FAIL`) // pubkey's X/Y is not on the curve
+	_, err := jwk.ParseKey[jwk.Key](untrustedJWK)
+	require.Error(t, err, `jwk.ParseKey must reject an off-curve ECDSA JWK`)
 }
 
 func TestGH888(t *testing.T) {
