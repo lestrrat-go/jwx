@@ -89,8 +89,15 @@ func (s *set) AddKey(key Key) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if reflect.ValueOf(key).IsNil() {
-		panic("nil key")
+	rv := reflect.ValueOf(key)
+	if !rv.IsValid() {
+		return fmt.Errorf(`(jwk.Set).AddKey: nil key`)
+	}
+	switch rv.Kind() {
+	case reflect.Ptr, reflect.Interface, reflect.Chan, reflect.Func, reflect.Map, reflect.Slice:
+		if rv.IsNil() {
+			return fmt.Errorf(`(jwk.Set).AddKey: nil key`)
+		}
 	}
 
 	if i := s.indexNL(key); i > -1 {
