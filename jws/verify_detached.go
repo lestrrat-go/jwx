@@ -32,6 +32,17 @@ import (
 // (`{` → JSON, otherwise compact). Passing jws.WithCompact() or
 // jws.WithJSON() overrides auto-detection.
 //
+// VerifyDetached does not enforce a size limit on the incoming JWS buffer in
+// either compact or JSON form. Callers are expected to gate the input before
+// passing it to this function. This matters both for malicious input and for
+// accidental misuse: callers may mistakenly pass a regular JWS carrying an
+// in-band payload when this API expects a detached-payload form. Detached JWS
+// is commonly used specifically when payloads are very large, so accidentally
+// passing a regular JWS can turn that payload back into a large in-memory
+// input buffer before verification even begins. If the JWS comes from an
+// untrusted source, the caller should bound its size and reject inputs that
+// are not already in the detached shape expected by this API.
+//
 // The payload must be the raw, unencoded payload — not base64url-encoded.
 //
 // The payload reader is consumed exactly once during verification. If
