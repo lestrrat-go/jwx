@@ -78,54 +78,94 @@ func Import[T Key](raw any) (T, error) {
 	return result, nil
 }
 
+func validateImportedKey(key Key) error {
+	if v, ok := key.(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return importerr(`key validation failed: %w`, err)
+		}
+	}
+	return nil
+}
+
 func doImport(raw any) (Key, error) {
 	if raw == nil {
 		return nil, importerr(`a non-nil key is required`)
 	}
 
+	var (
+		key     Key
+		err     error
+		handled bool
+	)
+
 	// Fast path: type switch for built-in types avoids reflect.TypeOf + mutex
 	switch v := raw.(type) {
 	case *rsa.PrivateKey:
-		return importRSAPrivateKeyPtr(v)
+		handled = true
+		key, err = importRSAPrivateKeyPtr(v)
 	case *rsa.PublicKey:
-		return importRSAPublicKeyPtr(v)
+		handled = true
+		key, err = importRSAPublicKeyPtr(v)
 	case rsa.PrivateKey:
-		return importRSAPrivateKey(v)
+		handled = true
+		key, err = importRSAPrivateKey(v)
 	case rsa.PublicKey:
-		return importRSAPublicKey(v)
+		handled = true
+		key, err = importRSAPublicKey(v)
 	case *ecdsa.PrivateKey:
-		return importECDSAPrivateKeyPtr(v)
+		handled = true
+		key, err = importECDSAPrivateKeyPtr(v)
 	case *ecdsa.PublicKey:
-		return importECDSAPublicKeyPtr(v)
+		handled = true
+		key, err = importECDSAPublicKeyPtr(v)
 	case ecdsa.PrivateKey:
-		return importECDSAPrivateKey(v)
+		handled = true
+		key, err = importECDSAPrivateKey(v)
 	case ecdsa.PublicKey:
-		return importECDSAPublicKey(v)
+		handled = true
+		key, err = importECDSAPublicKey(v)
 	case ed25519.PrivateKey:
-		return importEd25519PrivateKey(v)
+		handled = true
+		key, err = importEd25519PrivateKey(v)
 	case ed25519.PublicKey:
-		return importEd25519PublicKey(v)
+		handled = true
+		key, err = importEd25519PublicKey(v)
 	case *ecdh.PrivateKey:
-		return importECDHPrivateKeyPtr(v)
+		handled = true
+		key, err = importECDHPrivateKeyPtr(v)
 	case *ecdh.PublicKey:
-		return importECDHPublicKeyPtr(v)
+		handled = true
+		key, err = importECDHPublicKeyPtr(v)
 	case ecdh.PrivateKey:
-		return importECDHPrivateKey(v)
+		handled = true
+		key, err = importECDHPrivateKey(v)
 	case ecdh.PublicKey:
-		return importECDHPublicKey(v)
+		handled = true
+		key, err = importECDHPublicKey(v)
 	case []byte:
-		return importSymmetricKey(v)
+		handled = true
+		key, err = importSymmetricKey(v)
 	}
 
-	// Slow path: registered importers for custom/extension types
-	muKeyImporters.RLock()
-	conv, ok := keyImporters[reflect.TypeOf(raw)]
-	muKeyImporters.RUnlock()
-	if !ok {
-		return nil, importerr(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
+	if !handled {
+		// Slow path: registered importers for custom/extension types
+		muKeyImporters.RLock()
+		conv, ok := keyImporters[reflect.TypeOf(raw)]
+		muKeyImporters.RUnlock()
+		if !ok {
+			return nil, importerr(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
+		}
+
+		key, err = conv.Import(raw)
 	}
 
-	return conv.Import(raw)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateImportedKey(key); err != nil {
+		return nil, err
+	}
+	return key, nil
 }
 
 // PublicSetOf returns a new jwk.Set consisting of

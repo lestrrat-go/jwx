@@ -18,6 +18,8 @@ func init() {
 	panicOnRegistrationError(RegisterKeyExporter(KeyKind(jwa.RSA().String()), KeyExportFunc(rsaJWKToRaw)))
 }
 
+const minRSAModulusBits = 2048
+
 func (k *rsaPrivateKey) Import(rawKey *rsa.PrivateKey) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
@@ -103,16 +105,44 @@ func (k *rsaPublicKey) Import(rawKey *rsa.PublicKey) error {
 	return nil
 }
 
-func buildRSAPublicKey(key *rsa.PublicKey, n, e []byte) error {
+func validateRSAModulusAndExponent(n, e []byte) (*big.Int, error) {
+	n = trimLeadingZeroBytes(n)
+	if len(n) == 0 {
+		return nil, fmt.Errorf(`missing "n" value`)
+	}
+
+	bigN := new(big.Int).SetBytes(n)
+	if bigN.BitLen() < minRSAModulusBits {
+		return nil, fmt.Errorf(`rsa modulus too small: got %d bits, need at least %d`, bigN.BitLen(), minRSAModulusBits)
+	}
+
+	e = trimLeadingZeroBytes(e)
+	if len(e) == 0 {
+		return nil, fmt.Errorf(`missing "e" value`)
+	}
+
 	bigE := new(big.Int).SetBytes(e)
+	if bigE.Cmp(big.NewInt(3)) < 0 || bigE.Bit(0) == 0 {
+		return nil, fmt.Errorf(`invalid rsa public exponent: must be an odd integer >= 3`)
+	}
+
 	// rsa.PublicKey.E is a Go int. Reject exponents that do not fit on the
 	// current platform (e.g. GOARCH=386). Without this guard, Int64()/int()
 	// silently truncates, causing the materialized key to disagree with the
 	// JSON bytes and breaking RFC 7638 thumbprint uniqueness.
 	if bigE.BitLen() >= bits.UintSize {
-		return fmt.Errorf(`rsa public exponent too large for this platform: %d bits (max %d)`, bigE.BitLen(), bits.UintSize-1)
+		return nil, fmt.Errorf(`rsa public exponent too large for this platform: %d bits (max %d)`, bigE.BitLen(), bits.UintSize-1)
 	}
-	key.N = new(big.Int).SetBytes(n)
+
+	return bigE, nil
+}
+
+func buildRSAPublicKey(key *rsa.PublicKey, n, e []byte) error {
+	bigE, err := validateRSAModulusAndExponent(n, e)
+	if err != nil {
+		return err
+	}
+	key.N = new(big.Int).SetBytes(trimLeadingZeroBytes(n))
 	key.E = int(bigE.Int64())
 	return nil
 }
@@ -367,15 +397,8 @@ func validateRSAKey(key interface {
 	if !ok {
 		return fmt.Errorf(`missing "e" value`)
 	}
-
-	if len(n) == 0 {
-		// Ideally we would like to check for the actual length, but unlike
-		// EC keys, we have nothing in the key itself that will tell us
-		// how many bits this key should have.
-		return fmt.Errorf(`missing "n" value`)
-	}
-	if len(e) == 0 {
-		return fmt.Errorf(`missing "e" value`)
+	if _, err := validateRSAModulusAndExponent(n, e); err != nil {
+		return err
 	}
 	if checkPrivate {
 		if priv, ok := key.(keyWithD); ok {
