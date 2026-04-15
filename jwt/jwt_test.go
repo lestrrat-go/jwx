@@ -762,6 +762,88 @@ func TestParseRequest(t *testing.T) {
 			},
 		},
 		{
+			Name: "Authorization header: Bearer scheme is case-insensitive (lowercase)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "bearer "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+			},
+		},
+		{
+			Name: "Authorization header: Bearer scheme is case-insensitive (uppercase)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "BEARER "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+			},
+		},
+		{
+			Name: "Authorization header: Bearer scheme is case-insensitive (mixed case)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "BeArEr "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+			},
+		},
+		{
+			Name: "Authorization header: Bearer with tab separator",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "Bearer\t"+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+			},
+		},
+		{
+			Name: "Authorization header: Bearer with multiple spaces",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "Bearer  "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+			},
+		},
+		{
+			// Regression: RFC 6750 ABNF requires 1*SP between scheme and
+			// credentials. Old code stripped "Bearer" without a separator and
+			// silently accepted concatenated forms like "Bearer<token>".
+			Name: "Authorization header: Bearer without separator is rejected",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "Bearer"+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+			},
+			Error: true,
+		},
+		{
+			Name: "Authorization header: non-Bearer scheme is rejected",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "Basic "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+			},
+			Error: true,
+		},
+		{
 			Name: "Token in Authorization header (w/o extra options, using jwk.Set)",
 			Request: func() *http.Request {
 				req := httptest.NewRequest(http.MethodGet, u, nil)
