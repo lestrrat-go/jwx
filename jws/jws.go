@@ -701,13 +701,26 @@ func isRegisteredUnderAnyCurve(alg jwa.SignatureAlgorithm) bool {
 }
 
 // validateAlgorithmForKey checks that alg is compatible with key.
-// If the key type is not recognized (e.g. an opaque crypto.Signer whose
-// .Public() also returns an unrecognized type), validation is skipped
-// and the crypto layer will catch any real incompatibility.
+// Two classification failures are intentionally allowed through so the
+// crypto layer can handle them: (a) a nil key, used by custom
+// keyless algorithms registered via RegisterSigner (see GH910), and
+// (b) an opaque crypto.Signer whose .Public() is itself a crypto.Signer
+// — the one case AlgorithmsForKey refuses to recurse into (see the
+// guard in the default branch of AlgorithmsForKey). Every other
+// classification failure is surfaced so callers get a crisp
+// option-boundary rejection instead of a deep-stack error.
 func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
+	if key == nil {
+		return nil
+	}
 	algs, err := AlgorithmsForKey(key)
 	if err != nil {
-		return nil //nolint:nilerr // intentional: unrecognized key types skip validation
+		if signer, ok := key.(crypto.Signer); ok {
+			if _, isSigner := signer.Public().(crypto.Signer); isSigner {
+				return nil
+			}
+		}
+		return err
 	}
 	if !slices.Contains(algs, alg) {
 		return fmt.Errorf(`algorithm %q is not compatible with key type %T`, alg, key)
