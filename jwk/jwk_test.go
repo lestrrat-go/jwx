@@ -11,6 +11,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -2202,6 +2203,44 @@ func TestExportEmbeddedKey(t *testing.T) {
 		require.NoError(t, err, "jwk.Export should succeed with double indirect embed")
 		_ = rawKeyV
 	})
+}
+
+func TestPEMDecodeFunc(t *testing.T) {
+	// PEMDecodeFunc should adapt a plain function to PEMDecoder and
+	// forward the call verbatim.
+	wantRaw := []byte("raw")
+	wantRest := []byte("rest")
+	wantErr := errors.New("boom")
+	var got []byte
+	var dec jwk.PEMDecoder = jwk.PEMDecodeFunc(func(src []byte) (any, []byte, error) {
+		got = src
+		return wantRaw, wantRest, wantErr
+	})
+
+	raw, rest, err := dec.Decode([]byte("src"))
+	require.Equal(t, []byte("src"), got, "adapter should forward the input")
+	require.Equal(t, any(wantRaw), raw)
+	require.Equal(t, wantRest, rest)
+	require.ErrorIs(t, err, wantErr)
+}
+
+func TestOKPRawKeyImporterFunc(t *testing.T) {
+	// OKPRawKeyImporterFunc should adapt a plain function to the
+	// OKPRawKeyImporter interface and forward the call verbatim.
+	wantX := []byte{0x01}
+	wantD := []byte{0x02}
+	var got any
+	var imp jwk.OKPRawKeyImporter = jwk.OKPRawKeyImporterFunc(func(key any) (jwa.EllipticCurveAlgorithm, []byte, []byte, bool) {
+		got = key
+		return jwa.Ed25519(), wantX, wantD, true
+	})
+
+	crv, x, d, ok := imp.ImportOKPRawKey("sentinel")
+	require.True(t, ok)
+	require.Equal(t, "sentinel", got)
+	require.Equal(t, jwa.Ed25519(), crv)
+	require.Equal(t, wantX, x)
+	require.Equal(t, wantD, d)
 }
 
 func TestWithPEMDecoder(t *testing.T) {
