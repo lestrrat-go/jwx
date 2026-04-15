@@ -98,7 +98,11 @@ func getOutput(filename string) (io.WriteCloser, error) {
 	case "":
 		return nil, fmt.Errorf(`output must be a file name, or "-" for STDOUT`)
 	default:
-		f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644)
+		// Output may be private key material (jwk generate), decrypted
+		// plaintext (jwe decrypt), or an extracted JWS payload (jws verify).
+		// Use 0600 and always truncate so a shorter re-run cannot leak
+		// tail bytes left over from a previous invocation.
+		f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0600)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to create file %s: %w`, filename, err)
 		}
