@@ -230,7 +230,6 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 			t.Run("WithKeySet", func(t *testing.T) {
 				pkJwk, err := jwk.Import(rawkey)
 				require.NoError(t, err, `jwk.New should succeed`)
-				// Keys are not going to be selected without an algorithm
 				require.NoError(t, pkJwk.Set(jwe.AlgorithmKey, jwa.RSA_OAEP()), `jwk.Set should succeed`)
 				set := jwk.NewSet()
 				set.AddKey(pkJwk)
@@ -238,6 +237,23 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
 				var used any
 				plaintext, err = jwe.Decrypt(encrypted, jwe.WithKeySet(set, jwe.WithRequireKid(false)), jwe.WithKeyUsed(&used))
 				require.NoError(t, err)
+				require.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext")
+				require.Equal(t, pkJwk, used)
+			})
+			t.Run("WithKeySet (JWK without alg)", func(t *testing.T) {
+				// Regression: keys from JWK Sets that omit "alg" (common for
+				// IdP-published encryption keys) must still be selectable
+				// when the recipient's header declares the algorithm.
+				pkJwk, err := jwk.Import(rawkey)
+				require.NoError(t, err, `jwk.Import should succeed`)
+				_, hasAlg := pkJwk.Algorithm()
+				require.False(t, hasAlg, `imported JWK should have no "alg" field`)
+				set := jwk.NewSet()
+				require.NoError(t, set.AddKey(pkJwk))
+
+				var used any
+				plaintext, err = jwe.Decrypt(encrypted, jwe.WithKeySet(set, jwe.WithRequireKid(false)), jwe.WithKeyUsed(&used))
+				require.NoError(t, err, `jwe.Decrypt with alg-less JWK should succeed`)
 				require.Equal(t, payload, string(plaintext), "jwe.Decrypt should produce the same plaintext")
 				require.Equal(t, pkJwk, used)
 			})
