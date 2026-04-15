@@ -987,6 +987,83 @@ func TestPublicKeyOf(t *testing.T) {
 	})
 }
 
+func TestPublicSetOfSymmetricRejection(t *testing.T) {
+	t.Parallel()
+
+	makeRSA := func(t *testing.T, kid string) jwk.Key {
+		t.Helper()
+		rawRSA, err := rsa.GenerateKey(rand.Reader, 2048)
+		require.NoError(t, err, `rsa.GenerateKey should succeed`)
+		k, err := jwk.Import[jwk.Key](rawRSA)
+		require.NoError(t, err, `jwk.Import RSA should succeed`)
+		require.NoError(t, k.Set(jwk.KeyIDKey, kid), `Set kid should succeed`)
+		return k
+	}
+	makeHMAC := func(t *testing.T, kid string) jwk.Key {
+		t.Helper()
+		k, err := jwk.Import[jwk.Key]([]byte("top-secret-hmac-material"))
+		require.NoError(t, err, `jwk.Import symmetric should succeed`)
+		require.NoError(t, k.Set(jwk.KeyIDKey, kid), `Set kid should succeed`)
+		return k
+	}
+
+	t.Run("mixed set rejects symmetric by default", func(t *testing.T) {
+		t.Parallel()
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(makeRSA(t, "rsa-1")))
+		require.NoError(t, set.AddKey(makeHMAC(t, "hmac-1")))
+
+		_, err := jwk.PublicSetOf(set)
+		require.Error(t, err, `PublicSetOf should reject a set containing a symmetric key`)
+		require.ErrorContains(t, err, "symmetric")
+		require.ErrorContains(t, err, `"hmac-1"`)
+	})
+
+	t.Run("mixed set passes through with WithAllowSymmetric(true)", func(t *testing.T) {
+		t.Parallel()
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(makeRSA(t, "rsa-1")))
+		require.NoError(t, set.AddKey(makeHMAC(t, "hmac-1")))
+
+		pub, err := jwk.PublicSetOf(set, jwk.WithAllowSymmetric(true))
+		require.NoError(t, err, `PublicSetOf with WithAllowSymmetric(true) should succeed`)
+		require.Equal(t, 2, pub.Len(), `resulting set should still contain both keys`)
+
+		buf, err := json.Marshal(pub)
+		require.NoError(t, err, `json.Marshal should succeed`)
+		// Pin the dangerous opt-in behavior: secret material is still present.
+		require.Contains(t, string(buf), `"k":`, `opt-in pass-through keeps the secret in the output`)
+	})
+
+	t.Run("pure symmetric set rejected by default", func(t *testing.T) {
+		t.Parallel()
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(makeHMAC(t, "hmac-only")))
+
+		_, err := jwk.PublicSetOf(set)
+		require.Error(t, err, `PublicSetOf should reject a purely symmetric set`)
+		require.ErrorContains(t, err, `"hmac-only"`)
+	})
+
+	t.Run("empty set succeeds", func(t *testing.T) {
+		t.Parallel()
+		pub, err := jwk.PublicSetOf(jwk.NewSet())
+		require.NoError(t, err, `PublicSetOf on empty set should succeed`)
+		require.Equal(t, 0, pub.Len(), `result should be empty`)
+	})
+
+	t.Run("pure asymmetric set is unaffected", func(t *testing.T) {
+		t.Parallel()
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(makeRSA(t, "rsa-a")))
+		require.NoError(t, set.AddKey(makeRSA(t, "rsa-b")))
+
+		pub, err := jwk.PublicSetOf(set)
+		require.NoError(t, err, `PublicSetOf on asymmetric-only set should succeed`)
+		require.Equal(t, 2, pub.Len())
+	})
+}
+
 func TestIssue207(t *testing.T) {
 	t.Parallel()
 	const src = `{"kty":"EC","alg":"ECMR","crv":"P-521","key_ops":["deriveKey"],"x":"AJwCS845x9VljR-fcrN2WMzIJHDYuLmFShhyu8ci14rmi2DMFp8txIvaxG8n7ZcODeKIs1EO4E_Bldm_pxxs8cUn","y":"ASjz754cIQHPJObihPV8D7vVNfjp_nuwP76PtbLwUkqTk9J1mzCDKM3VADEk-Z1tP-DHiwib6If8jxnb_FjNkiLJ"}`

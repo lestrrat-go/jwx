@@ -66,6 +66,18 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 ## JWK
 
+* `jwk.PublicSetOf` now returns an error if the input set contains a
+  symmetric (`oct`) key, because the "public" form of a symmetric key
+  would be the secret itself — publishing the result (e.g. as
+  `/.well-known/jwks.json`) would leak the HMAC secret. Callers who
+  genuinely want the legacy pass-through can opt in with
+  `jwk.PublicSetOf(set, jwk.WithAllowSymmetric(true))`. The signature
+  is now variadic (`PublicSetOf(v Set, options ...PublicSetOption)`),
+  so existing call sites compile unchanged.
+
+  `jwk.PublicKeyOf` on a single symmetric key is unchanged — it still
+  returns the key as-is, matching its documented behavior.
+
 * `jwk.Import()` is now generic: `jwk.Import[T Key](raw any) (T, error)`.
   This replaces the previous `jwk.Import()` which returned an untyped `jwk.Key`.
 
