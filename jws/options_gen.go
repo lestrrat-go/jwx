@@ -408,6 +408,17 @@ func WithFS(v fs.FS) ReadFileOption {
 // It is highly recommended that you fix your key to contain a proper `alg`
 // header field instead of resorting to using this option, but sometimes
 // it just needs to happen.
+//
+// Fan-out and DoS considerations: when combined with `WithRequireKid(false)`
+// against a large JWKS, verification attempts scale with the number of
+// keys in the set. If the JWS protected header advertises an `alg` (as
+// required by RFC 7515 §4.1.1), only keys whose type is compatible with
+// that algorithm are tried, so the cost is bounded by the number of
+// type-compatible keys. If the header has no `alg`, every inferred
+// algorithm is tried against every candidate key, and the cost becomes
+// `N_keys × N_algs_per_keytype`. Operators exposing verification to
+// untrusted input should pair this option with `WithMaxSignatures` and
+// keep their JWKS bounded.
 func WithInferAlgorithmFromKey(v bool) WithKeySetSuboption {
 	return &withKeySetSuboption{option.New(identInferAlgorithmFromKey{}, v)}
 }
