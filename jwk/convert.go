@@ -456,7 +456,7 @@ func doExport(key Key, hint any) (any, error) {
 // hold muKeyExporters.RLock.
 func findExporters(key Key) []KeyExporter {
 	if ki, ok := key.(KeyKinder); ok {
-		ident := ki.KeyKind()
+		ident := ki.KeyKind().normalize()
 		if exporters, ok := keyExporters[ident]; ok {
 			return exporters
 		}
