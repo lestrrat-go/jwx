@@ -727,6 +727,7 @@ func TestAssignKeyID(t *testing.T) {
 	t.Parallel()
 
 	t.Run("assigns kid when missing", func(t *testing.T) {
+		t.Parallel()
 		generators := []func() (jwk.Key, error){
 			jwxtest.GenerateRsaJwk,
 			jwxtest.GenerateRsaPublicJwk,
@@ -750,6 +751,7 @@ func TestAssignKeyID(t *testing.T) {
 	})
 
 	t.Run("preserves existing kid without force", func(t *testing.T) {
+		t.Parallel()
 		k, err := jwxtest.GenerateRsaJwk()
 		require.NoError(t, err, `jwk generation should be successful`)
 		require.NoError(t, k.Set(jwk.KeyIDKey, "preset"), `pre-setting kid should succeed`)
@@ -760,6 +762,7 @@ func TestAssignKeyID(t *testing.T) {
 	})
 
 	t.Run("overwrites existing kid with force", func(t *testing.T) {
+		t.Parallel()
 		k, err := jwxtest.GenerateRsaJwk()
 		require.NoError(t, err, `jwk generation should be successful`)
 		require.NoError(t, k.Set(jwk.KeyIDKey, "preset"), `pre-setting kid should succeed`)
@@ -774,6 +777,7 @@ func TestAssignKeyID(t *testing.T) {
 	})
 
 	t.Run("force honors WithThumbprintHash", func(t *testing.T) {
+		t.Parallel()
 		k, err := jwxtest.GenerateRsaJwk()
 		require.NoError(t, err, `jwk generation should be successful`)
 		require.NoError(t, k.Set(jwk.KeyIDKey, "preset"), `pre-setting kid should succeed`)
