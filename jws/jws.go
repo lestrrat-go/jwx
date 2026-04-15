@@ -493,6 +493,7 @@ func UnregisterCustomField(name string) {
 // Helpers for signature verification
 var muAlgorithmMaps sync.RWMutex
 var keyTypeToAlgorithms = make(map[jwa.KeyType][]jwa.SignatureAlgorithm)
+var algorithmToKeyTypes = make(map[jwa.SignatureAlgorithm][]jwa.KeyType)
 var curveToAlgorithms = make(map[jwa.EllipticCurveAlgorithm][]jwa.SignatureAlgorithm)
 
 func init() {
@@ -533,6 +534,9 @@ func RegisterAlgorithmForKeyType(kty jwa.KeyType, alg jwa.SignatureAlgorithm) er
 	muAlgorithmMaps.Lock()
 	defer muAlgorithmMaps.Unlock()
 	keyTypeToAlgorithms[kty] = append(keyTypeToAlgorithms[kty], alg)
+	if !slices.Contains(algorithmToKeyTypes[alg], kty) {
+		algorithmToKeyTypes[alg] = append(algorithmToKeyTypes[alg], kty)
+	}
 	return nil
 }
 

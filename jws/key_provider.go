@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"slices"
 	"sync"
 
 	"github.com/lestrrat-go/jwx/v4/jwa"
@@ -206,17 +207,54 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 		return nil
 	}
 
-	// Otherwise just try all keys
+	// Otherwise just try all keys.
+	//
+	// When the protected header advertises an `alg`, keys whose type
+	// cannot produce that algorithm are skipped before reaching
+	// selectKey. This bounds verification fan-out to
+	// N_keys_of_matching_type instead of N_keys against a heterogeneous
+	// JWKS. The skip is semantics-preserving: validateAlgorithmForKey
+	// in verify_context would reject the incompatible (alg, key) pair
+	// before running any verifier anyway.
+	//
+	// The allowed-KeyType set is computed once per FetchKeys call so
+	// the per-key check is a cheap KeyType equality over a tiny slice
+	// (typically 1 element), not a full AlgorithmsForKey recomputation.
+	// When allowedKtys is nil (no header alg, or alg has no registered
+	// key type), the filter is skipped and existing behavior is
+	// preserved.
+	var allowedKtys []jwa.KeyType
+	if hdrAlg, ok := sig.ProtectedHeaders().Algorithm(); ok {
+		allowedKtys = keyTypesForAlgorithm(hdrAlg)
+	}
 	for i := range kp.set.Len() {
 		key, ok := kp.set.Key(i)
 		if !ok {
 			return fmt.Errorf(`failed to get key at index %d`, i)
+		}
+		if allowedKtys != nil && !slices.Contains(allowedKtys, key.KeyType()) {
+			continue
 		}
 		if err := kp.selectKey(sink, key, sig, msg); err != nil {
 			continue
 		}
 	}
 	return nil
+}
+
+// keyTypesForAlgorithm returns the registered key types that can
+// produce the given signature algorithm. The inverse map is maintained
+// at registration time so this is an O(1) lookup. Returns nil if no
+// key type is registered for alg (e.g. an unknown algorithm from an
+// extension that isn't loaded), which signals callers to skip the
+// prefilter and fall through to their existing behavior.
+func keyTypesForAlgorithm(alg jwa.SignatureAlgorithm) []jwa.KeyType {
+	muAlgorithmMaps.RLock()
+	defer muAlgorithmMaps.RUnlock()
+	// Copy so the caller can safely iterate without holding the
+	// lock; RegisterAlgorithmForKeyType may append concurrently
+	// after we return. Typical length is 1.
+	return slices.Clone(algorithmToKeyTypes[alg])
 }
 
 type jkuProvider struct {
