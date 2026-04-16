@@ -139,7 +139,7 @@ func RegisterKeyType(algorithms ...KeyType) error {
 		}
 		allKeyType[alg.String()] = alg
 	}
-	rebuildKeyType()
+	rebuildKeyTypeLocked()
 	return nil
 }
 
@@ -154,10 +154,10 @@ func UnregisterKeyType(algorithms ...KeyType) {
 		}
 		delete(allKeyType, alg.String())
 	}
-	rebuildKeyType()
+	rebuildKeyTypeLocked()
 }
 
-func rebuildKeyType() {
+func rebuildKeyTypeLocked() {
 	list := make([]KeyType, 0, len(allKeyType))
 	for _, v := range allKeyType {
 		list = append(list, v)

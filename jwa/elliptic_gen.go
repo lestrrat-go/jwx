@@ -145,7 +145,7 @@ func RegisterEllipticCurveAlgorithm(algorithms ...EllipticCurveAlgorithm) error 
 		}
 		allEllipticCurveAlgorithm[alg.String()] = alg
 	}
-	rebuildEllipticCurveAlgorithm()
+	rebuildEllipticCurveAlgorithmLocked()
 	return nil
 }
 
@@ -160,10 +160,10 @@ func UnregisterEllipticCurveAlgorithm(algorithms ...EllipticCurveAlgorithm) {
 		}
 		delete(allEllipticCurveAlgorithm, alg.String())
 	}
-	rebuildEllipticCurveAlgorithm()
+	rebuildEllipticCurveAlgorithmLocked()
 }
 
-func rebuildEllipticCurveAlgorithm() {
+func rebuildEllipticCurveAlgorithmLocked() {
 	list := make([]EllipticCurveAlgorithm, 0, len(allEllipticCurveAlgorithm))
 	for _, v := range allEllipticCurveAlgorithm {
 		list = append(list, v)

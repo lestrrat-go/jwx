@@ -329,7 +329,7 @@ func generateAlgRegistration(o *codegen.Output, t Algorithm) {
 	o.L("}")
 	o.L("all%[1]s[alg.String()] = alg", t.Name)
 	o.L("}")
-	o.L("rebuild%[1]s()", t.Name)
+	o.L("rebuild%[1]sLocked()", t.Name)
 	o.L("return nil")
 	o.L("}")
 
@@ -344,10 +344,10 @@ func generateAlgRegistration(o *codegen.Output, t Algorithm) {
 	o.L("}")
 	o.L("delete(all%[1]s, alg.String())", t.Name)
 	o.L("}")
-	o.L("rebuild%[1]s()", t.Name)
+	o.L("rebuild%[1]sLocked()", t.Name)
 	o.L("}")
 
-	o.LL("func rebuild%[1]s() {", t.Name)
+	o.LL("func rebuild%[1]sLocked() {", t.Name)
 	o.L("list := make([]%[1]s, 0, len(all%[1]s))", t.Name)
 	o.L("for _, v := range all%[1]s {", t.Name)
 	o.L("list = append(list, v)")

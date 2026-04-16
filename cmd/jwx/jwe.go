@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 
@@ -134,10 +133,20 @@ func makeJweDecryptCmd() *cli.Command {
 	var cmd cli.Command
 	cmd.Name = "decrypt"
 	cmd.Aliases = []string{"dec"}
+	cmd.UsageText = `jwx jwe decrypt [command options] FILE
+
+   Decrypts the JWE message in FILE using the specified key and
+   key encryption algorithm.
+   Use "-" as FILE to read from STDIN.
+
+   The user must explicitly provide "--key-encryption". This command
+   refuses to trust the recipient-header "alg" value to choose the
+   decryption primitive.
+`
 	cmd.Flags = []cli.Flag{
 		keyFlag("decrypt"),
 		keyFormatFlag(),
-		keyEncryptionFlag(false),
+		keyEncryptionFlag(true),
 		outputFlag(),
 	}
 	cmd.Action = func(c *cli.Context) error {
@@ -161,39 +170,19 @@ func makeJweDecryptCmd() *cli.Command {
 		}
 		key, _ := keyset.Key(0)
 
-		var decrypted []byte
-
-		if keyencalg := c.String("key-encryption"); keyencalg != "" {
-			var keyenc jwa.KeyEncryptionAlgorithm
-			{
-				v, ok := jwa.LookupKeyEncryptionAlgorithm(keyencalg)
-				if !ok {
-					return fmt.Errorf(`invalid key encryption algorithm %q`, keyencalg)
-				}
-				keyenc = v
-
+		keyencalg := c.String("key-encryption")
+		var keyenc jwa.KeyEncryptionAlgorithm
+		{
+			v, ok := jwa.LookupKeyEncryptionAlgorithm(keyencalg)
+			if !ok {
+				return fmt.Errorf(`invalid key encryption algorithm %q`, keyencalg)
 			}
+			keyenc = v
+		}
 
-			// if we have an explicit key encryption algorithm, we don't have to
-			// guess it.
-			v, err := jwe.Decrypt(buf, jwe.WithKey(keyenc, key))
-			if err != nil {
-				return fmt.Errorf(`failed to decrypt message: %w`, err)
-			}
-			decrypted = v
-		} else {
-			v, err := jwe.Decrypt(buf, jwe.WithKeyProvider(jwe.KeyProviderFunc(func(_ context.Context, sink jwe.KeySink, r jwe.Recipient, _ *jwe.Message) error {
-				alg, ok := r.Headers().Algorithm()
-				if !ok {
-					return fmt.Errorf(`failed to determine key encryption algorithm`)
-				}
-				sink.Key(alg, key)
-				return nil
-			})))
-			if err != nil {
-				return fmt.Errorf(`failed to decrypt message: %w`, err)
-			}
-			decrypted = v
+		decrypted, err := jwe.Decrypt(buf, jwe.WithKey(keyenc, key))
+		if err != nil {
+			return fmt.Errorf(`failed to decrypt message: %w`, err)
 		}
 
 		output, err := getOutput(c.String("output"))

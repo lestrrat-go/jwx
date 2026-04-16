@@ -201,7 +201,7 @@ func RegisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) error {
 		}
 		allSignatureAlgorithm[alg.String()] = alg
 	}
-	rebuildSignatureAlgorithm()
+	rebuildSignatureAlgorithmLocked()
 	return nil
 }
 
@@ -216,10 +216,10 @@ func UnregisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
 		}
 		delete(allSignatureAlgorithm, alg.String())
 	}
-	rebuildSignatureAlgorithm()
+	rebuildSignatureAlgorithmLocked()
 }
 
-func rebuildSignatureAlgorithm() {
+func rebuildSignatureAlgorithmLocked() {
 	list := make([]SignatureAlgorithm, 0, len(allSignatureAlgorithm))
 	for _, v := range allSignatureAlgorithm {
 		list = append(list, v)

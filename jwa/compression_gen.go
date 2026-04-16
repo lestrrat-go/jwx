@@ -114,7 +114,7 @@ func RegisterCompressionAlgorithm(algorithms ...CompressionAlgorithm) error {
 		}
 		allCompressionAlgorithm[alg.String()] = alg
 	}
-	rebuildCompressionAlgorithm()
+	rebuildCompressionAlgorithmLocked()
 	return nil
 }
 
@@ -129,10 +129,10 @@ func UnregisterCompressionAlgorithm(algorithms ...CompressionAlgorithm) {
 		}
 		delete(allCompressionAlgorithm, alg.String())
 	}
-	rebuildCompressionAlgorithm()
+	rebuildCompressionAlgorithmLocked()
 }
 
-func rebuildCompressionAlgorithm() {
+func rebuildCompressionAlgorithmLocked() {
 	list := make([]CompressionAlgorithm, 0, len(allCompressionAlgorithm))
 	for _, v := range allCompressionAlgorithm {
 		list = append(list, v)

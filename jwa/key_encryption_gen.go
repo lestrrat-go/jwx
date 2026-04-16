@@ -262,7 +262,7 @@ func RegisterKeyEncryptionAlgorithm(algorithms ...KeyEncryptionAlgorithm) error 
 		}
 		allKeyEncryptionAlgorithm[alg.String()] = alg
 	}
-	rebuildKeyEncryptionAlgorithm()
+	rebuildKeyEncryptionAlgorithmLocked()
 	return nil
 }
 
@@ -277,10 +277,10 @@ func UnregisterKeyEncryptionAlgorithm(algorithms ...KeyEncryptionAlgorithm) {
 		}
 		delete(allKeyEncryptionAlgorithm, alg.String())
 	}
-	rebuildKeyEncryptionAlgorithm()
+	rebuildKeyEncryptionAlgorithmLocked()
 }
 
-func rebuildKeyEncryptionAlgorithm() {
+func rebuildKeyEncryptionAlgorithmLocked() {
 	list := make([]KeyEncryptionAlgorithm, 0, len(allKeyEncryptionAlgorithm))
 	for _, v := range allKeyEncryptionAlgorithm {
 		list = append(list, v)

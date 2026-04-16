@@ -493,7 +493,15 @@ func Example_jws_verify_with_jwk_set() {
     }
 
     // This works, because we're telling it to infer the algorithm by the
-    // key type.
+    // key type. Beyond making verification succeed, WithInferAlgorithmFromKey
+    // is also the recommended defense against the classic JWT "alg confusion"
+    // attack: an attacker takes a token signed with an asymmetric algorithm
+    // such as RS256, rewrites its header to alg=HS256, and tricks a naive
+    // verifier into using the RSA *public* key as an HMAC secret — which the
+    // attacker also knows, so the forged signature verifies. Inferring the
+    // algorithm from the key type (RSA key ⇒ RS256, never HS256) makes the
+    // attacker-supplied alg header irrelevant. Prefer this option whenever
+    // your JWKs don't carry explicit "alg" metadata.
     if _, err := jws.Verify(signed, jws.WithKeySet(set, jws.WithInferAlgorithmFromKey(true), jws.WithRequireKid(false))); err != nil {
       fmt.Printf("Failed to verify using jwk.Set: %s", err)
       return
@@ -511,7 +519,9 @@ func Example_jws_verify_with_jwk_set() {
     }
 
     // This works, because the library can find a key matching the key ID,
-    // and it can infer the algorithm from the key type
+    // and it can infer the algorithm from the key type (see the alg-confusion
+    // note on the previous WithInferAlgorithmFromKey call for why this is
+    // the safe default when keys lack explicit "alg" metadata).
     if _, err := jws.Verify(signed, jws.WithKeySet(set, jws.WithInferAlgorithmFromKey(true))); err != nil {
       fmt.Printf("Failed to verify using jwk.Set: %s", err)
       return
