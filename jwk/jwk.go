@@ -72,7 +72,16 @@ func Import(raw any) (Key, error) {
 		return nil, importerr(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}
 
-	return conv.Import(raw)
+	key, err := conv.Import(raw)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := key.(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return nil, importerr(`key validation failed: %w`, err)
+		}
+	}
+	return key, nil
 }
 
 // PublicSetOf returns a new jwk.Set consisting of
@@ -685,6 +694,8 @@ func Configure(options ...GlobalOption) {
 	var strictKeyUsagePtr *bool
 	var maxFetchBodySizePtr *int64
 	var httpClientPtr *HTTPClient
+	var minRSAModulusBitsPtr *int64
+	var minRSAPublicExponentPtr *int64
 	for _, option := range options {
 		switch option.Ident() {
 		case identStrictKeyUsage{}:
@@ -708,6 +719,20 @@ func Configure(options ...GlobalOption) {
 				continue
 			}
 			httpClientPtr = &v
+		case identMinRSAModulusBits{}:
+			var v int
+			if err := option.Value(&v); err != nil {
+				continue
+			}
+			v64 := int64(v)
+			minRSAModulusBitsPtr = &v64
+		case identMinRSAPublicExponent{}:
+			var v int
+			if err := option.Value(&v); err != nil {
+				continue
+			}
+			v64 := int64(v)
+			minRSAPublicExponentPtr = &v64
 		}
 	}
 
@@ -721,6 +746,14 @@ func Configure(options ...GlobalOption) {
 
 	if httpClientPtr != nil {
 		setFetchHTTPClient(*httpClientPtr)
+	}
+
+	if minRSAModulusBitsPtr != nil {
+		rsaMinModulusBits.Store(*minRSAModulusBitsPtr)
+	}
+
+	if minRSAPublicExponentPtr != nil {
+		setMinRSAPublicExponent(int(*minRSAPublicExponentPtr))
 	}
 }
 
