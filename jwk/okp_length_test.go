@@ -2,6 +2,7 @@ package jwk_test
 
 import (
 	"crypto/ed25519"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -56,11 +57,15 @@ func TestOKPImportRejectsInvalidEd25519Lengths(t *testing.T) {
 		_, err := jwk.Import[jwk.OKPPublicKey](ed25519.PublicKey(make([]byte, ed25519.PublicKeySize-1)))
 		require.Error(t, err)
 		require.ErrorContains(t, err, "wrong public key size")
+		require.ErrorIs(t, err, jwk.ImportError())
+		require.True(t, errors.Is(err, jwk.ImportError()))
 	})
 
 	t.Run("PrivateKey", func(t *testing.T) {
 		_, err := jwk.Import[jwk.OKPPrivateKey](ed25519.PrivateKey(make([]byte, ed25519.PrivateKeySize-1)))
 		require.Error(t, err)
 		require.ErrorContains(t, err, "wrong private key size")
+		require.ErrorIs(t, err, jwk.ImportError())
+		require.True(t, errors.Is(err, jwk.ImportError()))
 	})
 }

@@ -422,6 +422,8 @@ There are other ways to creating keys from a raw key, but they require knowing i
 Use [`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Import) when you have a key type which you do not know its underlying type in advance.
 
 It automatically creates the appropriate underlying key based on the given argument type.
+The returned key has already passed `Validate()`, so malformed raw keys fail at
+import time instead of being returned for later validation.
 
 | Argument Type | Key Type | Note |
 |---------------|----------|------|

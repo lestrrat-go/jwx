@@ -3,6 +3,7 @@ package jwk_test
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"errors"
 	"math/big"
 	"testing"
 
@@ -86,6 +87,8 @@ func TestECDSAImportRejectsInvalidPoints(t *testing.T) {
 		}
 		_, err := jwk.Import[jwk.Key](bad)
 		require.Error(t, err, `jwk.Import must reject an off-curve ecdsa.PublicKey`)
+		require.ErrorIs(t, err, jwk.ImportError(), `Import error should be classified as jwk.ImportError`)
+		require.True(t, errors.Is(err, jwk.ImportError()), `errors.Is should match jwk.ImportError`)
 	})
 
 	t.Run("identity public key", func(t *testing.T) {
@@ -96,5 +99,7 @@ func TestECDSAImportRejectsInvalidPoints(t *testing.T) {
 		}
 		_, err := jwk.Import[jwk.Key](bad)
 		require.Error(t, err, `jwk.Import must reject the identity point`)
+		require.ErrorIs(t, err, jwk.ImportError(), `Import error should be classified as jwk.ImportError`)
+		require.True(t, errors.Is(err, jwk.ImportError()), `errors.Is should match jwk.ImportError`)
 	})
 }
