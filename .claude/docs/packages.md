@@ -20,6 +20,7 @@ Algorithm identifiers per RFC 7518. Registry pattern with thread-safe lookup.
 - Algorithm types: `SignatureAlgorithm`, `KeyEncryptionAlgorithm`, `ContentEncryptionAlgorithm`, `EllipticCurveAlgorithm`, `KeyType`, `CompressionAlgorithm`
 - **KeyAlgorithmFrom(v any) (KeyAlgorithm, error)** — convert string/typed algorithm to union interface
 - Per-type API: `New{Type}()`, `Lookup{Type}(name) (T, bool)`, `Register{Type}()`, `Unregister{Type}()`, `{Type}s() []T`
+  `Register{Type}()` is process-global; attempts to replace builtin identifiers such as `RS256` are ignored.
 - Constructor functions: `ES256()`, `RS256()`, `A128GCM()`, `P256()`, `Ed25519()`, etc.
 - Files: `jwa.go`, `secp2561k.go` + generated `*_gen.go`
 - Imports: internal/tokens
@@ -28,6 +29,7 @@ Algorithm identifiers per RFC 7518. Registry pattern with thread-safe lookup.
 
 JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 
+- **Configure(options ...GlobalOption)** — configure global jwk behavior (`WithStrictKeyUsage`, fetch defaults, RSA validation floors)
 - **Parse(src []byte, ...ParseOption) (Set, error)** / **ParseKey(data []byte, ...ParseOption) (Key, error)** — parse JWK/JWKS
 - **Fetch(ctx, url, ...FetchOption) (Set, error)** — HTTP fetch with optional whitelist, body size limit (default 10 MB via `WithMaxFetchBodySize`)
 - **DefaultHTTPClient() \*http.Client** — returns a new http.Client with library defaults (30s timeout, redirect policy)
@@ -36,6 +38,7 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 - **NewCache(ctx, client) (*Cache, error)** — auto-refreshing JWKS cache
 - **AssignKeyID(key Key, ...AssignKeyIDOption) error** — compute and set kid via thumbprint
 - **Pem(v any) ([]byte, error)** — PEM encode
+- Global options: `WithStrictKeyUsage(bool)`, `WithHTTPClient(HTTPClient)`, `WithMaxFetchBodySize(int64)`, `WithMinRSAModulusBits(int)`, `WithMinRSAPublicExponent(int)`
 - Key interfaces: `Key`, `Set`, `RSAPublicKey`, `RSAPrivateKey`, `ECDSAPublicKey`, `ECDSAPrivateKey`, `OKPPublicKey`, `OKPPrivateKey`, `SymmetricKey`
 - Extension: `RegisterCustomField()`, `RegisterKeyParser()`, `RegisterKeyImporter()`, `RegisterKeyExporter()`
 - Error sentinels: `ImportError()`, `ParseError()`, `WhitelistError()`, `ContinueError()`

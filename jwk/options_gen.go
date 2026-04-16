@@ -186,6 +186,8 @@ type identHTTPClient struct{}
 type identIgnoreParseError struct{}
 type identLocalRegistry struct{}
 type identMaxFetchBodySize struct{}
+type identMinRSAModulusBits struct{}
+type identMinRSAPublicExponent struct{}
 type identPEM struct{}
 type identPEMDecoder struct{}
 type identStrictKeyUsage struct{}
@@ -223,6 +225,14 @@ func (identLocalRegistry) String() string {
 
 func (identMaxFetchBodySize) String() string {
 	return "WithMaxFetchBodySize"
+}
+
+func (identMinRSAModulusBits) String() string {
+	return "WithMinRSAModulusBits"
+}
+
+func (identMinRSAPublicExponent) String() string {
+	return "WithMinRSAPublicExponent"
 }
 
 func (identPEM) String() string {
@@ -365,6 +375,25 @@ func withLocalRegistry(v *json.Registry) ParseOption {
 // override.
 func WithMaxFetchBodySize(v int64) GlobalFetchOption {
 	return &globalFetchOption{option.New(identMaxFetchBodySize{}, v)}
+}
+
+// WithMinRSAModulusBits specifies the minimum RSA modulus size, in bits,
+// accepted by JWK validation and raw/PEM/X.509 import.
+//
+// The default is 2048. Lower this only for legacy interoperability with
+// older key material. A value of 0 disables the modulus-size floor.
+func WithMinRSAModulusBits(v int) GlobalOption {
+	return &globalOption{option.New(identMinRSAModulusBits{}, v)}
+}
+
+// WithMinRSAPublicExponent specifies the minimum RSA public exponent
+// accepted by JWK validation and raw/PEM/X.509 import.
+//
+// The default is 3. The exponent must still be odd and fit in a Go `int`.
+// Lower this only for legacy interoperability. A value of 0 disables the
+// minimum-exponent floor.
+func WithMinRSAPublicExponent(v int) GlobalOption {
+	return &globalOption{option.New(identMinRSAPublicExponent{}, v)}
 }
 
 // WithPEM specifies that the input to `Parse()` is a PEM encoded key.

@@ -1,8 +1,11 @@
 package jwa_test
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/stretchr/testify/require"
@@ -60,34 +63,87 @@ func TestRFC9864(t *testing.T) {
 }
 
 func TestKeyAlgorithmFrom(t *testing.T) {
+	t.Parallel()
+
 	testcases := []struct {
-		Input any
-		Error bool
+		Name     string
+		Input    any
+		Expected jwa.KeyAlgorithm
+		Error    bool
 	}{
 		{
-			Input: jwa.RS256(),
+			Name:     "signature algorithm",
+			Input:    jwa.RS256(),
+			Expected: jwa.RS256(),
 		},
 		{
-			Input: jwa.DIRECT(),
+			Name:     "key encryption algorithm",
+			Input:    jwa.DIRECT(),
+			Expected: jwa.DIRECT(),
 		},
 		{
-			Input: jwa.A128CBC_HS256(),
+			Name:     "content encryption algorithm",
+			Input:    jwa.A128CBC_HS256(),
+			Expected: jwa.A128CBC_HS256(),
 		},
 		{
+			Name:     "valid string",
+			Input:    "RS256",
+			Expected: jwa.RS256(),
+		},
+		{
+			Name:  "invalid short string",
 			Input: "dummy",
 			Error: true,
 		},
 	}
 
 	for _, tc := range testcases {
-		t.Run(fmt.Sprintf("%T", tc.Input), func(t *testing.T) {
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+
 			alg, err := jwa.KeyAlgorithmFrom(tc.Input)
 			if tc.Error {
 				require.Error(t, err, `creating key alrgorithm should fail`)
+				require.True(t, errors.Is(err, jwa.ErrInvalidKeyAlgorithm()), `creating key algorithm should wrap ErrInvalidKeyAlgorithm`)
+				require.Contains(t, err.Error(), `invalid key value: "dummy"`, `short invalid input should still be rendered in full`)
 			} else {
 				require.NoError(t, err, `creating key alrgorithm should succeed`)
-				require.Equal(t, alg, tc.Input, `key should be valid`)
+				require.Equal(t, tc.Expected, alg, `key should be valid`)
 			}
 		})
 	}
+
+	t.Run("invalid long string is truncated", func(t *testing.T) {
+		t.Parallel()
+
+		input := strings.Repeat("a", 80)
+		_, err := jwa.KeyAlgorithmFrom(input)
+		require.Error(t, err, `creating key algorithm should fail`)
+		require.True(t, errors.Is(err, jwa.ErrInvalidKeyAlgorithm()), `creating key algorithm should wrap ErrInvalidKeyAlgorithm`)
+		require.Contains(t, err.Error(), `invalid key value: `, `error should contain stable prefix`)
+		require.Contains(t, err.Error(), strings.Repeat("a", 64)+`...`, `error should contain truncated preview`)
+		require.NotContains(t, err.Error(), input, `error should not echo the full invalid value`)
+	})
+
+	t.Run("invalid multibyte string is truncated on rune boundaries", func(t *testing.T) {
+		t.Parallel()
+
+		input := strings.Repeat("あ", 80)
+		_, err := jwa.KeyAlgorithmFrom(input)
+		require.Error(t, err, `creating key algorithm should fail`)
+		require.True(t, errors.Is(err, jwa.ErrInvalidKeyAlgorithm()), `creating key algorithm should wrap ErrInvalidKeyAlgorithm`)
+		require.True(t, utf8.ValidString(err.Error()), `error should remain valid UTF-8`)
+		require.Contains(t, err.Error(), strings.Repeat("あ", 64)+`...`, `error should truncate by rune count`)
+		require.NotContains(t, err.Error(), input, `error should not echo the full invalid value`)
+	})
+
+	t.Run("invalid type preserves type information", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := jwa.KeyAlgorithmFrom(123)
+		require.Error(t, err, `creating key algorithm should fail`)
+		require.True(t, errors.Is(err, jwa.ErrInvalidKeyAlgorithm()), `creating key algorithm should wrap ErrInvalidKeyAlgorithm`)
+		require.Contains(t, err.Error(), fmt.Sprintf(`invalid key type: %T`, 123), `error should report invalid type`)
+	})
 }
