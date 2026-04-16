@@ -802,6 +802,58 @@ func TestGH924(t *testing.T) {
 	require.Equal(t, payload, decrypted, `decrypt messages match`)
 }
 
+func TestDecryptRejectsNonStringAESGCMKWHeaders(t *testing.T) {
+	sharedKey := []byte("0123456789abcdef")
+	payload := []byte("Lorem Ipsum")
+
+	encrypted, err := jwe.Encrypt(
+		payload,
+		jwe.WithJSON(),
+		jwe.WithKey(jwa.A128GCMKW(), sharedKey),
+		jwe.WithContentEncryption(jwa.A128GCM()),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.A128GCMKW(), sharedKey))
+	require.NoError(t, err, `baseline jwe.Decrypt should succeed`)
+	require.Equal(t, payload, decrypted, `baseline plaintext should round-trip`)
+
+	for _, field := range []string{jwe.InitializationVectorKey, jwe.TagKey} {
+		t.Run(field, func(t *testing.T) {
+			var parsed map[string]any
+			require.NoError(t, json.Unmarshal(encrypted, &parsed), `freshly encrypted JWE should parse as JSON`)
+
+			protectedB64, ok := parsed["protected"].(string)
+			require.True(t, ok, `flattened JSON JWE should contain protected headers`)
+
+			protectedJSON, err := base64.RawURLEncoding.DecodeString(protectedB64)
+			require.NoError(t, err, `protected header should be base64url encoded`)
+
+			var protected map[string]any
+			require.NoError(t, json.Unmarshal(protectedJSON, &protected), `protected header should decode as JSON`)
+
+			_, ok = protected[field]
+			require.True(t, ok, `protected header should contain %q`, field)
+
+			protected[field] = 1
+
+			protectedJSON, err = json.Marshal(protected)
+			require.NoError(t, err, `re-marshaling tampered protected header should succeed`)
+
+			parsed["protected"] = base64.RawURLEncoding.EncodeToString(protectedJSON)
+
+			tampered, err := json.Marshal(parsed)
+			require.NoError(t, err, `re-marshaling tampered JWE should succeed`)
+
+			_, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.A128GCMKW(), sharedKey))
+			require.Error(t, err, `jwe.Decrypt must reject non-string AES-GCM-KW headers`)
+			require.Contains(t, err.Error(), field)
+			require.Contains(t, err.Error(), `not a string`)
+			require.NotContains(t, err.Error(), `GCM requires`)
+		})
+	}
+}
+
 func TestKeyEncrypterFuncAdapter(t *testing.T) {
 	// KeyEncryptFunc / KeyDecryptFunc should round-trip a JWE using a
 	// plain function on both sides, verifying that the adapters satisfy
