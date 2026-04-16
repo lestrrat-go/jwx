@@ -199,10 +199,7 @@ func ensureSize(dst []byte, n int) []byte {
 	}
 
 	const maxInt = int64(^uint(0) >> 1)
-	maxAlloc := maxBufSize.Load()
-	if maxAlloc > maxInt {
-		maxAlloc = maxInt
-	}
+	maxAlloc := min(maxBufSize.Load(), maxInt)
 
 	if int64(len(dst)) > maxAlloc-int64(n) {
 		panic(fmt.Errorf("failed to allocate buffer"))
