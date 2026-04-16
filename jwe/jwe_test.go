@@ -906,6 +906,123 @@ func TestGH1001(t *testing.T) {
 	require.NotNil(t, cek, `cek should not be nil`)
 }
 
+func TestEncryptStaticCEKLength(t *testing.T) {
+	makeCEK := func(size int) []byte {
+		cek := make([]byte, size)
+		for i := range cek {
+			cek[i] = byte(i + 1)
+		}
+		return cek
+	}
+
+	t.Run("default content encryption is A256GCM", func(t *testing.T) {
+		_, err := jwe.EncryptStatic(
+			[]byte("Lorem Ipsum"),
+			makeCEK(16),
+			jwe.WithKey(jwa.RSA_OAEP(), &rsaPrivKey.PublicKey),
+		)
+		require.Error(t, err, `jwe.EncryptStatic should fail`)
+		require.ErrorIs(t, err, jwe.EncryptError(), `error should be of type jwe.EncryptError`)
+		require.ErrorContains(t, err, `content encryption key length 16 does not match enc "A256GCM" (expected 32 bytes)`)
+	})
+
+	t.Run("matching CEK lengths succeed for every supported enc", func(t *testing.T) {
+		testcases := []struct {
+			alg  jwa.ContentEncryptionAlgorithm
+			size int
+		}{
+			{alg: jwa.A128GCM(), size: 16},
+			{alg: jwa.A192GCM(), size: 24},
+			{alg: jwa.A256GCM(), size: 32},
+			{alg: jwa.A128CBC_HS256(), size: 32},
+			{alg: jwa.A192CBC_HS384(), size: 48},
+			{alg: jwa.A256CBC_HS512(), size: 64},
+		}
+
+		for _, tc := range testcases {
+			t.Run(tc.alg.String(), func(t *testing.T) {
+				payload := []byte("Lorem Ipsum")
+				encrypted, err := jwe.EncryptStatic(
+					payload,
+					makeCEK(tc.size),
+					jwe.WithKey(jwa.RSA_OAEP(), &rsaPrivKey.PublicKey),
+					jwe.WithContentEncryption(tc.alg),
+				)
+				require.NoError(t, err, `jwe.EncryptStatic should succeed`)
+
+				decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), &rsaPrivKey))
+				require.NoError(t, err, `jwe.Decrypt should succeed`)
+				require.Equal(t, payload, decrypted, `decrypted message should match`)
+			})
+		}
+	})
+
+	t.Run("mismatched CEK lengths fail clearly", func(t *testing.T) {
+		testcases := []struct {
+			name string
+			alg  jwa.ContentEncryptionAlgorithm
+			size int
+			want string
+		}{
+			{
+				name: "gcm",
+				alg:  jwa.A128GCM(),
+				size: 15,
+				want: `content encryption key length 15 does not match enc "A128GCM" (expected 16 bytes)`,
+			},
+			{
+				name: "cbc+hmac",
+				alg:  jwa.A256CBC_HS512(),
+				size: 32,
+				want: `content encryption key length 32 does not match enc "A256CBC-HS512" (expected 64 bytes)`,
+			},
+		}
+
+		for _, tc := range testcases {
+			t.Run(tc.name, func(t *testing.T) {
+				_, err := jwe.EncryptStatic(
+					[]byte("Lorem Ipsum"),
+					makeCEK(tc.size),
+					jwe.WithKey(jwa.RSA_OAEP(), &rsaPrivKey.PublicKey),
+					jwe.WithContentEncryption(tc.alg),
+				)
+				require.Error(t, err, `jwe.EncryptStatic should fail`)
+				require.ErrorIs(t, err, jwe.EncryptError(), `error should be of type jwe.EncryptError`)
+				require.ErrorContains(t, err, tc.want)
+			})
+		}
+	})
+
+	t.Run("DIRECT validates the final CEK instead of the EncryptStatic input", func(t *testing.T) {
+		sharedKey := bytes.Repeat([]byte{0x42}, 16)
+		payload := []byte("Lorem Ipsum")
+
+		encrypted, err := jwe.EncryptStatic(
+			payload,
+			makeCEK(1),
+			jwe.WithKey(jwa.DIRECT(), sharedKey),
+			jwe.WithContentEncryption(jwa.A128GCM()),
+		)
+		require.NoError(t, err, `jwe.EncryptStatic should succeed`)
+
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.DIRECT(), sharedKey))
+		require.NoError(t, err, `jwe.Decrypt should succeed`)
+		require.Equal(t, payload, decrypted, `decrypted message should match`)
+	})
+
+	t.Run("DIRECT reports the final CEK length on mismatch", func(t *testing.T) {
+		_, err := jwe.EncryptStatic(
+			[]byte("Lorem Ipsum"),
+			makeCEK(32),
+			jwe.WithKey(jwa.DIRECT(), bytes.Repeat([]byte{0x24}, 16)),
+			jwe.WithContentEncryption(jwa.A256GCM()),
+		)
+		require.Error(t, err, `jwe.EncryptStatic should fail`)
+		require.ErrorIs(t, err, jwe.EncryptError(), `error should be of type jwe.EncryptError`)
+		require.ErrorContains(t, err, `content encryption key length 16 does not match enc "A256GCM" (expected 32 bytes)`)
+	})
+}
+
 func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 	token := []byte("eyJhbGciOiJQQkVTMi1IUzI1NitBMTI4S1ciLCJlbmMiOiJBMjU2R0NNIiwicDJjIjoyMDAwMDAwMDAwLCJwMnMiOiJNNzczSnlmV2xlX2FsSXNrc0NOTU9BIn0=.S8B1kXdIR7BM6i_TaGsgqEOxU-1Sgdakp4mHq7UVhn-_REzOiGz2gg.gU_LfzhBXtQdwYjh.9QUIS-RWkLc.m9TudmzUoCzDhHsGGfzmCA")
 	key, err := jwk.Import[jwk.Key]([]byte(`abcdefg`))

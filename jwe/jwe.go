@@ -253,6 +253,22 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 // Encrypt function such that the latter does not accidentally use a static
 // CEK.
 //
+// Unless `jwe.WithContentEncryption()` is provided, `EncryptStatic` uses
+// `jwa.A256GCM()`, which requires a 32-byte CEK.
+//
+// The CEK used to encrypt the payload must match the selected content
+// encryption algorithm:
+//
+//   - `jwa.A128GCM()`: 16 bytes
+//   - `jwa.A192GCM()`: 24 bytes
+//   - `jwa.A256GCM()`: 32 bytes
+//   - `jwa.A128CBC_HS256()`: 32 bytes
+//   - `jwa.A192CBC_HS384()`: 48 bytes
+//   - `jwa.A256CBC_HS512()`: 64 bytes
+//
+// `EncryptStatic` validates the final CEK length before payload encryption
+// and returns an error if it does not match the selected `enc` algorithm.
+//
 // DO NOT attempt to use this function unless you completely understand the
 // security implications to using static CEKs. You have been warned.
 //
@@ -871,6 +887,10 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		if useRawCEK {
 			cek = rawCEK
 		}
+	}
+
+	if len(cek) != contentcrypt.KeySize() {
+		return nil, fmt.Errorf(`content encryption key length %d does not match enc %q (expected %d bytes)`, len(cek), ec.calg.String(), contentcrypt.KeySize())
 	}
 
 	if err := protected.setNoLock(ContentEncryptionKey, ec.calg); err != nil {
