@@ -20,7 +20,7 @@ func exampleGenPayload() (*rsa.PrivateKey, []byte, error) {
 
 	payload := []byte("Lorem Ipsum")
 
-	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.RSA1_5(), &privkey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256()))
+	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.RSA_OAEP(), &privkey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256()))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -34,7 +34,7 @@ func Example_jwe_decrypt() {
 		return
 	}
 
-	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA1_5(), privkey))
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), privkey))
 	if err != nil {
 		log.Printf("failed to decrypt: %s", err)
 		return
