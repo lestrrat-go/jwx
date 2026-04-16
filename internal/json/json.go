@@ -3,7 +3,7 @@ package json
 import (
 	"bytes"
 	"fmt"
-	"os"
+
 	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
@@ -163,11 +163,4 @@ func (dc *decodeCtx) Registry() *Registry {
 
 func (dc *decodeCtx) StrictStrings() bool {
 	return dc.strictStrings
-}
-
-func Dump(v any) {
-	enc := NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	//nolint:errchkjson
-	_ = enc.Encode(v)
 }

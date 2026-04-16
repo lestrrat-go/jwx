@@ -108,9 +108,9 @@ func InvalidNumberOfSegmentsError() error {
 }
 
 // maxSplitCompactReaderSize caps the number of bytes SplitCompactReader will
-// consume from a non-finite io.Reader. It matches the default
-// jws.maxParseInputSize (10 MiB). Callers that need a different limit should
-// wrap their reader with io.LimitReader before calling SplitCompactReader.
+// consume from any io.Reader. It matches the default jws.maxParseInputSize
+// (10 MiB). Callers that need a different limit should wrap their reader
+// with io.LimitReader before calling SplitCompactReader.
 const maxSplitCompactReaderSize = 10 * 1024 * 1024
 
 var errInputTooLarge = errors.New(`jwsbb: input exceeds maximum size`)
@@ -179,17 +179,24 @@ func SplitCompactString(src string) (protected, payload, signature []byte, err e
 //
 // The function validates that exactly 3 segments are present, separated by periods.
 func SplitCompactReader(rdr io.Reader) (protected, payload, signature []byte, err error) {
-	data, err := jwxio.ReadAllFromFiniteSource(rdr)
+	data, err := jwxio.ReadAllFromFiniteSource(rdr, maxSplitCompactReaderSize+1)
 	if err == nil {
+		if int64(len(data)) > maxSplitCompactReaderSize {
+			return nil, nil, nil, InputTooLargeError()
+		}
 		return SplitCompact(data)
+	}
+
+	if errors.Is(err, jwxio.InputTooLargeError()) {
+		return nil, nil, nil, InputTooLargeError()
 	}
 
 	if !errors.Is(err, jwxio.NonFiniteSourceError()) {
 		return nil, nil, nil, err
 	}
 
-	// Cap total bytes read from a non-finite source. Read one extra byte so
-	// we can distinguish "exactly at the limit" from "over".
+	// Streaming fallback: the type switch in ReadAllFromFiniteSource
+	// rejected before reading any bytes, so rdr is still at position 0.
 	limited := io.LimitReader(rdr, maxSplitCompactReaderSize+1)
 
 	var periods int

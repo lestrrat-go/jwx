@@ -9,6 +9,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const (
+	testDefaultMaxChainLength     = 10
+	testDefaultMaxCertificateSize = 256 * 1024
+)
+
+func restoreCertSettings() {
+	cert.Settings(
+		cert.WithMaxChainLength(testDefaultMaxChainLength),
+		cert.WithMaxCertificateSize(testDefaultMaxCertificateSize),
+	)
+}
+
 var certBytes = []byte(`MIICdDCCAd2gAwIBAgIUEpq1vvAyaiEKhgEE/UKykUcnXi4wDQYJKoZIhvcNAQEL
 BQAwTDELMAkGA1UEBhMCSlAxDjAMBgNVBAgMBVRva3lvMREwDwYDVQQHDAhSb3Bw
 b25naTEMMAoGA1UECgwDSldYMQwwCgYDVQQDDANKV1gwHhcNMjIwMzEzMTMzOTIy
@@ -25,6 +37,9 @@ gPt3f4fzO4SIXu7fG89QkR5TJs6lxyZsr1V/IumL4LSx04LhIvMhHiUbbyVHgN8B
 KpDY+K+bsqw=`)
 
 func TestChain(t *testing.T) {
+	restoreCertSettings()
+	defer restoreCertSettings()
+
 	goldenCert, err := cert.Parse(certBytes)
 	require.NoError(t, err, `x509.ParseCertificate should succeed`)
 
@@ -80,6 +95,7 @@ func TestChain(t *testing.T) {
 		require.Equal(t, chain.Len(), len(back), `round-trip should preserve length`)
 
 		for i, s := range back {
+			// The serialized string must be single-line base64 with no whitespace.
 			der, err := base64.StdEncoding.DecodeString(s)
 			require.NoError(t, err, `entry %d must be valid base64`, i)
 			parsed, err := cert.Parse([]byte(s))
@@ -91,6 +107,9 @@ func TestChain(t *testing.T) {
 }
 
 func TestChainAddRejectsInvalid(t *testing.T) {
+	restoreCertSettings()
+	defer restoreCertSettings()
+
 	// Regression for CERT-002: Add must reject input that would produce
 	// invalid JSON or enable JSON injection when later marshaled.
 	testcases := []struct {
@@ -100,6 +119,7 @@ func TestChainAddRejectsInvalid(t *testing.T) {
 		{Name: `quote injection`, Data: []byte(`abc","injected":"x`)},
 		{Name: `raw garbage`, Data: []byte(`not base64 at all !!!`)},
 		{Name: `control characters`, Data: []byte("ab\x00cd")},
+		{Name: `valid base64 but not certificate`, Data: []byte(base64.StdEncoding.EncodeToString([]byte(`not a certificate`)))},
 	}
 	for _, tc := range testcases {
 		t.Run(tc.Name, func(t *testing.T) {
@@ -108,4 +128,73 @@ func TestChainAddRejectsInvalid(t *testing.T) {
 			require.Equal(t, 0, chain.Len(), `failed Add must not mutate chain`)
 		})
 	}
+}
+
+func TestChainUnmarshalJSONRejectsInvalidCertificate(t *testing.T) {
+	restoreCertSettings()
+	defer restoreCertSettings()
+
+	var chain cert.Chain
+	require.NoError(t, chain.Add(certBytes), `chain.Add should succeed`)
+
+	buf, err := json.Marshal([]string{base64.StdEncoding.EncodeToString([]byte(`not a certificate`))})
+	require.NoError(t, err, `json.Marshal should succeed`)
+
+	err = json.Unmarshal(buf, &chain)
+	require.Error(t, err, `json.Unmarshal should fail`)
+	require.Equal(t, 1, chain.Len(), `failed unmarshal must not mutate the existing chain`)
+}
+
+func TestChainRejectsDefaultMaxChainLength(t *testing.T) {
+	restoreCertSettings()
+	defer restoreCertSettings()
+
+	var chain cert.Chain
+	for range testDefaultMaxChainLength {
+		require.NoError(t, chain.Add(certBytes), `chain.Add should succeed`)
+	}
+
+	require.Error(t, chain.Add(certBytes), `chain.Add should enforce the default max chain length`)
+	require.Equal(t, testDefaultMaxChainLength, chain.Len(), `failed Add must not mutate chain`)
+}
+
+func TestChainAllowsUnlimitedChainLength(t *testing.T) {
+	restoreCertSettings()
+	defer restoreCertSettings()
+
+	cert.Settings(cert.WithMaxChainLength(0))
+
+	var chain cert.Chain
+	for range testDefaultMaxChainLength + 1 {
+		require.NoError(t, chain.Add(certBytes), `chain.Add should succeed when the limit is disabled`)
+	}
+
+	require.Equal(t, testDefaultMaxChainLength+1, chain.Len(), `all certificates should be accepted`)
+}
+
+func TestChainRejectsDefaultMaxCertificateSize(t *testing.T) {
+	restoreCertSettings()
+	defer restoreCertSettings()
+
+	oversized := make([]byte, testDefaultMaxCertificateSize+1)
+	encoded := make([]byte, base64.StdEncoding.EncodedLen(len(oversized)))
+	base64.StdEncoding.Encode(encoded, oversized)
+
+	var chain cert.Chain
+	require.Error(t, chain.Add(encoded), `chain.Add should enforce the default max certificate size`)
+	require.Equal(t, 0, chain.Len(), `failed Add must not mutate chain`)
+}
+
+func TestChainAllowsUnlimitedCertificateSize(t *testing.T) {
+	restoreCertSettings()
+	defer restoreCertSettings()
+
+	cert.Settings(cert.WithMaxCertificateSize(1))
+
+	var chain cert.Chain
+	require.Error(t, chain.Add(certBytes), `chain.Add should respect a small configured max certificate size`)
+
+	cert.Settings(cert.WithMaxCertificateSize(0))
+	require.NoError(t, chain.Add(certBytes), `chain.Add should succeed when the size limit is disabled`)
+	require.Equal(t, 1, chain.Len(), `the certificate should be appended`)
 }

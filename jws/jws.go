@@ -159,12 +159,12 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	sc.payload = payload
 
 	if err := sc.ProcessOptions(options); err != nil {
-		return nil, makeSignError(`failed to process options: %w`, err)
+		return nil, makeSignError(prefixJwsSign, `failed to process options: %w`, err)
 	}
 
 	lsigner := len(sc.sigbuilders)
 	if lsigner == 0 {
-		return nil, makeSignError(`no signers available. Specify an algorithm and a key using jws.WithKey()`)
+		return nil, makeSignError(prefixJwsSign, `no signers available. Specify an algorithm and a key using jws.WithKey()`)
 	}
 
 	// Design note: while we could have easily set format = fmtJSON when
@@ -176,7 +176,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	// Therefore, instead of making implicit format conversions, we force the
 	// user to spell it out as `jws.Sign(..., jws.WithJSON(), jws.WithKey(...), jws.WithKey(...))`
 	if sc.format == fmtCompact && lsigner != 1 {
-		return nil, makeSignError(`cannot have multiple signers (keys) specified for compact serialization. Use only one jws.WithKey()`)
+		return nil, makeSignError(prefixJwsSign, `cannot have multiple signers (keys) specified for compact serialization. Use only one jws.WithKey()`)
 	}
 
 	// Create a Message object with all the bits and bobs, and we'll
@@ -184,7 +184,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	var result Message
 
 	if err := sc.PopulateMessage(&result); err != nil {
-		return nil, makeSignError(`failed to populate message: %w`, err)
+		return nil, makeSignError(prefixJwsSign, `failed to populate message: %w`, err)
 	}
 	switch sc.format {
 	case fmtJSON:
@@ -205,7 +205,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		}
 		return Compact(&result, compactOpts...)
 	default:
-		return nil, makeSignError(`invalid serialization format`)
+		return nil, makeSignError(prefixJwsSign, `invalid serialization format`)
 	}
 }
 
@@ -256,6 +256,24 @@ func getB64Value(hdr Headers) bool {
 	}
 
 	return b64
+}
+
+func detectParseFormat(src []byte) int {
+	for i := 0; i < len(src); {
+		r := rune(src[i])
+		width := 1
+		if r >= utf8.RuneSelf {
+			r, width = utf8.DecodeRune(src[i:])
+		}
+		if !unicode.IsSpace(r) {
+			if r == tokens.OpenCurlyBracket {
+				return fmtJSON
+			}
+			return fmtCompact
+		}
+		i += width
+	}
+	return 0
 }
 
 // Parse parses contents from the given source and creates a jws.Message
@@ -313,21 +331,7 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 
 	// if format is 0 or both JSON/Compact, auto detect
 	if v := formats & (fmtJSON | fmtCompact); v == 0 || v == fmtJSON|fmtCompact {
-	CHECKLOOP:
-		for i := range src {
-			r := rune(src[i])
-			if r >= utf8.RuneSelf {
-				r, _ = utf8.DecodeRune(src)
-			}
-			if !unicode.IsSpace(r) {
-				if r == tokens.OpenCurlyBracket {
-					formats = fmtJSON
-				} else {
-					formats = fmtCompact
-				}
-				break CHECKLOOP
-			}
-		}
+		formats = detectParseFormat(src)
 	}
 
 	if formats&fmtCompact == fmtCompact {
@@ -376,13 +380,16 @@ func ParseReader(src io.Reader, options ...ParseOption) (*Message, error) {
 		}
 	}
 
-	limited := io.LimitReader(src, maxSize+1)
-	data, err := jwxio.ReadAllFromFiniteSource(limited)
+	data, err := jwxio.ReadAllFromFiniteSource(src, maxSize+1)
 	if err == nil {
 		if int64(len(data)) > maxSize {
 			return nil, makeParseError(`jws.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
 		}
 		return Parse(data, options...)
+	}
+
+	if errors.Is(err, jwxio.InputTooLargeError()) {
+		return nil, makeParseError(`jws.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
 	}
 
 	if !errors.Is(err, jwxio.NonFiniteSourceError()) {
@@ -486,6 +493,12 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 	decodedSignature, err := base64.Decode(signature)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to decode signature: %w`, err)
+	}
+	if len(decodedSignature) == 0 {
+		alg, ok := hdr.Algorithm()
+		if !ok || alg != jwa.NoSignature() {
+			return nil, fmt.Errorf(`empty compact signature requires protected header "alg" to be "none"`)
+		}
 	}
 
 	var msg Message
@@ -701,18 +714,62 @@ func isRegisteredUnderAnyCurve(alg jwa.SignatureAlgorithm) bool {
 }
 
 // validateAlgorithmForKey checks that alg is compatible with key.
-// If the key type is not recognized (e.g. an opaque crypto.Signer whose
-// .Public() also returns an unrecognized type), validation is skipped
-// and the crypto layer will catch any real incompatibility.
+// Three classification failures are intentionally allowed through:
+// (a) a nil key, used by keyless algorithms (see GH910);
+// (b) any key handed to an algorithm with a user-registered custom
+// Signer2/Verifier2 — custom implementations may accept arbitrary key
+// types that AlgorithmsForKey cannot classify; and
+// (c) an opaque crypto.Signer whose .Public() is itself a crypto.Signer,
+// the one case AlgorithmsForKey refuses to recurse into.
+// Every other classification failure is surfaced so callers get a crisp
+// option-boundary rejection instead of a deep-stack error.
 func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
+	if key == nil {
+		return nil
+	}
 	algs, err := AlgorithmsForKey(key)
 	if err != nil {
-		return nil //nolint:nilerr // intentional: unrecognized key types skip validation
+		if hasCustomSigVerifier(alg) {
+			return nil
+		}
+		if signer, ok := key.(crypto.Signer); ok {
+			if _, isSigner := signer.Public().(crypto.Signer); isSigner {
+				return nil
+			}
+		}
+		return err
 	}
 	if !slices.Contains(algs, alg) {
+		if hasCustomSigVerifier(alg) {
+			return nil
+		}
 		return fmt.Errorf(`algorithm %q is not compatible with key type %T`, alg, key)
 	}
 	return nil
+}
+
+// hasCustomSigVerifier reports whether a non-default Signer2 or
+// Verifier2 has been registered for alg. When this is true, key-type
+// validation must be skipped: the custom implementation decides what
+// key types it accepts.
+func hasCustomSigVerifier(alg jwa.SignatureAlgorithm) bool {
+	muSigner2DB.RLock()
+	s, sok := signer2DB[alg]
+	muSigner2DB.RUnlock()
+	if sok {
+		if _, isDefault := s.(defaultSigner); !isDefault {
+			return true
+		}
+	}
+	muVerifier2DB.RLock()
+	v, vok := verifier2DB[alg]
+	muVerifier2DB.RUnlock()
+	if vok {
+		if _, isDefault := v.(defaultVerifier); !isDefault {
+			return true
+		}
+	}
+	return false
 }
 
 // Settings allows you to set global settings for this JWS operations.
@@ -767,6 +824,12 @@ func Settings(options ...GlobalOption) {
 // Since this function avoids doing many checks that jws.Verify would perform,
 // you must ensure to perform the necessary checks including ensuring that algorithm is safe to use for your payload yourself.
 //
+// VerifyCompactFast cross-checks the protected header's "alg" against
+// the caller-supplied alg: if the header omits "alg" (required by
+// RFC 7515 §4.1.1) or advertises a different value, it returns a
+// verification error. This prevents silently verifying a message
+// under a different discipline than the one its header advertises.
+//
 // VerifyCompactFast refuses messages whose protected header carries a
 // "crit" list. RFC 7515 §4.1.11 requires every critical extension to be
 // understood by the recipient, and the fast path has no WithCritExtension
@@ -795,12 +858,28 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 		return nil, makeVerifyError("failed to split compact: %w", err)
 	}
 
+	parsedHdr := jwsbb.HeaderParseCompact(hdr)
+
 	// Refuse crit-bearing messages: the fast path has no WithCritExtension
 	// allowlist, so accepting them would silently violate RFC 7515 §4.1.11.
 	// Callers that wrap VerifyCompactFast can detect this via
 	// errors.Is(err, jws.ErrCritPresent()) and fall through to jws.Verify.
-	if jwsbb.HeaderHas(jwsbb.HeaderParseCompact(hdr), CriticalKey) {
+	if jwsbb.HeaderHas(parsedHdr, CriticalKey) {
 		return nil, errCritPresent
+	}
+
+	// Cross-check the protected header "alg" against the caller-supplied
+	// alg. RFC 7515 §4.1.1 makes "alg" mandatory in the protected header
+	// for compact serialization, and a mismatch between what the message
+	// advertises and the discipline under which we verify is the sort of
+	// silent divergence that downstream code (e.g. JWT consumers) should
+	// not be asked to re-discover on its own.
+	hdrAlg, err := jwsbb.HeaderGetString(parsedHdr, AlgorithmKey)
+	if err != nil {
+		return nil, verifyError{verificationError{fmt.Errorf(`jws.Verify: failed to extract %q from protected header: %w`, AlgorithmKey, err)}}
+	}
+	if hdrAlg != algstr {
+		return nil, verifyError{verificationError{fmt.Errorf(`jws.Verify: protected header %q %q does not match caller-supplied algorithm %q`, AlgorithmKey, hdrAlg, algstr)}}
 	}
 
 	signature, err := base64.Decode(encodedSig)
