@@ -92,6 +92,17 @@ func TestRSAImportRejectsInvalidParameters(t *testing.T) {
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "invalid rsa public exponent")
 	})
+
+	t.Run("negative exponent", func(t *testing.T) {
+		bad := &rsa.PublicKey{
+			N: mustBigIntFromBase64(t, rfc7638RSAModulus),
+			E: -3,
+		}
+
+		_, err := jwk.Import(bad)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "invalid rsa public exponent")
+	})
 }
 
 func TestRSAPEMImportRunsValidation(t *testing.T) {
