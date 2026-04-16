@@ -53,6 +53,8 @@ import (
 // JOSE operations stay byte-slice/buffer oriented.
 type implementationNoteStreaming struct{}
 
+var _ implementationNoteStreaming
+
 // Settings configures global settings for the jwx package.
 //
 // All options accepted here have process-global effect and are intended
