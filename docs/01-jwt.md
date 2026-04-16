@@ -1347,6 +1347,8 @@ func Example_jwt_serialize_jws() {
 source: [examples/jwt_serialize_jws_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwt_serialize_jws_example_test.go)
 <!-- END INCLUDE -->
 
+> Warning: the symmetric literals in these examples are deliberately short for readability. Production `HS*` keys should be random secrets that meet the minimum sizes described in [the JWK docs](04-jwk.md).
+
 ## Serialize using JWE and JWS
 
 The `jwt` package provides a `Serializer` object to allow users to serialize a token using an arbitrary combination of processors.
