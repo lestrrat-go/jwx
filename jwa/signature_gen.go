@@ -202,7 +202,7 @@ func RegisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
 		}
 		allSignatureAlgorithm[alg.String()] = alg
 	}
-	rebuildSignatureAlgorithm()
+	rebuildSignatureAlgorithmLocked()
 }
 
 // UnregisterSignatureAlgorithm unregisters a SignatureAlgorithm from its known database.
@@ -216,10 +216,10 @@ func UnregisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
 		}
 		delete(allSignatureAlgorithm, alg.String())
 	}
-	rebuildSignatureAlgorithm()
+	rebuildSignatureAlgorithmLocked()
 }
 
-func rebuildSignatureAlgorithm() {
+func rebuildSignatureAlgorithmLocked() {
 	list := make([]SignatureAlgorithm, 0, len(allSignatureAlgorithm))
 	for _, v := range allSignatureAlgorithm {
 		list = append(list, v)

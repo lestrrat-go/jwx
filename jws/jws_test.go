@@ -1259,6 +1259,30 @@ func TestJKU(t *testing.T) {
 			})
 		}
 	})
+	t.Run("KidNotInJWKS", func(t *testing.T) {
+		// Sign with a key whose kid is NOT present in the remote JWKS.
+		// The fetched set only contains a key with a different kid.
+		// jkuProvider used to return nil in this case, collapsing the
+		// failure into a generic "could not verify" error and hiding
+		// the root cause from operators. It must now surface an
+		// explicit kid-not-found error.
+		signerKey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+		require.NoError(t, signerKey.Set(jwk.KeyIDKey, `signer-kid`), `Set kid should succeed`)
+
+		hdr := jws.NewHeaders()
+		require.NoError(t, hdr.Set(jws.JWKSetURLKey, srv.URL), `Set jku should succeed`)
+		signed, err := jws.Sign(payload, jws.WithKey(jwa.RS256(), signerKey, jws.WithProtectedHeaders(hdr)))
+		require.NoError(t, err, `jws.Sign should succeed`)
+
+		_, err = jws.Verify(signed, jws.WithVerifyAuto(nil,
+			jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+			jwk.WithHTTPClient(srv.Client()),
+		))
+		require.Error(t, err, `jws.Verify should fail when jku JWKS has no matching kid`)
+		require.Contains(t, err.Error(), `signer-kid`, `error should name the missing kid`)
+		require.Contains(t, err.Error(), `not found`, `error should say the kid was not found`)
+	})
 }
 
 func TestAlgorithmsForKey(t *testing.T) {
@@ -1428,6 +1452,47 @@ func TestAlgorithmsForKeyECDHRejects(t *testing.T) {
 			require.Error(t, err, `AlgorithmsForKey should reject ecdh keys`)
 		})
 	}
+}
+
+// unclassifiableSigner is a crypto.Signer whose Public() is itself a
+// crypto.Signer, so AlgorithmsForKey cannot classify it — the documented
+// "opaque KMS-backed signer" escape hatch in validateAlgorithmForKey.
+type unclassifiableSigner struct{}
+
+func (unclassifiableSigner) Public() crypto.PublicKey { return unclassifiableSigner{} }
+func (unclassifiableSigner) Sign(_ io.Reader, _ []byte, _ crypto.SignerOpts) ([]byte, error) {
+	return nil, errors.New("unclassifiableSigner.Sign not implemented")
+}
+
+// TestValidateAlgorithmForKeyBoundary is a regression test for JWS-054:
+// validateAlgorithmForKey must reject unrecognized key types at the option
+// boundary, while still allowing the narrow opaque-crypto.Signer escape
+// hatch so KMS-style signers reach the crypto layer.
+func TestValidateAlgorithmForKeyBoundary(t *testing.T) {
+	t.Run("unknown struct rejected at option boundary", func(t *testing.T) {
+		type bogusKey struct{}
+		_, err := jws.Sign([]byte("payload"), jws.WithKey(jwa.RS256(), bogusKey{}))
+		require.Error(t, err, `jws.Sign must reject unknown key types`)
+		require.Contains(t, err.Error(), "unknown key type",
+			`error must come from AlgorithmsForKey, not the signing stack`)
+	})
+	t.Run("opaque crypto.Signer still accepted", func(t *testing.T) {
+		// Not expected to actually sign — we only assert the boundary
+		// check does not short-circuit before the signing stack.
+		_, err := jws.Sign([]byte("payload"), jws.WithKey(jwa.RS256(), unclassifiableSigner{}))
+		require.Error(t, err, `signing must ultimately fail`)
+		require.NotContains(t, err.Error(), "unknown key type",
+			`opaque crypto.Signer must bypass the option-boundary check`)
+		require.NotContains(t, err.Error(), "is not compatible with key type",
+			`opaque crypto.Signer must bypass the compatibility check`)
+	})
+	t.Run("rsa key with incompatible alg still rejected", func(t *testing.T) {
+		privkey, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err, `GenerateRsaKey should succeed`)
+		_, err = jws.Sign([]byte("payload"), jws.WithKey(jwa.ES256(), privkey))
+		require.Error(t, err, `jws.Sign must reject incompatible alg`)
+		require.Contains(t, err.Error(), "is not compatible with key type")
+	})
 }
 
 func TestGH681(t *testing.T) {
@@ -2106,4 +2171,47 @@ func TestVerifyWithNonSignatureAlgorithm(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, errors.Is(err, jws.VerifyError()))
 	require.Contains(t, err.Error(), "SignatureAlgorithm")
+}
+
+func TestVerifyCompactFastHeaderAlgCrossCheck(t *testing.T) {
+	hmacKey := jwxtest.GenerateSymmetricKey()
+
+	t.Run("Match", func(t *testing.T) {
+		signed, err := jws.Sign([]byte("payload"), jws.WithKey(jwa.HS256(), hmacKey))
+		require.NoError(t, err)
+
+		payload, err := jws.VerifyCompactFast(hmacKey, signed, jwa.HS256())
+		require.NoError(t, err)
+		require.Equal(t, []byte("payload"), payload)
+	})
+
+	t.Run("Mismatch/HS256 signed verified as HS384", func(t *testing.T) {
+		// HS256 and HS384 both accept symmetric []byte keys, so
+		// validateAlgorithmForKey passes and the new header cross-check
+		// is the discipline that catches the divergence.
+		signed, err := jws.Sign([]byte("payload"), jws.WithKey(jwa.HS256(), hmacKey))
+		require.NoError(t, err)
+
+		_, err = jws.VerifyCompactFast(hmacKey, signed, jwa.HS384())
+		require.Error(t, err)
+		require.True(t, errors.Is(err, jws.VerifyError()), `error should be VerifyError`)
+		require.True(t, errors.Is(err, jws.VerificationError()), `error should be VerificationError`)
+		require.Contains(t, err.Error(), `"alg"`)
+		require.Contains(t, err.Error(), "HS256")
+		require.Contains(t, err.Error(), "HS384")
+	})
+
+	t.Run("Missing alg in header", func(t *testing.T) {
+		// Hand-assemble a compact JWS whose protected header omits "alg".
+		hdr := base64.EncodeToString([]byte(`{"typ":"JWT"}`))
+		payload := base64.EncodeToString([]byte("payload"))
+		sig := base64.EncodeToString([]byte("not-a-real-signature"))
+		compact := []byte(hdr + "." + payload + "." + sig)
+
+		_, err := jws.VerifyCompactFast(hmacKey, compact, jwa.HS256())
+		require.Error(t, err)
+		require.True(t, errors.Is(err, jws.VerifyError()), `error should be VerifyError`)
+		require.True(t, errors.Is(err, jws.VerificationError()), `error should be VerificationError`)
+		require.Contains(t, err.Error(), `"alg"`)
+	})
 }

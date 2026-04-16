@@ -107,7 +107,7 @@ func RegisterCompressionAlgorithm(algorithms ...CompressionAlgorithm) {
 		}
 		allCompressionAlgorithm[alg.String()] = alg
 	}
-	rebuildCompressionAlgorithm()
+	rebuildCompressionAlgorithmLocked()
 }
 
 // UnregisterCompressionAlgorithm unregisters a CompressionAlgorithm from its known database.
@@ -121,10 +121,10 @@ func UnregisterCompressionAlgorithm(algorithms ...CompressionAlgorithm) {
 		}
 		delete(allCompressionAlgorithm, alg.String())
 	}
-	rebuildCompressionAlgorithm()
+	rebuildCompressionAlgorithmLocked()
 }
 
-func rebuildCompressionAlgorithm() {
+func rebuildCompressionAlgorithmLocked() {
 	list := make([]CompressionAlgorithm, 0, len(allCompressionAlgorithm))
 	for _, v := range allCompressionAlgorithm {
 		list = append(list, v)

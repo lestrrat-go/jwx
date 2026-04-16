@@ -133,7 +133,7 @@ func RegisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm
 		}
 		allContentEncryptionAlgorithm[alg.String()] = alg
 	}
-	rebuildContentEncryptionAlgorithm()
+	rebuildContentEncryptionAlgorithmLocked()
 }
 
 // UnregisterContentEncryptionAlgorithm unregisters a ContentEncryptionAlgorithm from its known database.
@@ -147,10 +147,10 @@ func UnregisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorit
 		}
 		delete(allContentEncryptionAlgorithm, alg.String())
 	}
-	rebuildContentEncryptionAlgorithm()
+	rebuildContentEncryptionAlgorithmLocked()
 }
 
-func rebuildContentEncryptionAlgorithm() {
+func rebuildContentEncryptionAlgorithmLocked() {
 	list := make([]ContentEncryptionAlgorithm, 0, len(allContentEncryptionAlgorithm))
 	for _, v := range allContentEncryptionAlgorithm {
 		list = append(list, v)

@@ -107,7 +107,7 @@ func Generate(t Algorithm) error {
 		"sort",
 		"sync",
 	}
-	
+
 	// Check if we need to import tokens package
 	needsTokens := false
 	for _, e := range t.Elements {
@@ -116,11 +116,11 @@ func Generate(t Algorithm) error {
 			break
 		}
 	}
-	
+
 	if needsTokens {
 		pkgs = append(pkgs, "github.com/lestrrat-go/jwx/v3/internal/tokens")
 	}
-	
+
 	for _, pkg := range pkgs {
 		o.L("%s", strconv.Quote(pkg))
 	}
@@ -300,7 +300,7 @@ func Generate(t Algorithm) error {
 	o.L("}")
 	o.L("all%[1]s[alg.String()] = alg", t.Name)
 	o.L("}")
-	o.L("rebuild%[1]s()", t.Name)
+	o.L("rebuild%[1]sLocked()", t.Name)
 	o.L("}")
 
 	o.LL("// Unregister%[1]s unregisters a %[1]s from its known database.", t.Name)
@@ -314,10 +314,10 @@ func Generate(t Algorithm) error {
 	o.L("}")
 	o.L("delete(all%[1]s, alg.String())", t.Name)
 	o.L("}")
-	o.L("rebuild%[1]s()", t.Name)
+	o.L("rebuild%[1]sLocked()", t.Name)
 	o.L("}")
 
-	o.LL("func rebuild%[1]s() {", t.Name)
+	o.LL("func rebuild%[1]sLocked() {", t.Name)
 	o.L("list := make([]%[1]s, 0, len(all%[1]s))", t.Name)
 	o.L("for _, v := range all%[1]s {", t.Name)
 	o.L("list = append(list, v)")
