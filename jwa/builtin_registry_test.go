@@ -2,6 +2,7 @@ package jwa_test
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -23,40 +24,48 @@ type builtinRegistryCase[T interface {
 
 func TestBuiltinRegistryEntriesAreProtected(t *testing.T) {
 	testBuiltinRegistryProtection(t, builtinRegistryCase[jwa.SignatureAlgorithm]{
-		name:        "SignatureAlgorithm",
-		builtin:     jwa.RS256,
-		replacement: func(name string) jwa.SignatureAlgorithm { return jwa.NewSignatureAlgorithm(name, jwa.WithDeprecated(true)) },
-		register:    jwa.RegisterSignatureAlgorithm,
-		unregister:  jwa.UnregisterSignatureAlgorithm,
-		lookup:      jwa.LookupSignatureAlgorithm,
-		list:        jwa.SignatureAlgorithms,
+		name:    "SignatureAlgorithm",
+		builtin: jwa.RS256,
+		replacement: func(name string) jwa.SignatureAlgorithm {
+			return jwa.NewSignatureAlgorithm(name, jwa.WithDeprecated(true))
+		},
+		register:   jwa.RegisterSignatureAlgorithm,
+		unregister: jwa.UnregisterSignatureAlgorithm,
+		lookup:     jwa.LookupSignatureAlgorithm,
+		list:       jwa.SignatureAlgorithms,
 	})
 	testBuiltinRegistryProtection(t, builtinRegistryCase[jwa.KeyEncryptionAlgorithm]{
-		name:        "KeyEncryptionAlgorithm",
-		builtin:     jwa.RSA_OAEP,
-		replacement: func(name string) jwa.KeyEncryptionAlgorithm { return jwa.NewKeyEncryptionAlgorithm(name, jwa.WithDeprecated(true)) },
-		register:    jwa.RegisterKeyEncryptionAlgorithm,
-		unregister:  jwa.UnregisterKeyEncryptionAlgorithm,
-		lookup:      jwa.LookupKeyEncryptionAlgorithm,
-		list:        jwa.KeyEncryptionAlgorithms,
+		name:    "KeyEncryptionAlgorithm",
+		builtin: jwa.RSA_OAEP,
+		replacement: func(name string) jwa.KeyEncryptionAlgorithm {
+			return jwa.NewKeyEncryptionAlgorithm(name, jwa.WithDeprecated(true))
+		},
+		register:   jwa.RegisterKeyEncryptionAlgorithm,
+		unregister: jwa.UnregisterKeyEncryptionAlgorithm,
+		lookup:     jwa.LookupKeyEncryptionAlgorithm,
+		list:       jwa.KeyEncryptionAlgorithms,
 	})
 	testBuiltinRegistryProtection(t, builtinRegistryCase[jwa.ContentEncryptionAlgorithm]{
-		name:        "ContentEncryptionAlgorithm",
-		builtin:     jwa.A128GCM,
-		replacement: func(name string) jwa.ContentEncryptionAlgorithm { return jwa.NewContentEncryptionAlgorithm(name, jwa.WithDeprecated(true)) },
-		register:    jwa.RegisterContentEncryptionAlgorithm,
-		unregister:  jwa.UnregisterContentEncryptionAlgorithm,
-		lookup:      jwa.LookupContentEncryptionAlgorithm,
-		list:        jwa.ContentEncryptionAlgorithms,
+		name:    "ContentEncryptionAlgorithm",
+		builtin: jwa.A128GCM,
+		replacement: func(name string) jwa.ContentEncryptionAlgorithm {
+			return jwa.NewContentEncryptionAlgorithm(name, jwa.WithDeprecated(true))
+		},
+		register:   jwa.RegisterContentEncryptionAlgorithm,
+		unregister: jwa.UnregisterContentEncryptionAlgorithm,
+		lookup:     jwa.LookupContentEncryptionAlgorithm,
+		list:       jwa.ContentEncryptionAlgorithms,
 	})
 	testBuiltinRegistryProtection(t, builtinRegistryCase[jwa.EllipticCurveAlgorithm]{
-		name:        "EllipticCurveAlgorithm",
-		builtin:     jwa.P256,
-		replacement: func(name string) jwa.EllipticCurveAlgorithm { return jwa.NewEllipticCurveAlgorithm(name, jwa.WithDeprecated(true)) },
-		register:    jwa.RegisterEllipticCurveAlgorithm,
-		unregister:  jwa.UnregisterEllipticCurveAlgorithm,
-		lookup:      jwa.LookupEllipticCurveAlgorithm,
-		list:        jwa.EllipticCurveAlgorithms,
+		name:    "EllipticCurveAlgorithm",
+		builtin: jwa.P256,
+		replacement: func(name string) jwa.EllipticCurveAlgorithm {
+			return jwa.NewEllipticCurveAlgorithm(name, jwa.WithDeprecated(true))
+		},
+		register:   jwa.RegisterEllipticCurveAlgorithm,
+		unregister: jwa.UnregisterEllipticCurveAlgorithm,
+		lookup:     jwa.LookupEllipticCurveAlgorithm,
+		list:       jwa.EllipticCurveAlgorithms,
 	})
 	testBuiltinRegistryProtection(t, builtinRegistryCase[jwa.KeyType]{
 		name:        "KeyType",
@@ -68,13 +77,15 @@ func TestBuiltinRegistryEntriesAreProtected(t *testing.T) {
 		list:        jwa.KeyTypes,
 	})
 	testBuiltinRegistryProtection(t, builtinRegistryCase[jwa.CompressionAlgorithm]{
-		name:        "CompressionAlgorithm",
-		builtin:     jwa.Deflate,
-		replacement: func(name string) jwa.CompressionAlgorithm { return jwa.NewCompressionAlgorithm(name, jwa.WithDeprecated(true)) },
-		register:    jwa.RegisterCompressionAlgorithm,
-		unregister:  jwa.UnregisterCompressionAlgorithm,
-		lookup:      jwa.LookupCompressionAlgorithm,
-		list:        jwa.CompressionAlgorithms,
+		name:    "CompressionAlgorithm",
+		builtin: jwa.Deflate,
+		replacement: func(name string) jwa.CompressionAlgorithm {
+			return jwa.NewCompressionAlgorithm(name, jwa.WithDeprecated(true))
+		},
+		register:   jwa.RegisterCompressionAlgorithm,
+		unregister: jwa.UnregisterCompressionAlgorithm,
+		lookup:     jwa.LookupCompressionAlgorithm,
+		list:       jwa.CompressionAlgorithms,
 	})
 }
 
@@ -108,10 +119,8 @@ func testBuiltinRegistryProtection[T interface {
 func assertBuiltinInList[T comparable](t *testing.T, registry string, builtin T, values []T) {
 	t.Helper()
 
-	for _, value := range values {
-		if value == builtin {
-			return
-		}
+	if slices.Contains(values, builtin) {
+		return
 	}
 
 	require.Failf(t, "builtin missing from list", "%s list is missing %v", registry, builtin)
