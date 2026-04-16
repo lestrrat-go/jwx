@@ -218,6 +218,13 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 // Read the documentation for `jwe.WithKey()` to learn more about the
 // possible values that can be used for `alg` and `key`.
 //
+// If you enable `jwe.WithCompress()`, this library does not enforce a
+// producer-side payload size limit before compression. Callers that accept
+// untrusted or arbitrarily large plaintext must bound the input size before
+// calling `jwe.Encrypt()`. Recipients may also reject compressed messages
+// whose decompressed payload exceeds their `jwe.WithMaxDecompressBufferSize()`
+// setting.
+//
 // Look for options that return `jwe.EncryptOption` or `jws.EncryptDecryptOption`
 // for a complete list of options that can be passed to this function.
 //
