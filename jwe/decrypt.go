@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	stdjson "encoding/json"
 	"fmt"
+	"math"
 
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/jwa"
@@ -94,6 +95,10 @@ func decryptKeyPBES2(recipientKey []byte, alg string, key any, headers Headers, 
 		}
 	default:
 		return nil, fmt.Errorf(`jwe: decrypt key: %q field is not a number`, CountKey)
+	}
+
+	if math.IsNaN(countFlt) || math.IsInf(countFlt, 0) || math.Trunc(countFlt) != countFlt {
+		return nil, fmt.Errorf("jwe: decrypt key: invalid 'p2c' value")
 	}
 
 	if countFlt > float64(maxCount) || countFlt < float64(minCount) {
