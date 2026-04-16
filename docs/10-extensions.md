@@ -172,6 +172,11 @@ func Example_mldsa_jwk() {
 	// JWK keys can be serialized to JSON for storage or transmission.
 	// The JSON representation follows the AKP key format with base64url-encoded
 	// "pub" (public key bytes) and "priv" (seed bytes) fields.
+	//
+	// Note: core jwk validation for AKP keys only checks that "alg" is set
+	// and that "pub"/"priv" are non-empty. Parameter-set-specific length
+	// checks are performed by the companion module when it reconstructs or
+	// uses the key.
 	serialized, err := json.Marshal(privJWK)
 	if err != nil {
 		fmt.Printf("failed to serialize JWK: %s\n", err)
