@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v4/cert"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/lestrrat-go/jwx/v4/jws"
@@ -133,6 +134,13 @@ func TestHeader(t *testing.T) {
 		v, ok := h.Field(`private`)
 		require.True(t, ok, `h.Field should succeed`)
 		require.Equal(t, v, "boofoo", "value for 'private' should match")
+	})
+
+	t.Run("RejectInvalidX509CertChain", func(t *testing.T) {
+		h := jws.NewHeaders()
+		err := json.Unmarshal([]byte(`{"x5c":["bm90IGEgY2VydGlmaWNhdGU="]}`), h)
+		require.Error(t, err, `json.Unmarshal should reject invalid x5c entries`)
+		require.False(t, h.Has(jws.X509CertChainKey), `failed decode must not populate x5c`)
 	})
 
 	t.Run("Iterator", func(t *testing.T) {
