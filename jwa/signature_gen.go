@@ -182,17 +182,25 @@ func LookupSignatureAlgorithm(name string) (SignatureAlgorithm, bool) {
 // RegisterSignatureAlgorithm registers a new SignatureAlgorithm. The signature value must be immutable
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
 //
-// The error return is reserved for future validation (duplicate detection,
-// identifier rules, freeze-point enforcement, etc). The current implementation
-// always returns nil, but callers — especially extension modules calling this
-// from init() — must check the return value and panic on failure to stay
-// forward-compatible.
+// Registration is process-global. Built-in identifiers such as RS256 are
+// reserved and cannot be replaced by callers after init has completed; use a
+// distinct name for third-party algorithms.
 func RegisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) error {
 	muAllSignatureAlgorithm.Lock()
+	defer muAllSignatureAlgorithm.Unlock()
 	for _, alg := range algorithms {
+		if _, ok := builtinSignatureAlgorithm[alg.String()]; ok {
+			if existing, ok := allSignatureAlgorithm[alg.String()]; ok && existing != alg {
+				return fmt.Errorf(`jwa: SignatureAlgorithm %q is reserved for a built-in value`, alg.String())
+			}
+		}
+	}
+	for _, alg := range algorithms {
+		if _, ok := builtinSignatureAlgorithm[alg.String()]; ok {
+			continue
+		}
 		allSignatureAlgorithm[alg.String()] = alg
 	}
-	muAllSignatureAlgorithm.Unlock()
 	rebuildSignatureAlgorithm()
 	return nil
 }
@@ -201,23 +209,21 @@ func RegisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) error {
 // Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
 	muAllSignatureAlgorithm.Lock()
+	defer muAllSignatureAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		if _, ok := builtinSignatureAlgorithm[alg.String()]; ok {
 			continue
 		}
 		delete(allSignatureAlgorithm, alg.String())
 	}
-	muAllSignatureAlgorithm.Unlock()
 	rebuildSignatureAlgorithm()
 }
 
 func rebuildSignatureAlgorithm() {
 	list := make([]SignatureAlgorithm, 0, len(allSignatureAlgorithm))
-	muAllSignatureAlgorithm.RLock()
 	for _, v := range allSignatureAlgorithm {
 		list = append(list, v)
 	}
-	muAllSignatureAlgorithm.RUnlock()
 	slices.SortFunc(list, func(a, b SignatureAlgorithm) int {
 		return cmp.Compare(a.String(), b.String())
 	})

@@ -51,11 +51,9 @@ func VerifierFor(alg jwa.SignatureAlgorithm) (Verifier, error) {
 // This function also calls jwa.RegisterSignatureAlgorithm to register
 // the algorithm in this module's algorithm database.
 //
-// The error return is reserved for future validation (duplicate detection,
-// identifier rules, freeze-point enforcement, etc). The current
-// implementation always returns nil, but callers — especially extension
-// modules calling this from init() — must check the return value and panic
-// on failure to stay forward-compatible.
+// Built-in algorithm identifiers are reserved; attempts to register a Verifier
+// using a built-in name with different metadata will fail. Re-registering the
+// exact built-in algorithm value is allowed.
 func RegisterVerifier(alg jwa.SignatureAlgorithm, v Verifier) error {
 	if err := jwa.RegisterSignatureAlgorithm(alg); err != nil {
 		return fmt.Errorf(`jws.RegisterVerifier: failed to register signature algorithm: %w`, err)

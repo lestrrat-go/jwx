@@ -120,17 +120,25 @@ func LookupContentEncryptionAlgorithm(name string) (ContentEncryptionAlgorithm, 
 // RegisterContentEncryptionAlgorithm registers a new ContentEncryptionAlgorithm. The signature value must be immutable
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
 //
-// The error return is reserved for future validation (duplicate detection,
-// identifier rules, freeze-point enforcement, etc). The current implementation
-// always returns nil, but callers — especially extension modules calling this
-// from init() — must check the return value and panic on failure to stay
-// forward-compatible.
+// Registration is process-global. Built-in identifiers such as RS256 are
+// reserved and cannot be replaced by callers after init has completed; use a
+// distinct name for third-party algorithms.
 func RegisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm) error {
 	muAllContentEncryptionAlgorithm.Lock()
+	defer muAllContentEncryptionAlgorithm.Unlock()
 	for _, alg := range algorithms {
+		if _, ok := builtinContentEncryptionAlgorithm[alg.String()]; ok {
+			if existing, ok := allContentEncryptionAlgorithm[alg.String()]; ok && existing != alg {
+				return fmt.Errorf(`jwa: ContentEncryptionAlgorithm %q is reserved for a built-in value`, alg.String())
+			}
+		}
+	}
+	for _, alg := range algorithms {
+		if _, ok := builtinContentEncryptionAlgorithm[alg.String()]; ok {
+			continue
+		}
 		allContentEncryptionAlgorithm[alg.String()] = alg
 	}
-	muAllContentEncryptionAlgorithm.Unlock()
 	rebuildContentEncryptionAlgorithm()
 	return nil
 }
@@ -139,23 +147,21 @@ func RegisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm
 // Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm) {
 	muAllContentEncryptionAlgorithm.Lock()
+	defer muAllContentEncryptionAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		if _, ok := builtinContentEncryptionAlgorithm[alg.String()]; ok {
 			continue
 		}
 		delete(allContentEncryptionAlgorithm, alg.String())
 	}
-	muAllContentEncryptionAlgorithm.Unlock()
 	rebuildContentEncryptionAlgorithm()
 }
 
 func rebuildContentEncryptionAlgorithm() {
 	list := make([]ContentEncryptionAlgorithm, 0, len(allContentEncryptionAlgorithm))
-	muAllContentEncryptionAlgorithm.RLock()
 	for _, v := range allContentEncryptionAlgorithm {
 		list = append(list, v)
 	}
-	muAllContentEncryptionAlgorithm.RUnlock()
 	slices.SortFunc(list, func(a, b ContentEncryptionAlgorithm) int {
 		return cmp.Compare(a.String(), b.String())
 	})
