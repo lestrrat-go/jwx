@@ -58,7 +58,7 @@ JSON Web Signatures per RFC 7515. Sign, verify, parse.
 - **VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error)** — fast-path verification
 - **Parse(src []byte, ...ParseOption) (*Message, error)** — parse without verification
 - **SplitCompact(src []byte) ([]byte, []byte, []byte, error)** — split compact JWS into parts
-- Key types: `Message`, `Signature`, `Headers`, `KeyProvider`, `KeySink`, `Base64Encoder`, `Base64StreamEncoder`
+- Key types: `Message`, `Signature`, `Headers`, `KeyProvider`, `KeySink`, `Base64Encoder`
 - Options: `WithKey()`, `WithKeySet()`, `WithVerifyAuto()`, `WithJSON()`, `WithDetachedPayload()`
 - Global/per-call settings: `WithMaxParseInputSize()` (usable in both `Settings()` and `ParseReader()`/`ReadFile()`); `WithMaxSignatures()` (usable in both `Settings()` and `Parse()`/`ReadFile()`)
 - Registration: `RegisterSigner()`, `RegisterVerifier()`, `AlgorithmsForKey()`, `RegisterAlgorithmForKeyType()`, `RegisterAlgorithmForCurve()`

@@ -5,7 +5,6 @@ import (
 	stdbase64 "encoding/base64"
 	"encoding/binary"
 	"fmt"
-	"io"
 	"sync/atomic"
 )
 
@@ -18,11 +17,6 @@ type Encoder interface {
 	EncodedLen(int) int
 	EncodeToString([]byte) string
 	AppendEncode([]byte, []byte) []byte
-}
-
-type StreamEncoder interface {
-	Encoder
-	NewEncoder(io.Writer) io.WriteCloser
 }
 
 type stdEncoder struct {
@@ -43,10 +37,6 @@ func (e stdEncoder) EncodeToString(src []byte) string {
 
 func (e stdEncoder) AppendEncode(dst, src []byte) []byte {
 	return e.enc.AppendEncode(dst, src)
-}
-
-func (e stdEncoder) NewEncoder(w io.Writer) io.WriteCloser {
-	return stdbase64.NewEncoder(e.enc, w)
 }
 
 // encoderHolder and decoderHolder are fixed concrete types so that
@@ -73,18 +63,6 @@ func getEncoder() Encoder {
 
 func DefaultEncoder() Encoder {
 	return getEncoder()
-}
-
-func AsStreamEncoder(enc Encoder) (StreamEncoder, bool) {
-	if stream, ok := enc.(StreamEncoder); ok {
-		return stream, true
-	}
-
-	stdenc, ok := enc.(*stdbase64.Encoding)
-	if !ok {
-		return nil, false
-	}
-	return stdEncoder{enc: stdenc}, true
 }
 
 func SetDecoder(dec Decoder) {

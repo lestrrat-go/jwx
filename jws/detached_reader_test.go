@@ -167,13 +167,19 @@ func TestDetachedReaderWithBase64Encoder(t *testing.T) {
 	key, err := jwxtest.GenerateSymmetricJwk()
 	require.NoError(t, err)
 
-	signed, err := jws.SignDetachedReader(
+	_, err = jws.SignDetachedReader(
 		bytes.NewReader(payload),
 		jws.WithKey(jwa.HS256(), key),
 		jws.WithBase64Encoder(stdbase64.URLEncoding),
 	)
+	require.Error(t, err)
+	require.ErrorContains(t, err, `jws.WithBase64Encoder() is not supported by SignDetachedReader`)
+
+	signed, err := jws.SignDetachedReader(
+		bytes.NewReader(payload),
+		jws.WithKey(jwa.HS256(), key),
+	)
 	require.NoError(t, err)
-	require.Contains(t, string(signed), "=")
 
 	err = jws.VerifyDetachedReader(
 		signed,
@@ -181,7 +187,8 @@ func TestDetachedReaderWithBase64Encoder(t *testing.T) {
 		jws.WithKey(jwa.HS256(), key),
 		jws.WithBase64Encoder(stdbase64.URLEncoding),
 	)
-	require.NoError(t, err)
+	require.Error(t, err)
+	require.ErrorContains(t, err, `jws.WithBase64Encoder() is not supported by VerifyDetachedReader`)
 }
 
 func TestDetachedReaderUnsupportedUsageGuidance(t *testing.T) {

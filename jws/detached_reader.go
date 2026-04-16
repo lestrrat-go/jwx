@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/hmac"
 	"crypto/rsa"
+	stdbase64 "encoding/base64"
 	"fmt"
 	"hash"
 	"io"
@@ -80,7 +81,7 @@ func SignDetachedReader(payload io.Reader, options ...SignOption) ([]byte, error
 		case identValidateKey{}:
 			validateKey = option.MustGet[bool](opt)
 		case identBase64Encoder{}:
-			encoder = option.MustGet[Base64Encoder](opt)
+			return nil, makeSignError(prefixJwsSignDetachedReader, `jws.WithBase64Encoder() is not supported by SignDetachedReader; the streaming payload path uses RawURLEncoding`)
 		case identSerialization{}:
 			v := option.MustGet[int](opt)
 			switch v {
@@ -101,11 +102,6 @@ func SignDetachedReader(payload io.Reader, options ...SignOption) ([]byte, error
 	}
 	if alg == jwa.NoSignature() {
 		return nil, makeSignError(prefixJwsSignDetachedReader, `"none" (jwa.NoSignature) cannot be used with SignDetachedReader; use jws.Sign with jws.WithInsecureNoSignature() if you really need an unsecured in-memory JWS`)
-	}
-
-	streamEncoder, ok := base64.AsStreamEncoder(encoder)
-	if !ok {
-		return nil, makeSignError(prefixJwsSignDetachedReader, `jws.WithBase64Encoder() for SignDetachedReader requires a stream-capable encoder; use a standard library base64 encoding or implement jws.Base64StreamEncoder`)
 	}
 
 	if validateKey {
@@ -166,7 +162,7 @@ func SignDetachedReader(payload io.Reader, options ...SignOption) ([]byte, error
 	if err := writeDetachedPrefix(hasher, hdrbuf, encoder); err != nil {
 		return nil, makeSignError(prefixJwsSignDetachedReader, `failed to write signing prefix: %w`, err)
 	}
-	if err := streamDetachedPayload(hasher, payload, streamEncoder, getB64Value(signingHeaders)); err != nil {
+	if err := streamDetachedPayload(hasher, payload, getB64Value(signingHeaders)); err != nil {
 		return nil, makeSignError(prefixJwsSignDetachedReader, `failed to stream payload: %w`, err)
 	}
 
@@ -213,7 +209,6 @@ func VerifyDetachedReader(src []byte, payload io.Reader, options ...VerifyOption
 	var keyFound bool
 	var validateKey bool
 	var keyUsed *any
-	var encoder Base64Encoder = base64.DefaultEncoder()
 	critValidation := true
 	criticalExtensions := []string{"b64"}
 	format := 0
@@ -247,7 +242,7 @@ func VerifyDetachedReader(src []byte, payload io.Reader, options ...VerifyOption
 		case identCritExtension{}:
 			criticalExtensions = append(criticalExtensions, option.MustGet[[]string](opt)...)
 		case identBase64Encoder{}:
-			encoder = option.MustGet[Base64Encoder](opt)
+			return makeVerifyError(`jws.WithBase64Encoder() is not supported by VerifyDetachedReader; the streaming payload path uses RawURLEncoding`)
 		case identSerialization{}:
 			v := option.MustGet[int](opt)
 			switch v {
@@ -280,11 +275,6 @@ func VerifyDetachedReader(src []byte, payload io.Reader, options ...VerifyOption
 		format = detected
 	} else if format != detected {
 		return makeVerifyError(`input format mismatch: %s specified but input appears to be %s`, detachedReaderFormatName(format), detachedReaderFormatName(detected))
-	}
-
-	streamEncoder, ok := base64.AsStreamEncoder(encoder)
-	if !ok {
-		return makeVerifyError(`jws.WithBase64Encoder() for VerifyDetachedReader requires a stream-capable encoder; use a standard library base64 encoding or implement jws.Base64StreamEncoder`)
 	}
 
 	if validateKey {
@@ -340,7 +330,7 @@ func VerifyDetachedReader(src []byte, payload io.Reader, options ...VerifyOption
 	if _, err := hasher.Write([]byte{tokens.Period}); err != nil {
 		return makeVerifyError(`failed to write signing prefix: %w`, err)
 	}
-	if err := streamDetachedPayload(hasher, payload, streamEncoder, getB64Value(protected)); err != nil {
+	if err := streamDetachedPayload(hasher, payload, getB64Value(protected)); err != nil {
 		return makeVerifyError(`failed to stream payload: %w`, err)
 	}
 	if err := dsig.VerifyDigest(rawKey, dsigAlg, hasher.Sum(nil), decodedSig); err != nil {
@@ -570,7 +560,7 @@ func writeDetachedPrefix(hasher hash.Hash, hdrbuf []byte, encoder Base64Encoder)
 	return err
 }
 
-func streamDetachedPayload(hasher hash.Hash, payload io.Reader, encoder base64.StreamEncoder, encodePayload bool) error {
+func streamDetachedPayload(hasher hash.Hash, payload io.Reader, encodePayload bool) error {
 	if !encodePayload {
 		if _, err := io.Copy(hasher, payload); err != nil {
 			return fmt.Errorf(`failed to stream payload: %w`, err)
@@ -578,7 +568,7 @@ func streamDetachedPayload(hasher hash.Hash, payload io.Reader, encoder base64.S
 		return nil
 	}
 
-	w := encoder.NewEncoder(hasher)
+	w := stdbase64.NewEncoder(stdbase64.RawURLEncoding, hasher)
 	if _, err := io.Copy(w, payload); err != nil {
 		_ = w.Close()
 		return fmt.Errorf(`failed to stream payload through base64 encoder: %w`, err)

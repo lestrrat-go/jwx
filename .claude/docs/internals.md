@@ -115,7 +115,7 @@ Internal `internal/json` package provides the abstraction. Custom field registry
 
 Pluggable at runtime via `SetBase64Encoder`/`SetBase64Decoder` (exposed as `jwx.SetBase64Encoder`/`jwx.SetBase64Decoder` in the top-level package):
 - Default: `encoding/base64`
-- Reader-based detached JWS APIs (`jws.SignDetachedReader`, `jws.VerifyDetachedReader`) require a stream-capable encoder; standard-library `*encoding/base64.Encoding` values are auto-adapted, and custom encoders can implement `jws.Base64StreamEncoder`
+- Reader-based detached JWS APIs (`jws.SignDetachedReader`, `jws.VerifyDetachedReader`) reject `jws.WithBase64Encoder()` and stream the payload with standard-library raw URL encoding
 
 Internal `internal/base64` package abstracts the choice.
 
