@@ -87,8 +87,8 @@ func doImport(raw any) (Key, error) {
 	if err != nil {
 		return nil, importerr(`%w`, err)
 	}
-	if err := validateReturnedKey(`jwk.Import`, key); err != nil {
-		return nil, importError{err}
+	if err := validateReturnedKey(key); err != nil {
+		return nil, importerr(`%w`, err)
 	}
 	return key, nil
 }
@@ -143,12 +143,12 @@ func importRawKey(raw any) (Key, error) {
 	return conv.Import(raw)
 }
 
-func validateReturnedKey(prefix string, key Key) error {
+func validateReturnedKey(key Key) error {
 	if key == nil {
 		return nil
 	}
 	if err := key.Validate(); err != nil {
-		return fmt.Errorf(`%s: %w`, prefix, err)
+		return err
 	}
 	return nil
 }
@@ -376,8 +376,8 @@ func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 		if err != nil {
 			return nil, fmt.Errorf(`jwk.Parse: failed to create jwk.Key from %T: %w`, raw, err)
 		}
-		if err := validateReturnedKey(`jwk.Parse`, key); err != nil {
-			return nil, err
+		if err := validateReturnedKey(key); err != nil {
+			return nil, fmt.Errorf(`jwk.Parse: %w`, err)
 		}
 		return key, nil
 	}
@@ -398,8 +398,8 @@ func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 		parser := parsers[i]
 		key, err := parser.ParseKey(probe, &unmarshaler, data)
 		if err == nil {
-			if err := validateReturnedKey(`jwk.Parse`, key); err != nil {
-				return nil, err
+			if err := validateReturnedKey(key); err != nil {
+				return nil, fmt.Errorf(`jwk.Parse: %w`, err)
 			}
 			return key, nil
 		}
@@ -469,8 +469,8 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			if err != nil {
 				return nil, parseerr(`failed to create jwk.Key from %T: %w`, raw, err)
 			}
-			if err := validateReturnedKey(`jwk.Parse`, key); err != nil {
-				return nil, parseError{err}
+			if err := validateReturnedKey(key); err != nil {
+				return nil, parseerr(`%w`, err)
 			}
 			if err := s.AddKey(key); err != nil {
 				return nil, parseerr(`failed to add jwk.Key to set: %w`, err)
