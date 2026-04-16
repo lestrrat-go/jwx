@@ -17,6 +17,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
 var fieldRegistry = json.NewRegistry()
@@ -122,7 +123,7 @@ func PublicSetOf(v Set, options ...PublicSetOption) (Set, error) {
 		if !ok {
 			return nil, fmt.Errorf(`key not found`)
 		}
-		if _, isSymmetric := k.(SymmetricKey); isSymmetric && !allowSymmetric {
+		if k.KeyType() == jwa.OctetSeq() && !allowSymmetric {
 			kid, _ := k.KeyID()
 			return nil, fmt.Errorf(`jwk.PublicSetOf: input set contains a symmetric key (kid=%q, index=%d); symmetric keys have no public form and would leak secret material if published. Remove symmetric keys from the set before calling PublicSetOf, or pass jwk.WithAllowSymmetric(true) to opt into legacy pass-through behavior`, kid, i)
 		}
