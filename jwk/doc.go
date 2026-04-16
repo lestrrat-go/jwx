@@ -9,8 +9,8 @@
 // work for third party key types (see section on "Registering a key type" below).
 //
 // Users can create a JWK in two ways. One is to unmarshal a JSON representation of a
-// key. The second one is to use `jwk.Import()` to import a raw key and convert it to
-// a jwk.Key.
+// key. The second one is to use `jwk.Import()` to import a raw key, validate it,
+// and convert it to a jwk.Key.
 //
 // # Simple Usage
 //

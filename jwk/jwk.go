@@ -46,7 +46,8 @@ func init() {
 	}
 }
 
-// Import creates a jwk.Key from the given key (RSA/ECDSA/symmetric keys).
+// Import creates a validated jwk.Key from the given key
+// (RSA/ECDSA/symmetric keys).
 //
 // The constructor auto-detects the type of key to be instantiated
 // based on the input type:
@@ -65,6 +66,9 @@ func init() {
 // Use a concrete key type to obtain a typed result directly:
 //
 //	rsaKey, err := jwk.Import[jwk.RSAPrivateKey](rawRSAKey)
+//
+// Import validates the populated JWK before returning it. Malformed raw
+// keys fail at import time instead of being returned for later validation.
 func Import[T Key](raw any) (T, error) {
 	var zero T
 	key, err := doImport(raw)
@@ -79,10 +83,11 @@ func Import[T Key](raw any) (T, error) {
 }
 
 func validateImportedKey(key Key) error {
-	if v, ok := key.(interface{ Validate() error }); ok {
-		if err := v.Validate(); err != nil {
-			return importerr(`key validation failed: %w`, err)
-		}
+	if key == nil {
+		return nil
+	}
+	if err := key.Validate(); err != nil {
+		return importerr(`key validation failed: %w`, err)
 	}
 	return nil
 }
@@ -126,16 +131,13 @@ func importBuiltinKey(raw any) (Key, error) {
 	}
 }
 
-func doImport(raw any) (Key, error) {
+func convertRawKey(raw any) (Key, error) {
 	if raw == nil {
-		return nil, importerr(`a non-nil key is required`)
+		return nil, fmt.Errorf(`a non-nil key is required`)
 	}
 
 	key, err := importBuiltinKey(raw)
 	if err == nil {
-		if err := validateImportedKey(key); err != nil {
-			return nil, err
-		}
 		return key, nil
 	}
 	if !errors.Is(err, errNotBuiltinKey) {
@@ -146,17 +148,31 @@ func doImport(raw any) (Key, error) {
 	conv, ok := keyImporters[reflect.TypeOf(raw)]
 	muKeyImporters.RUnlock()
 	if !ok {
-		return nil, importerr(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
+		return nil, fmt.Errorf(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}
 
-	key, err = conv.Import(raw)
+	return conv.Import(raw)
+}
+
+func doImport(raw any) (Key, error) {
+	key, err := convertRawKey(raw)
 	if err != nil {
-		return nil, err
+		return nil, importerr(`%w`, err)
 	}
 	if err := validateImportedKey(key); err != nil {
 		return nil, err
 	}
 	return key, nil
+}
+
+func validateReturnedKey(key Key) error {
+	if key == nil {
+		return nil
+	}
+	if err := key.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // PublicSetOf returns a new jwk.Set consisting of
@@ -378,7 +394,14 @@ func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 		if err != nil {
 			return nil, fmt.Errorf(`failed to decode PEM/X.509 encoded key: %w`, err)
 		}
-		return doImport(raw)
+		key, err := convertRawKey(raw)
+		if err != nil {
+			return nil, fmt.Errorf(`jwk.Parse: failed to create jwk.Key from %T: %w`, raw, err)
+		}
+		if err := validateReturnedKey(key); err != nil {
+			return nil, fmt.Errorf(`jwk.Parse: %w`, err)
+		}
+		return key, nil
 	}
 
 	probe, err := keyProbe.Probe(data)
@@ -397,6 +420,9 @@ func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 		parser := parsers[i]
 		key, err := parser.ParseKey(probe, &unmarshaler, data)
 		if err == nil {
+			if err := validateReturnedKey(key); err != nil {
+				return nil, fmt.Errorf(`jwk.Parse: %w`, err)
+			}
 			return key, nil
 		}
 
@@ -461,9 +487,12 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			if err != nil {
 				return nil, parseerr(`failed to parse PEM encoded key: %w`, err)
 			}
-			key, err := doImport(raw)
+			key, err := convertRawKey(raw)
 			if err != nil {
 				return nil, parseerr(`failed to create jwk.Key from %T: %w`, raw, err)
+			}
+			if err := validateReturnedKey(key); err != nil {
+				return nil, parseerr(`%w`, err)
 			}
 			if err := s.AddKey(key); err != nil {
 				return nil, parseerr(`failed to add jwk.Key to set: %w`, err)
