@@ -753,7 +753,7 @@ func Configure(options ...GlobalOption) {
 	}
 
 	if minRSAPublicExponentPtr != nil {
-		rsaMinPublicExponent.Store(*minRSAPublicExponentPtr)
+		setMinRSAPublicExponent(int(*minRSAPublicExponentPtr))
 	}
 }
 

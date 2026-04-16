@@ -23,11 +23,20 @@ const minRSAModulusBits = 2048
 const minRSAPublicExponent = 3
 
 var rsaMinModulusBits = atomic.Int64{}
-var rsaMinPublicExponent = atomic.Int64{}
+var rsaMinPublicExponent atomic.Pointer[big.Int]
 
 func init() {
 	rsaMinModulusBits.Store(minRSAModulusBits)
-	rsaMinPublicExponent.Store(minRSAPublicExponent)
+	setMinRSAPublicExponent(minRSAPublicExponent)
+}
+
+func setMinRSAPublicExponent(v int) {
+	if v <= 0 {
+		rsaMinPublicExponent.Store(nil)
+		return
+	}
+
+	rsaMinPublicExponent.Store(big.NewInt(int64(v)))
 }
 
 func (k *rsaPrivateKey) Import(rawKey *rsa.PrivateKey) error {
@@ -137,8 +146,8 @@ func validateRSAModulusAndExponent(n, e []byte) (*big.Int, error) {
 	if bigE.Sign() <= 0 || bigE.Bit(0) == 0 {
 		return nil, fmt.Errorf(`invalid rsa public exponent: must be a positive odd integer`)
 	}
-	if minExponent > 0 && bigE.Cmp(big.NewInt(minExponent)) < 0 {
-		return nil, fmt.Errorf(`invalid rsa public exponent: got %s, need at least %d`, bigE.String(), minExponent)
+	if minExponent != nil && bigE.Cmp(minExponent) < 0 {
+		return nil, fmt.Errorf(`invalid rsa public exponent: got %s, need at least %s`, bigE.String(), minExponent.String())
 	}
 
 	// rsa.PublicKey.E is a Go int. Reject exponents that do not fit on the
