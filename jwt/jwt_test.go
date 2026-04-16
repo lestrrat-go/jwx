@@ -1401,7 +1401,12 @@ func TestGH430(t *testing.T) {
 func TestGH706(t *testing.T) {
 	err := jwt.Validate(jwt.New(), jwt.WithRequiredClaim("foo"))
 	require.ErrorIs(t, err, jwt.ValidationError{}, `error should be a validation error`)
+	require.ErrorIs(t, err, jwt.MissingRequiredClaimError{}, `err should be jwt.ErrRequiredClaim`)
 	require.ErrorIs(t, err, &jwt.MissingRequiredClaimError{}, `err should be jwt.ErrRequiredClaim`)
+
+	requiredClaimErr, ok := errors.AsType[jwt.MissingRequiredClaimError](err)
+	require.True(t, ok, `errors.AsType should find MissingRequiredClaimError`)
+	require.Equal(t, "foo", requiredClaimErr.Claim, `Claim should identify the missing required claim`)
 }
 
 func TestBenHigginsByPassRegression(t *testing.T) {
