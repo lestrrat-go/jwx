@@ -65,17 +65,17 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 
 			alg, ok := data.alg.(jwa.SignatureAlgorithm)
 			if !ok {
-				return makeSignError(`expected algorithm to be of type jwa.SignatureAlgorithm but got (%[1]q, %[1]T)`, data.alg)
+				return makeSignError(prefixJwsSign, `expected algorithm to be of type jwa.SignatureAlgorithm but got (%[1]q, %[1]T)`, data.alg)
 			}
 
 			// No, we don't accept "none" here.
 			if alg == jwa.NoSignature() {
-				return makeSignError(`"none" (jwa.NoSignature) cannot be used with jws.WithKey`)
+				return makeSignError(prefixJwsSign, `"none" (jwa.NoSignature) cannot be used with jws.WithKey`)
 			}
 
 			if !data.keyPrevalidated {
 				if err := validateAlgorithmForKey(alg, data.key); err != nil {
-					return makeSignError(`%w`, err)
+					return makeSignError(prefixJwsSign, `%w`, err)
 				}
 			}
 
@@ -83,7 +83,7 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			// fast-path header JSON (e.g. an algorithm name that would
 			// require JSON escaping).
 			if data.cachedHdrErr != nil {
-				return makeSignError(`%w`, data.cachedHdrErr)
+				return makeSignError(prefixJwsSign, `%w`, data.cachedHdrErr)
 			}
 
 			sb := signatureBuilderPool.Get()
@@ -97,7 +97,7 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			sc.sigbuilders = append(sc.sigbuilders, sb)
 		case identDetachedPayload{}:
 			if sc.payload != nil {
-				return makeSignError(`payload must be nil when jws.WithDetachedPayload() is specified`)
+				return makeSignError(prefixJwsSign, `payload must be nil when jws.WithDetachedPayload() is specified`)
 			}
 			sc.payload = option.MustGet[[]byte](opt)
 			sc.detached = true
@@ -106,7 +106,7 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 		case identBase64Encoder{}:
 			sc.encoder = option.MustGet[Base64Encoder](opt)
 		default:
-			return makeSignError(`invalid jws.SignOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, opt.Ident()), `jws.ident`))
+			return makeSignError(prefixJwsSign, `invalid jws.SignOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, opt.Ident()), `jws.ident`))
 		}
 	}
 	return nil
