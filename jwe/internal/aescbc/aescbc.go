@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"slices"
 	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v4/internal/pool"
@@ -191,16 +192,22 @@ func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) ([]byte, error) {
 }
 
 func ensureSize(dst []byte, n int) []byte {
-	// if the dst buffer has enough length just copy the relevant parts to it.
-	// Otherwise create a new slice that's big enough, and operate on that
-	// Note: I think go-jose has a bug in that it checks for cap(), but not len().
-	ret := dst
-	if diff := n - len(dst); diff > 0 {
-		// dst is not big enough
-		ret = make([]byte, n)
-		copy(ret, dst)
+	// Grow dst by n bytes, preserving its current contents as the prefix.
+	// This matches the crypto.AEAD append contract used by Seal/Open.
+	if n < 0 {
+		panic(fmt.Errorf("failed to allocate buffer"))
 	}
-	return ret
+
+	const maxInt = int64(^uint(0) >> 1)
+	maxAlloc := min(maxBufSize.Load(), maxInt)
+
+	if int64(len(dst)) > maxAlloc-int64(n) {
+		panic(fmt.Errorf("failed to allocate buffer"))
+	}
+
+	retlen := len(dst) + n
+	dst = slices.Grow(dst, n)
+	return dst[:retlen]
 }
 
 // Seal fulfills the crypto.AEAD interface
@@ -226,9 +233,7 @@ func (c Hmac) Seal(dst, nonce, plaintext, data []byte) []byte {
 		panic(fmt.Errorf("failed to seal on hmac: %v", err))
 	}
 
-	retlen := len(dst) + len(ciphertext) + len(authtag)
-
-	ret := ensureSize(dst, retlen)
+	ret := ensureSize(dst, len(ciphertext)+len(authtag))
 	out := ret[len(dst):]
 	n := copy(out, ciphertext)
 	copy(out[n:], authtag)
