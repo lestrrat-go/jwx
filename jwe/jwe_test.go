@@ -794,6 +794,47 @@ func TestGH924(t *testing.T) {
 	require.Equal(t, payload, decrypted, `decrypt messages match`)
 }
 
+func TestDecryptRejectsNonStringAESGCMKWHeaders(t *testing.T) {
+	sharedKey := []byte("0123456789abcdef")
+	payload := []byte("Lorem Ipsum")
+
+	encrypted, err := jwe.Encrypt(
+		payload,
+		jwe.WithJSON(),
+		jwe.WithKey(jwa.A128GCMKW(), sharedKey),
+		jwe.WithContentEncryption(jwa.A128GCM()),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.A128GCMKW(), sharedKey))
+	require.NoError(t, err, `baseline jwe.Decrypt should succeed`)
+	require.Equal(t, payload, decrypted, `baseline plaintext should round-trip`)
+
+	for _, field := range []string{jwe.InitializationVectorKey, jwe.TagKey} {
+		t.Run(field, func(t *testing.T) {
+			var parsed map[string]any
+			require.NoError(t, json.Unmarshal(encrypted, &parsed), `freshly encrypted JWE should parse as JSON`)
+
+			header, ok := parsed["header"].(map[string]any)
+			require.True(t, ok, `flattened JSON JWE should contain a recipient header`)
+
+			_, ok = header[field]
+			require.True(t, ok, `recipient header should contain %q`, field)
+
+			header[field] = 1
+
+			tampered, err := json.Marshal(parsed)
+			require.NoError(t, err, `re-marshaling tampered JWE should succeed`)
+
+			_, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.A128GCMKW(), sharedKey))
+			require.Error(t, err, `jwe.Decrypt must reject non-string AES-GCM-KW headers`)
+			require.Contains(t, err.Error(), field)
+			require.Contains(t, err.Error(), `not a string`)
+			require.NotContains(t, err.Error(), `GCM requires`)
+		})
+	}
+}
+
 func TestGH1001(t *testing.T) {
 	rawKey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)

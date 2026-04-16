@@ -656,7 +656,10 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 		}
 	case jwa.A128GCMKW(), jwa.A192GCMKW(), jwa.A256GCMKW():
 		var ivB64 string
-		if err := h2.Get(InitializationVectorKey, &ivB64); err == nil {
+		if h2.Has(InitializationVectorKey) {
+			if err := h2.Get(InitializationVectorKey, &ivB64); err != nil {
+				return nil, fmt.Errorf(`field %q is not a string: %w`, InitializationVectorKey, err)
+			}
 			iv, err := base64.DecodeString(ivB64)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to b64-decode 'iv': %w`, err)
@@ -664,7 +667,10 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 			dec.KeyInitializationVector(iv)
 		}
 		var tagB64 string
-		if err := h2.Get(TagKey, &tagB64); err == nil {
+		if h2.Has(TagKey) {
+			if err := h2.Get(TagKey, &tagB64); err != nil {
+				return nil, fmt.Errorf(`field %q is not a string: %w`, TagKey, err)
+			}
 			tag, err := base64.DecodeString(tagB64)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to b64-decode 'tag': %w`, err)
