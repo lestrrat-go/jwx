@@ -127,6 +127,15 @@ func TestSealAndOpenAppendToDst(t *testing.T) {
 	})
 }
 
+func TestEnsureSizeRejectsOverflow(t *testing.T) {
+	dst := []byte("x")
+	maxInt := int(^uint(0) >> 1)
+
+	require.PanicsWithError(t, "failed to allocate buffer", func() {
+		_ = ensureSize(dst, maxInt)
+	})
+}
+
 func TestPad(t *testing.T) {
 	for i := range 256 {
 		buf := make([]byte, i)

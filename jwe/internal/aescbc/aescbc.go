@@ -193,6 +193,11 @@ func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) ([]byte, error) {
 func ensureSize(dst []byte, n int) []byte {
 	// Grow dst by n bytes, preserving its current contents as the prefix.
 	// This matches the crypto.AEAD append contract used by Seal/Open.
+	const maxInt = int(^uint(0) >> 1)
+	if n > maxInt-len(dst) {
+		panic(fmt.Errorf("failed to allocate buffer"))
+	}
+
 	retlen := len(dst) + n
 	if cap(dst) >= retlen {
 		return dst[:retlen]
