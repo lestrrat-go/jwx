@@ -182,6 +182,7 @@ type messageUnmarshalProbe struct {
 func (m *Message) UnmarshalJSON(buf []byte) error {
 	m.payload = nil
 	m.signatures = nil
+	m.detached = false
 	m.b64 = true
 
 	var mup messageUnmarshalProbe
@@ -273,7 +274,9 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		b64 = getB64Value(sig.protected)
 	}
 
-	if mup.Payload != nil {
+	if mup.Payload == nil {
+		m.detached = true
+	} else {
 		if !b64 { // NOT base64 encoded
 			m.payload = []byte(*mup.Payload)
 		} else {
@@ -314,24 +317,34 @@ func (m Message) marshalFlattened() ([]byte, error) {
 		wrote = true
 	}
 
-	if wrote {
-		buf.WriteRune(tokens.Comma)
+	if !m.detached {
+		if wrote {
+			buf.WriteRune(tokens.Comma)
+		}
+		buf.WriteString(`"payload":"`)
+		buf.Write(base64.Encode(m.payload))
+		buf.WriteRune('"')
+		wrote = true
 	}
-	buf.WriteString(`"payload":"`)
-	buf.Write(base64.Encode(m.payload))
-	buf.WriteRune('"')
 
 	if protected := sig.protected; protected != nil {
 		protectedbuf, err := json.Marshal(protected)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to marshal "protected" (flattened format): %w`, err)
 		}
-		buf.WriteString(`,"protected":"`)
+		if wrote {
+			buf.WriteRune(tokens.Comma)
+		}
+		buf.WriteString(`"protected":"`)
 		buf.Write(base64.Encode(protectedbuf))
 		buf.WriteRune('"')
+		wrote = true
 	}
 
-	buf.WriteString(`,"signature":"`)
+	if wrote {
+		buf.WriteRune(tokens.Comma)
+	}
+	buf.WriteString(`"signature":"`)
 	buf.Write(base64.Encode(sig.signature))
 	buf.WriteRune('"')
 	buf.WriteRune(tokens.CloseCurlyBracket)
@@ -344,9 +357,13 @@ func (m Message) marshalFull() ([]byte, error) {
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
 
-	buf.WriteString(`{"payload":"`)
-	buf.Write(base64.Encode(m.payload))
-	buf.WriteString(`","signatures":[`)
+	buf.WriteRune(tokens.OpenCurlyBracket)
+	if !m.detached {
+		buf.WriteString(`"payload":"`)
+		buf.Write(base64.Encode(m.payload))
+		buf.WriteString(`",`)
+	}
+	buf.WriteString(`"signatures":[`)
 	for i, sig := range m.signatures {
 		if i > 0 {
 			buf.WriteRune(tokens.Comma)

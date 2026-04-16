@@ -14,6 +14,12 @@ import (
 // but it uses a base64 encoding with padding.
 type Base64Encoder = base64.Encoder
 
+// Base64StreamEncoder extends Base64Encoder with a streaming writer
+// constructor. Reader-based detached signing and verification use this
+// interface so the payload can be streamed through the same encoder that
+// handles the protected-header and signature segments.
+type Base64StreamEncoder = base64.StreamEncoder
+
 type DecodeCtx interface {
 	CollectRaw() bool
 }
@@ -61,6 +67,7 @@ type Message struct {
 	dc            DecodeCtx
 	payload       []byte
 	signatures    []*Signature
+	detached      bool
 	b64           bool // true if payload should be base64 encoded
 	maxSignatures int  // scratch cap enforced during UnmarshalJSON; 0 means use global default
 }

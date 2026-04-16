@@ -2,9 +2,10 @@ package base64
 
 import (
 	"bytes"
-	"encoding/base64"
+	stdbase64 "encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"sync/atomic"
 )
 
@@ -19,6 +20,35 @@ type Encoder interface {
 	AppendEncode([]byte, []byte) []byte
 }
 
+type StreamEncoder interface {
+	Encoder
+	NewEncoder(io.Writer) io.WriteCloser
+}
+
+type stdEncoder struct {
+	enc *stdbase64.Encoding
+}
+
+func (e stdEncoder) Encode(dst, src []byte) {
+	e.enc.Encode(dst, src)
+}
+
+func (e stdEncoder) EncodedLen(n int) int {
+	return e.enc.EncodedLen(n)
+}
+
+func (e stdEncoder) EncodeToString(src []byte) string {
+	return e.enc.EncodeToString(src)
+}
+
+func (e stdEncoder) AppendEncode(dst, src []byte) []byte {
+	return e.enc.AppendEncode(dst, src)
+}
+
+func (e stdEncoder) NewEncoder(w io.Writer) io.WriteCloser {
+	return stdbase64.NewEncoder(e.enc, w)
+}
+
 // encoderHolder and decoderHolder are fixed concrete types so that
 // atomic.Value.Store never sees a type change (which would panic).
 type encoderHolder struct{ enc Encoder }
@@ -28,7 +58,7 @@ var atomicEncoder atomic.Value
 var atomicDecoder atomic.Value
 
 func init() {
-	atomicEncoder.Store(encoderHolder{base64.RawURLEncoding})
+	atomicEncoder.Store(encoderHolder{stdEncoder{enc: stdbase64.RawURLEncoding}})
 	atomicDecoder.Store(decoderHolder{defaultDecoder{}})
 }
 
@@ -43,6 +73,18 @@ func getEncoder() Encoder {
 
 func DefaultEncoder() Encoder {
 	return getEncoder()
+}
+
+func AsStreamEncoder(enc Encoder) (StreamEncoder, bool) {
+	if stream, ok := enc.(StreamEncoder); ok {
+		return stream, true
+	}
+
+	stdenc, ok := enc.(*stdbase64.Encoding)
+	if !ok {
+		return nil, false
+	}
+	return stdEncoder{enc: stdenc}, true
 }
 
 func SetDecoder(dec Decoder) {
@@ -117,17 +159,17 @@ func Guess(src []byte) int {
 type defaultDecoder struct{}
 
 func (defaultDecoder) Decode(src []byte) ([]byte, error) {
-	var enc *base64.Encoding
+	var enc *stdbase64.Encoding
 
 	switch Guess(src) {
 	case RawURL:
-		enc = base64.RawURLEncoding
+		enc = stdbase64.RawURLEncoding
 	case URL:
-		enc = base64.URLEncoding
+		enc = stdbase64.URLEncoding
 	case RawStd:
-		enc = base64.RawStdEncoding
+		enc = stdbase64.RawStdEncoding
 	case Std:
-		enc = base64.StdEncoding
+		enc = stdbase64.StdEncoding
 	default:
 		return nil, fmt.Errorf(`invalid encoding`)
 	}
@@ -156,11 +198,11 @@ func DecodeString(src string) ([]byte, error) {
 // does not acquire any mutex, and does not allocate. The caller must ensure
 // dst is large enough (use DecodedStrictLen).
 func DecodeStrict(dst, src []byte) (int, error) {
-	return base64.RawURLEncoding.Decode(dst, src)
+	return stdbase64.RawURLEncoding.Decode(dst, src)
 }
 
 // DecodedStrictLen returns the maximum decoded length for a base64url-encoded
 // input of length n (no padding).
 func DecodedStrictLen(n int) int {
-	return base64.RawURLEncoding.DecodedLen(n)
+	return stdbase64.RawURLEncoding.DecodedLen(n)
 }

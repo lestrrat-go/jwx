@@ -4,6 +4,7 @@ go_library(
     name = "jws",
     srcs = [
         "accessors.go",
+        "detached_reader.go",
         "errors.go",
         "filter.go",
         "headers.go",
@@ -27,6 +28,7 @@ go_library(
         "//cert",
         "//internal/base64",
         "//internal/json",
+        "//internal/keyconv",
         "//internal/jwxio",
         "//internal/pool",
         "//internal/tokens",
@@ -34,6 +36,7 @@ go_library(
         "//jwk",
         "//jws/jwsbb",
         "//transform",
+        "@com_github_lestrrat_go_dsig//:dsig",
         "@com_github_lestrrat_go_option_v3//:option",
     ],
 )
@@ -43,6 +46,7 @@ go_test(
     srcs = [
         "bench_marshal_test.go",
         "bench_serialize_test.go",
+        "detached_reader_test.go",
         "filter_test.go",
         "fuzz_test.go",
         "headers_nil_test.go",

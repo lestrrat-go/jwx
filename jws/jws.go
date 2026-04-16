@@ -20,6 +20,16 @@
 // and verify the result using `algorithm` and `key`. Upon successful
 // verification, the original payload is returned, so you can work on it.
 //
+// `jws.Sign()` and `jws.Verify()` are the default general-purpose entry
+// points, including for detached payloads that are already available as
+// `[]byte` via `jws.WithDetachedPayload()`.
+//
+// If the payload is detached and should be streamed from an `io.Reader`
+// without materializing it in memory, use `jws.SignDetachedReader()` and
+// `jws.VerifyDetachedReader()` instead. Those APIs are intentionally
+// narrower: single-key only, detached-payload only, and not all algorithms
+// can be streamed.
+//
 // As a sidenote, consider using github.com/lestrrat-go/htmsig if you
 // looking for HTTP Message Signatures (RFC9421) -- it uses the same
 // underlying signing/verification mechanisms as this module.
