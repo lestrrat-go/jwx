@@ -3,14 +3,3 @@ Changes
 
 v4 has many incompatibilities with v3. To see the full list of differences between
 v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MICRATION-v4.md)
-
-v4 UNRELEASED
-  * [jws] Add `jws.SignDetachedReader()` and `jws.VerifyDetachedReader()` for
-    one-pass streaming of detached payloads from `io.Reader`. These are
-    specialist APIs for detached payloads that should not be materialized in
-    memory; `jws.Sign()` / `jws.Verify()` remain the default general-purpose
-    entry points, including detached payloads already available as `[]byte`.
-
-  * [jws] Fix JSON detached serialization to omit the `"payload"` member when
-    `jws.Sign()` is used with `jws.WithDetachedPayload()` and `jws.WithJSON()`,
-    preserving RFC 7515 Appendix F semantics through parse/remarshal.
