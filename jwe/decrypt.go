@@ -124,19 +124,23 @@ func decryptKeyAESGCMKW(recipientKey []byte, alg string, key any, headers Header
 
 	var keyiv, keytag []byte
 	if ivV, ok := headers.Field(InitializationVectorKey); ok {
-		if ivB64, ok := ivV.(string); ok {
-			keyiv, err = base64.DecodeString(ivB64)
-			if err != nil {
-				return nil, fmt.Errorf(`jwe: decrypt key: failed to decode 'iv': %w`, err)
-			}
+		ivB64, ok := ivV.(string)
+		if !ok {
+			return nil, fmt.Errorf(`jwe: decrypt key: %q is not a string`, InitializationVectorKey)
+		}
+		keyiv, err = base64.DecodeString(ivB64)
+		if err != nil {
+			return nil, fmt.Errorf(`jwe: decrypt key: failed to decode 'iv': %w`, err)
 		}
 	}
 	if tagV, ok := headers.Field(TagKey); ok {
-		if tagB64, ok := tagV.(string); ok {
-			keytag, err = base64.DecodeString(tagB64)
-			if err != nil {
-				return nil, fmt.Errorf(`jwe: decrypt key: failed to decode 'tag': %w`, err)
-			}
+		tagB64, ok := tagV.(string)
+		if !ok {
+			return nil, fmt.Errorf(`jwe: decrypt key: %q is not a string`, TagKey)
+		}
+		keytag, err = base64.DecodeString(tagB64)
+		if err != nil {
+			return nil, fmt.Errorf(`jwe: decrypt key: failed to decode 'tag': %w`, err)
 		}
 	}
 	return jwebb.KeyDecryptAESGCMKW(recipientKey, recipientKey, alg, sharedkey, keyiv, keytag)
