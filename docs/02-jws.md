@@ -215,6 +215,8 @@ func Example_jws_sign() {
 source: [examples/jws_sign_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_sign_example_test.go)
 <!-- END INCLUDE -->
 
+> Warning: the symmetric literals in the examples are deliberately short for readability. Production `HS*` keys should be random secrets that meet the minimum sizes described in [the JWK docs](04-jwk.md).
+
 For normal JWS code, prefer passing a concrete `jwa.SignatureAlgorithm` constant such as
 `jwa.HS256()` or `jwa.RS256()` to `jws.WithKey()`. The option accepts `jwa.KeyAlgorithm`
 so it can forward `(jwk.Key).Algorithm()`, but that metadata is still operation-specific:
