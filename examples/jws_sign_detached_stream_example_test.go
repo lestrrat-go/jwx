@@ -34,14 +34,14 @@ func Example_jws_sign_detached_stream() {
 	// Sign by streaming the payload through the hash function.
 	// The payload is read from an io.Reader and never fully buffered.
 	// The result is a compact JWS with an empty payload segment.
-	signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
+	signed, err := jws.SignDetachedReader(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
 	if err != nil {
 		fmt.Printf("failed to sign: %s\n", err)
 		return
 	}
 
 	// Verify by streaming the payload through the hash function.
-	err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
+	err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
 	if err != nil {
 		fmt.Printf("failed to verify: %s\n", err)
 		return

@@ -17,7 +17,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
-// SignDetached signs a detached payload provided as an io.Reader and
+// SignDetachedReader signs a detached payload provided as an io.Reader and
 // returns a JWS with an omitted payload in either compact or flattened
 // JSON serialization. Unlike jws.Sign with jws.WithDetachedPayload, this
 // function never materializes the payload in memory — it streams the
@@ -53,7 +53,7 @@ import (
 //
 // EdDSA and custom algorithms are not supported for streaming
 // signing and return an error.
-func SignDetached(payload io.Reader, options ...SignOption) ([]byte, error) {
+func SignDetachedReader(payload io.Reader, options ...SignOption) ([]byte, error) {
 	var alg jwa.SignatureAlgorithm
 	var key any
 	var keyFound bool
@@ -67,7 +67,7 @@ func SignDetached(payload io.Reader, options ...SignOption) ([]byte, error) {
 		switch option.Ident() {
 		case identKey{}:
 			if keyFound {
-				return nil, makeSignError(`SignDetached accepts exactly one jws.WithKey()`)
+				return nil, makeSignError(`SignDetachedReader accepts exactly one jws.WithKey()`)
 			}
 			var pair *withKey
 			if err := option.Value(&pair); err != nil {
@@ -95,7 +95,7 @@ func SignDetached(payload io.Reader, options ...SignOption) ([]byte, error) {
 			// RawURLEncoding. Reject the option rather than ship a
 			// silent half-use. v4 will extend Base64Encoder with a
 			// streaming interface and thread it through streamPayload.
-			return nil, makeSignError(`jws.WithBase64Encoder() is not supported by SignDetached; the streaming payload path uses RawURLEncoding`)
+			return nil, makeSignError(`jws.WithBase64Encoder() is not supported by SignDetachedReader; the streaming payload path uses RawURLEncoding`)
 		case identSerialization{}:
 			var v int
 			if err := option.Value(&v); err != nil {
@@ -108,18 +108,18 @@ func SignDetached(payload io.Reader, options ...SignOption) ([]byte, error) {
 				return nil, makeSignError(`invalid serialization format value %d`, v)
 			}
 		case identDetachedPayload{}, identKeyProvider{}, identMessage{}, identInsecureNoSignature{}:
-			return nil, makeSignError(`option %T is not supported by SignDetached; use jws.WithKey() to specify a single key`, option)
+			return nil, makeSignError(`option %T is not supported by SignDetachedReader; use jws.WithKey() to specify a single key`, option)
 		default:
 			return nil, makeSignError(`invalid jws.SignOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
 	}
 
 	if !keyFound {
-		return nil, makeSignError(`jws.WithKey() must be specified for SignDetached`)
+		return nil, makeSignError(`jws.WithKey() must be specified for SignDetachedReader`)
 	}
 
 	if alg == jwa.NoSignature() {
-		return nil, makeSignError(`"none" (jwa.NoSignature) cannot be used with SignDetached`)
+		return nil, makeSignError(`"none" (jwa.NoSignature) cannot be used with SignDetachedReader`)
 	}
 
 	if validateKey {
@@ -232,7 +232,7 @@ func SignDetached(payload io.Reader, options ...SignOption) ([]byte, error) {
 }
 
 // detachedJSONEnvelope is the flattened JSON shape produced by
-// SignDetached when WithJSON() is requested. The payload member is
+// SignDetachedReader when WithJSON() is requested. The payload member is
 // intentionally absent — RFC 7515 Appendix F specifies that the JSON
 // Serialization signals detached content by deleting the payload member.
 // Field order matches the struct declaration order and is stable across

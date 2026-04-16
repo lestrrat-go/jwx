@@ -21,7 +21,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
-// VerifyDetached verifies a JWS against a detached payload provided as
+// VerifyDetachedReader verifies a JWS against a detached payload provided as
 // an io.Reader. The input may be a compact serialization with an empty
 // payload segment, or a flattened JSON serialization with the "payload"
 // member omitted or empty. Unlike jws.Verify with jws.WithDetachedPayload,
@@ -32,7 +32,7 @@ import (
 // (`{` → JSON, otherwise compact). Passing jws.WithCompact() or
 // jws.WithJSON() overrides auto-detection.
 //
-// VerifyDetached does not enforce a size limit on the incoming JWS buffer in
+// VerifyDetachedReader does not enforce a size limit on the incoming JWS buffer in
 // either compact or JSON form. Callers are expected to gate the input before
 // passing it to this function. This matters both for malicious input and for
 // accidental misuse: callers may mistakenly pass a regular JWS carrying an
@@ -71,16 +71,16 @@ import (
 //
 // EdDSA and custom algorithms are not supported for streaming
 // verification and return an error.
-func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) error {
+func VerifyDetachedReader(compact []byte, payload io.Reader, options ...VerifyOption) error {
 	// Extract the single key from options. We do not use verifyContext
-	// because VerifyDetached is a single-key operation — key sets and
+	// because VerifyDetachedReader is a single-key operation — key sets and
 	// key providers are not supported.
 	var alg jwa.SignatureAlgorithm
 	var key any
 	var keyFound bool
 	var validateKey bool
 	var critValidation bool
-	// VerifyDetached is always detached, so "b64" is pre-declared
+	// VerifyDetachedReader is always detached, so "b64" is pre-declared
 	// in the allowlist — matches the auto-declaration that
 	// verifyContext does for jws.Verify + WithDetachedPayload.
 	criticalExtensions := []string{"b64"}
@@ -91,7 +91,7 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 		switch option.Ident() {
 		case identKey{}:
 			if keyFound {
-				return makeVerifyError(`VerifyDetached accepts exactly one jws.WithKey()`)
+				return makeVerifyError(`VerifyDetachedReader accepts exactly one jws.WithKey()`)
 			}
 			var pair *withKey
 			if err := option.Value(&pair); err != nil {
@@ -126,11 +126,11 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 			// streamPayload uses encoding/base64 directly for the
 			// b64-encoded payload path, so honoring a custom encoder
 			// would silently apply to the protected-header decode but
-			// not the payload. Reject symmetrically with SignDetached
+			// not the payload. Reject symmetrically with SignDetachedReader
 			// rather than ship a half-use. v4 will extend
 			// Base64Encoder with a streaming interface and thread it
 			// through streamPayload.
-			return makeVerifyError(`jws.WithBase64Encoder() is not supported by VerifyDetached; the streaming payload path uses RawURLEncoding`)
+			return makeVerifyError(`jws.WithBase64Encoder() is not supported by VerifyDetachedReader; the streaming payload path uses RawURLEncoding`)
 		case identSerialization{}:
 			var v int
 			if err := option.Value(&v); err != nil {
@@ -145,18 +145,18 @@ func VerifyDetached(compact []byte, payload io.Reader, options ...VerifyOption) 
 				return makeVerifyError(`invalid serialization format value %d`, v)
 			}
 		case identKeyProvider{}, identDetachedPayload{}, identMessage{}:
-			return makeVerifyError(`option %T is not supported by VerifyDetached; use jws.WithKey() to specify a single key`, option)
+			return makeVerifyError(`option %T is not supported by VerifyDetachedReader; use jws.WithKey() to specify a single key`, option)
 		default:
 			return makeVerifyError(`invalid jws.VerifyOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
 	}
 
 	if !keyFound {
-		return makeVerifyError(`jws.WithKey() must be specified for VerifyDetached`)
+		return makeVerifyError(`jws.WithKey() must be specified for VerifyDetachedReader`)
 	}
 
 	if alg == jwa.NoSignature() {
-		return makeVerifyError(`"none" (jwa.NoSignature) cannot be used with VerifyDetached`)
+		return makeVerifyError(`"none" (jwa.NoSignature) cannot be used with VerifyDetachedReader`)
 	}
 
 	detected := detectDetachedFormat(compact)
@@ -301,7 +301,7 @@ func extractDetachedParts(src []byte, format int) ([]byte, []byte, error) {
 			return nil, nil, fmt.Errorf(`failed to split compact: %w`, err)
 		}
 		if len(payloadSegment) != 0 {
-			return nil, nil, fmt.Errorf(`compact token must have an empty payload segment for VerifyDetached`)
+			return nil, nil, fmt.Errorf(`compact token must have an empty payload segment for VerifyDetachedReader`)
 		}
 		decodedSig, err := internbase64.Decode(signatureSegment)
 		if err != nil {
@@ -323,7 +323,7 @@ func extractDetachedParts(src []byte, format int) ([]byte, []byte, error) {
 }
 
 // detachedJSONProbe is a probe struct used to parse a flattened or
-// single-signature general JSON-serialized JWS for VerifyDetached.
+// single-signature general JSON-serialized JWS for VerifyDetachedReader.
 // Fields are pointers so we can distinguish "absent" from "empty".
 type detachedJSONProbe struct {
 	Payload    *string           `json:"payload,omitempty"`
@@ -352,7 +352,7 @@ func parseDetachedJSON(src []byte) ([]byte, []byte, error) {
 	}
 
 	if probe.Payload != nil && *probe.Payload != "" {
-		return nil, nil, fmt.Errorf(`JSON input must have an omitted or empty "payload" member for VerifyDetached`)
+		return nil, nil, fmt.Errorf(`JSON input must have an omitted or empty "payload" member for VerifyDetachedReader`)
 	}
 
 	var protectedB64, signatureB64 *string
@@ -371,7 +371,7 @@ func parseDetachedJSON(src []byte) ([]byte, []byte, error) {
 		protectedB64 = sig.Protected
 		signatureB64 = sig.Signature
 	case len(probe.Signatures) > 1:
-		return nil, nil, fmt.Errorf(`VerifyDetached supports only single-signature JSON input, got %d`, len(probe.Signatures))
+		return nil, nil, fmt.Errorf(`VerifyDetachedReader supports only single-signature JSON input, got %d`, len(probe.Signatures))
 	default:
 		return nil, nil, fmt.Errorf(`JSON input has no signature`)
 	}

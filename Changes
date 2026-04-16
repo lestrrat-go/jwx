@@ -5,7 +5,7 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.1.0 UNRELEASED
-  * [jws] Add `jws.SignDetached` and `jws.VerifyDetached` for streaming
+  * [jws] Add `jws.SignDetachedReader` and `jws.VerifyDetachedReader` for streaming
     detached payloads via `io.Reader`. Unlike `jws.Sign` /
     `jws.Verify` with `WithDetachedPayload`, these never materialize
     the payload in memory — the payload is streamed through the hash
@@ -106,7 +106,7 @@ v3.1.0 UNRELEASED
   * [jws/jwsbb] Add `jwsbb.RegisterAlgorithm()` for external modules to
     register custom algorithm implementations (e.g. Ed448).
 
-  * [jws] Add `jws.SignDetached()` and `jws.VerifyDetached()` for streaming
+  * [jws] Add `jws.SignDetachedReader()` and `jws.VerifyDetachedReader()` for streaming
     signing and verification of JWS compact serializations with detached
     payloads. Unlike `jws.Sign()`/`jws.Verify()` with
     `jws.WithDetachedPayload()`, these functions never load the entire payload

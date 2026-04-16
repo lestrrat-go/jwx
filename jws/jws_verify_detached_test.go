@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestVerifyDetached(t *testing.T) {
+func TestVerifyDetachedReader(t *testing.T) {
 	payload := []byte("The true sign of intelligence is not knowledge but imagination.")
 
 	t.Run("RoundTrip", func(t *testing.T) {
@@ -24,8 +24,8 @@ func TestVerifyDetached(t *testing.T) {
 			signed, err := jws.Sign(nil, jws.WithKey(jwa.HS256(), key), jws.WithDetachedPayload(payload))
 			require.NoError(t, err, `jws.Sign should succeed`)
 
-			err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
-			require.NoError(t, err, `jws.VerifyDetached should succeed`)
+			err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
+			require.NoError(t, err, `jws.VerifyDetachedReader should succeed`)
 		})
 		t.Run("RS256", func(t *testing.T) {
 			privkey, err := jwxtest.GenerateRsaKey()
@@ -34,8 +34,8 @@ func TestVerifyDetached(t *testing.T) {
 			signed, err := jws.Sign(nil, jws.WithKey(jwa.RS256(), privkey), jws.WithDetachedPayload(payload))
 			require.NoError(t, err, `jws.Sign should succeed`)
 
-			err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
-			require.NoError(t, err, `jws.VerifyDetached should succeed`)
+			err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+			require.NoError(t, err, `jws.VerifyDetachedReader should succeed`)
 		})
 		t.Run("PS256", func(t *testing.T) {
 			privkey, err := jwxtest.GenerateRsaKey()
@@ -44,8 +44,8 @@ func TestVerifyDetached(t *testing.T) {
 			signed, err := jws.Sign(nil, jws.WithKey(jwa.PS256(), privkey), jws.WithDetachedPayload(payload))
 			require.NoError(t, err, `jws.Sign should succeed`)
 
-			err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.PS256(), &privkey.PublicKey))
-			require.NoError(t, err, `jws.VerifyDetached should succeed`)
+			err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.PS256(), &privkey.PublicKey))
+			require.NoError(t, err, `jws.VerifyDetachedReader should succeed`)
 		})
 		t.Run("ES256", func(t *testing.T) {
 			privkey, err := jwxtest.GenerateEcdsaKey(jwa.P256())
@@ -54,14 +54,14 @@ func TestVerifyDetached(t *testing.T) {
 			signed, err := jws.Sign(nil, jws.WithKey(jwa.ES256(), privkey), jws.WithDetachedPayload(payload))
 			require.NoError(t, err, `jws.Sign should succeed`)
 
-			err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.ES256(), &privkey.PublicKey))
-			require.NoError(t, err, `jws.VerifyDetached should succeed`)
+			err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.ES256(), &privkey.PublicKey))
+			require.NoError(t, err, `jws.VerifyDetachedReader should succeed`)
 		})
 	})
 
 	t.Run("Rejects jwa.NoSignature", func(t *testing.T) {
-		err := jws.VerifyDetached([]byte(`eyJhbGciOiJub25lIn0..`), bytes.NewReader(payload), jws.WithKey(jwa.NoSignature(), nil))
-		require.Error(t, err, `jws.VerifyDetached should fail for NoSignature`)
+		err := jws.VerifyDetachedReader([]byte(`eyJhbGciOiJub25lIn0..`), bytes.NewReader(payload), jws.WithKey(jwa.NoSignature(), nil))
+		require.Error(t, err, `jws.VerifyDetachedReader should fail for NoSignature`)
 		require.Contains(t, err.Error(), `"none"`, `error should clearly identify "none" algorithm`)
 	})
 
@@ -72,8 +72,8 @@ func TestVerifyDetached(t *testing.T) {
 		signed, err := jws.Sign(nil, jws.WithKey(jwa.EdDSA(), privkey), jws.WithDetachedPayload(payload))
 		require.NoError(t, err, `jws.Sign should succeed`)
 
-		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.EdDSA(), privkey.Public()))
-		require.Error(t, err, `jws.VerifyDetached should fail for EdDSA`)
+		err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.EdDSA(), privkey.Public()))
+		require.Error(t, err, `jws.VerifyDetachedReader should fail for EdDSA`)
 	})
 
 	t.Run("b64=false", func(t *testing.T) {
@@ -86,8 +86,8 @@ func TestVerifyDetached(t *testing.T) {
 		signed, err := jws.Sign(nil, jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs)), jws.WithDetachedPayload(payload))
 		require.NoError(t, err, `jws.Sign should succeed`)
 
-		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
-		require.NoError(t, err, `jws.VerifyDetached with b64=false should succeed`)
+		err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
+		require.NoError(t, err, `jws.VerifyDetachedReader with b64=false should succeed`)
 	})
 
 	t.Run("Large payload", func(t *testing.T) {
@@ -102,8 +102,8 @@ func TestVerifyDetached(t *testing.T) {
 		signed, err := jws.Sign(nil, jws.WithKey(jwa.RS256(), privkey), jws.WithDetachedPayload(largePayload))
 		require.NoError(t, err, `jws.Sign should succeed`)
 
-		err = jws.VerifyDetached(signed, bytes.NewReader(largePayload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
-		require.NoError(t, err, `jws.VerifyDetached with large payload should succeed`)
+		err = jws.VerifyDetachedReader(signed, bytes.NewReader(largePayload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+		require.NoError(t, err, `jws.VerifyDetachedReader with large payload should succeed`)
 	})
 
 	t.Run("IO error mid-stream", func(t *testing.T) {
@@ -119,8 +119,8 @@ func TestVerifyDetached(t *testing.T) {
 			failErr: fmt.Errorf("simulated I/O error"),
 		}
 
-		err = jws.VerifyDetached(signed, errReader, jws.WithKey(jwa.RS256(), &privkey.PublicKey))
-		require.Error(t, err, `jws.VerifyDetached should fail on I/O error`)
+		err = jws.VerifyDetachedReader(signed, errReader, jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+		require.Error(t, err, `jws.VerifyDetachedReader should fail on I/O error`)
 	})
 
 	t.Run("Wrong key returns error", func(t *testing.T) {
@@ -133,8 +133,8 @@ func TestVerifyDetached(t *testing.T) {
 		signed, err := jws.Sign(nil, jws.WithKey(jwa.RS256(), privkey), jws.WithDetachedPayload(payload))
 		require.NoError(t, err, `jws.Sign should succeed`)
 
-		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &wrongKey.PublicKey))
-		require.Error(t, err, `jws.VerifyDetached with wrong key should fail`)
+		err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &wrongKey.PublicKey))
+		require.Error(t, err, `jws.VerifyDetachedReader with wrong key should fail`)
 		require.True(t, errors.Is(err, jws.VerifyError()), `error should be a VerifyError`)
 		require.True(t, errors.Is(err, jws.VerificationError()), `error should be a VerificationError`)
 	})
@@ -191,8 +191,8 @@ func TestVerifyDetached(t *testing.T) {
 				_, err = jws.Verify(signed, jws.WithKey(tc.alg, tc.pubkey), jws.WithDetachedPayload(payload))
 				require.NoError(t, err, `jws.Verify should succeed`)
 
-				err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(tc.alg, tc.pubkey))
-				require.NoError(t, err, `jws.VerifyDetached should succeed`)
+				err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(tc.alg, tc.pubkey))
+				require.NoError(t, err, `jws.VerifyDetachedReader should succeed`)
 			})
 		}
 	})
@@ -202,21 +202,21 @@ func TestVerifyDetached(t *testing.T) {
 		signed, err := jws.Sign(nil, jws.WithKey(jwa.HS256(), key), jws.WithDetachedPayload(payload))
 		require.NoError(t, err)
 
-		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithDetachedPayload(payload))
+		err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithDetachedPayload(payload))
 		require.Error(t, err, `should reject WithDetachedPayload`)
 	})
 
 	t.Run("Rejects no key", func(t *testing.T) {
-		err := jws.VerifyDetached([]byte("eyJhbGciOiJIUzI1NiJ9..sig"), bytes.NewReader(payload))
+		err := jws.VerifyDetachedReader([]byte("eyJhbGciOiJIUzI1NiJ9..sig"), bytes.NewReader(payload))
 		require.Error(t, err, `should reject missing key`)
 	})
 
 	t.Run("Rejects WithBase64Encoder option", func(t *testing.T) {
 		key := jwxtest.GenerateSymmetricKey()
-		signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
+		signed, err := jws.SignDetachedReader(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
 		require.NoError(t, err)
 
-		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithBase64Encoder(base64.RawURLEncoding))
+		err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithBase64Encoder(base64.RawURLEncoding))
 		require.Error(t, err, `should reject WithBase64Encoder`)
 	})
 
@@ -226,16 +226,16 @@ func TestVerifyDetached(t *testing.T) {
 		signed, err := jws.Sign(nil, jws.WithKey(jwa.HS256(), key1), jws.WithDetachedPayload(payload))
 		require.NoError(t, err)
 
-		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key1), jws.WithKey(jwa.HS256(), key2))
+		err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key1), jws.WithKey(jwa.HS256(), key2))
 		require.Error(t, err, `should reject multiple keys`)
 	})
 
 	t.Run("Explicit WithCompact with compact input", func(t *testing.T) {
 		key := jwxtest.GenerateSymmetricKey()
-		signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
+		signed, err := jws.SignDetachedReader(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
 		require.NoError(t, err)
 
-		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithCompact())
+		err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithCompact())
 		require.NoError(t, err)
 	})
 
@@ -243,27 +243,27 @@ func TestVerifyDetached(t *testing.T) {
 		privkey, err := jwxtest.GenerateRsaKey()
 		require.NoError(t, err)
 
-		signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
+		signed, err := jws.SignDetachedReader(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
 		require.NoError(t, err)
 
-		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+		err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
 		require.NoError(t, err)
 	})
 
 	t.Run("Format override mismatch returns clear error", func(t *testing.T) {
 		key := jwxtest.GenerateSymmetricKey()
 
-		compactSigned, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
+		compactSigned, err := jws.SignDetachedReader(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
 		require.NoError(t, err)
 
-		err = jws.VerifyDetached(compactSigned, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithJSON())
+		err = jws.VerifyDetachedReader(compactSigned, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithJSON())
 		require.Error(t, err, `compact input with WithJSON override should fail`)
 		require.Contains(t, err.Error(), `format mismatch`, `error should call out the format mismatch`)
 
-		jsonSigned, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithJSON())
+		jsonSigned, err := jws.SignDetachedReader(bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithJSON())
 		require.NoError(t, err)
 
-		err = jws.VerifyDetached(jsonSigned, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithCompact())
+		err = jws.VerifyDetachedReader(jsonSigned, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key), jws.WithCompact())
 		require.Error(t, err, `JSON input with WithCompact override should fail`)
 		require.Contains(t, err.Error(), `format mismatch`, `error should call out the format mismatch`)
 	})
@@ -272,10 +272,10 @@ func TestVerifyDetached(t *testing.T) {
 		privkey, err := jwxtest.GenerateEcdsaKey(jwa.P256())
 		require.NoError(t, err)
 
-		signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.ES256(), privkey), jws.WithJSON())
+		signed, err := jws.SignDetachedReader(bytes.NewReader(payload), jws.WithKey(jwa.ES256(), privkey), jws.WithJSON())
 		require.NoError(t, err)
 
-		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.ES256(), &privkey.PublicKey), jws.WithJSON())
+		err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.ES256(), &privkey.PublicKey), jws.WithJSON())
 		require.NoError(t, err)
 	})
 
@@ -285,7 +285,7 @@ func TestVerifyDetached(t *testing.T) {
 		privkey, err := jwxtest.GenerateRsaKey()
 		require.NoError(t, err)
 
-		flat, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
+		flat, err := jws.SignDetachedReader(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
 		require.NoError(t, err)
 
 		var fm map[string]json.RawMessage
@@ -299,7 +299,7 @@ func TestVerifyDetached(t *testing.T) {
 		}
 		generalBytes := mustMarshal(t, general)
 
-		err = jws.VerifyDetached(generalBytes, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+		err = jws.VerifyDetachedReader(generalBytes, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
 		require.NoError(t, err)
 	})
 
@@ -309,7 +309,7 @@ func TestVerifyDetached(t *testing.T) {
 
 		// Build a JSON with two signatures — identical so the structure
 		// parses but the count check fires first.
-		flat, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
+		flat, err := jws.SignDetachedReader(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
 		require.NoError(t, err)
 
 		var fm map[string]json.RawMessage
@@ -321,7 +321,7 @@ func TestVerifyDetached(t *testing.T) {
 		})
 		multi := []byte(`{"signatures":[` + string(one) + `,` + string(one) + `]}`)
 
-		err = jws.VerifyDetached(multi, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+		err = jws.VerifyDetachedReader(multi, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), `single-signature`)
 	})
@@ -330,7 +330,7 @@ func TestVerifyDetached(t *testing.T) {
 		privkey, err := jwxtest.GenerateRsaKey()
 		require.NoError(t, err)
 
-		flat, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
+		flat, err := jws.SignDetachedReader(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
 		require.NoError(t, err)
 
 		var fm map[string]json.RawMessage
@@ -338,7 +338,7 @@ func TestVerifyDetached(t *testing.T) {
 		fm["payload"] = json.RawMessage(`"bm90LWVtcHR5"`) // "not-empty" base64url
 		tampered := mustMarshal(t, fm)
 
-		err = jws.VerifyDetached(tampered, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+		err = jws.VerifyDetachedReader(tampered, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), `payload`)
 	})
@@ -347,7 +347,7 @@ func TestVerifyDetached(t *testing.T) {
 		privkey, err := jwxtest.GenerateRsaKey()
 		require.NoError(t, err)
 
-		flat, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
+		flat, err := jws.SignDetachedReader(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
 		require.NoError(t, err)
 
 		var fm map[string]json.RawMessage
@@ -355,7 +355,7 @@ func TestVerifyDetached(t *testing.T) {
 		fm["payload"] = json.RawMessage(`""`)
 		withEmpty := mustMarshal(t, fm)
 
-		err = jws.VerifyDetached(withEmpty, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+		err = jws.VerifyDetachedReader(withEmpty, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
 		require.NoError(t, err)
 	})
 
@@ -370,7 +370,7 @@ func TestVerifyDetached(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
+		err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &privkey.PublicKey))
 		require.NoError(t, err)
 	})
 
@@ -380,10 +380,10 @@ func TestVerifyDetached(t *testing.T) {
 		wrongKey, err := jwxtest.GenerateRsaKey()
 		require.NoError(t, err)
 
-		signed, err := jws.SignDetached(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
+		signed, err := jws.SignDetachedReader(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
 		require.NoError(t, err)
 
-		err = jws.VerifyDetached(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &wrongKey.PublicKey))
+		err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.RS256(), &wrongKey.PublicKey))
 		require.Error(t, err)
 		require.True(t, errors.Is(err, jws.VerificationError()))
 	})
