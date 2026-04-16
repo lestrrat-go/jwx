@@ -6,7 +6,7 @@ Package jwe implements JWE as described in [RFC 7516](https://tools.ietf.org/htm
 
 | Algorithm                                | Constant in [jwa](../jwa) | Note |
 |:-----------------------------------------|:--------------------------|:-----|
-| RSA-PKCS1v1.5                            | jwa.RSA1_5                |      |
+| RSA-PKCS1v1.5                            | jwa.RSA1_5                | Legacy interop only; prefer RSA-OAEP for new code |
 | RSA-OAEP-SHA1                            | jwa.RSA_OAEP              |      |
 | RSA-OAEP-SHA256                          | jwa.RSA_OAEP_256          |      |
 | AES key wrap (128/192/256)               | jwa.A128KW / A192KW / A256KW |   |
