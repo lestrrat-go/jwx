@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/cert"
+	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe"
@@ -164,6 +165,14 @@ func TestHeaders(t *testing.T) {
 		require.NoError(t, h2.Decode(buf), `h2.Decode should succeed`)
 
 		require.Equal(t, h1, h2, `objects should match`)
+	})
+
+	t.Run("RejectInvalidX509CertChain", func(t *testing.T) {
+		h := jwe.NewHeaders()
+		err := json.Unmarshal([]byte(`{"x5c":["bm90IGEgY2VydGlmaWNhdGU="]}`), &h)
+		require.Error(t, err, `json.Unmarshal should reject invalid x5c entries`)
+		_, ok := h.X509CertChain()
+		require.False(t, ok, `failed decode must not populate x5c`)
 	})
 
 	t.Run("Range", func(t *testing.T) {

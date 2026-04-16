@@ -122,11 +122,13 @@ Generic filtering utilities using Go generics.
 
 X.509 certificate chain support for `x5c` JWK fields.
 
+- **Settings(options ...GlobalOption)** — configure global certificate validation limits
 - **Create(rand, template, parent, pub, priv) ([]byte, error)** — create base64-encoded certificate
 - **Parse(src []byte) (*x509.Certificate, error)** — decode base64+DER certificate
 - **EncodeBase64(der []byte) ([]byte, error)** — encode DER to base64
-- Key types: `Chain` (Get, Len, Add, MarshalJSON, UnmarshalJSON)
-- Files: `cert.go`, `chain.go`
+- Global options: `WithMaxChainLength(int)`, `WithMaxCertificateSize(int64)`
+- Key types: `Chain` (Get, Len, Add, MarshalJSON, UnmarshalJSON), `GlobalOption`
+- Files: `cert.go`, `chain.go`, `options.go`, `settings.go`
 - Imports: internal/{base64, tokens}
 
 ## internal/
