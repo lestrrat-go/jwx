@@ -1,6 +1,11 @@
 //go:generate ../tools/cmd/genjwe.sh
 
-// Package jwe implements JWE as described in https://tools.ietf.org/html/rfc7516
+// Package jwe implements JWE as described in https://tools.ietf.org/html/rfc7516.
+//
+// Legacy note: RSA-PKCS1 v1.5 key encryption (`jwa.RSA1_5()`) is supported
+// only for interoperability with existing peers. New applications should
+// prefer an RSA-OAEP variant such as `jwa.RSA_OAEP_256()` because PKCS#1 v1.5
+// decryption is exposed to Bleichenbacher-style oracle attacks.
 package jwe
 
 // #region imports
@@ -11,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"slices"
 	"sync/atomic"
 
@@ -208,9 +214,9 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 // option.
 //
 //	jwe.Encrypt(payload, jwe.WithKey(alg, key))
-//	jwe.Encrypt(payload, jws.WithJSON(), jws.WithKey(alg1, key1), jws.WithKey(alg2, key2))
+//	jwe.Encrypt(payload, jwe.WithJSON(), jwe.WithKey(alg1, key1), jwe.WithKey(alg2, key2))
 //
-// Note that in the second example the `jws.WithJSON()` option is
+// Note that in the second example the `jwe.WithJSON()` option is
 // specified as well. This is because the compact serialization
 // format does not support multiple recipients, and users must
 // specifically ask for the JSON serialization format.
@@ -218,7 +224,18 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 // Read the documentation for `jwe.WithKey()` to learn more about the
 // possible values that can be used for `alg` and `key`.
 //
-// Look for options that return `jwe.EncryptOption` or `jws.EncryptDecryptOption`
+// `jwa.RSA1_5()` is supported only for interoperability with legacy peers.
+// New applications should prefer an RSA-OAEP variant such as
+// `jwa.RSA_OAEP_256()` because PKCS#1 v1.5 decryption is exposed to
+// Bleichenbacher-style oracle attacks.
+// If you enable `jwe.WithCompress()`, this library does not enforce a
+// producer-side payload size limit before compression. Callers that accept
+// untrusted or arbitrarily large plaintext must bound the input size before
+// calling `jwe.Encrypt()`. Recipients may also reject compressed messages
+// whose decompressed payload exceeds their `jwe.WithMaxDecompressBufferSize()`
+// setting.
+//
+// Look for options that return `jwe.EncryptOption` or `jwe.EncryptDecryptOption`
 // for a complete list of options that can be passed to this function.
 //
 // As of v3.0.12, users can specify `jwe.WithLegacyHeaderMerging()` to
@@ -241,6 +258,22 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 // content encryption key (CEK). It is separated out from the main
 // Encrypt function such that the latter does not accidentally use a static
 // CEK.
+//
+// Unless `jwe.WithContentEncryption()` is provided, `EncryptStatic` uses
+// `jwa.A256GCM()`, which requires a 32-byte CEK.
+//
+// The CEK used to encrypt the payload must match the selected content
+// encryption algorithm:
+//
+//   - `jwa.A128GCM()`: 16 bytes
+//   - `jwa.A192GCM()`: 24 bytes
+//   - `jwa.A256GCM()`: 32 bytes
+//   - `jwa.A128CBC_HS256()`: 32 bytes
+//   - `jwa.A192CBC_HS384()`: 48 bytes
+//   - `jwa.A256CBC_HS512()`: 64 bytes
+//
+// `EncryptStatic` validates the final CEK length before payload encryption
+// and returns an error if it does not match the selected `enc` algorithm.
 //
 // DO NOT attempt to use this function unless you completely understand the
 // security implications to using static CEKs. You have been warned.
@@ -639,7 +672,10 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 		}
 	case jwa.A128GCMKW(), jwa.A192GCMKW(), jwa.A256GCMKW():
 		var ivB64 string
-		if err := h2.Get(InitializationVectorKey, &ivB64); err == nil {
+		if h2.Has(InitializationVectorKey) {
+			if err := h2.Get(InitializationVectorKey, &ivB64); err != nil {
+				return nil, fmt.Errorf(`field %q is not a string: %w`, InitializationVectorKey, err)
+			}
 			iv, err := base64.DecodeString(ivB64)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to b64-decode 'iv': %w`, err)
@@ -647,7 +683,10 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 			dec.KeyInitializationVector(iv)
 		}
 		var tagB64 string
-		if err := h2.Get(TagKey, &tagB64); err == nil {
+		if h2.Has(TagKey) {
+			if err := h2.Get(TagKey, &tagB64); err != nil {
+				return nil, fmt.Errorf(`field %q is not a string: %w`, TagKey, err)
+			}
 			tag, err := base64.DecodeString(tagB64)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to b64-decode 'tag': %w`, err)
@@ -683,6 +722,9 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 
 		maxCount := dc.maxPBES2Count
 		minCount := dc.minPBES2Count
+		if math.IsNaN(countFlt) || math.IsInf(countFlt, 0) || math.Trunc(countFlt) != countFlt {
+			return nil, fmt.Errorf("invalid 'p2c' value")
+		}
 		if countFlt > float64(maxCount) {
 			return nil, fmt.Errorf("invalid 'p2c' value")
 		}
@@ -967,6 +1009,10 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		}
 	}
 
+	if len(cek) != contentcrypt.KeySize() {
+		return nil, fmt.Errorf(`content encryption key length %d does not match enc %q (expected %d bytes)`, len(cek), ec.calg.String(), contentcrypt.KeySize())
+	}
+
 	if err := protected.Set(ContentEncryptionKey, ec.calg); err != nil {
 		return nil, fmt.Errorf(`failed to set "enc" in protected header: %w`, err)
 	}
@@ -1082,11 +1128,11 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 // payload (e.g. the key encryption algorithm and the corresponding
 // key to decrypt the JWE message) in its optional arguments. See
 // the examples and list of options that return a DecryptOption for possible
-// values. Upon successful decryptiond returns the decrypted payload.
+// values. Upon successful decryption returns the decrypted payload.
 //
 // The JWE message can be either compact or full JSON format.
 //
-// When using `jwe.WithKeyEncryptionAlgorithm()`, you can pass a `jwa.KeyAlgorithm`
+// When using `jwe.WithKey()`, you can pass a `jwa.KeyAlgorithm`
 // for convenience: this is mainly to allow you to directly pass the result of `(jwk.Key).Algorithm()`.
 // However, do note that while `(jwk.Key).Algorithm()` could very well contain key encryption
 // algorithms, it could also contain other types of values, such as _signature algorithms_.

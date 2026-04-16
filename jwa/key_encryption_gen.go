@@ -41,6 +41,9 @@ func init() {
 	algorithms[18] = NewKeyEncryptionAlgorithm(tokens.RSA_OAEP_512)
 
 	RegisterKeyEncryptionAlgorithm(algorithms...)
+	for _, alg := range algorithms {
+		builtinKeyEncryptionAlgorithm[alg.String()] = struct{}{}
+	}
 }
 
 // A128GCMKW returns an object representing AES-GCM key wrap (128) key encryption algorithm.
@@ -203,36 +206,44 @@ func LookupKeyEncryptionAlgorithm(name string) (KeyEncryptionAlgorithm, bool) {
 
 // RegisterKeyEncryptionAlgorithm registers a new KeyEncryptionAlgorithm. The signature value must be immutable
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
+//
+// Registration is process-global. Built-in identifiers such as RS256 are
+// reserved and cannot be replaced by callers after init has completed; use a
+// distinct name for third-party algorithms.
 func RegisterKeyEncryptionAlgorithm(algorithms ...KeyEncryptionAlgorithm) {
 	muAllKeyEncryptionAlgorithm.Lock()
+	defer muAllKeyEncryptionAlgorithm.Unlock()
 	for _, alg := range algorithms {
+		if _, ok := builtinKeyEncryptionAlgorithm[alg.String()]; ok {
+			if existing, ok := allKeyEncryptionAlgorithm[alg.String()]; ok && existing != alg {
+				continue
+			}
+			continue
+		}
 		allKeyEncryptionAlgorithm[alg.String()] = alg
 	}
-	muAllKeyEncryptionAlgorithm.Unlock()
-	rebuildKeyEncryptionAlgorithm()
+	rebuildKeyEncryptionAlgorithmLocked()
 }
 
 // UnregisterKeyEncryptionAlgorithm unregisters a KeyEncryptionAlgorithm from its known database.
 // Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterKeyEncryptionAlgorithm(algorithms ...KeyEncryptionAlgorithm) {
 	muAllKeyEncryptionAlgorithm.Lock()
+	defer muAllKeyEncryptionAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		if _, ok := builtinKeyEncryptionAlgorithm[alg.String()]; ok {
 			continue
 		}
 		delete(allKeyEncryptionAlgorithm, alg.String())
 	}
-	muAllKeyEncryptionAlgorithm.Unlock()
-	rebuildKeyEncryptionAlgorithm()
+	rebuildKeyEncryptionAlgorithmLocked()
 }
 
-func rebuildKeyEncryptionAlgorithm() {
+func rebuildKeyEncryptionAlgorithmLocked() {
 	list := make([]KeyEncryptionAlgorithm, 0, len(allKeyEncryptionAlgorithm))
-	muAllKeyEncryptionAlgorithm.RLock()
 	for _, v := range allKeyEncryptionAlgorithm {
 		list = append(list, v)
 	}
-	muAllKeyEncryptionAlgorithm.RUnlock()
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].String() < list[j].String()
 	})
