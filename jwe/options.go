@@ -120,6 +120,11 @@ func WithPerRecipientHeaders(hdr Headers) WithKeySuboption {
 //     participate by implementing the HPKE interfaces in package
 //     `github.com/lestrrat-go/jwx/v4/jwe/jwebb`
 //
+// `jwa.RSA1_5()` is supported only for interoperability with legacy peers.
+// New applications should prefer an RSA-OAEP variant such as
+// `jwa.RSA_OAEP_256()` because PKCS#1 v1.5 decryption is exposed to
+// Bleichenbacher-style oracle attacks.
+//
 // Companion modules may register additional algorithm/key pairs. See the package
 // README and companion-module documentation for extension-specific combinations
 // such as ML-KEM.
