@@ -731,7 +731,7 @@ decrypted, _ := jwe.Decrypt(encrypted, jwe.WithKey(jwxmlkem.MLKEM768(), dk))
 
 Supported algorithms: `ML-KEM-768`, `ML-KEM-1024` (direct), and `ML-KEM-768+A192KW`, `ML-KEM-1024+A256KW` (key wrap variants). Raw `*mlkem.EncapsulationKey*`/`*mlkem.DecapsulationKey*` values and `jwk.Key` values are both accepted via `jwe.WithKey`. See [`examples/mlkem_encrypt_decrypt_example_test.go`](https://github.com/jwx-go/examples/blob/v4/mlkem_encrypt_decrypt_example_test.go) for a runnable example.
 
-**JWK round-trip caveat:** `draft-ietf-jose-pqc-kem` defines the `priv` field as the 32-byte `d` seed only, while stdlib `crypto/mlkem` requires the full 64-byte `d || z` seed. On re-import, a fresh random `z` is generated. Decapsulation of valid ciphertexts is unaffected, but JWK round-trips are not bitwise-identical. See the [module README](https://github.com/jwx-go/mlkem) for details.
+**JWK round-trip behavior:** `draft-ietf-jose-pqc-kem` defines the `priv` field as the 32-byte `d` seed only, while stdlib `crypto/mlkem` requires the full 64-byte `d || z` seed. This module stores `d` in `priv` and preserves the implicit-rejection value in a private `z` field so ML-KEM private JWKs round-trip back to the same stdlib seed. Legacy ML-KEM JWKs without `z` still import; on export, the module derives a deterministic fallback `z` from `d` and the ML-KEM parameter set so reconstructed keys remain stable across processes and restarts. See the [module README](https://github.com/jwx-go/mlkem) for details.
 
 ---
 

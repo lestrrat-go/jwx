@@ -64,3 +64,33 @@ func TestAKPThumbprintRequiresAlg(t *testing.T) {
 		require.Error(t, err)
 	})
 }
+
+func TestAKPPublicKeyDropsZButPreservesOtherCustomFields(t *testing.T) {
+	pub := []byte("pub-bytes")
+	priv := []byte("priv-bytes")
+	z := []byte("mlkem-private-z")
+	alg := jwa.RS256()
+
+	k := newAKPPrivateKey()
+	require.NoError(t, k.Set(AKPPubKey, pub))
+	require.NoError(t, k.Set(AKPPrivKey, priv))
+	require.NoError(t, k.Set(AlgorithmKey, alg))
+	require.NoError(t, k.Set(akpPrivateZKey, z))
+	require.NoError(t, k.Set("custom", "keep-me"))
+
+	pubKey, err := k.PublicKey()
+	require.NoError(t, err)
+	require.False(t, pubKey.Has(AKPPrivKey))
+	require.False(t, pubKey.Has(akpPrivateZKey))
+	require.True(t, pubKey.Has("custom"))
+
+	custom, ok := pubKey.Field("custom")
+	require.True(t, ok)
+	require.Equal(t, "keep-me", custom)
+
+	privThumbprint, err := k.Thumbprint(crypto.SHA256)
+	require.NoError(t, err)
+	pubThumbprint, err := pubKey.Thumbprint(crypto.SHA256)
+	require.NoError(t, err)
+	require.Equal(t, privThumbprint, pubThumbprint)
+}
