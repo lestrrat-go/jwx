@@ -143,6 +143,6 @@ Shared utilities. Not public API.
 | `keyconv` | Key type conversions between jwk.Key and Go crypto types |
 | `jose` | Test helper for jose CLI integration |
 | `jwxtest` | Test key generation helpers (RSA, ECDSA, Ed25519, symmetric) |
-| `jwxio` | Safe IO: `ReadAllFromFiniteSource()` |
+| `jwxio` | Safe IO: `ReadAllFromFiniteSource(rdr, maxBytes)` |
 | `tokens` | String constants for algorithm names and separators |
 | `pool` | Generic object pool (`Pool[T]`, `SlicePool[T]`) |
