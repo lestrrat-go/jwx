@@ -987,6 +987,26 @@ func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 	}
 }
 
+func rewriteCompactPBES2Count(t *testing.T, token []byte, count any) []byte {
+	t.Helper()
+
+	segs := bytes.Split(token, []byte{'.'})
+	require.Len(t, segs, 5, `compact JWE should have 5 segments`)
+
+	protectedJSON, err := base64.RawURLEncoding.DecodeString(string(segs[0]))
+	require.NoError(t, err, `protected header should decode`)
+
+	var protected map[string]any
+	require.NoError(t, json.Unmarshal(protectedJSON, &protected), `protected header should parse`)
+	protected[jwe.CountKey] = count
+
+	protectedJSON, err = json.Marshal(protected)
+	require.NoError(t, err, `protected header should marshal`)
+
+	segs[0] = []byte(base64.RawURLEncoding.EncodeToString(protectedJSON))
+	return bytes.Join(segs, []byte{'.'})
+}
+
 func TestMinPBES2Count(t *testing.T) {
 	// Encrypt a message using PBES2 (default p2c=10000)
 	password := []byte(`supersecret`)
@@ -1119,6 +1139,36 @@ func TestPBES2CountEncrypt(t *testing.T) {
 		decrypted, err := jwe.Decrypt(encrypted2, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
 		require.NoError(t, err)
 		require.Equal(t, payload, decrypted)
+	})
+}
+
+func TestPBES2RejectsNonIntegerCount(t *testing.T) {
+	password := []byte(`supersecret`)
+	key, err := jwk.Import(password)
+	require.NoError(t, err, `jwk.Import should succeed`)
+
+	encrypted, err := jwe.Encrypt(
+		[]byte(`hello world`),
+		jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+		jwe.WithPBES2Count(2000),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	tampered := rewriteCompactPBES2Count(t, encrypted, 1500.9)
+
+	t.Run("default decoder rejects fractional count", func(t *testing.T) {
+		_, err := jwe.Decrypt(tampered, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.Error(t, err, `jwe.Decrypt should fail`)
+		require.Contains(t, err.Error(), `invalid 'p2c' value`)
+	})
+
+	t.Run("UseNumber decoder rejects fractional count", func(t *testing.T) {
+		json.DecoderSettings(true)
+		defer json.DecoderSettings(false)
+
+		_, err := jwe.Decrypt(tampered, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.Error(t, err, `jwe.Decrypt should fail`)
+		require.Contains(t, err.Error(), `invalid 'p2c' value`)
 	})
 }
 

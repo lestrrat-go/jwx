@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"slices"
 	"sync/atomic"
 
@@ -699,6 +700,9 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 
 		maxCount := dc.maxPBES2Count
 		minCount := dc.minPBES2Count
+		if math.IsNaN(countFlt) || math.IsInf(countFlt, 0) || math.Trunc(countFlt) != countFlt {
+			return nil, fmt.Errorf("invalid 'p2c' value")
+		}
 		if countFlt > float64(maxCount) {
 			return nil, fmt.Errorf("invalid 'p2c' value")
 		}
