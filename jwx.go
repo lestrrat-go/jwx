@@ -27,6 +27,32 @@ import (
 	"github.com/lestrrat-go/option/v3"
 )
 
+// implementationNoteStreaming documents a library-wide design decision:
+// jwx remains buffer-oriented for parse/sign/verify/encrypt/decrypt paths
+// even when an io.Reader helper exists as an input convenience.
+//
+// We investigated true streaming support across the core packages and
+// companion modules, including PQC algorithms. Some signature families can
+// share an incremental core because the underlying crypto signs or verifies a
+// digest or other compact representative rather than the full message:
+// HMAC, RSA, ECDSA, ES256K, and the composite-signature companion all fit
+// that model. ML-DSA is also more nuanced than its top-level message-based
+// API suggests because the underlying library supports external-mu signing.
+//
+// That is still not enough for a coherent library-wide streaming design.
+// Other supported signature algorithms such as Ed25519 and Ed448 are exposed
+// as whole-message operations at the crypto-library surface, and JWE content
+// encryption is the decisive blocker: the supported content-encryption stack,
+// especially AES-GCM via cipher.AEAD, is fundamentally exposed through
+// one-shot buffer APIs. As long as any required primitive in the supported
+// stack remains non-streaming, true streaming support would force split code
+// paths and algorithm-specific execution models.
+//
+// jwx intentionally avoids that divergence. Until the full supported
+// primitive set supports a coherent streaming model end to end, the public
+// JOSE operations stay byte-slice/buffer oriented.
+type implementationNoteStreaming struct{}
+
 // Settings configures global settings for the jwx package.
 //
 // All options accepted here have process-global effect and are intended
