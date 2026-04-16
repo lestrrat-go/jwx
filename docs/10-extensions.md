@@ -533,10 +533,10 @@ func Example_jwe_encrypt_hpke5() {
   var pub circlx448.Key
   circlx448.KeyGen(&pub, &seed)
 
-  // Wrap the raw X448 key pair into the x448mod types that implement
-  // jwx's key agreement interfaces. NewPrivateKey takes the seed (private
-  // scalar) and the corresponding public key.
-  privKey := x448mod.NewPrivateKey(seed, pub)
+  // Wrap the raw X448 seed into the x448mod type that implements jwx's
+  // key agreement interfaces. NewPrivateKey derives the public key from
+  // the seed so the private scalar and exported public JWK cannot drift.
+  privKey := x448mod.NewPrivateKey(seed)
 
   // Import to JWK. The resulting key has kty="OKP" and crv="X448".
   // We need a JWK because jwe.Encrypt/Decrypt work with JWK keys
@@ -630,7 +630,9 @@ func Example_jwe_encrypt_hpke6() {
   var pub circlx448.Key
   circlx448.KeyGen(&pub, &seed)
 
-  privKey := x448mod.NewPrivateKey(seed, pub)
+  // NewPrivateKey derives the public key from the seed, which avoids
+  // constructing a JWK whose public and private halves disagree.
+  privKey := x448mod.NewPrivateKey(seed)
 
   privJWK, err := jwk.Import[jwk.Key](privKey)
   if err != nil {
