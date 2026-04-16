@@ -36,6 +36,9 @@ func init() {
 	algorithms[15] = NewSignatureAlgorithm("RS512")
 
 	RegisterSignatureAlgorithm(algorithms...)
+	for _, alg := range algorithms {
+		builtinSignatureAlgorithm[alg.String()] = struct{}{}
+	}
 }
 
 // ES256 returns an object representing ECDSA signature algorithm using P-256 curve and SHA-256.
@@ -183,12 +186,22 @@ func LookupSignatureAlgorithm(name string) (SignatureAlgorithm, bool) {
 
 // RegisterSignatureAlgorithm registers a new SignatureAlgorithm. The signature value must be immutable
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
+//
+// Registration is process-global. Built-in identifiers such as RS256 are
+// reserved and cannot be replaced by callers after init has completed; use a
+// distinct name for third-party algorithms.
 func RegisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
 	muAllSignatureAlgorithm.Lock()
+	defer muAllSignatureAlgorithm.Unlock()
 	for _, alg := range algorithms {
+		if _, ok := builtinSignatureAlgorithm[alg.String()]; ok {
+			if existing, ok := allSignatureAlgorithm[alg.String()]; ok && existing != alg {
+				continue
+			}
+			continue
+		}
 		allSignatureAlgorithm[alg.String()] = alg
 	}
-	muAllSignatureAlgorithm.Unlock()
 	rebuildSignatureAlgorithm()
 }
 
@@ -196,23 +209,21 @@ func RegisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
 // Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterSignatureAlgorithm(algorithms ...SignatureAlgorithm) {
 	muAllSignatureAlgorithm.Lock()
+	defer muAllSignatureAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		if _, ok := builtinSignatureAlgorithm[alg.String()]; ok {
 			continue
 		}
 		delete(allSignatureAlgorithm, alg.String())
 	}
-	muAllSignatureAlgorithm.Unlock()
 	rebuildSignatureAlgorithm()
 }
 
 func rebuildSignatureAlgorithm() {
 	list := make([]SignatureAlgorithm, 0, len(allSignatureAlgorithm))
-	muAllSignatureAlgorithm.RLock()
 	for _, v := range allSignatureAlgorithm {
 		list = append(list, v)
 	}
-	muAllSignatureAlgorithm.RUnlock()
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].String() < list[j].String()
 	})
