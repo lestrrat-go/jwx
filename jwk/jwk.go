@@ -760,7 +760,7 @@ func Settings(options ...GlobalOption) {
 		case identMinRSAModulusBits{}:
 			rsaMinModulusBits.Store(int64(option.MustGet[int](opt)))
 		case identMinRSAPublicExponent{}:
-			rsaMinPublicExponent.Store(int64(option.MustGet[int](opt)))
+			setMinRSAPublicExponent(option.MustGet[int](opt))
 		case identStrictKeyUsage{}:
 			strictKeyUsage.Store(option.MustGet[bool](opt))
 		}
