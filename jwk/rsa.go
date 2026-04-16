@@ -98,6 +98,9 @@ func importRsaPublicKeyByteValues(rawKey *rsa.PublicKey) ([]byte, []byte, error)
 	if err != nil {
 		return nil, nil, fmt.Errorf(`invalid rsa.PublicKey: %w`, err)
 	}
+	if rawKey.E <= 0 {
+		return nil, nil, fmt.Errorf(`invalid rsa.PublicKey: invalid rsa public exponent: must be a positive odd integer`)
+	}
 
 	data := make([]byte, 8)
 	binary.BigEndian.PutUint64(data, uint64(rawKey.E))
