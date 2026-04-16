@@ -215,6 +215,71 @@ func TestParseReader(t *testing.T) {
 	})
 }
 
+func TestParseCompactEmptySignature(t *testing.T) {
+	t.Parallel()
+
+	testcases := []struct {
+		Name   string
+		Header string
+		OK     bool
+	}{
+		{
+			Name:   "SignedAlgorithmRejected",
+			Header: `{"alg":"HS256"}`,
+		},
+		{
+			Name:   "MissingAlgorithmRejected",
+			Header: `{"typ":"JWT"}`,
+		},
+		{
+			Name:   "NoSignatureAllowed",
+			Header: `{"alg":"none"}`,
+			OK:     true,
+		},
+	}
+
+	payload := base64.Encode([]byte("test"))
+
+	for _, tc := range testcases {
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+
+			protected := string(base64.Encode([]byte(tc.Header)))
+			compact := protected + "." + string(payload) + "."
+
+			msg, err := jws.Parse([]byte(compact))
+			if tc.OK {
+				require.NoError(t, err, `jws.Parse should succeed`)
+				require.Len(t, msg.Signatures(), 1, `message should contain one signature`)
+				require.Empty(t, msg.Signatures()[0].Signature(), `signature should be empty`)
+			} else {
+				require.Error(t, err, `jws.Parse should fail`)
+				require.ErrorIs(t, err, jws.ParseError(), `error should match jws.ParseError`)
+			}
+
+			msg, err = jws.ParseString(compact)
+			if tc.OK {
+				require.NoError(t, err, `jws.ParseString should succeed`)
+				require.Len(t, msg.Signatures(), 1, `message should contain one signature`)
+				require.Empty(t, msg.Signatures()[0].Signature(), `signature should be empty`)
+			} else {
+				require.Error(t, err, `jws.ParseString should fail`)
+				require.ErrorIs(t, err, jws.ParseError(), `error should match jws.ParseError`)
+			}
+
+			msg, err = jws.ParseReader(bufio.NewReader(strings.NewReader(compact)))
+			if tc.OK {
+				require.NoError(t, err, `jws.ParseReader should succeed`)
+				require.Len(t, msg.Signatures(), 1, `message should contain one signature`)
+				require.Empty(t, msg.Signatures()[0].Signature(), `signature should be empty`)
+			} else {
+				require.Error(t, err, `jws.ParseReader should fail`)
+				require.ErrorIs(t, err, jws.ParseError(), `error should match jws.ParseError`)
+			}
+		})
+	}
+}
+
 type dummyCryptoSigner struct {
 	raw crypto.Signer
 }

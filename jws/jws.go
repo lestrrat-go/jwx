@@ -487,6 +487,12 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 	if err != nil {
 		return nil, fmt.Errorf(`failed to decode signature: %w`, err)
 	}
+	if len(decodedSignature) == 0 {
+		alg, ok := hdr.Algorithm()
+		if !ok || alg != jwa.NoSignature() {
+			return nil, fmt.Errorf(`empty compact signature requires protected header "alg" to be "none"`)
+		}
+	}
 
 	var msg Message
 	msg.payload = decodedPayload
