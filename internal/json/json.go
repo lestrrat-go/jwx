@@ -5,7 +5,7 @@ import (
 	jsonv2 "encoding/json/v2"
 	"fmt"
 	"io"
-	"os"
+
 	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
@@ -201,9 +201,4 @@ func (dc *decodeCtx) Registry() *Registry {
 
 func (dc *decodeCtx) StrictStrings() bool {
 	return dc.strictStrings
-}
-
-func Dump(v any) {
-	enc := jsontext.NewEncoder(os.Stdout, jsontext.WithIndent("\t"))
-	_ = jsonv2.MarshalEncode(enc, v)
 }
