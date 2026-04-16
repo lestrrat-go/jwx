@@ -46,7 +46,6 @@ func TestDetectParseFormat(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			require.Equal(t, tc.want, detectParseFormat(tc.src))
