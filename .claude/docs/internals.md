@@ -54,7 +54,6 @@ Manual option functions in `{pkg}/options.go` supplement generated ones.
 | What | Registration Function | Package |
 |------|----------------------|---------|
 | Custom algorithms | `jwa.Register{Type}()` | jwa |
-  Builtin identifiers are reserved after init; `Register{Type}()` ignores attempts to replace one.
 | Custom key parsers | `jwk.RegisterKeyParser()` | jwk |
 | Custom key importers | `jwk.RegisterKeyImporter()` | jwk |
 | Custom key exporters | `jwk.RegisterKeyExporter()` | jwk |
