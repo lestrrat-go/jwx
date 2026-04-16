@@ -933,6 +933,17 @@ func TestPublicKeyOf(t *testing.T) {
 	})
 }
 
+type octetSeqBypassKey struct {
+	jwk.Key
+	kid string
+}
+
+func (k octetSeqBypassKey) KeyType() jwa.KeyType { return jwa.OctetSeq() }
+
+func (k octetSeqBypassKey) KeyID() (string, bool) { return k.kid, true }
+
+func (k octetSeqBypassKey) PublicKey() (jwk.Key, error) { return k, nil }
+
 func TestPublicSetOfSymmetricRejection(t *testing.T) {
 	t.Parallel()
 
@@ -989,6 +1000,30 @@ func TestPublicSetOfSymmetricRejection(t *testing.T) {
 		_, err := jwk.PublicSetOf(set)
 		require.Error(t, err, `PublicSetOf should reject a purely symmetric set`)
 		require.ErrorContains(t, err, `"hmac-only"`)
+	})
+
+	t.Run("custom oct key rejected by kty even without SymmetricKey interface", func(t *testing.T) {
+		t.Parallel()
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(octetSeqBypassKey{kid: "oct-bypass"}))
+
+		_, err := jwk.PublicSetOf(set)
+		require.Error(t, err, `PublicSetOf should reject oct keys by kty, not only by SymmetricKey interface`)
+		require.ErrorContains(t, err, `symmetric key`)
+		require.ErrorContains(t, err, `"oct-bypass"`)
+	})
+
+	t.Run("custom oct key still passes through with WithAllowSymmetric(true)", func(t *testing.T) {
+		t.Parallel()
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(octetSeqBypassKey{kid: "oct-bypass"}))
+
+		pub, err := jwk.PublicSetOf(set, jwk.WithAllowSymmetric(true))
+		require.NoError(t, err, `PublicSetOf with WithAllowSymmetric(true) should preserve legacy opt-in behavior for oct keys`)
+		require.Equal(t, 1, pub.Len(), `resulting set should still contain the custom oct key`)
+		got, ok := pub.Key(0)
+		require.True(t, ok, `first key should exist`)
+		require.Equal(t, jwa.OctetSeq(), got.KeyType())
 	})
 
 	t.Run("empty set succeeds", func(t *testing.T) {
