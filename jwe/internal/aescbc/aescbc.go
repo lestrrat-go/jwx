@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"slices"
 	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v4/internal/pool"
@@ -193,19 +194,23 @@ func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) ([]byte, error) {
 func ensureSize(dst []byte, n int) []byte {
 	// Grow dst by n bytes, preserving its current contents as the prefix.
 	// This matches the crypto.AEAD append contract used by Seal/Open.
-	const maxInt = int(^uint(0) >> 1)
-	if n > maxInt-len(dst) {
+	if n < 0 {
+		panic(fmt.Errorf("failed to allocate buffer"))
+	}
+
+	const maxInt = int64(^uint(0) >> 1)
+	maxAlloc := maxBufSize.Load()
+	if maxAlloc > maxInt {
+		maxAlloc = maxInt
+	}
+
+	if int64(len(dst)) > maxAlloc-int64(n) {
 		panic(fmt.Errorf("failed to allocate buffer"))
 	}
 
 	retlen := len(dst) + n
-	if cap(dst) >= retlen {
-		return dst[:retlen]
-	}
-
-	ret := make([]byte, retlen)
-	copy(ret, dst)
-	return ret
+	dst = slices.Grow(dst, n)
+	return dst[:retlen]
 }
 
 // Seal fulfills the crypto.AEAD interface
