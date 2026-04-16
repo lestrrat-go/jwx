@@ -362,13 +362,16 @@ func ParseReader(src io.Reader, options ...ParseOption) (*Message, error) {
 		}
 	}
 
-	limited := io.LimitReader(src, maxSize+1)
-	data, err := jwxio.ReadAllFromFiniteSource(limited)
+	data, err := jwxio.ReadAllFromFiniteSource(src, maxSize+1)
 	if err == nil {
 		if int64(len(data)) > maxSize {
 			return nil, makeParseError(`jws.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
 		}
 		return Parse(data, options...)
+	}
+
+	if errors.Is(err, jwxio.InputTooLargeError()) {
+		return nil, makeParseError(`jws.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
 	}
 
 	if !errors.Is(err, jwxio.NonFiniteSourceError()) {

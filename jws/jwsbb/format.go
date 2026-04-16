@@ -181,16 +181,16 @@ func SplitCompactString(src string) (protected, payload, signature []byte, err e
 //
 // The function validates that exactly 3 segments are present, separated by periods.
 func SplitCompactReader(rdr io.Reader) (protected, payload, signature []byte, err error) {
-	// Wrap with a size cap before the finite-source check so that even
-	// recognized finite types (e.g. *io.LimitedReader with a large N)
-	// cannot cause unbounded allocation.
-	capped := io.LimitReader(rdr, maxSplitCompactReaderSize+1)
-	data, err := jwxio.ReadAllFromFiniteSource(capped)
+	data, err := jwxio.ReadAllFromFiniteSource(rdr, maxSplitCompactReaderSize+1)
 	if err == nil {
 		if int64(len(data)) > maxSplitCompactReaderSize {
 			return nil, nil, nil, InputTooLargeError()
 		}
 		return SplitCompact(data)
+	}
+
+	if errors.Is(err, jwxio.InputTooLargeError()) {
+		return nil, nil, nil, InputTooLargeError()
 	}
 
 	if !errors.Is(err, jwxio.NonFiniteSourceError()) {
