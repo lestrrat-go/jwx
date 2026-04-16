@@ -18,5 +18,8 @@ go_test(
     name = "ecdsa_test",
     srcs = ["ecdsa_test.go"],
     embed = [":ecdsa"],
-    deps = ["//jwa"],
+    deps = [
+        "//jwa",
+        "@com_github_stretchr_testify//require",
+    ],
 )
