@@ -1,6 +1,11 @@
 //go:generate ../tools/cmd/genjwe.sh
 
-// Package jwe implements JWE as described in https://tools.ietf.org/html/rfc7516
+// Package jwe implements JWE as described in https://tools.ietf.org/html/rfc7516.
+//
+// Legacy note: RSA-PKCS1 v1.5 key encryption (`jwa.RSA1_5()`) is supported
+// only for interoperability with existing peers. New applications should
+// prefer an RSA-OAEP variant such as `jwa.RSA_OAEP_256()` because PKCS#1 v1.5
+// decryption is exposed to Bleichenbacher-style oracle attacks.
 package jwe
 
 // #region imports
@@ -219,6 +224,10 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 // Read the documentation for `jwe.WithKey()` to learn more about the
 // possible values that can be used for `alg` and `key`.
 //
+// `jwa.RSA1_5()` is supported only for interoperability with legacy peers.
+// New applications should prefer an RSA-OAEP variant such as
+// `jwa.RSA_OAEP_256()` because PKCS#1 v1.5 decryption is exposed to
+// Bleichenbacher-style oracle attacks.
 // If you enable `jwe.WithCompress()`, this library does not enforce a
 // producer-side payload size limit before compression. Callers that accept
 // untrusted or arbitrarily large plaintext must bound the input size before
