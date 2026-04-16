@@ -22,7 +22,7 @@ type assignKeyIDOption struct {
 
 func (*assignKeyIDOption) assignKeyIDOption() {}
 
-// GlobalOption is a type of Option that can be passed to the `jwk.Configure()` to
+// GlobalOption is a type of Option that can be passed to `jwk.Settings()` to
 // change the global configuration of the jwk package.
 type GlobalOption interface {
 	Option
@@ -63,6 +63,8 @@ type identAllowSymmetric struct{}
 type identForceAssign struct{}
 type identIgnoreParseError struct{}
 type identLocalRegistry struct{}
+type identMinRSAModulusBits struct{}
+type identMinRSAPublicExponent struct{}
 type identPEM struct{}
 type identPEMDecoder struct{}
 type identStrictKeyUsage struct{}
@@ -83,6 +85,14 @@ func (identIgnoreParseError) String() string {
 
 func (identLocalRegistry) String() string {
 	return "withLocalRegistry"
+}
+
+func (identMinRSAModulusBits) String() string {
+	return "WithMinRSAModulusBits"
+}
+
+func (identMinRSAPublicExponent) String() string {
+	return "WithMinRSAPublicExponent"
 }
 
 func (identPEM) String() string {
@@ -157,6 +167,25 @@ func WithIgnoreParseError(v bool) ParseOption {
 // This option is only available for internal code. Users don't get to play with it
 func withLocalRegistry(v *json.Registry) ParseOption {
 	return &parseOption{option.New(identLocalRegistry{}, v)}
+}
+
+// WithMinRSAModulusBits specifies the minimum RSA modulus size, in bits,
+// accepted by JWK validation and raw/PEM/X.509 import.
+//
+// The default is 2048. Lower this only for legacy interoperability with
+// older key material. A value of 0 disables the modulus-size floor.
+func WithMinRSAModulusBits(v int) GlobalOption {
+	return &globalOption{option.New(identMinRSAModulusBits{}, v)}
+}
+
+// WithMinRSAPublicExponent specifies the minimum RSA public exponent
+// accepted by JWK validation and raw/PEM/X.509 import.
+//
+// The default is 3. The exponent must still be odd and fit in a Go `int`.
+// Lower this only for legacy interoperability. A value of 0 disables the
+// minimum-exponent floor.
+func WithMinRSAPublicExponent(v int) GlobalOption {
+	return &globalOption{option.New(identMinRSAPublicExponent{}, v)}
 }
 
 // WithPEM specifies that the input to `Parse()` is a PEM encoded key.

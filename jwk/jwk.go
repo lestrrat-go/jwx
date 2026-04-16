@@ -762,10 +762,14 @@ func IsKeyValidationError(err error) bool {
 	return errors.Is(err, &kve)
 }
 
-// Configure is used to configure global behavior of the jwk package.
-func Configure(options ...GlobalOption) {
+// Settings is used to configure global behavior of the jwk package.
+func Settings(options ...GlobalOption) {
 	for _, opt := range options {
 		switch opt.Ident() {
+		case identMinRSAModulusBits{}:
+			rsaMinModulusBits.Store(int64(option.MustGet[int](opt)))
+		case identMinRSAPublicExponent{}:
+			rsaMinPublicExponent.Store(int64(option.MustGet[int](opt)))
 		case identStrictKeyUsage{}:
 			strictKeyUsage.Store(option.MustGet[bool](opt))
 		}
