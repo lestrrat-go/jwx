@@ -82,23 +82,19 @@ func Import[T Key](raw any) (T, error) {
 	return result, nil
 }
 
-func doImport(raw any) (Key, error) {
-	key, err := importRawKey(raw)
-	if err != nil {
-		return nil, importerr(`%w`, err)
+func validateImportedKey(key Key) error {
+	if key == nil {
+		return nil
 	}
-	if err := validateReturnedKey(key); err != nil {
-		return nil, importerr(`%w`, err)
+	if err := key.Validate(); err != nil {
+		return importerr(`key validation failed: %w`, err)
 	}
-	return key, nil
+	return nil
 }
 
-func importRawKey(raw any) (Key, error) {
-	if raw == nil {
-		return nil, fmt.Errorf(`a non-nil key is required`)
-	}
+var errNotBuiltinKey = errors.New(`not a builtin key`)
 
-	// Fast path: type switch for built-in types avoids reflect.TypeOf + mutex
+func importBuiltinKey(raw any) (Key, error) {
 	switch v := raw.(type) {
 	case *rsa.PrivateKey:
 		return importRSAPrivateKeyPtr(v)
@@ -130,9 +126,24 @@ func importRawKey(raw any) (Key, error) {
 		return importECDHPublicKey(v)
 	case []byte:
 		return importSymmetricKey(v)
+	default:
+		return nil, errNotBuiltinKey
+	}
+}
+
+func convertRawKey(raw any) (Key, error) {
+	if raw == nil {
+		return nil, fmt.Errorf(`a non-nil key is required`)
 	}
 
-	// Slow path: registered importers for custom/extension types
+	key, err := importBuiltinKey(raw)
+	if err == nil {
+		return key, nil
+	}
+	if !errors.Is(err, errNotBuiltinKey) {
+		return nil, err
+	}
+
 	muKeyImporters.RLock()
 	conv, ok := keyImporters[reflect.TypeOf(raw)]
 	muKeyImporters.RUnlock()
@@ -141,6 +152,17 @@ func importRawKey(raw any) (Key, error) {
 	}
 
 	return conv.Import(raw)
+}
+
+func doImport(raw any) (Key, error) {
+	key, err := convertRawKey(raw)
+	if err != nil {
+		return nil, importerr(`%w`, err)
+	}
+	if err := validateImportedKey(key); err != nil {
+		return nil, err
+	}
+	return key, nil
 }
 
 func validateReturnedKey(key Key) error {
@@ -372,7 +394,7 @@ func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 		if err != nil {
 			return nil, fmt.Errorf(`failed to decode PEM/X.509 encoded key: %w`, err)
 		}
-		key, err := importRawKey(raw)
+		key, err := convertRawKey(raw)
 		if err != nil {
 			return nil, fmt.Errorf(`jwk.Parse: failed to create jwk.Key from %T: %w`, raw, err)
 		}
@@ -465,7 +487,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			if err != nil {
 				return nil, parseerr(`failed to parse PEM encoded key: %w`, err)
 			}
-			key, err := importRawKey(raw)
+			key, err := convertRawKey(raw)
 			if err != nil {
 				return nil, parseerr(`failed to create jwk.Key from %T: %w`, raw, err)
 			}
@@ -760,10 +782,14 @@ func IsKeyValidationError(err error) bool {
 	return errors.Is(err, &kve)
 }
 
-// Configure is used to configure global behavior of the jwk package.
-func Configure(options ...GlobalOption) {
+// Settings is used to configure global behavior of the jwk package.
+func Settings(options ...GlobalOption) {
 	for _, opt := range options {
 		switch opt.Ident() {
+		case identMinRSAModulusBits{}:
+			rsaMinModulusBits.Store(int64(option.MustGet[int](opt)))
+		case identMinRSAPublicExponent{}:
+			setMinRSAPublicExponent(option.MustGet[int](opt))
 		case identStrictKeyUsage{}:
 			strictKeyUsage.Store(option.MustGet[bool](opt))
 		}

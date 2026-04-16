@@ -30,6 +30,7 @@ Algorithm identifiers per RFC 7518. Registry pattern with thread-safe lookup.
 
 JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 
+- **Settings(options ...GlobalOption)** — configure global jwk behavior (`WithStrictKeyUsage`, RSA validation floors)
 - **Parse(src []byte, ...ParseOption) (Set, error)** / **ParseKey(data []byte, ...ParseOption) (Key, error)** — parse JWK/JWKS
 - **Fetch(ctx, url, ...FetchOption) (Set, error)** — HTTP fetch with optional whitelist, body size limit (default 10 MB via `WithMaxFetchBodySize`)
 - **DefaultHTTPClient() \*http.Client** — returns a new http.Client with library defaults (30s timeout, redirect policy)
@@ -37,6 +38,7 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 - **PublicKeyOf(v any) (Key, error)** / **PublicSetOf(v Set, ...PublicSetOption) (Set, error)** — extract public keys. `PublicSetOf` rejects sets containing symmetric (oct) keys by default; pass `WithAllowSymmetric(true)` for legacy pass-through.
 - **AssignKeyID(key Key, ...AssignKeyIDOption) error** — compute and set kid via thumbprint
 - **Pem(v any) ([]byte, error)** — PEM encode
+- Global options: `WithStrictKeyUsage(bool)`, `WithMinRSAModulusBits(int)`, `WithMinRSAPublicExponent(int)`
 - JWKS caching moved to `github.com/jwx-go/jwkcache` — see [Extension Modules](../../docs/10-extensions.md)
 - Key interfaces: `Key`, `Set`, `RSAPublicKey`, `RSAPrivateKey`, `ECDSAPublicKey`, `ECDSAPrivateKey`, `OKPPublicKey`, `OKPPrivateKey`, `SymmetricKey`, `AKPPublicKey`, `AKPPrivateKey` (post-quantum, used by mldsa/mlkem extensions)
 - Extension: `RegisterCustomField[T]()`, `RegisterCustomDecoder[T]()`, `RegisterKeyParser()`, `RegisterKeyImporter()`, `RegisterKeyExporter()`
