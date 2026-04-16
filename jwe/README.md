@@ -21,11 +21,11 @@ Package jwe implements JWE as described in [RFC 7516](https://tools.ietf.org/htm
 
 ## Supported content encryption algorithms
 
-| Algorithm                   | Constant in [jwa](../jwa) |
-|:----------------------------|:--------------------------|
-| AES-CBC + HMAC-SHA256 (128) | jwa.A128CBC_HS256         |
-| AES-CBC + HMAC-SHA384 (192) | jwa.A192CBC_HS384         |
-| AES-CBC + HMAC-SHA512 (256) | jwa.A256CBC_HS512         |
-| AES-GCM (128)               | jwa.A128GCM               |
-| AES-GCM (192)               | jwa.A192GCM               |
-| AES-GCM (256)               | jwa.A256GCM               |
+| Algorithm                   | Constant in [jwa](../jwa) | Required CEK length |
+|:----------------------------|:--------------------------|:--------------------|
+| AES-CBC + HMAC-SHA256 (128) | jwa.A128CBC_HS256         | 32 bytes            |
+| AES-CBC + HMAC-SHA384 (192) | jwa.A192CBC_HS384         | 48 bytes            |
+| AES-CBC + HMAC-SHA512 (256) | jwa.A256CBC_HS512         | 64 bytes            |
+| AES-GCM (128)               | jwa.A128GCM               | 16 bytes            |
+| AES-GCM (192)               | jwa.A192GCM               | 24 bytes            |
+| AES-GCM (256)               | jwa.A256GCM               | 32 bytes            |
