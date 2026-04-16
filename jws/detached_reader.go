@@ -21,6 +21,10 @@ import (
 	"github.com/lestrrat-go/jwx/v4/jws/jwsbb"
 )
 
+const (
+	prefixJwsSignDetachedReader = `jws.SignDetachedReader`
+)
+
 // SignDetachedReader signs a detached payload provided as an io.Reader and
 // returns a JWS with the payload omitted from either compact or flattened JSON
 // serialization.
@@ -51,22 +55,22 @@ func SignDetachedReader(payload io.Reader, options ...SignOption) ([]byte, error
 		switch opt.Ident() {
 		case identKey{}:
 			if keyFound {
-				return nil, makeSignError(`SignDetachedReader accepts exactly one jws.WithKey(); use jws.Sign with jws.WithDetachedPayload() for the general detached path`)
+				return nil, makeSignError(prefixJwsSignDetachedReader, `SignDetachedReader accepts exactly one jws.WithKey(); use jws.Sign with jws.WithDetachedPayload() for the general detached path`)
 			}
 
 			pair := option.MustGet[*withKey](opt)
 			var ok bool
 			alg, ok = pair.alg.(jwa.SignatureAlgorithm)
 			if !ok {
-				return nil, makeSignError(`expected algorithm to be of type jwa.SignatureAlgorithm but got (%[1]q, %[1]T)`, pair.alg)
+				return nil, makeSignError(prefixJwsSignDetachedReader, `expected algorithm to be of type jwa.SignatureAlgorithm but got (%[1]q, %[1]T)`, pair.alg)
 			}
 			if alg != jwa.NoSignature() && !pair.keyPrevalidated {
 				if err := validateAlgorithmForKey(alg, pair.key); err != nil {
-					return nil, makeSignError(`%w`, err)
+					return nil, makeSignError(prefixJwsSignDetachedReader, `%w`, err)
 				}
 			}
 			if pair.cachedHdrErr != nil {
-				return nil, makeSignError(`%w`, pair.cachedHdrErr)
+				return nil, makeSignError(prefixJwsSignDetachedReader, `%w`, pair.cachedHdrErr)
 			}
 
 			key = pair.key
@@ -83,61 +87,61 @@ func SignDetachedReader(payload io.Reader, options ...SignOption) ([]byte, error
 			case fmtCompact, fmtJSON, fmtJSONPretty:
 				format = v
 			default:
-				return nil, makeSignError(`invalid serialization format value %d`, v)
+				return nil, makeSignError(prefixJwsSignDetachedReader, `invalid serialization format value %d`, v)
 			}
 		case identDetachedPayload{}, identKeyProvider{}, identMessage{}, identInsecureNoSignature{}:
-			return nil, makeSignError(`option %T is not supported by SignDetachedReader; use jws.Sign with jws.WithDetachedPayload() for the general detached path`, opt)
+			return nil, makeSignError(prefixJwsSignDetachedReader, `option %T is not supported by SignDetachedReader; use jws.Sign with jws.WithDetachedPayload() for the general detached path`, opt)
 		default:
-			return nil, makeSignError(`invalid jws.SignOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, opt.Ident()), `jws.ident`))
+			return nil, makeSignError(prefixJwsSignDetachedReader, `invalid jws.SignOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, opt.Ident()), `jws.ident`))
 		}
 	}
 
 	if !keyFound {
-		return nil, makeSignError(`jws.WithKey() must be specified for SignDetachedReader`)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `jws.WithKey() must be specified for SignDetachedReader`)
 	}
 	if alg == jwa.NoSignature() {
-		return nil, makeSignError(`"none" (jwa.NoSignature) cannot be used with SignDetachedReader; use jws.Sign with jws.WithInsecureNoSignature() if you really need an unsecured in-memory JWS`)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `"none" (jwa.NoSignature) cannot be used with SignDetachedReader; use jws.Sign with jws.WithInsecureNoSignature() if you really need an unsecured in-memory JWS`)
 	}
 
 	streamEncoder, ok := base64.AsStreamEncoder(encoder)
 	if !ok {
-		return nil, makeSignError(`jws.WithBase64Encoder() for SignDetachedReader requires a stream-capable encoder; use a standard library base64 encoding or implement jws.Base64StreamEncoder`)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `jws.WithBase64Encoder() for SignDetachedReader requires a stream-capable encoder; use a standard library base64 encoding or implement jws.Base64StreamEncoder`)
 	}
 
 	if validateKey {
 		if err := validateKeyBeforeUse(key); err != nil {
-			return nil, makeSignError(`failed to validate key: %w`, err)
+			return nil, makeSignError(prefixJwsSignDetachedReader, `failed to validate key: %w`, err)
 		}
 	}
 
 	dsigAlg := resolveDetachedDsigAlgorithm(alg.String())
 	dsigInfo, ok := dsig.GetAlgorithmInfo(dsigAlg)
 	if !ok {
-		return nil, makeSignError(`unsupported algorithm %q; use jws.Sign with jws.WithDetachedPayload() if you need the general detached path`, alg)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `unsupported algorithm %q; use jws.Sign with jws.WithDetachedPayload() if you need the general detached path`, alg)
 	}
 	switch dsigInfo.Family {
 	case dsig.EdDSAFamily:
-		return nil, makeSignError(`algorithm %q does not support SignDetachedReader because it requires the full payload; use jws.Sign with jws.WithDetachedPayload() if the payload fits in memory`, alg)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `algorithm %q does not support SignDetachedReader because it requires the full payload; use jws.Sign with jws.WithDetachedPayload() if the payload fits in memory`, alg)
 	case dsig.Custom:
-		return nil, makeSignError(`custom algorithms do not support SignDetachedReader; use jws.Sign with jws.WithDetachedPayload() if the payload fits in memory`)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `custom algorithms do not support SignDetachedReader; use jws.Sign with jws.WithDetachedPayload() if the payload fits in memory`)
 	}
 
 	rawKey, err := convertKeyForDetachedSign(key, dsigInfo.Family)
 	if err != nil {
-		return nil, makeSignError(`failed to convert key: %w`, err)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `failed to convert key: %w`, err)
 	}
 
 	protected, err = cloneOrNewHeaders(protected)
 	if err != nil {
-		return nil, makeSignError(`failed to clone protected headers: %w`, err)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `failed to clone protected headers: %w`, err)
 	}
 	if err := protected.Set(AlgorithmKey, alg); err != nil {
-		return nil, makeSignError(`failed to set "alg" header: %w`, err)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `failed to set "alg" header: %w`, err)
 	}
 	if jwkKey, ok := key.(jwk.Key); ok {
 		if kid, ok := jwkKey.KeyID(); ok && kid != "" {
 			if err := protected.Set(KeyIDKey, kid); err != nil {
-				return nil, makeSignError(`failed to set "kid" header: %w`, err)
+				return nil, makeSignError(prefixJwsSignDetachedReader, `failed to set "kid" header: %w`, err)
 			}
 		}
 	}
@@ -146,29 +150,29 @@ func SignDetachedReader(payload io.Reader, options ...SignOption) ([]byte, error
 	if format == fmtCompact {
 		signingHeaders, err = mergeHeaders(public, protected)
 		if err != nil {
-			return nil, makeSignError(`failed to merge headers: %w`, err)
+			return nil, makeSignError(prefixJwsSignDetachedReader, `failed to merge headers: %w`, err)
 		}
 	}
 
 	hdrbuf, err := json.Marshal(signingHeaders)
 	if err != nil {
-		return nil, makeSignError(`failed to marshal headers: %w`, err)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `failed to marshal headers: %w`, err)
 	}
 
 	hasher, err := createDetachedHasher(dsigInfo, rawKey)
 	if err != nil {
-		return nil, makeSignError(`failed to create hasher: %w`, err)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `failed to create hasher: %w`, err)
 	}
 	if err := writeDetachedPrefix(hasher, hdrbuf, encoder); err != nil {
-		return nil, makeSignError(`failed to write signing prefix: %w`, err)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `failed to write signing prefix: %w`, err)
 	}
 	if err := streamDetachedPayload(hasher, payload, streamEncoder, getB64Value(signingHeaders)); err != nil {
-		return nil, makeSignError(`failed to stream payload: %w`, err)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `failed to stream payload: %w`, err)
 	}
 
 	signature, err := dsig.SignDigest(rawKey, dsigAlg, hasher.Sum(nil), nil)
 	if err != nil {
-		return nil, makeSignError(`failed to sign digest: %w`, err)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `failed to sign digest: %w`, err)
 	}
 
 	hdrEncoded := encoder.EncodeToString(hdrbuf)
@@ -184,7 +188,7 @@ func SignDetachedReader(payload io.Reader, options ...SignOption) ([]byte, error
 	case fmtJSON, fmtJSONPretty:
 		return assembleDetachedJSON(public, hdrEncoded, sigEncoded, format == fmtJSONPretty)
 	default:
-		return nil, makeSignError(`unexpected serialization format %d`, format)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `unexpected serialization format %d`, format)
 	}
 }
 
@@ -362,21 +366,21 @@ func assembleDetachedJSON(public Headers, hdrEncoded, sigEncoded string, pretty 
 	if public != nil {
 		hdrjs, err := json.Marshal(public)
 		if err != nil {
-			return nil, makeSignError(`failed to marshal unprotected header: %w`, err)
+			return nil, makeSignError(prefixJwsSignDetachedReader, `failed to marshal unprotected header: %w`, err)
 		}
 		env.Header = hdrjs
 	}
 	if pretty {
 		out, err := json.MarshalIndent(env, "", "  ")
 		if err != nil {
-			return nil, makeSignError(`failed to marshal JSON output: %w`, err)
+			return nil, makeSignError(prefixJwsSignDetachedReader, `failed to marshal JSON output: %w`, err)
 		}
 		return out, nil
 	}
 
 	out, err := json.Marshal(env)
 	if err != nil {
-		return nil, makeSignError(`failed to marshal JSON output: %w`, err)
+		return nil, makeSignError(prefixJwsSignDetachedReader, `failed to marshal JSON output: %w`, err)
 	}
 	return out, nil
 }
