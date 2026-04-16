@@ -208,9 +208,9 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 // option.
 //
 //	jwe.Encrypt(payload, jwe.WithKey(alg, key))
-//	jwe.Encrypt(payload, jws.WithJSON(), jws.WithKey(alg1, key1), jws.WithKey(alg2, key2))
+//	jwe.Encrypt(payload, jwe.WithJSON(), jwe.WithKey(alg1, key1), jwe.WithKey(alg2, key2))
 //
-// Note that in the second example the `jws.WithJSON()` option is
+// Note that in the second example the `jwe.WithJSON()` option is
 // specified as well. This is because the compact serialization
 // format does not support multiple recipients, and users must
 // specifically ask for the JSON serialization format.
@@ -218,7 +218,7 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 // Read the documentation for `jwe.WithKey()` to learn more about the
 // possible values that can be used for `alg` and `key`.
 //
-// Look for options that return `jwe.EncryptOption` or `jws.EncryptDecryptOption`
+// Look for options that return `jwe.EncryptOption` or `jwe.EncryptDecryptOption`
 // for a complete list of options that can be passed to this function.
 //
 // As of v3.0.12, users can specify `jwe.WithLegacyHeaderMerging()` to
@@ -1082,11 +1082,11 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 // payload (e.g. the key encryption algorithm and the corresponding
 // key to decrypt the JWE message) in its optional arguments. See
 // the examples and list of options that return a DecryptOption for possible
-// values. Upon successful decryptiond returns the decrypted payload.
+// values. Upon successful decryption returns the decrypted payload.
 //
 // The JWE message can be either compact or full JSON format.
 //
-// When using `jwe.WithKeyEncryptionAlgorithm()`, you can pass a `jwa.KeyAlgorithm`
+// When using `jwe.WithKey()`, you can pass a `jwa.KeyAlgorithm`
 // for convenience: this is mainly to allow you to directly pass the result of `(jwk.Key).Algorithm()`.
 // However, do note that while `(jwk.Key).Algorithm()` could very well contain key encryption
 // algorithms, it could also contain other types of values, such as _signature algorithms_.
