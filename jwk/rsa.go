@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"math/bits"
 	"reflect"
+	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
@@ -19,6 +20,15 @@ func init() {
 }
 
 const minRSAModulusBits = 2048
+const minRSAPublicExponent = 3
+
+var rsaMinModulusBits = atomic.Int64{}
+var rsaMinPublicExponent = atomic.Int64{}
+
+func init() {
+	rsaMinModulusBits.Store(minRSAModulusBits)
+	rsaMinPublicExponent.Store(minRSAPublicExponent)
+}
 
 func (k *rsaPrivateKey) Import(rawKey *rsa.PrivateKey) error {
 	k.mu.Lock()
@@ -112,8 +122,9 @@ func validateRSAModulusAndExponent(n, e []byte) (*big.Int, error) {
 	}
 
 	bigN := new(big.Int).SetBytes(n)
-	if bigN.BitLen() < minRSAModulusBits {
-		return nil, fmt.Errorf(`rsa modulus too small: got %d bits, need at least %d`, bigN.BitLen(), minRSAModulusBits)
+	minBits := int(rsaMinModulusBits.Load())
+	if minBits > 0 && bigN.BitLen() < minBits {
+		return nil, fmt.Errorf(`rsa modulus too small: got %d bits, need at least %d`, bigN.BitLen(), minBits)
 	}
 
 	e = trimLeadingZeroBytes(e)
@@ -122,8 +133,12 @@ func validateRSAModulusAndExponent(n, e []byte) (*big.Int, error) {
 	}
 
 	bigE := new(big.Int).SetBytes(e)
-	if bigE.Cmp(big.NewInt(3)) < 0 || bigE.Bit(0) == 0 {
-		return nil, fmt.Errorf(`invalid rsa public exponent: must be an odd integer >= 3`)
+	minExponent := rsaMinPublicExponent.Load()
+	if bigE.Sign() <= 0 || bigE.Bit(0) == 0 {
+		return nil, fmt.Errorf(`invalid rsa public exponent: must be a positive odd integer`)
+	}
+	if minExponent > 0 && bigE.Cmp(big.NewInt(minExponent)) < 0 {
+		return nil, fmt.Errorf(`invalid rsa public exponent: got %s, need at least %d`, bigE.String(), minExponent)
 	}
 
 	// rsa.PublicKey.E is a Go int. Reject exponents that do not fit on the

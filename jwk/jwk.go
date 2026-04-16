@@ -694,6 +694,8 @@ func Configure(options ...GlobalOption) {
 	var strictKeyUsagePtr *bool
 	var maxFetchBodySizePtr *int64
 	var httpClientPtr *HTTPClient
+	var minRSAModulusBitsPtr *int64
+	var minRSAPublicExponentPtr *int64
 	for _, option := range options {
 		switch option.Ident() {
 		case identStrictKeyUsage{}:
@@ -717,6 +719,20 @@ func Configure(options ...GlobalOption) {
 				continue
 			}
 			httpClientPtr = &v
+		case identMinRSAModulusBits{}:
+			var v int
+			if err := option.Value(&v); err != nil {
+				continue
+			}
+			v64 := int64(v)
+			minRSAModulusBitsPtr = &v64
+		case identMinRSAPublicExponent{}:
+			var v int
+			if err := option.Value(&v); err != nil {
+				continue
+			}
+			v64 := int64(v)
+			minRSAPublicExponentPtr = &v64
 		}
 	}
 
@@ -730,6 +746,14 @@ func Configure(options ...GlobalOption) {
 
 	if httpClientPtr != nil {
 		setFetchHTTPClient(*httpClientPtr)
+	}
+
+	if minRSAModulusBitsPtr != nil {
+		rsaMinModulusBits.Store(*minRSAModulusBitsPtr)
+	}
+
+	if minRSAPublicExponentPtr != nil {
+		rsaMinPublicExponent.Store(*minRSAPublicExponentPtr)
 	}
 }
 
