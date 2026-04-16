@@ -25,7 +25,12 @@ type signError struct {
 	error
 }
 
-var errDefaultSignError = makeSignError(`unknown error`)
+const (
+	prefixJwsSign    = `jws.Sign`
+	prefixJwsCompact = `jws.Compact`
+)
+
+var errDefaultSignError = makeSignError(prefixJwsSign, `unknown error`)
 
 // SignError returns an error that can be passed to `errors.Is` to check if the error is a sign error.
 func SignError() error {
@@ -41,8 +46,8 @@ func (signError) Is(err error) bool {
 	return ok
 }
 
-func makeSignError(f string, args ...any) error {
-	return signError{fmt.Errorf(`jws.Sign: `+f, args...)}
+func makeSignError(prefix string, f string, args ...any) error {
+	return signError{fmt.Errorf(prefix+`: `+f, args...)}
 }
 
 // This error is returned when jws.Verify fails, but note that there's another type of
