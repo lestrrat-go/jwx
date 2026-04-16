@@ -935,6 +935,7 @@ func TestPublicKeyOf(t *testing.T) {
 
 type octetSeqBypassKey struct {
 	jwk.Key
+
 	kid string
 }
 
