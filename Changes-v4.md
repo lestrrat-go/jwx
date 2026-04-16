@@ -102,6 +102,11 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   jwk.RegisterProbeField[string]("MyHint", "my_hint")
   ```
 
+* RSA JWK validation is now enforced consistently across JSON parse, JWKS parse,
+  PEM/X.509 parse, and `jwk.Import()`. Keys with moduli smaller than 2048 bits
+  or unsafe public exponents are now rejected by default. Compatibility knobs are available via
+  `jwk.Settings(jwk.WithMinRSAModulusBits(...), jwk.WithMinRSAPublicExponent(...))`.
+
 * The `AKP` key type (Algorithm Key Pair, RFC 9802) has been added, exposed as
   `jwa.AKP()` with `jwk.AKPPublicKey` / `jwk.AKPPrivateKey`. This is a generic
   key type for post-quantum algorithms and is used by both ML-DSA (signature)

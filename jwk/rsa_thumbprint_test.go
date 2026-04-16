@@ -2,7 +2,6 @@ package jwk_test
 
 import (
 	"crypto"
-	"crypto/rsa"
 	"encoding/hex"
 	"encoding/json"
 	"math/bits"
@@ -12,10 +11,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const rfc7638RSAModulus = "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
+
 // RFC 7638 Section 3.1 canonical example.
 const rfc7638RSAJWK = `{
   "kty": "RSA",
-  "n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw",
+  "n": "` + rfc7638RSAModulus + `",
   "e": "AQAB"
 }`
 
@@ -38,18 +39,15 @@ func TestRSA_Thumbprint_RFC7638Vector(t *testing.T) {
 
 // TestRSA_ExponentTruncation_Rejected verifies that an RSA public exponent
 // whose bit length does not fit in a Go `int` on this platform is rejected
-// at export time, rather than being silently truncated.
+// at parse time, rather than being silently truncated later at export time.
 //
 // Regression for JWK-20260415151950-008.
 func TestRSA_ExponentTruncation_Rejected(t *testing.T) {
 	// e = 0x01_00_00_00_00_00_00_01 (65 bits) — fits neither 32-bit nor 64-bit int.
-	payload := `{"kty":"RSA","n":"AQAB","e":"AQAAAAAAAAAB"}`
+	payload := rsaPublicJWK(rfc7638RSAModulus, "AQAAAAAAAAAB")
 
-	k, err := jwk.ParseKey[jwk.Key]([]byte(payload))
-	require.NoError(t, err, "parse should accept the raw bytes")
-
-	_, err = jwk.Export[*rsa.PublicKey](k)
-	require.Error(t, err, "export must reject oversized exponent")
+	_, err := jwk.ParseKey[jwk.Key](payload)
+	require.Error(t, err, "parse must reject oversized exponent")
 	require.Contains(t, err.Error(), "rsa public exponent too large")
 }
 
@@ -63,14 +61,14 @@ func TestRSA_ExponentTruncation_Rejected(t *testing.T) {
 // Regression for JWK-20260415151950-008.
 func TestRSA_Thumbprint_UsesStoredBytes(t *testing.T) {
 	// Standard F4 = 0x10001
-	jwkF4 := `{"kty":"RSA","n":"AQAB","e":"AQAB"}`
+	jwkF4 := rsaPublicJWK(rfc7638RSAModulus, "AQAB")
 	// Same exponent with an added leading zero byte: e = 0x00_01_00_01
-	jwkF4PaddedE := `{"kty":"RSA","n":"AQAB","e":"AAEAAQ"}`
+	jwkF4PaddedE := rsaPublicJWK(rfc7638RSAModulus, "AAEAAQ")
 	// Different exponent entirely: e = 3
-	jwkE3 := `{"kty":"RSA","n":"AQAB","e":"Aw"}`
+	jwkE3 := rsaPublicJWK(rfc7638RSAModulus, "Aw")
 
-	thumb := func(payload string) []byte {
-		k, err := jwk.ParseKey[jwk.Key]([]byte(payload))
+	thumb := func(payload []byte) []byte {
+		k, err := jwk.ParseKey[jwk.Key](payload)
 		require.NoError(t, err)
 		tp, err := k.Thumbprint(crypto.SHA256)
 		require.NoError(t, err)

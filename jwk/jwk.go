@@ -78,12 +78,18 @@ func Import[T Key](raw any) (T, error) {
 	return result, nil
 }
 
-func doImport(raw any) (Key, error) {
-	if raw == nil {
-		return nil, importerr(`a non-nil key is required`)
+func validateImportedKey(key Key) error {
+	if v, ok := key.(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return importerr(`key validation failed: %w`, err)
+		}
 	}
+	return nil
+}
 
-	// Fast path: type switch for built-in types avoids reflect.TypeOf + mutex
+var errNotBuiltinKey = errors.New(`not a builtin key`)
+
+func importBuiltinKey(raw any) (Key, error) {
 	switch v := raw.(type) {
 	case *rsa.PrivateKey:
 		return importRSAPrivateKeyPtr(v)
@@ -115,9 +121,27 @@ func doImport(raw any) (Key, error) {
 		return importECDHPublicKey(v)
 	case []byte:
 		return importSymmetricKey(v)
+	default:
+		return nil, errNotBuiltinKey
+	}
+}
+
+func doImport(raw any) (Key, error) {
+	if raw == nil {
+		return nil, importerr(`a non-nil key is required`)
 	}
 
-	// Slow path: registered importers for custom/extension types
+	key, err := importBuiltinKey(raw)
+	if err == nil {
+		if err := validateImportedKey(key); err != nil {
+			return nil, err
+		}
+		return key, nil
+	}
+	if !errors.Is(err, errNotBuiltinKey) {
+		return nil, err
+	}
+
 	muKeyImporters.RLock()
 	conv, ok := keyImporters[reflect.TypeOf(raw)]
 	muKeyImporters.RUnlock()
@@ -125,7 +149,14 @@ func doImport(raw any) (Key, error) {
 		return nil, importerr(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}
 
-	return conv.Import(raw)
+	key, err = conv.Import(raw)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateImportedKey(key); err != nil {
+		return nil, err
+	}
+	return key, nil
 }
 
 // PublicSetOf returns a new jwk.Set consisting of
@@ -722,10 +753,14 @@ func IsKeyValidationError(err error) bool {
 	return errors.Is(err, &kve)
 }
 
-// Configure is used to configure global behavior of the jwk package.
-func Configure(options ...GlobalOption) {
+// Settings is used to configure global behavior of the jwk package.
+func Settings(options ...GlobalOption) {
 	for _, opt := range options {
 		switch opt.Ident() {
+		case identMinRSAModulusBits{}:
+			rsaMinModulusBits.Store(int64(option.MustGet[int](opt)))
+		case identMinRSAPublicExponent{}:
+			setMinRSAPublicExponent(option.MustGet[int](opt))
 		case identStrictKeyUsage{}:
 			strictKeyUsage.Store(option.MustGet[bool](opt))
 		}
