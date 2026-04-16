@@ -118,7 +118,7 @@ Generic filtering utilities using Go generics.
 
 - **Apply[T Filterable[T]](object T, logic FilterLogic) (T, error)** — include matching fields
 - **Reject[T Filterable[T]](object T, logic FilterLogic) (T, error)** — exclude matching fields
-- **AsMap(m Mappable, dst map[string]any) error** — convert to map (EXPERIMENTAL)
+- **AsMap(m Mappable, dst map[string]any) error** — convert to map; values are whatever `Field()` returns, so mutable values may be live aliases of source object (EXPERIMENTAL)
 - Key types: `FilterLogic`, `FilterLogicFunc`, `Filterable[T]`, `NameBasedFilter[T]`, `Mappable`
 - Files: `filter.go`, `map.go`
 - Imports: (external only: blackmagic)
