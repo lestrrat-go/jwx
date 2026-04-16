@@ -2151,17 +2151,26 @@ func TestAlgorithmsForKeyCryptoSigner(t *testing.T) {
 	})
 }
 
-func TestVerifyWithNonSignatureAlgorithm(t *testing.T) {
+func TestWithKeyRejectsNonSignatureAlgorithm(t *testing.T) {
 	hmacKey := jwxtest.GenerateSymmetricKey()
 	signed, err := jws.Sign([]byte("test"), jws.WithKey(jwa.HS256(), hmacKey))
 	require.NoError(t, err)
 
-	// jwa.A128KW is a KeyEncryptionAlgorithm, not a SignatureAlgorithm.
-	// Previously the unchecked type assertion in verify_context would panic.
-	_, err = jws.Verify(signed, jws.WithKey(jwa.A128KW(), hmacKey))
-	require.Error(t, err)
-	require.True(t, errors.Is(err, jws.VerifyError()))
-	require.Contains(t, err.Error(), "SignatureAlgorithm")
+	t.Run("Sign", func(t *testing.T) {
+		// jwa.A128KW is a KeyEncryptionAlgorithm, not a SignatureAlgorithm.
+		_, err := jws.Sign([]byte("test"), jws.WithKey(jwa.A128KW(), hmacKey))
+		require.Error(t, err)
+		require.True(t, errors.Is(err, jws.SignError()))
+		require.Contains(t, err.Error(), "SignatureAlgorithm")
+	})
+
+	t.Run("Verify", func(t *testing.T) {
+		// Previously the unchecked type assertion in verify_context would panic.
+		_, err := jws.Verify(signed, jws.WithKey(jwa.A128KW(), hmacKey))
+		require.Error(t, err)
+		require.True(t, errors.Is(err, jws.VerifyError()))
+		require.Contains(t, err.Error(), "SignatureAlgorithm")
+	})
 }
 
 func TestCompactErrorsUseSignError(t *testing.T) {

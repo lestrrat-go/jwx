@@ -99,11 +99,16 @@ Since version 2.0.0 `jwk.Key` now stores the `alg` field as a `jwa.KeyAlgorithm`
 
 Now you should be able to just pass the `alg` value to most high-level functions and methods such as `jwt.Verify`, `jws.Sign`, and `jwe.Encrypt`
 
+That convenience is still operation-specific. For JWS helpers such as `jws.Sign()` and
+`jws.Verify()`, the value must resolve to a `jwa.SignatureAlgorithm`. For JWE helpers, it
+must resolve to the appropriate key-encryption algorithm. Passing the wrong kind of
+algorithm, such as `jwa.A128KW()` to `jws.WithKey()`, compiles but fails at runtime.
+
 ### When do we use `jwa.KeyAlgorithm`
 
 There are some functions that accept `jwa.KeyAlgorithm`, while there are others that expect `jwa.SignatureAlgorithm` or `jwa.KeyEncryptionAlgorithm`. So when do we use which?
 
-The guideline is as follows: If it's a high-level function/method that the users regularly use, use `jwa.KeyAlgorithm`. For example, almost everybody who use `jwt` will want to verify the JWS signed payload, so `jwt.Sign()`, and `jwt.Verify()` expect `jwa.KeyAlgorithm`. On the other hand, `jwt.Serializer` uses `jwa.SignatureAlgorithm` and such. This is a low-level utility, and users are not really meant to use it for their most basic needs: therefore they use the specific algorithm type.
+The guideline is as follows: If it's a high-level function/method that the users regularly use, use `jwa.KeyAlgorithm`. For example, almost everybody who use `jwt` will want to verify the JWS signed payload, so `jwt.Sign()`, and `jwt.Verify()` expect `jwa.KeyAlgorithm`. On the other hand, `jwt.Serializer` uses `jwa.SignatureAlgorithm` and such. This is a low-level utility, and users are not really meant to use it for their most basic needs: therefore they use the specific algorithm type. This does not mean every algorithm kind is valid for every operation; the operation still decides whether it accepts signature or key-encryption algorithms.
 
 ## Why are your options objects, and not callbacks?
 
