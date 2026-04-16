@@ -87,16 +87,6 @@ func validateImportedKey(key Key) error {
 	return nil
 }
 
-func validateImportedKeyResult(key Key, err error) (Key, error) {
-	if err != nil {
-		return nil, err
-	}
-	if err := validateImportedKey(key); err != nil {
-		return nil, err
-	}
-	return key, nil
-}
-
 var errNotBuiltinKey = errors.New(`not a builtin key`)
 
 func importBuiltinKey(raw any) (Key, error) {
@@ -143,7 +133,10 @@ func doImport(raw any) (Key, error) {
 
 	key, err := importBuiltinKey(raw)
 	if err == nil {
-		return validateImportedKeyResult(key, nil)
+		if err := validateImportedKey(key); err != nil {
+			return nil, err
+		}
+		return key, nil
 	}
 	if !errors.Is(err, errNotBuiltinKey) {
 		return nil, err
@@ -156,7 +149,14 @@ func doImport(raw any) (Key, error) {
 		return nil, importerr(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}
 
-	return validateImportedKeyResult(conv.Import(raw))
+	key, err = conv.Import(raw)
+	if err != nil {
+		return nil, err
+	}
+	if err := validateImportedKey(key); err != nil {
+		return nil, err
+	}
+	return key, nil
 }
 
 // PublicSetOf returns a new jwk.Set consisting of
