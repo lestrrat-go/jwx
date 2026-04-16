@@ -7,7 +7,6 @@ import (
 	"crypto/rand"
 	"encoding/pem"
 	"fmt"
-	"math/big"
 	"sync"
 	"testing"
 
@@ -34,14 +33,6 @@ func (invalidReturningParser) ParseKey(_ *jwk.KeyProbe, _ jwk.KeyUnmarshaler, pa
 
 var registerInvalidImporterOnce sync.Once
 var registerInvalidParserOnce sync.Once
-
-func invalidECDSAPublicKey() *ecdsa.PublicKey {
-	return &ecdsa.PublicKey{
-		Curve: elliptic.P256(),
-		X:     big.NewInt(1),
-		Y:     big.NewInt(1),
-	}
-}
 
 func makeInvalidECDSAJWK() (jwk.Key, error) {
 	raw, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
