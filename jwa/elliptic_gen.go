@@ -126,15 +126,23 @@ func LookupEllipticCurveAlgorithm(name string) (EllipticCurveAlgorithm, bool) {
 // RegisterEllipticCurveAlgorithm registers a new EllipticCurveAlgorithm. The signature value must be immutable
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
 //
-// The error return is reserved for future validation (duplicate detection,
-// identifier rules, freeze-point enforcement, etc). The current implementation
-// always returns nil, but callers — especially extension modules calling this
-// from init() — must check the return value and panic on failure to stay
-// forward-compatible.
+// Registration is process-global. Built-in identifiers such as RS256 are
+// reserved and cannot be replaced by callers after init has completed; use a
+// distinct name for third-party algorithms.
 func RegisterEllipticCurveAlgorithm(algorithms ...EllipticCurveAlgorithm) error {
 	muAllEllipticCurveAlgorithm.Lock()
 	defer muAllEllipticCurveAlgorithm.Unlock()
 	for _, alg := range algorithms {
+		if _, ok := builtinEllipticCurveAlgorithm[alg.String()]; ok {
+			if existing, ok := allEllipticCurveAlgorithm[alg.String()]; ok && existing != alg {
+				return fmt.Errorf(`jwa: EllipticCurveAlgorithm %q is reserved for a built-in value`, alg.String())
+			}
+		}
+	}
+	for _, alg := range algorithms {
+		if _, ok := builtinEllipticCurveAlgorithm[alg.String()]; ok {
+			continue
+		}
 		allEllipticCurveAlgorithm[alg.String()] = alg
 	}
 	rebuildEllipticCurveAlgorithmLocked()

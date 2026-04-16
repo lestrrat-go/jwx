@@ -62,11 +62,9 @@ func SignerFor(alg jwa.SignatureAlgorithm) (Signer, error) {
 // jwa.UnregisterSignatureAlgorithm yourself after calling
 // UnregisterSigner.
 //
-// The error return is reserved for future validation (duplicate detection,
-// identifier rules, freeze-point enforcement, etc). The current
-// implementation always returns nil, but callers — especially extension
-// modules calling this from init() — must check the return value and panic
-// on failure to stay forward-compatible.
+// Built-in algorithm identifiers are reserved; attempts to register a Signer
+// using a built-in name with different metadata will fail. Re-registering the
+// exact built-in algorithm value is allowed.
 func RegisterSigner(alg jwa.SignatureAlgorithm, s Signer) error {
 	if err := jwa.RegisterSignatureAlgorithm(alg); err != nil {
 		return fmt.Errorf(`jws.RegisterSigner: failed to register signature algorithm: %w`, err)
