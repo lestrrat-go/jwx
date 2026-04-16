@@ -29,7 +29,7 @@ func ParseCookie(req *http.Request, name string, options ...ParseOption) (Token,
 	}
 	tok, err := ParseString(cookie.Value, options...)
 	if err != nil {
-		return nil, fmt.Errorf(`jws.ParseCookie: failed to parse token stored in cookie: %w`, err)
+		return nil, fmt.Errorf(`jwt.ParseCookie: failed to parse token stored in cookie: %w`, err)
 	}
 
 	if dst != nil {
@@ -85,13 +85,13 @@ func ParseForm(values url.Values, name string, options ...ParseOption) (Token, e
 // are specified, you must explicitly re-enable searching for "Authorization" header
 // if you also want to search for it.
 //
-//	# searches for "Authorization"
+//	// searches for "Authorization"
 //	jwt.ParseRequest(req)
 //
-//	# searches for "x-my-token" ONLY.
+//	// searches for "x-my-token" ONLY.
 //	jwt.ParseRequest(req, jwt.WithHeaderKey("x-my-token"))
 //
-//	# searches for "Authorization" AND "x-my-token"
+//	// searches for "Authorization" AND "x-my-token"
 //	jwt.ParseRequest(req, jwt.WithHeaderKey("Authorization"), jwt.WithHeaderKey("x-my-token"))
 //
 // Cookies are searched using (http.Request).Cookie(). If you have multiple
