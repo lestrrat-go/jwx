@@ -3,6 +3,7 @@ package ecdsa
 import (
 	"crypto/elliptic"
 	"fmt"
+	"slices"
 	"sync"
 	"testing"
 
@@ -78,15 +79,6 @@ func TestAlgorithmsReturnsSnapshot(t *testing.T) {
 	require.True(t, found, `Algorithms snapshot should include the registered curve`)
 
 	refreshed := Algorithms()
-	require.True(t, containsAlgorithm(refreshed, registered), `registry snapshot should still contain the registered curve`)
-	require.False(t, containsAlgorithm(refreshed, tampered), `mutating the returned slice must not modify the registry`)
-}
-
-func containsAlgorithm(list []jwa.EllipticCurveAlgorithm, target jwa.EllipticCurveAlgorithm) bool {
-	for _, alg := range list {
-		if alg == target {
-			return true
-		}
-	}
-	return false
+	require.True(t, slices.Contains(refreshed, registered), `registry snapshot should still contain the registered curve`)
+	require.False(t, slices.Contains(refreshed, tampered), `mutating the returned slice must not modify the registry`)
 }
