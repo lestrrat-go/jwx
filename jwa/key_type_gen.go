@@ -24,6 +24,9 @@ func init() {
 	algorithms[3] = NewKeyType("RSA")
 
 	RegisterKeyType(algorithms...)
+	for _, alg := range algorithms {
+		builtinKeyType[alg.String()] = struct{}{}
+	}
 }
 
 // EC returns an object representing EC. Elliptic Curve
@@ -107,10 +110,20 @@ func LookupKeyType(name string) (KeyType, bool) {
 
 // RegisterKeyType registers a new KeyType. The signature value must be immutable
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
+//
+// Registration is process-global. Built-in identifiers such as RS256 are
+// reserved and cannot be replaced by callers after init has completed; use a
+// distinct name for third-party algorithms.
 func RegisterKeyType(algorithms ...KeyType) {
 	muAllKeyType.Lock()
 	defer muAllKeyType.Unlock()
 	for _, alg := range algorithms {
+		if _, ok := builtinKeyType[alg.String()]; ok {
+			if existing, ok := allKeyType[alg.String()]; ok && existing != alg {
+				continue
+			}
+			continue
+		}
 		allKeyType[alg.String()] = alg
 	}
 	rebuildKeyTypeLocked()
