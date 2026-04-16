@@ -505,7 +505,7 @@ func (m Message) marshalFull() ([]byte, error) {
 // must be passed to the function.
 func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 	if l := len(msg.signatures); l != 1 {
-		return nil, fmt.Errorf(`jws.Compact: cannot serialize message with %d signatures (must be one)`, l)
+		return nil, makeSignError(prefixJwsCompact, `cannot serialize message with %d signatures (must be one)`, l)
 	}
 
 	var detached bool
@@ -514,11 +514,11 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 		switch option.Ident() {
 		case identDetached{}:
 			if err := option.Value(&detached); err != nil {
-				return nil, fmt.Errorf(`jws.Compact: failed to retrieve detached option value: %w`, err)
+				return nil, makeSignError(prefixJwsCompact, `failed to retrieve detached option value: %w`, err)
 			}
 		case identBase64Encoder{}:
 			if err := option.Value(&encoder); err != nil {
-				return nil, fmt.Errorf(`jws.Compact: failed to retrieve base64 encoder option value: %w`, err)
+				return nil, makeSignError(prefixJwsCompact, `failed to retrieve base64 encoder option value: %w`, err)
 			}
 		}
 	}
@@ -529,7 +529,7 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 
 	hdrbuf, err := json.Marshal(hdrs)
 	if err != nil {
-		return nil, fmt.Errorf(`jws.Compress: failed to marshal headers: %w`, err)
+		return nil, makeSignError(prefixJwsCompact, `failed to marshal headers: %w`, err)
 	}
 
 	buf := pool.BytesBuffer().Get()
@@ -544,7 +544,7 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 			buf.WriteString(encoded)
 		} else {
 			if bytes.Contains(msg.payload, []byte{tokens.Period}) {
-				return nil, fmt.Errorf(`jws.Compress: payload must not contain a "."`)
+				return nil, makeSignError(prefixJwsCompact, `payload must not contain a "."`)
 			}
 			buf.Write(msg.payload)
 		}

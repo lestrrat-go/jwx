@@ -159,12 +159,12 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	sc.payload = payload
 
 	if err := sc.ProcessOptions(options); err != nil {
-		return nil, makeSignError(`failed to process options: %w`, err)
+		return nil, makeSignError(prefixJwsSign, `failed to process options: %w`, err)
 	}
 
 	lsigner := len(sc.sigbuilders)
 	if lsigner == 0 {
-		return nil, makeSignError(`no signers available. Specify an algorithm and a key using jws.WithKey()`)
+		return nil, makeSignError(prefixJwsSign, `no signers available. Specify an algorithm and a key using jws.WithKey()`)
 	}
 
 	// Design note: while we could have easily set format = fmtJSON when
@@ -176,7 +176,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	// Therefore, instead of making implicit format conversions, we force the
 	// user to spell it out as `jws.Sign(..., jws.WithJSON(), jws.WithKey(...), jws.WithKey(...))`
 	if sc.format == fmtCompact && lsigner != 1 {
-		return nil, makeSignError(`cannot have multiple signers (keys) specified for compact serialization. Use only one jws.WithKey()`)
+		return nil, makeSignError(prefixJwsSign, `cannot have multiple signers (keys) specified for compact serialization. Use only one jws.WithKey()`)
 	}
 
 	// Create a Message object with all the bits and bobs, and we'll
@@ -184,7 +184,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	var result Message
 
 	if err := sc.PopulateMessage(&result); err != nil {
-		return nil, makeSignError(`failed to populate message: %w`, err)
+		return nil, makeSignError(prefixJwsSign, `failed to populate message: %w`, err)
 	}
 	switch sc.format {
 	case fmtJSON:
@@ -205,7 +205,7 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		}
 		return Compact(&result, compactOpts...)
 	default:
-		return nil, makeSignError(`invalid serialization format`)
+		return nil, makeSignError(prefixJwsSign, `invalid serialization format`)
 	}
 }
 

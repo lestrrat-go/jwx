@@ -2107,3 +2107,47 @@ func TestVerifyWithNonSignatureAlgorithm(t *testing.T) {
 	require.True(t, errors.Is(err, jws.VerifyError()))
 	require.Contains(t, err.Error(), "SignatureAlgorithm")
 }
+
+func TestCompactErrorsUseSignError(t *testing.T) {
+	t.Run("invalid signature count", func(t *testing.T) {
+		_, err := jws.Compact(jws.NewMessage())
+		require.Error(t, err)
+		require.True(t, errors.Is(err, jws.SignError()))
+		require.Contains(t, err.Error(), "jws.Compact: cannot serialize message")
+		require.NotContains(t, err.Error(), "jws.Compress")
+	})
+
+	t.Run("marshal headers failure", func(t *testing.T) {
+		hdrs := jws.NewHeaders()
+		require.NoError(t, hdrs.Set("broken", make(chan int)))
+
+		msg := jws.NewMessage().
+			SetPayload([]byte("payload")).
+			AppendSignature(jws.NewSignature().
+				SetProtectedHeaders(hdrs).
+				SetSignature([]byte("sig")))
+
+		_, err := jws.Compact(msg)
+		require.Error(t, err)
+		require.True(t, errors.Is(err, jws.SignError()))
+		require.Contains(t, err.Error(), "jws.Compact: failed to marshal headers")
+		require.NotContains(t, err.Error(), "jws.Compress")
+	})
+
+	t.Run("unencoded payload contains dot", func(t *testing.T) {
+		hdrs := jws.NewHeaders()
+		require.NoError(t, hdrs.Set("b64", false))
+
+		msg := jws.NewMessage().
+			SetPayload([]byte("a.b")).
+			AppendSignature(jws.NewSignature().
+				SetProtectedHeaders(hdrs).
+				SetSignature([]byte("sig")))
+
+		_, err := jws.Compact(msg)
+		require.Error(t, err)
+		require.True(t, errors.Is(err, jws.SignError()))
+		require.Contains(t, err.Error(), `jws.Compact: payload must not contain a "."`)
+		require.NotContains(t, err.Error(), "jws.Compress")
+	})
+}
