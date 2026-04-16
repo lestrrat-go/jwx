@@ -87,7 +87,8 @@ func WithPerRecipientHeaders(hdr Headers) WithKeySuboption {
 }
 
 // WithKey is used to pass a static algorithm/key pair to either `jwe.Encrypt()` or `jwe.Decrypt()`.
-// either a raw key or `jwk.Key` may be passed as `key`.
+// Either a raw key or `jwk.Key` may be passed as `key`. If `key` is a `jwk.Key`,
+// it must export to one of the raw key types described below.
 //
 // The `alg` parameter is the identifier for the key encryption algorithm that should be used.
 // It is of type `jwa.KeyAlgorithm` but in reality you can only pass `jwa.KeyEncryptionAlgorithm`
@@ -95,10 +96,38 @@ func WithPerRecipientHeaders(hdr Headers) WithKeySuboption {
 // passed to the option. If you specify other algorithm types such as `jwa.SignatureAlgorithm`,
 // then you will get an error when `jwe.Encrypt()` or `jwe.Decrypt()` is executed.
 //
+// Built-in algorithm/key pairs are:
+//
+//   - `jwa.RSA1_5()` and `jwa.RSA_OAEP*()`: `*rsa.PublicKey` for `jwe.Encrypt()`
+//     and the matching `*rsa.PrivateKey` for `jwe.Decrypt()`
+//   - `jwa.A128KW()`, `jwa.A192KW()`, `jwa.A256KW()`, `jwa.A128GCMKW()`,
+//     `jwa.A192GCMKW()`, and `jwa.A256GCMKW()`: shared symmetric key bytes of
+//     the size required by the selected algorithm
+//   - `jwa.DIRECT()`: shared symmetric key bytes used as the CEK. The key length
+//     must match the selected `enc`, and DIRECT supports only a single recipient
+//   - `jwa.ECDH_ES()` and `jwa.ECDH_ES_A*KW()`: recipient public key for
+//     `jwe.Encrypt()` and the matching private key for `jwe.Decrypt()`. Built-in
+//     support accepts `*ecdsa.PublicKey`, `*ecdsa.PrivateKey`,
+//     `*ecdh.PublicKey`, and `*ecdh.PrivateKey`; `jwa.ECDH_ES()` also supports
+//     only a single recipient. Custom raw key types may participate by
+//     implementing the ECDH-ES interfaces in package
+//     `github.com/lestrrat-go/jwx/v4/jwe/jwebb`
+//   - `jwa.PBES2_*()`: password bytes
+//   - `jwa.HPKE_*()`: recipient public key for `jwe.Encrypt()` and the matching
+//     private key for `jwe.Decrypt()`. Built-in support accepts
+//     `*ecdsa.PublicKey`, `*ecdsa.PrivateKey`, `*ecdh.PublicKey`, and
+//     `*ecdh.PrivateKey` for the selected HPKE suite. Custom raw key types may
+//     participate by implementing the HPKE interfaces in package
+//     `github.com/lestrrat-go/jwx/v4/jwe/jwebb`
+//
 // `jwa.RSA1_5()` is supported only for interoperability with legacy peers.
 // New applications should prefer an RSA-OAEP variant such as
 // `jwa.RSA_OAEP_256()` because PKCS#1 v1.5 decryption is exposed to
 // Bleichenbacher-style oracle attacks.
+//
+// Companion modules may register additional algorithm/key pairs. See the package
+// README and companion-module documentation for extension-specific combinations
+// such as ML-KEM.
 //
 // Unlike `jwe.WithKeySet()`, the `kid` field does not need to match for the key
 // to be tried.
