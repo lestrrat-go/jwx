@@ -242,6 +242,12 @@ func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryp
 // New applications should prefer an RSA-OAEP variant such as
 // `jwa.RSA_OAEP_256()` because PKCS#1 v1.5 decryption is exposed to
 // Bleichenbacher-style oracle attacks.
+// If you enable `jwe.WithCompress()`, this library does not enforce a
+// producer-side payload size limit before compression. Callers that accept
+// untrusted or arbitrarily large plaintext must bound the input size before
+// calling `jwe.Encrypt()`. Recipients may also reject compressed messages
+// whose decompressed payload exceeds their `jwe.WithMaxDecompressBufferSize()`
+// setting.
 //
 // Look for options that return `jwe.EncryptOption` or `jwe.EncryptDecryptOption`
 // for a complete list of options that can be passed to this function.
