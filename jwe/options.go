@@ -95,6 +95,11 @@ func WithPerRecipientHeaders(hdr Headers) WithKeySuboption {
 // passed to the option. If you specify other algorithm types such as `jwa.SignatureAlgorithm`,
 // then you will get an error when `jwe.Encrypt()` or `jwe.Decrypt()` is executed.
 //
+// `jwa.RSA1_5()` is supported only for interoperability with legacy peers.
+// New applications should prefer an RSA-OAEP variant such as
+// `jwa.RSA_OAEP_256()` because PKCS#1 v1.5 decryption is exposed to
+// Bleichenbacher-style oracle attacks.
+//
 // Unlike `jwe.WithKeySet()`, the `kid` field does not need to match for the key
 // to be tried.
 func WithKey(alg jwa.KeyAlgorithm, key any, options ...WithKeySuboption) EncryptDecryptOption {
