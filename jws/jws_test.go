@@ -39,6 +39,15 @@ const examplePayload = `{"iss":"joe",` + "\r\n" + ` "exp":1300819380,` + "\r\n" 
 const exampleCompactSerialization = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
 const badValue = "%badvalue%"
 
+type infiniteByteReader struct{ b byte }
+
+func (r *infiniteByteReader) Read(p []byte) (int, error) {
+	for i := range p {
+		p[i] = r.b
+	}
+	return len(p), nil
+}
+
 var hasES256K bool
 
 func TestSanity(t *testing.T) {
@@ -1872,6 +1881,13 @@ func TestMaxParseInputSize(t *testing.T) {
 		data := make([]byte, 200)
 		_, err := jws.ParseReader(bytes.NewReader(data), jws.WithMaxParseInputSize(100))
 		require.Error(t, err, `jws.ParseReader should reject input exceeding per-call max size`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("direct oversized limited reader is rejected", func(t *testing.T) {
+		rdr := &io.LimitedReader{R: &infiniteByteReader{b: 'x'}, N: 103}
+		_, err := jws.ParseReader(rdr, jws.WithMaxParseInputSize(100))
+		require.Error(t, err, `jws.ParseReader should reject oversized limited readers`)
+		require.ErrorIs(t, err, jws.ParseError())
 		require.Contains(t, err.Error(), `exceeded max size`)
 	})
 	t.Run("input within limit is accepted", func(t *testing.T) {
