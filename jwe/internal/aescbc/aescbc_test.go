@@ -1,6 +1,7 @@
 package aescbc
 
 import (
+	"bytes"
 	"crypto/aes"
 	"testing"
 
@@ -85,6 +86,52 @@ func TestOpenOpaqueErrors(t *testing.T) {
 		tampered[len(tampered)-1] ^= 0xFF
 		_, err := enc.Open(nil, nonce, tampered, aad)
 		require.EqualError(t, err, "invalid ciphertext")
+	})
+}
+
+func TestSealAndOpenAppendToDst(t *testing.T) {
+	key := make([]byte, 32)
+	enc, err := New(key, aes.NewCipher)
+	require.NoError(t, err, "aescbc.New")
+
+	aad := []byte("aad")
+	plaintext := []byte("hello world")
+	nonce := make([]byte, enc.blockCipher.BlockSize())
+	sealed := enc.Seal(nil, nonce, plaintext, aad)
+
+	t.Run("Seal appends after dst prefix", func(t *testing.T) {
+		prefix := []byte("dst")
+		got := enc.Seal(prefix, nonce, plaintext, aad)
+
+		expected := append(append([]byte(nil), prefix...), sealed...)
+		require.Equal(t, expected, got)
+	})
+
+	t.Run("Open appends after short dst prefix", func(t *testing.T) {
+		prefix := []byte("dst")
+		got, err := enc.Open(prefix, nonce, sealed, aad)
+		require.NoError(t, err, "Open should succeed")
+
+		expected := append(append([]byte(nil), prefix...), plaintext...)
+		require.Equal(t, expected, got)
+	})
+
+	t.Run("Open appends after long dst prefix", func(t *testing.T) {
+		prefix := bytes.Repeat([]byte{'x'}, len(plaintext)+3)
+		got, err := enc.Open(prefix, nonce, sealed, aad)
+		require.NoError(t, err, "Open should succeed")
+
+		expected := append(append([]byte(nil), prefix...), plaintext...)
+		require.Equal(t, expected, got)
+	})
+}
+
+func TestEnsureSizeRejectsOverflow(t *testing.T) {
+	dst := []byte("x")
+	maxInt := int(^uint(0) >> 1)
+
+	require.PanicsWithError(t, "failed to allocate buffer", func() {
+		_ = ensureSize(dst, maxInt)
 	})
 }
 

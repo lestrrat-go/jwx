@@ -19,7 +19,7 @@ func ParseCookie(req *http.Request, name string, options ...ParseOption) (Token,
 		switch option.Ident() {
 		case identCookie{}:
 			if err := option.Value(&dst); err != nil {
-				return nil, fmt.Errorf(`jws.ParseCookie: value to option WithCookie must be **http.Cookie: %w`, err)
+				return nil, fmt.Errorf(`jwt.ParseCookie: value to option WithCookie must be **http.Cookie: %w`, err)
 			}
 		}
 	}
@@ -30,7 +30,7 @@ func ParseCookie(req *http.Request, name string, options ...ParseOption) (Token,
 	}
 	tok, err := ParseString(cookie.Value, options...)
 	if err != nil {
-		return nil, fmt.Errorf(`jws.ParseCookie: failed to parse token stored in cookie: %w`, err)
+		return nil, fmt.Errorf(`jwt.ParseCookie: failed to parse token stored in cookie: %w`, err)
 	}
 
 	if dst != nil {
@@ -86,13 +86,13 @@ func ParseForm(values url.Values, name string, options ...ParseOption) (Token, e
 // are specified, you must explicitly re-enable searching for "Authorization" header
 // if you also want to search for it.
 //
-//	# searches for "Authorization"
+//	// searches for "Authorization"
 //	jwt.ParseRequest(req)
 //
-//	# searches for "x-my-token" ONLY.
+//	// searches for "x-my-token" ONLY.
 //	jwt.ParseRequest(req, jwt.WithHeaderKey("x-my-token"))
 //
-//	# searches for "Authorization" AND "x-my-token"
+//	// searches for "Authorization" AND "x-my-token"
 //	jwt.ParseRequest(req, jwt.WithHeaderKey("Authorization"), jwt.WithHeaderKey("x-my-token"))
 //
 // Cookies are searched using (http.Request).Cookie(). If you have multiple
@@ -109,19 +109,19 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 		case identHeaderKey{}:
 			var v string
 			if err := option.Value(&v); err != nil {
-				return nil, fmt.Errorf(`jws.ParseRequest: value to option WithHeaderKey must be string: %w`, err)
+				return nil, fmt.Errorf(`jwt.ParseRequest: value to option WithHeaderKey must be string: %w`, err)
 			}
 			hdrkeys = append(hdrkeys, v)
 		case identFormKey{}:
 			var v string
 			if err := option.Value(&v); err != nil {
-				return nil, fmt.Errorf(`jws.ParseRequest: value to option WithFormKey must be string: %w`, err)
+				return nil, fmt.Errorf(`jwt.ParseRequest: value to option WithFormKey must be string: %w`, err)
 			}
 			formkeys = append(formkeys, v)
 		case identCookieKey{}:
 			var v string
 			if err := option.Value(&v); err != nil {
-				return nil, fmt.Errorf(`jws.ParseRequest: value to option WithCookieKey must be string: %w`, err)
+				return nil, fmt.Errorf(`jwt.ParseRequest: value to option WithCookieKey must be string: %w`, err)
 			}
 			cookiekeys = append(cookiekeys, v)
 		default:

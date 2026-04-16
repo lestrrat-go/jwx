@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"crypto/sha512"
 	"hash"
+	"io"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
@@ -36,6 +37,22 @@ func TestSplitCompactReaderNonFiniteSizeCap(t *testing.T) {
 	//nolint:dogsled // SplitCompactReader returns 4 values; we only need err here
 	_, _, _, err := jwsbb.SplitCompactReader(&endlessReader{b: 'X'})
 	require.Error(t, err, "SplitCompactReader should fail on oversized non-finite input")
+	require.ErrorIs(t, err, jwsbb.InputTooLargeError(), "error should be InputTooLargeError")
+}
+
+func TestSplitCompactReaderLimitedReaderLargeN(t *testing.T) {
+	t.Parallel()
+
+	// A *io.LimitedReader with a very large N passes the finite-source
+	// type check. Without a size cap on the finite path, io.ReadAll would
+	// attempt to allocate N bytes (DoS via OOM). Verify that
+	// SplitCompactReader caps the read on the finite path too.
+	const oversized = 11 * 1024 * 1024 // > maxSplitCompactReaderSize (10 MiB)
+	rdr := &io.LimitedReader{R: &endlessReader{b: 'X'}, N: oversized}
+
+	//nolint:dogsled
+	_, _, _, err := jwsbb.SplitCompactReader(rdr)
+	require.Error(t, err, "SplitCompactReader should reject oversized LimitedReader")
 	require.ErrorIs(t, err, jwsbb.InputTooLargeError(), "error should be InputTooLargeError")
 }
 
