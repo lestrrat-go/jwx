@@ -150,7 +150,7 @@ func TestChainRejectsDefaultMaxChainLength(t *testing.T) {
 	defer restoreCertSettings()
 
 	var chain cert.Chain
-	for i := 0; i < testDefaultMaxChainLength; i++ {
+	for range testDefaultMaxChainLength {
 		require.NoError(t, chain.Add(certBytes), `chain.Add should succeed`)
 	}
 
@@ -165,7 +165,7 @@ func TestChainAllowsUnlimitedChainLength(t *testing.T) {
 	cert.Settings(cert.WithMaxChainLength(0))
 
 	var chain cert.Chain
-	for i := 0; i < testDefaultMaxChainLength+1; i++ {
+	for range testDefaultMaxChainLength + 1 {
 		require.NoError(t, chain.Add(certBytes), `chain.Add should succeed when the limit is disabled`)
 	}
 
