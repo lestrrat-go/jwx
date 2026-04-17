@@ -1584,6 +1584,44 @@ func TestDecrypt_fail(t *testing.T) {
 		require.ErrorIs(t, err, jwe.DecryptError(), `error should be of type jwe.DecryptError`)
 		require.ErrorIs(t, err, jwe.ParseError(), `error should be of type jwe.ParseError`)
 	})
+	t.Run("multiple keys all fail with different reasons", func(t *testing.T) {
+		// Encrypt with RSA-OAEP, then attempt decrypt with several keys that
+		// each fail for a different reason. The returned error chain must
+		// surface every per-key failure, not just the last one.
+		privkey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+		encrypted, err := jwe.Encrypt([]byte("Lorem Ipsum"), jwe.WithKey(jwa.RSA_OAEP(), privkey))
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+		// Key 1: correct alg (RSA-OAEP), but a different RSA key → CEK decrypt fails.
+		wrongRSAKey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+		// Key 2: RSA-OAEP-256 alg, but the protected header says RSA-OAEP → alg mismatch.
+		anotherRSAKey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+		_, err = jwe.Decrypt(encrypted,
+			jwe.WithKey(jwa.RSA_OAEP(), wrongRSAKey),
+			jwe.WithKey(jwa.RSA_OAEP_256(), anotherRSAKey),
+		)
+		require.Error(t, err, `jwe.Decrypt should fail`)
+		require.ErrorIs(t, err, jwe.DecryptError(), `error should be of type jwe.DecryptError`)
+		require.ErrorIs(t, err, jwe.RecipientError(), `error should be of type jwe.RecipientError`)
+
+		// Both per-key failure reasons must be present in the error chain,
+		// not just the last one.
+		msg := err.Error()
+		require.Contains(t, msg, `failed to decrypt key`,
+			`error should preserve the first (wrong-key) attempt failure`)
+		require.Contains(t, msg, `algorithms do not match`,
+			`error should preserve the second (alg-mismatch) attempt failure`)
+		require.Contains(t, msg, `tried 2 keys`,
+			`error should report that 2 keys were tried`)
+		require.NotContains(t, msg, `last error =`,
+			`error should no longer use the "last error =" framing`)
+	})
 }
 func BenchmarkParseCompat(b *testing.B) {
 	buf := []byte(`eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.OKOawDo13gRp2ojaHV7LFpZcgV7T6DVZKTyKOMTYUmKoTCVJRgckCL9kiMT03JGeipsEdY3mx_etLbbWSrFr05kLzcSr4qKAq7YN7e9jwQRb23nfa6c9d-StnImGyFDbSv04uVuxIp5Zms1gNxKKK2Da14B8S4rzVRltdYwam_lDp5XnZAYpQdb76FdIKLaVmqgfwX7XWRxv2322i-vDxRfqNzo_tETKzpVLzfiwQyeyPGLBIO56YJ7eObdv0je81860ppamavo35UgoRdbYaBcoh9QcfylQr66oc6vFWXRcZ_ZT2LawVCWTIy3brGPi6UklfCpIMfIjf7iGdXKHzg.48V1_ALb6US04U3b.5eym8TW_c8SuK0ltJ3rpYIzOeDQz7TALvtu6UG9oMo4vpzs9tX_EFShS8iB7j6jiSdiwkIr3ajwQzaBtQD_A.XFBoMYUZodetZdvTiFvSkQ`)
