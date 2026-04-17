@@ -599,7 +599,7 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 
 	ce, ok := msg.protectedHeaders.ContentEncryption()
 	if !ok {
-		return nil, fmt.Errorf(`jwe.Decrypt: failed to retrieve content encryption algorithm from protected headers`)
+		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: %w`, MissingContentEncryptionError{})}
 	}
 
 	// The "alg" header can be in either protected/unprotected headers.
@@ -617,7 +617,7 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 			break
 		}
 		// if we found something but didn't match, it's a failure
-		return nil, fmt.Errorf(`jwe.Decrypt: key (%q) and recipient (%q) algorithms do not match`, alg, v)
+		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: %w`, AlgorithmMismatchError{Expected: alg, Got: v})}
 	}
 	if !algMatched {
 		return nil, fmt.Errorf(`jwe.Decrypt: failed to find "alg" header in either protected or per-recipient headers`)

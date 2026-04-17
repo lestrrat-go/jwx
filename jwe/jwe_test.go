@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -1985,4 +1986,89 @@ func TestDecryptIgnoresUnprotectedHeader(t *testing.T) {
 	decrypted, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.RSA_OAEP(), privkey))
 	require.NoError(t, err, `jwe.Decrypt must ignore unprotected-header overrides`)
 	require.Equal(t, []byte(payload), decrypted, `plaintext should still round-trip through the tampered JWE`)
+}
+
+// TestDecryptSubstepTypedErrors pins the contract that
+// jwe.decryptContent surfaces programmatically distinguishable errors
+// for its well-known substep failures. Callers should be able to match
+// these with errors.Is / errors.AsType without falling back to
+// substring checks on the error message.
+func TestDecryptSubstepTypedErrors(t *testing.T) {
+	t.Run("MissingContentEncryptionError when enc is absent from protected header", func(t *testing.T) {
+		privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+		require.NoError(t, err, `rsa.GenerateKey should succeed`)
+
+		const payload = `lorem ipsum`
+		encrypted, err := jwe.Encrypt(
+			[]byte(payload),
+			jwe.WithKey(jwa.RSA_OAEP(), &privkey.PublicKey),
+			jwe.WithContentEncryption(jwa.A128GCM()),
+			jwe.WithJSON(),
+		)
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+		var parsed map[string]any
+		require.NoError(t, json.Unmarshal(encrypted, &parsed), `freshly encrypted JWE should parse as JSON`)
+
+		// Strip "enc" from the base64url-encoded protected header and
+		// re-encode. The AEAD tag will no longer verify, but that never
+		// matters because decryptContent checks for "enc" in the
+		// protected header BEFORE any AEAD work happens.
+		protectedEncoded, ok := parsed["protected"].(string)
+		require.True(t, ok, `protected header should be a string`)
+		protectedBytes, err := base64.RawURLEncoding.DecodeString(protectedEncoded)
+		require.NoError(t, err, `protected header should decode as base64url`)
+		var protectedJSON map[string]any
+		require.NoError(t, json.Unmarshal(protectedBytes, &protectedJSON), `protected header should parse as JSON`)
+		delete(protectedJSON, "enc")
+		newProtected, err := json.Marshal(protectedJSON)
+		require.NoError(t, err, `re-marshaling protected header should succeed`)
+		parsed["protected"] = base64.RawURLEncoding.EncodeToString(newProtected)
+
+		tampered, err := json.Marshal(parsed)
+		require.NoError(t, err, `re-marshaling tampered JWE should succeed`)
+
+		_, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.RSA_OAEP(), privkey))
+		require.Error(t, err, `jwe.Decrypt should fail when "enc" is missing`)
+		require.ErrorIs(t, err, jwe.DecryptError(), `error should wrap jwe.DecryptError`)
+		require.ErrorIs(t, err, jwe.MissingContentEncryptionError{}, `error should be programmatically matchable as jwe.MissingContentEncryptionError`)
+	})
+
+	t.Run("AlgorithmMismatchError when per-recipient alg differs from key alg", func(t *testing.T) {
+		privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+		require.NoError(t, err, `rsa.GenerateKey should succeed`)
+
+		const payload = `lorem ipsum`
+		encrypted, err := jwe.Encrypt(
+			[]byte(payload),
+			jwe.WithKey(jwa.RSA_OAEP(), &privkey.PublicKey),
+			jwe.WithContentEncryption(jwa.A128GCM()),
+			jwe.WithJSON(),
+		)
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+		var parsed map[string]any
+		require.NoError(t, json.Unmarshal(encrypted, &parsed), `freshly encrypted JWE should parse as JSON`)
+
+		// Overwrite the flattened per-recipient header's "alg" with a
+		// different valid algorithm. decryptContent's alg-match loop
+		// inspects recipient.Headers() first and surfaces a typed
+		// mismatch when it does not match the caller's key alg.
+		parsed["header"] = map[string]any{
+			"alg": jwa.RSA1_5().String(),
+		}
+
+		tampered, err := json.Marshal(parsed)
+		require.NoError(t, err, `re-marshaling tampered JWE should succeed`)
+
+		_, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.RSA_OAEP(), privkey))
+		require.Error(t, err, `jwe.Decrypt should fail when per-recipient alg differs from the key alg`)
+		require.ErrorIs(t, err, jwe.DecryptError(), `error should wrap jwe.DecryptError`)
+		require.ErrorIs(t, err, jwe.AlgorithmMismatchError{}, `error should be programmatically matchable as jwe.AlgorithmMismatchError`)
+
+		mismatch, ok := errors.AsType[jwe.AlgorithmMismatchError](err)
+		require.True(t, ok, `errors.AsType should extract jwe.AlgorithmMismatchError`)
+		require.Equal(t, jwa.RSA_OAEP(), mismatch.Expected, `Expected should be the caller's key algorithm`)
+		require.Equal(t, jwa.RSA1_5(), mismatch.Got, `Got should be the algorithm declared in the per-recipient header`)
+	})
 }
