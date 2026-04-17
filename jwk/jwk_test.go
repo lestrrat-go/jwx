@@ -357,6 +357,22 @@ func TestGenericImport(t *testing.T) {
 		// Importing []byte produces SymmetricKey, not RSAPrivateKey
 		_, err := jwk.Import[jwk.RSAPrivateKey]([]byte("symmetric"))
 		require.Error(t, err)
+
+		// Still classified as a jwk.ImportError so existing callers
+		// that match on the sentinel keep working.
+		require.ErrorIs(t, err, jwk.ImportError(), `should remain an ImportError`)
+		// Also classified as the new typed mismatch error.
+		require.ErrorIs(t, err, jwk.KeyTypeMismatchError{}, `should be a KeyTypeMismatchError`)
+
+		mismatch, ok := errors.AsType[jwk.KeyTypeMismatchError](err)
+		require.True(t, ok, `errors.AsType should recover KeyTypeMismatchError`)
+		require.NotNil(t, mismatch.Got, `Got should be populated`)
+		require.NotNil(t, mismatch.Want, `Want should be populated`)
+		// []byte is imported as a SymmetricKey interface implementation.
+		require.True(t, mismatch.Got.Implements(reflect.TypeFor[jwk.SymmetricKey]()),
+			`Got (%s) should implement SymmetricKey`, mismatch.Got)
+		require.Equal(t, reflect.TypeFor[jwk.RSAPrivateKey](), mismatch.Want,
+			`Want should equal the requested type parameter`)
 	})
 	t.Run("BaseInterface", func(t *testing.T) {
 		t.Parallel()
