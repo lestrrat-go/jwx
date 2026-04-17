@@ -383,6 +383,84 @@ func TestGenericImport(t *testing.T) {
 	})
 }
 
+func TestExportAll(t *testing.T) {
+	t.Parallel()
+
+	rsaRaw, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+	ecdsaRaw, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	_, ed25519Raw, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+
+	rsaKey, err := jwk.Import[jwk.Key](rsaRaw)
+	require.NoError(t, err)
+	ecdsaKey, err := jwk.Import[jwk.Key](ecdsaRaw)
+	require.NoError(t, err)
+	ed25519Key, err := jwk.Import[jwk.Key](ed25519Raw)
+	require.NoError(t, err)
+
+	newMixedSet := func(t *testing.T) jwk.Set {
+		t.Helper()
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(rsaKey))
+		require.NoError(t, set.AddKey(ecdsaKey))
+		require.NoError(t, set.AddKey(ed25519Key))
+		return set
+	}
+
+	t.Run("Heterogeneous T=any", func(t *testing.T) {
+		t.Parallel()
+		raws, err := jwk.ExportAll[any](newMixedSet(t))
+		require.NoError(t, err)
+		require.Len(t, raws, 3)
+		require.IsType(t, (*rsa.PrivateKey)(nil), raws[0])
+		require.IsType(t, (*ecdsa.PrivateKey)(nil), raws[1])
+		require.IsType(t, ed25519.PrivateKey(nil), raws[2])
+	})
+
+	t.Run("Homogeneous concrete T", func(t *testing.T) {
+		t.Parallel()
+		set := jwk.NewSet()
+		rsaRaw2, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err)
+		k1, err := jwk.Import[jwk.Key](rsaRaw)
+		require.NoError(t, err)
+		k2, err := jwk.Import[jwk.Key](rsaRaw2)
+		require.NoError(t, err)
+		require.NoError(t, set.AddKey(k1))
+		require.NoError(t, set.AddKey(k2))
+
+		privkeys, err := jwk.ExportAll[*rsa.PrivateKey](set)
+		require.NoError(t, err)
+		require.Len(t, privkeys, 2)
+		require.Equal(t, rsaRaw.N, privkeys[0].N)
+		require.Equal(t, rsaRaw2.N, privkeys[1].N)
+	})
+
+	t.Run("Narrow T fails on first mismatch", func(t *testing.T) {
+		t.Parallel()
+		// set ordering: rsa, ecdsa, ed25519 — narrow to *rsa.PrivateKey
+		// must error on index 1.
+		_, err := jwk.ExportAll[*rsa.PrivateKey](newMixedSet(t))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "key #1")
+	})
+
+	t.Run("Empty set", func(t *testing.T) {
+		t.Parallel()
+		raws, err := jwk.ExportAll[any](jwk.NewSet())
+		require.NoError(t, err)
+		require.Empty(t, raws)
+	})
+
+	t.Run("Nil set", func(t *testing.T) {
+		t.Parallel()
+		_, err := jwk.ExportAll[any](nil)
+		require.Error(t, err)
+	})
+}
+
 const testOctKeyJSON = `{"kty":"oct","k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"}`
 
 func TestGenericParseKey(t *testing.T) {
