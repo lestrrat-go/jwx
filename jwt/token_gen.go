@@ -26,9 +26,6 @@ const (
 	SubjectKey    = "sub"
 )
 
-// stdClaimNames is a list of all standard claim names defined in the JWT specification.
-var stdClaimNames = []string{AudienceKey, ExpirationKey, IssuedAtKey, IssuerKey, JwtIDKey, NotBeforeKey, SubjectKey}
-
 // Token represents a generic JWT token.
 // which are type-aware (to an extent). Other claims may be accessed via the `Get`/`Set`
 // methods but their types are not taken into consideration at all. If you have non-standard

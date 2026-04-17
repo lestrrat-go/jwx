@@ -69,6 +69,18 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `jwa.ES256K()` | `es256k.ES256K()` | `import "github.com/jwx-go/es256k/v4"` |
 | `jwa.Ed448()` | `ed448.Curve()` | `import "github.com/jwx-go/ed448/v4"` |
 | `jwa.EdDSAEd448()` | `ed448.EdDSAEd448()` | `import "github.com/jwx-go/ed448/v4"` |
+| `jwt.TokenFilter` / `jws.HeaderFilter` / `jwe.HeaderFilter` / `jwk.KeyFilter` | `jwxfilter.Filter[jwt.Token]` / `Filter[jws.Headers]` / `Filter[jwe.Headers]` / `Filter[jwk.Key]` | Moved to companion `github.com/jwx-go/jwxfilter/v4`; collapsed into one generic interface. |
+| `jwt.NewClaimNameFilter(...)` | `jwtfilter.ByName(...)` | Moved to `github.com/jwx-go/jwxfilter/v4/jwtfilter`. |
+| `jwt.StandardClaimsFilter()` | `jwtfilter.Standard()` | Moved to `github.com/jwx-go/jwxfilter/v4/jwtfilter`. |
+| `jws.NewHeaderNameFilter(...)` | `jwsfilter.ByName(...)` | Moved to `github.com/jwx-go/jwxfilter/v4/jwsfilter`. |
+| `jws.StandardHeadersFilter()` | `jwsfilter.Standard()` | Moved to `github.com/jwx-go/jwxfilter/v4/jwsfilter`. |
+| `jwe.NewHeaderNameFilter(...)` | `jwefilter.ByName(...)` | Moved to `github.com/jwx-go/jwxfilter/v4/jwefilter`. |
+| `jwe.StandardHeadersFilter()` | `jwefilter.Standard()` | Moved to `github.com/jwx-go/jwxfilter/v4/jwefilter`. |
+| `jwk.NewFieldNameFilter(...)` | `jwkfilter.ByName(...)` | Moved to `github.com/jwx-go/jwxfilter/v4/jwkfilter`. |
+| `jwk.RSAStandardFieldsFilter()` / `ECDSAStandardFieldsFilter()` / `OKPStandardFieldsFilter()` / `SymmetricStandardFieldsFilter()` / `AKPStandardFieldsFilter()` | `jwkfilter.RSAStandard()` / `ECDSAStandard()` / `OKPStandard()` / `SymmetricStandard()` / `AKPStandard()` | Moved to `github.com/jwx-go/jwxfilter/v4/jwkfilter`. |
+| `openid.StandardClaimsFilter()` | `openidfilter.Standard()` | Moved to `github.com/jwx-go/jwxfilter/v4/openidfilter`. |
+| `transform.AsMap` / `transform.Mappable` | `jwxfilter.AsMap` / `jwxfilter.Mappable` | Moved to `github.com/jwx-go/jwxfilter/v4` (root package). |
+| `transform.FilterLogic` / `FilterLogicFunc` / `Filterable` / `NameBasedFilter` / `NewNameBasedFilter` / `Apply` / `Reject` | _(removed from public API)_ | These were experimental internal primitives; the companion keeps equivalents unexported. Use a `<type>filter.ByName(...)` constructor instead. |
 
 ## Migration Recipes
 
@@ -494,6 +506,26 @@ These changes cannot be mechanically transformed and need human judgment:
    Extension modules that install a backend in `init()` (e.g. `asmbase64`) must panic on error, matching the house style for `Register*` failures.
 
    `jwk.Settings` remains void; its options have no validatable state today.
+
+6. **Filter + transform usage**: All filter types/constructors and the `transform` package moved out of core into `github.com/jwx-go/jwxfilter/v4`. If your code references `jwt.TokenFilter`, `jws.HeaderFilter`, `jwe.HeaderFilter`, `jwk.KeyFilter`, any `New*Filter` / `*StandardFilter()` / `openid.StandardClaimsFilter`, or anything in `transform`, add a dependency on the new companion and update imports:
+
+   ```sh
+   go get github.com/jwx-go/jwxfilter/v4
+   ```
+
+   ```go
+   // Before
+   import "github.com/lestrrat-go/jwx/v4/transform"
+   filter := jwt.NewClaimNameFilter("sub", "iss")
+   stripped, _ := filter.Filter(token)
+
+   // After
+   import "github.com/jwx-go/jwxfilter/v4/jwtfilter"
+   filter := jwtfilter.ByName("sub", "iss")
+   stripped, _ := filter.Filter(token)
+   ```
+
+   The four old filter interfaces (`jwt.TokenFilter`, `jws.HeaderFilter`, `jwe.HeaderFilter`, `jwk.KeyFilter`) collapse into one generic interface: `jwxfilter.Filter[T]`. The generic primitives in the old `transform` package (`FilterLogic`, `FilterLogicFunc`, `Filterable`, `NameBasedFilter`, `NewNameBasedFilter`, `Apply`, `Reject`) are no longer part of the public API — the companion keeps them unexported. Consumers that used them directly must migrate to the `<type>filter.ByName(...)` constructors.
 
 ## Build System Changes
 

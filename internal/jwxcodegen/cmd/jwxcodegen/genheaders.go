@@ -180,7 +180,7 @@ func generateHeaders(cfg *HeaderConfig, obj *codegen.Object) error {
 
 	o.L("}")
 
-	// stdHeaderNames
+	// stdHeaderNames — used by core for RFC 7515 §4.1.11 "crit" validation.
 	o.LL("// stdHeaderNames is a list of all standard header names defined in the %s specification.", cfg.Description[:3])
 	o.L("var stdHeaderNames = []string{")
 	for i, f := range obj.Fields() {

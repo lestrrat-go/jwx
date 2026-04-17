@@ -160,7 +160,6 @@ Tests are run via `./scripts/test.sh` which iterates over:
 | `jwe/` | JSON Web Encryption - `Encrypt()` and `Decrypt()` |
 | `jwt/` | JSON Web Tokens - claims and validation |
 | `jwt/openid/` | OpenID Connect ID tokens |
-| `transform/` | Token transformation utilities |
 
 ## Relevant RFCs
 
