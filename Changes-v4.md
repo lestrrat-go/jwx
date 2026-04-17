@@ -88,6 +88,11 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 * `jwk.Export()` is now generic: `jwk.Export[T any](key Key) (T, error)`.
 
+* `jwk.ExportAll[T any](set Set) ([]T, error)` is new — the plural counterpart
+  to `jwk.Export[T]`. Exports every key in a [Set], preserving insertion order,
+  and fails fast on the first mismatch. For a heterogeneous set, use
+  `T = any`; each element's dynamic type matches its source key's raw form.
+
 * `jwk.ParseKey()` is now generic: `jwk.ParseKey[T Key](data []byte, ...options) (T, error)`.
 
 * `jwk.Fetch()` and `jwk.Cache` have both been removed from the main module, along

@@ -430,6 +430,41 @@ func Export[T any](key Key) (T, error) {
 	return result, nil
 }
 
+// ExportAll exports every key in the given [Set] to type T, preserving
+// insertion order. It is the plural counterpart to [Export] and fails
+// fast on the first key whose raw representation cannot be asserted to
+// T.
+//
+// For a heterogeneous [Set] whose members don't share a concrete raw
+// type, use `T = any`:
+//
+//	raws, err := jwk.ExportAll[any](set)
+//
+// Each element's dynamic type then matches the source key's raw form
+// (e.g. *rsa.PrivateKey, *ecdsa.PrivateKey, ed25519.PrivateKey).
+//
+// Use a concrete T when every member shares a representation:
+//
+//	privkeys, err := jwk.ExportAll[*rsa.PrivateKey](set)
+//
+// An empty [Set] returns an empty slice and a nil error.
+func ExportAll[T any](set Set) ([]T, error) {
+	if set == nil {
+		return nil, fmt.Errorf(`jwk.ExportAll: set must not be nil`)
+	}
+	out := make([]T, 0, set.Len())
+	i := 0
+	for _, k := range set.All() {
+		v, err := Export[T](k)
+		if err != nil {
+			return nil, fmt.Errorf(`jwk.ExportAll: key #%d: %w`, i, err)
+		}
+		out = append(out, v)
+		i++
+	}
+	return out, nil
+}
+
 func doExport(key Key, hint any) (any, error) {
 	muKeyExporters.RLock()
 	exporters := findExporters(key)
