@@ -207,6 +207,16 @@ func TestBase64Settings(t *testing.T) {
 		require.NoError(t, err, `jws.Verify should succeed`)
 		require.Greater(t, dec.calls.Load(), int64(0), `custom decoder should be invoked`)
 	})
+
+	t.Run("nil encoder returns error and applies no changes", func(t *testing.T) {
+		require.Error(t, jwx.Settings(jwx.WithBase64Encoder(nil)),
+			`nil encoder should be rejected`)
+	})
+
+	t.Run("nil decoder returns error and applies no changes", func(t *testing.T) {
+		require.Error(t, jwx.Settings(jwx.WithBase64Decoder(nil)),
+			`nil decoder should be rejected`)
+	})
 }
 
 type rawURLDecoder struct{}

@@ -23,6 +23,8 @@
 package jwx
 
 import (
+	"fmt"
+
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/option/v3"
@@ -63,7 +65,26 @@ var _ implementationNoteStreaming
 // begins parsing JWx payloads. See the godoc on individual GlobalOption
 // constructors (e.g. [WithUseNumber]) for the concurrency contract of
 // each setting.
-func Settings(options ...GlobalOption) {
+//
+// Returns a non-nil error and applies no changes if any option fails
+// validation (for example, a nil [WithBase64Encoder] or [WithBase64Decoder]).
+func Settings(options ...GlobalOption) error {
+	// Validate first so the call is all-or-nothing on error.
+	// For interface-typed options, a nil value is unwrapped when passed
+	// through any, so option.Get returns ok=false — treat that as "nil".
+	for _, opt := range options {
+		switch opt.Ident() {
+		case identBase64Encoder{}:
+			if v, ok := option.Get[Base64Encoder](opt); !ok || v == nil {
+				return fmt.Errorf(`jwx.Settings: WithBase64Encoder must not be nil`)
+			}
+		case identBase64Decoder{}:
+			if v, ok := option.Get[Base64Decoder](opt); !ok || v == nil {
+				return fmt.Errorf(`jwx.Settings: WithBase64Decoder must not be nil`)
+			}
+		}
+	}
+
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identUseNumber{}:
@@ -74,4 +95,5 @@ func Settings(options ...GlobalOption) {
 			base64.SetDecoder(option.MustGet[Base64Decoder](opt))
 		}
 	}
+	return nil
 }
