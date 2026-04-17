@@ -12,6 +12,18 @@
 //	JWA (https://tools.ietf.org/html/rfc7518)
 //	JWT (https://tools.ietf.org/html/rfc7519)
 //
+// # Requirements
+//
+// v4 uses the experimental encoding/json/v2 API, so consumers must build
+// with:
+//
+//   - Go 1.26.0 or later (see go.mod for the exact minimum)
+//   - GOEXPERIMENT=jsonv2 set in the environment for every `go build`,
+//     `go test`, `go run`, and `go generate` invocation
+//
+// Without GOEXPERIMENT=jsonv2 the Go toolchain reports
+// `build constraints exclude all Go files` and the module will not build.
+//
 // Examples are stored in a separate Go module (to avoid adding
 // dependencies to this module), and thus does not appear in the
 // online documentation for this module.
