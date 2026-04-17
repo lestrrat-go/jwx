@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "accessors.go",
         "errors.go",
-        "filter.go",
         "headers.go",
         "headers_gen.go",
         "interface.go",
@@ -33,7 +32,6 @@ go_library(
         "//jwa",
         "//jwk",
         "//jws/jwsbb",
-        "//transform",
         "@com_github_lestrrat_go_option_v3//:option",
     ],
 )
@@ -43,7 +41,6 @@ go_test(
     srcs = [
         "bench_marshal_test.go",
         "bench_serialize_test.go",
-        "filter_test.go",
         "fuzz_test.go",
         "headers_nil_test.go",
         "headers_test.go",
