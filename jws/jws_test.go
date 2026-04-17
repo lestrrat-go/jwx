@@ -1973,15 +1973,11 @@ func TestMaxParseInputSize(t *testing.T) {
 			require.NotContains(t, err.Error(), `exceeded max size`)
 		}
 	})
-	t.Run("negative value panics in Settings", func(t *testing.T) {
-		require.Panics(t, func() {
-			jws.Settings(jws.WithMaxParseInputSize(-1))
-		})
+	t.Run("negative value returns error from Settings", func(t *testing.T) {
+		require.Error(t, jws.Settings(jws.WithMaxParseInputSize(-1)))
 	})
-	t.Run("zero value panics in Settings", func(t *testing.T) {
-		require.Panics(t, func() {
-			jws.Settings(jws.WithMaxParseInputSize(0))
-		})
+	t.Run("zero value returns error from Settings", func(t *testing.T) {
+		require.Error(t, jws.Settings(jws.WithMaxParseInputSize(0)))
 	})
 	t.Run("negative per-call value returns error", func(t *testing.T) {
 		data := []byte(`test`)

@@ -26,23 +26,34 @@ func init() {
 // These settings are read atomically, so changing them at runtime is race-free.
 // However, concurrent parses may observe a mix of old and new values. Configure
 // them once at program startup when possible.
-func Settings(options ...GlobalOption) {
+//
+// Returns a non-nil error and applies no changes if any option fails
+// validation (for example, a negative [WithMaxChainLength] or
+// [WithMaxCertificateSize]).
+func Settings(options ...GlobalOption) error {
+	// Validate first so the call is all-or-nothing on error.
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identMaxChainLength{}:
-			v := option.MustGet[int](opt)
-			if v < 0 {
-				panic("cert.Settings: WithMaxChainLength must be greater than or equal to zero")
+			if v := option.MustGet[int](opt); v < 0 {
+				return fmt.Errorf(`cert.Settings: WithMaxChainLength must be greater than or equal to zero, got %d`, v)
 			}
-			maxChainLength.Store(int64(v))
 		case identMaxCertificateSize{}:
-			v := option.MustGet[int64](opt)
-			if v < 0 {
-				panic("cert.Settings: WithMaxCertificateSize must be greater than or equal to zero")
+			if v := option.MustGet[int64](opt); v < 0 {
+				return fmt.Errorf(`cert.Settings: WithMaxCertificateSize must be greater than or equal to zero, got %d`, v)
 			}
-			maxCertificateSize.Store(v)
 		}
 	}
+
+	for _, opt := range options {
+		switch opt.Ident() {
+		case identMaxChainLength{}:
+			maxChainLength.Store(int64(option.MustGet[int](opt)))
+		case identMaxCertificateSize{}:
+			maxCertificateSize.Store(option.MustGet[int64](opt))
+		}
+	}
+	return nil
 }
 
 func currentMaxChainLength() int64 {

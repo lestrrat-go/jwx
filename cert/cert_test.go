@@ -157,14 +157,12 @@ func TestSettingsRejectNegativeValues(t *testing.T) {
 	defer restoreCertSettings()
 
 	t.Run(`WithMaxChainLength`, func(t *testing.T) {
-		require.Panics(t, func() {
-			cert.Settings(cert.WithMaxChainLength(-1))
-		}, `negative max chain length should panic`)
+		require.Error(t, cert.Settings(cert.WithMaxChainLength(-1)),
+			`negative max chain length should return an error`)
 	})
 
 	t.Run(`WithMaxCertificateSize`, func(t *testing.T) {
-		require.Panics(t, func() {
-			cert.Settings(cert.WithMaxCertificateSize(-1))
-		}, `negative max certificate size should panic`)
+		require.Error(t, cert.Settings(cert.WithMaxCertificateSize(-1)),
+			`negative max certificate size should return an error`)
 	})
 }
