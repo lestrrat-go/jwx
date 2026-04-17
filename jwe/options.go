@@ -48,7 +48,12 @@ func WithCritExtension(names ...string) DecryptOption {
 // Some fields such as "enc" and "zip" will be overwritten when encryption is
 // performed.
 //
-// There is no equivalent for unprotected headers in this implementation
+// There is no equivalent for unprotected headers in this implementation.
+//
+// This is a top-level `jwe.EncryptOption` passed directly to `jwe.Encrypt()`.
+// A similarly named `jws.WithProtectedHeaders()` exists, but in `jws` it is a
+// `WithKey` suboption passed inside `jws.WithKey(...)`. Do not confuse the
+// two — the Go compiler will reject the wrong placement.
 func WithProtectedHeaders(h Headers) EncryptOption {
 	cloned, _ := h.Clone()
 	return &encryptOption{option.New(identProtectedHeaders{}, cloned)}
@@ -131,6 +136,21 @@ func WithPerRecipientHeaders(hdr Headers) WithKeySuboption {
 //
 // Unlike `jwe.WithKeySet()`, the `kid` field does not need to match for the key
 // to be tried.
+//
+// # Suboptions
+//
+// `jwe.WithKey()` accepts the following suboption:
+//
+//   - `jwe.WithPerRecipientHeaders(Headers)`: per-recipient unprotected headers
+//     for this recipient. These are distinct from the JWE protected headers that
+//     apply to the whole message.
+//
+// Note that `jwe.WithProtectedHeaders()` is NOT a WithKey suboption — it is a
+// top-level `jwe.EncryptOption` passed directly to `jwe.Encrypt()`. Users
+// moving from `jws`, where `WithProtectedHeaders` is a `WithKey` suboption,
+// should expect this shape difference. The Go compiler will reject the wrong
+// placement because `jwe.WithKeySuboption` is a sealed interface distinct
+// from `jwe.EncryptOption` (and distinct from `jws.WithKeySuboption`).
 func WithKey(alg jwa.KeyAlgorithm, key any, options ...WithKeySuboption) EncryptDecryptOption {
 	var hdr Headers
 	for _, opt := range options {

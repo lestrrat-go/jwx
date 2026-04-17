@@ -448,20 +448,25 @@ func WithPretty(v bool) WithJSONSuboption {
 	return &withJSONSuboption{option.New(identPretty{}, v)}
 }
 
-// WithProtected is used with `jws.WithKey()` option when used with `jws.Sign()`
+// WithProtectedHeaders is used with `jws.WithKey()` option when used with `jws.Sign()`
 // to specify a protected header to be attached to the JWS signature.
 //
-// It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`
+// It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`.
+//
+// Note that `jwe.WithProtectedHeaders()` exists as well, but it is a top-level
+// `jwe.EncryptOption` passed directly to `jwe.Encrypt()`, not a `jwe.WithKey()`
+// suboption. The two serve different roles and have different types; the Go
+// compiler will reject any accidental swap.
 func WithProtectedHeaders(v Headers) WithKeySuboption {
 	return &withKeySuboption{option.New(identProtectedHeaders{}, v)}
 }
 
-// WithPublic is used with `jws.WithKey()` option when used with `jws.Sign()`
-// to specify a public header to be attached to the JWS signature.
+// WithPublicHeaders is used with `jws.WithKey()` option when used with `jws.Sign()`
+// to specify a public (unprotected) header to be attached to the JWS signature.
 //
-// It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`
+// It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`.
 //
-// `jws.Sign()` will result in an error if `jws.WithPublic()` is used
+// `jws.Sign()` will result in an error if `jws.WithPublicHeaders()` is used
 // and the serialization format is compact serialization.
 func WithPublicHeaders(v Headers) WithKeySuboption {
 	return &withKeySuboption{option.New(identPublicHeaders{}, v)}
