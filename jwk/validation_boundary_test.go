@@ -66,34 +66,43 @@ func registerInvalidParser(t *testing.T) {
 	})
 }
 
-func TestImportRejectsInvalidKeyFromCustomImporter(t *testing.T) {
+// Both the direct Import path and the ParseKey-with-X509 path funnel
+// raw keys through the same importer registry, so an invalid key
+// produced by a custom importer must be rejected the same way no
+// matter which path reached it. The x509 subtest depends on the
+// custom importer registered by registerInvalidImporter — running it
+// as a sibling top-level test made the outcome depend on Go's test
+// ordering, which is why they live together here.
+func TestRejectsInvalidKeyFromCustomImporter(t *testing.T) {
 	registerInvalidImporter(t)
 
-	_, err := jwk.Import[jwk.Key](invalidImportRaw{})
-	require.Error(t, err)
-	require.ErrorIs(t, err, jwk.ImportError())
-	require.True(t, jwk.IsKeyValidationError(err), `Import should preserve key-validation identity`)
-}
-
-func TestParseKeyWithX509DecoderRejectsInvalidImportedKey(t *testing.T) {
-	ident := "test-invalid-x509-import-boundary"
-	err := jwkbb.RegisterX509Decoder(ident, jwkbb.X509DecodeFunc(func(block *pem.Block) (any, error) {
-		if block.Type != "INVALID ECDSA" {
-			return nil, fmt.Errorf("unsupported type")
-		}
-		return invalidImportRaw{}, nil
-	}))
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		jwkbb.UnregisterX509Decoder(ident)
+	t.Run("direct Import", func(t *testing.T) {
+		_, err := jwk.Import[jwk.Key](invalidImportRaw{})
+		require.Error(t, err)
+		require.ErrorIs(t, err, jwk.ImportError())
+		require.True(t, jwk.IsKeyValidationError(err), `Import should preserve key-validation identity`)
 	})
 
-	src := []byte(`-----BEGIN INVALID ECDSA-----
+	t.Run("ParseKey via X509 decoder", func(t *testing.T) {
+		ident := "test-invalid-x509-import-boundary"
+		err := jwkbb.RegisterX509Decoder(ident, jwkbb.X509DecodeFunc(func(block *pem.Block) (any, error) {
+			if block.Type != "INVALID ECDSA" {
+				return nil, fmt.Errorf("unsupported type")
+			}
+			return invalidImportRaw{}, nil
+		}))
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			jwkbb.UnregisterX509Decoder(ident)
+		})
+
+		src := []byte(`-----BEGIN INVALID ECDSA-----
 ZHVtbXk=
 -----END INVALID ECDSA-----`)
-	_, err = jwk.ParseKey(src, jwk.WithX509(true))
-	require.Error(t, err)
-	require.True(t, jwk.IsKeyValidationError(err), `ParseKey should preserve key-validation identity`)
+		_, err = jwk.ParseKey(src, jwk.WithX509(true))
+		require.Error(t, err)
+		require.True(t, jwk.IsKeyValidationError(err), `ParseKey should preserve key-validation identity`)
+	})
 }
 
 func TestParseKeyRejectsInvalidKeyFromCustomParser(t *testing.T) {
