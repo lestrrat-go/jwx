@@ -18,8 +18,6 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-            ~/.cache/bazel
-            ~/.cache/bazelisk
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
@@ -37,7 +35,5 @@ jobs:
         run: make tidy
       - name: Test with coverage
         run: make cover
-      - uses: bazelbuild/setup-bazelisk@v3
-      - run: bazel mod tidy
       - name: Check difference between generation code and commit code
         run: make check_diffs
