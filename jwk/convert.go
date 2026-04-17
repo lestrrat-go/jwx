@@ -75,21 +75,6 @@ func RegisterKeyImporter[T any](fn func(T) (Key, error)) error {
 	return nil
 }
 
-// RegisterKeyImporterI registers a KeyImporter interface for the given raw key type.
-// This is the interface-based variant for cases where a full KeyImporter implementation
-// is needed instead of a simple function.
-//
-// The error return is reserved for future validation. The current
-// implementation always returns nil, but callers — especially extension
-// modules calling this from init() — must check the return value and panic
-// on failure to stay forward-compatible.
-func RegisterKeyImporterI(from any, conv KeyImporter) error {
-	muKeyImporters.Lock()
-	defer muKeyImporters.Unlock()
-	keyImporters[reflect.TypeOf(from)] = conv
-	return nil
-}
-
 // RegisterKeyExporter registers a [KeyExporter] for the given [KeyKind] identity.
 //
 // When [Export] is called, the library resolves exporters in two steps:
