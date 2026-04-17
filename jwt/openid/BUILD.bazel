@@ -6,7 +6,6 @@ go_library(
         "address.go",
         "birthdate.go",
         "builder_gen.go",
-        "filter.go",
         "interface.go",
         "openid.go",
         "token_gen.go",

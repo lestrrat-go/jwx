@@ -7,7 +7,6 @@ go_library(
         "builder_gen.go",
         "errors.go",
         "fastpath.go",
-        "filter.go",
         "http.go",
         "interface.go",
         "io_gen.go",
@@ -35,7 +34,6 @@ go_library(
         "//jws",
         "//jws/jwsbb",
         "//jwt/internal/types",
-        "//transform",
         "@com_github_lestrrat_go_option_v3//:option",
     ],
 )
@@ -45,7 +43,6 @@ go_test(
     srcs = [
         "bench_parse_test.go",
         "fastpath_test.go",
-        "filter_test.go",
         "fuzz_test.go",
         "jwt_crit_test.go",
         "jwt_test.go",

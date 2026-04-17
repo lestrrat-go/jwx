@@ -1707,17 +1707,6 @@ func (h *ecdsaPrivateKey) Keys() []string {
 	return keys
 }
 
-var ecdsaStandardFields KeyFilter
-
-func init() {
-	ecdsaStandardFields = NewFieldNameFilter(KeyTypeKey, KeyUsageKey, KeyOpsKey, AlgorithmKey, KeyIDKey, X509URLKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, ECDSACrvKey, ECDSAXKey, ECDSAYKey, ECDSADKey)
-}
-
-// ECDSAStandardFieldsFilter returns a KeyFilter that filters out standard ECDSA fields.
-func ECDSAStandardFieldsFilter() KeyFilter {
-	return ecdsaStandardFields
-}
-
 func init() {
 	registry.Register(jwa.EC().String(), registry.Constructor{
 		Public:  func() any { return newECDSAPublicKey() },
