@@ -401,7 +401,7 @@ func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 	}
 
 	if len(dc.keyProviders) < 1 {
-		return fmt.Errorf(`jwe.Decrypt: no key providers have been provided (see jwe.WithKey(), jwe.WithKeySet(), and jwe.WithKeyProvider()`)
+		return fmt.Errorf(`jwe.Decrypt: no decrypters available. Specify an algorithm and a key using jwe.WithKey() (or jwe.WithKeySet() or jwe.WithKeyProvider())`)
 	}
 
 	return nil
@@ -773,7 +773,7 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 	// We need to have at least one builder
 	switch l := len(ec.builders); {
 	case l == 0:
-		return fmt.Errorf(`missing key encryption builders: use jwe.WithKey() to specify one`)
+		return fmt.Errorf(`no encrypters available. Specify an algorithm and a key using jwe.WithKey()`)
 	case l > 1:
 		if ec.format == fmtCompact {
 			return fmt.Errorf(`cannot use compact serialization when multiple recipients exist (check the number of WithKey() argument, or use WithJSON())`)

@@ -122,7 +122,7 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 	}
 
 	if len(vc.keyProviders) < 1 {
-		return makeVerifyError(`no key providers have been provided (see jws.WithKey(), jws.WithKeySet(), jws.WithVerifyAuto(), and jws.WithKeyProvider()`)
+		return makeVerifyError(`no verifiers available. Specify an algorithm and a key using jws.WithKey() (or jws.WithKeySet(), jws.WithKeyProvider(), or jws.WithVerifyAuto())`)
 	}
 
 	return nil
