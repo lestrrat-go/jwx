@@ -14,8 +14,8 @@ import (
 
 // X509Decoder decodes a single PEM block into a raw key. Register a
 // custom implementation via [RegisterX509Decoder] to extend
-// [DecodePEM] (and by extension `jwk.ParseKey` with `jwk.WithX509(true)`)
-// to additional PEM block types such as PQC key formats.
+// `jwk.ParseKey` with `jwk.WithX509(true)` to additional PEM block
+// types such as PQC key formats.
 type X509Decoder interface {
 	DecodeX509(block *pem.Block) (any, error)
 }
@@ -81,7 +81,11 @@ func init() {
 func defaultX509Encode(v any) (string, []byte, error) {
 	switch v := v.(type) {
 	case *rsa.PrivateKey:
-		return RSAPrivateKeyBlockType, x509.MarshalPKCS1PrivateKey(v), nil
+		marshaled, err := x509.MarshalPKCS8PrivateKey(v)
+		if err != nil {
+			return "", nil, err
+		}
+		return PrivateKeyBlockType, marshaled, nil
 	case *ecdsa.PrivateKey:
 		marshaled, err := x509.MarshalECPrivateKey(v)
 		if err != nil {
@@ -101,7 +105,7 @@ func defaultX509Encode(v any) (string, []byte, error) {
 		}
 		return PublicKeyBlockType, marshaled, nil
 	default:
-		return "", nil, fmt.Errorf(`unsupported type %T for ASN.1 DER encoding`, v)
+		return "", nil, fmt.Errorf(`unsupported type %T for ASN.1 DER encoding: EncodePEM requires raw Go crypto keys (e.g. *rsa.PrivateKey, *ecdsa.PublicKey, ed25519.PrivateKey); convert a jwk.Key via jwk.Export[any] or a jwk.Set via jwk.ExportAll[any] first, or register a custom encoder with jwkbb.RegisterX509Encoder`, v)
 	}
 }
 
@@ -109,6 +113,15 @@ func defaultX509Encode(v any) (string, []byte, error) {
 // ident must be comparable and non-nil; decoder must be non-nil. A
 // duplicate ident is a no-op (returns nil) to preserve idempotent
 // extension-module init() behavior.
+//
+// Decoders are tried in registration order. The built-in stdlib
+// decoder is registered first during package init, so custom decoders
+// effectively extend the set of recognized PEM block types rather
+// than override stdlib handling — a custom decoder for a standard
+// block type (e.g. `RSA PRIVATE KEY`) will never be reached because
+// the default decoder claims it first. This is deliberate: it keeps
+// stdlib parsing stable regardless of which extension modules are
+// loaded.
 func RegisterX509Decoder(ident any, decoder X509Decoder) error {
 	if ident == nil {
 		return errors.New(`jwkbb.RegisterX509Decoder: ident must not be nil`)
@@ -175,6 +188,14 @@ func X509Decoders() iter.Seq[X509Decoder] {
 // ident must be comparable and non-nil; encoder must be non-nil. A
 // duplicate ident is a no-op (returns nil) to preserve idempotent
 // extension-module init() behavior.
+//
+// Encoders are tried in registration order and the first encoder that
+// returns without error wins for a given key. The built-in stdlib
+// encoder is registered first during package init, so a custom
+// encoder registered for a stdlib type (e.g. *rsa.PrivateKey) will
+// never be reached because the default encoder claims it first.
+// Register for types the default does not handle — PQC keys, custom
+// opaque types, etc.
 func RegisterX509Encoder(ident any, encoder X509Encoder) error {
 	if ident == nil {
 		return errors.New(`jwkbb.RegisterX509Encoder: ident must not be nil`)

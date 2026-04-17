@@ -39,7 +39,7 @@ func TestEncodePEM_VariadicPreservesOrder(t *testing.T) {
 
 	second, rest2 := pem.Decode(rest)
 	require.NotNil(t, second)
-	require.Equal(t, jwkbb.RSAPrivateKeyBlockType, second.Type, "second arg should be the second block")
+	require.Equal(t, jwkbb.PrivateKeyBlockType, second.Type, "second arg should be the second block (PKCS#8)")
 	require.Empty(t, rest2, "no trailing bytes expected")
 }
 

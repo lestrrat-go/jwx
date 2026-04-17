@@ -54,7 +54,7 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `jwk.WithPEMDecoder(d)` | *(removed)* | Use `jwkbb.RegisterX509Decoder(ident, d)` to install a custom PEM block decoder globally |
 | `jwk.WithPEM(true)` | `jwk.WithX509(true)` | Single option for "input is PEM-framed X.509"; `WithPEM` was a pre-release alias scheduled for removal |
 | `jwk.EncodePEM(v)` | `jwkbb.EncodePEM(raw)` | Unwrap `jwk.Key` with `jwk.Export[any]` first; accepts one or more raw keys |
-| `jwk.Pem(keyOrSet)` | `jwkbb.EncodePEM(jwk.ExportAll[any](set)...)` | Iterate a `jwk.Set` into raw keys via `jwk.ExportAll[any]`, then pass variadically. RSA private keys now emit `RSA PRIVATE KEY` (PKCS#1) by default — register a custom encoder for PKCS#8 if you need the old output |
+| `jwk.Pem(keyOrSet)` | `jwkbb.EncodePEM(jwk.ExportAll[any](set)...)` | Iterate a `jwk.Set` into raw keys via `jwk.ExportAll[any]`, then pass variadically |
 | `jwk.NewCache(ctx, client)` | `jwkfetch.NewCache(ctx, client)` | Extension module (see Recipe 6) |
 | `jwk.Fetch(ctx, url, opts...)` | `jwkfetch.NewClient(opts...).Fetch(ctx, url)` | Extension module (see Recipe 6) |
 | `jwk.WithHTTPClient(c)` | `jwkfetch.WithHTTPClient(c)` | Extension module |

@@ -139,9 +139,11 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   pem, _ := jwkbb.EncodePEM(raws...)
   ```
 
-  RSA private keys now emit `RSA PRIVATE KEY` (PKCS#1) via the default
-  encoder. The previous `jwk.Pem` path emitted PKCS#8. Register a
-  custom `jwkbb.X509Encoder` if you need the old output format.
+  The default encoder emits PKCS#8 (`PRIVATE KEY` block) for RSA and
+  Ed25519 private keys, matching the v3 `jwk.Pem` output. ECDSA private
+  keys continue to emit SEC1 (`EC PRIVATE KEY`). Register a custom
+  `jwkbb.X509Encoder` if you need a different block type (for example,
+  `RSA PRIVATE KEY` / PKCS#1).
 
 * `jwk.Fetch()` and `jwk.Cache` have both been removed from the main module, along
   with every other HTTP-touching entry point. The core `jwk` package no longer
