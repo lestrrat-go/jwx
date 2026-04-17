@@ -36,6 +36,7 @@ import (
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwk"
 	ourecdsa "github.com/lestrrat-go/jwx/v4/jwk/ecdsa"
+	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
 	"github.com/stretchr/testify/require"
 )
 
@@ -2480,7 +2481,7 @@ func TestRegisterX509Decoder(t *testing.T) {
 
 	// Create a custom decoder that handles a custom PEM type and returns the test key
 	customIdent := "test-custom-decoder"
-	customDecoder := jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
+	customDecoder := jwkbb.X509DecodeFunc(func(block *pem.Block) (any, error) {
 		if block.Type == "TEST CUSTOM KEY" {
 			return testKey, nil
 		}
@@ -2488,7 +2489,7 @@ func TestRegisterX509Decoder(t *testing.T) {
 	})
 
 	// Register the custom decoder
-	jwk.RegisterX509Decoder(customIdent, customDecoder)
+	jwkbb.RegisterX509Decoder(customIdent, customDecoder)
 
 	// Create test PEM data with our custom type
 	testPEMData := `-----BEGIN TEST CUSTOM KEY-----
@@ -2504,7 +2505,7 @@ dGVzdCBkYXRh
 	require.Equal(t, "RSA", parsedKey.KeyType().String())
 
 	// Clean up: unregister the decoder
-	jwk.UnregisterX509Decoder(customIdent)
+	jwkbb.UnregisterX509Decoder(customIdent)
 }
 
 func TestUnregisterX509Decoder(t *testing.T) {
@@ -2514,7 +2515,7 @@ func TestUnregisterX509Decoder(t *testing.T) {
 
 	// Create a custom decoder
 	customIdent := "test-unregister-decoder"
-	customDecoder := jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
+	customDecoder := jwkbb.X509DecodeFunc(func(block *pem.Block) (any, error) {
 		if block.Type == "TEST UNREGISTER" {
 			return testKey, nil
 		}
@@ -2522,7 +2523,7 @@ func TestUnregisterX509Decoder(t *testing.T) {
 	})
 
 	// Register the decoder
-	jwk.RegisterX509Decoder(customIdent, customDecoder)
+	jwkbb.RegisterX509Decoder(customIdent, customDecoder)
 
 	// Create test PEM data
 	testPEMData := `-----BEGIN TEST UNREGISTER-----
@@ -2535,7 +2536,7 @@ dGVzdCBkYXRh
 	require.NotNil(t, parsedKey1)
 
 	// Now unregister the decoder
-	jwk.UnregisterX509Decoder(customIdent)
+	jwkbb.UnregisterX509Decoder(customIdent)
 
 	// Verify it no longer works
 	parsedKey2, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
@@ -2543,10 +2544,18 @@ dGVzdCBkYXRh
 	require.Nil(t, parsedKey2)
 }
 
-func TestRegisterX509Decoder_NilPanic(t *testing.T) {
-	// Test that registering nil decoder panics
-	require.Panics(t, func() {
-		jwk.RegisterX509Decoder("test", nil)
+func TestRegisterX509Decoder_NilError(t *testing.T) {
+	// A nil decoder must surface as an error return, not a panic.
+	require.NotPanics(t, func() {
+		err := jwkbb.RegisterX509Decoder("test", nil)
+		require.Error(t, err, "registering a nil decoder must return an error")
+	})
+}
+
+func TestRegisterX509Decoder_NilIdent(t *testing.T) {
+	require.NotPanics(t, func() {
+		err := jwkbb.RegisterX509Decoder(nil, jwkbb.X509DecodeFunc(func(*pem.Block) (any, error) { return nil, errors.New("unused") }))
+		require.Error(t, err, "registering with a nil ident must return an error")
 	})
 }
 
@@ -2558,7 +2567,7 @@ func TestRegisterX509Decoder_DuplicateRegistration(t *testing.T) {
 	// Create a custom decoder that handles a specific PEM type
 	customIdent := "test-duplicate-decoder"
 	callCount := 0
-	decoder := jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
+	decoder := jwkbb.X509DecodeFunc(func(block *pem.Block) (any, error) {
 		callCount++
 		if block.Type == "TEST DUPLICATE" {
 			return testKey, nil
@@ -2567,7 +2576,7 @@ func TestRegisterX509Decoder_DuplicateRegistration(t *testing.T) {
 	})
 
 	// Register the decoder
-	jwk.RegisterX509Decoder(customIdent, decoder)
+	jwkbb.RegisterX509Decoder(customIdent, decoder)
 
 	// Create test PEM data
 	testPEMData := `-----BEGIN TEST DUPLICATE-----
@@ -2581,7 +2590,7 @@ dGVzdCBkYXRh
 	require.Equal(t, 1, callCount, "Decoder should be called once")
 
 	// Register it again (duplicate) - should be idempotent
-	jwk.RegisterX509Decoder(customIdent, decoder)
+	jwkbb.RegisterX509Decoder(customIdent, decoder)
 
 	// Verify it still works after duplicate registration and decoder wasn't added twice
 	parsedKey2, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
@@ -2590,13 +2599,13 @@ dGVzdCBkYXRh
 	require.Equal(t, 2, callCount, "Decoder should be called once more, not duplicated")
 
 	// Clean up
-	jwk.UnregisterX509Decoder(customIdent)
+	jwkbb.UnregisterX509Decoder(customIdent)
 }
 
 func TestUnregisterX509Decoder_NotRegistered(t *testing.T) {
 	// Unregistering a non-existent decoder should be safe (no-op)
 	require.NotPanics(t, func() {
-		jwk.UnregisterX509Decoder("non-existent-decoder")
+		jwkbb.UnregisterX509Decoder("non-existent-decoder")
 	})
 }
 
@@ -2609,8 +2618,8 @@ func registerTrioDecoders(t *testing.T) (identA, identB, identC string, pemFor f
 	testKey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err)
 
-	mk := func(wantType string) jwk.X509Decoder {
-		return jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
+	mk := func(wantType string) jwkbb.X509Decoder {
+		return jwkbb.X509DecodeFunc(func(block *pem.Block) (any, error) {
 			if block.Type == wantType {
 				return testKey, nil
 			}
@@ -2621,14 +2630,14 @@ func registerTrioDecoders(t *testing.T) (identA, identB, identC string, pemFor f
 	identA = "test-trio-A"
 	identB = "test-trio-B"
 	identC = "test-trio-C"
-	require.NoError(t, jwk.RegisterX509Decoder(identA, mk("TRIO A")))
-	require.NoError(t, jwk.RegisterX509Decoder(identB, mk("TRIO B")))
-	require.NoError(t, jwk.RegisterX509Decoder(identC, mk("TRIO C")))
+	require.NoError(t, jwkbb.RegisterX509Decoder(identA, mk("TRIO A")))
+	require.NoError(t, jwkbb.RegisterX509Decoder(identB, mk("TRIO B")))
+	require.NoError(t, jwkbb.RegisterX509Decoder(identC, mk("TRIO C")))
 
 	t.Cleanup(func() {
-		jwk.UnregisterX509Decoder(identA)
-		jwk.UnregisterX509Decoder(identB)
-		jwk.UnregisterX509Decoder(identC)
+		jwkbb.UnregisterX509Decoder(identA)
+		jwkbb.UnregisterX509Decoder(identB)
+		jwkbb.UnregisterX509Decoder(identC)
 	})
 
 	pemFor = func(typ string) []byte {
@@ -2647,7 +2656,7 @@ func TestUnregisterX509Decoder_StaleIndexMiddle(t *testing.T) {
 	// Remove the middle decoder. Prior to the fix, the surviving
 	// entry for identC kept its original index, which pointed past
 	// the end of the shrunken slice.
-	jwk.UnregisterX509Decoder(identB)
+	jwkbb.UnregisterX509Decoder(identB)
 
 	// B must no longer decode.
 	_, err := jwk.ParseKey(pemFor("TRIO B"), jwk.WithPEM(true))
@@ -2662,7 +2671,7 @@ func TestUnregisterX509Decoder_StaleIndexMiddle(t *testing.T) {
 	// Now unregister C by ident. Before the fix this would panic
 	// with an out-of-range slice index.
 	require.NotPanics(t, func() {
-		jwk.UnregisterX509Decoder(identC)
+		jwkbb.UnregisterX509Decoder(identC)
 	})
 
 	// C must no longer decode; A must still decode.
@@ -2682,7 +2691,7 @@ func TestUnregisterX509Decoder_StaleIndexMiddle(t *testing.T) {
 func TestUnregisterX509Decoder_StaleIndexFirst(t *testing.T) {
 	identA, identB, identC, pemFor := registerTrioDecoders(t)
 
-	jwk.UnregisterX509Decoder(identA)
+	jwkbb.UnregisterX509Decoder(identA)
 
 	_, err := jwk.ParseKey(pemFor("TRIO A"), jwk.WithPEM(true))
 	require.Error(t, err)
@@ -2692,7 +2701,7 @@ func TestUnregisterX509Decoder_StaleIndexFirst(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NotPanics(t, func() {
-		jwk.UnregisterX509Decoder(identC)
+		jwkbb.UnregisterX509Decoder(identC)
 	})
 
 	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
@@ -2711,7 +2720,7 @@ func TestX509DecoderConcurrent(t *testing.T) {
 	require.NoError(t, err)
 
 	pemData := []byte("-----BEGIN TRIO CONCURRENT-----\ndGVzdCBkYXRh\n-----END TRIO CONCURRENT-----")
-	decoder := jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
+	decoder := jwkbb.X509DecodeFunc(func(block *pem.Block) (any, error) {
 		if block.Type == "TRIO CONCURRENT" {
 			return testKey, nil
 		}
@@ -2739,8 +2748,8 @@ func TestX509DecoderConcurrent(t *testing.T) {
 
 	for i := range 200 {
 		ident := fmt.Sprintf("test-concurrent-%d", i)
-		require.NoError(t, jwk.RegisterX509Decoder(ident, decoder))
-		jwk.UnregisterX509Decoder(ident)
+		require.NoError(t, jwkbb.RegisterX509Decoder(ident, decoder))
+		jwkbb.UnregisterX509Decoder(ident)
 	}
 
 	close(stop)

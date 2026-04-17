@@ -21,6 +21,7 @@ import (
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
 	"github.com/lestrrat-go/option/v3"
 )
 
@@ -647,7 +648,7 @@ func asnEncode(key Key) (string, []byte, error) {
 		if err != nil {
 			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
 		}
-		return pmECPrivateKey, buf, nil
+		return jwkbb.ECPrivateKeyBlockType, buf, nil
 	case RSAPrivateKey, OKPPrivateKey:
 		rawkey, err := Export[any](key)
 		if err != nil {
@@ -657,7 +658,7 @@ func asnEncode(key Key) (string, []byte, error) {
 		if err != nil {
 			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
 		}
-		return pmPrivateKey, buf, nil
+		return jwkbb.PrivateKeyBlockType, buf, nil
 	case RSAPublicKey, ECDSAPublicKey, OKPPublicKey:
 		rawkey, err := Export[any](key)
 		if err != nil {
@@ -667,7 +668,7 @@ func asnEncode(key Key) (string, []byte, error) {
 		if err != nil {
 			return "", nil, fmt.Errorf(`failed to marshal PKIX: %w`, err)
 		}
-		return pmPublicKey, buf, nil
+		return jwkbb.PublicKeyBlockType, buf, nil
 	default:
 		return "", nil, fmt.Errorf(`unsupported key type %T`, key)
 	}

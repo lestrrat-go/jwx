@@ -200,7 +200,7 @@ func WithPEM(v bool) ParseOption {
 // PEM encoded keys. This option can be passed to `jwk.Parse()`
 //
 // This option is planned to be deprecated in the future. The plan is to
-// use `jwk.RegisterX509Decoder()` to register a custom X.509 decoder globally.
+// use `jwkbb.RegisterX509Decoder()` to register a custom X.509 decoder globally.
 func WithPEMDecoder(v PEMDecoder) ParseOption {
 	return &parseOption{option.New(identPEMDecoder{}, v)}
 }

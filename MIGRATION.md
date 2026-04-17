@@ -46,6 +46,10 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `jwk.RegisterProbeField(reflect.StructField{...})` | `jwk.RegisterProbeField[T](name, jsonKey)` | No `reflect` import needed |
 | `jwk.Import(raw)` | `jwk.Import[T](raw)` | Generic return type |
 | `jwk.ParseKey(data)` | `jwk.ParseKey(data)` *(unchanged — returns `jwk.Key`)* / `jwk.ParseKeyAs[T](data)` | Typed subtype moved to `ParseKeyAs[T]` |
+| `jwk.RegisterX509Decoder(ident, d)` | `jwkbb.RegisterX509Decoder(ident, d)` | Moved to `jwk/jwkbb`; returns error on nil input instead of panicking |
+| `jwk.UnregisterX509Decoder(ident)` | `jwkbb.UnregisterX509Decoder(ident)` | Moved to `jwk/jwkbb` |
+| `jwk.X509Decoder` / `jwk.X509DecodeFunc` | `jwkbb.X509Decoder` / `jwkbb.X509DecodeFunc` | Moved to `jwk/jwkbb` |
+| *(not available)* | `jwkbb.RegisterX509Encoder(ident, e)` / `jwkbb.UnregisterX509Encoder(ident)` / `jwkbb.X509Encoder` / `jwkbb.X509EncodeFunc` | New in v4: custom PEM encoders for `jwk.EncodePEM` (e.g. PQC key formats) |
 | `jwk.NewCache(ctx, client)` | `jwkfetch.NewCache(ctx, client)` | Extension module (see Recipe 6) |
 | `jwk.Fetch(ctx, url, opts...)` | `jwkfetch.NewClient(opts...).Fetch(ctx, url)` | Extension module (see Recipe 6) |
 | `jwk.WithHTTPClient(c)` | `jwkfetch.WithHTTPClient(c)` | Extension module |

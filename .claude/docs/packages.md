@@ -46,7 +46,7 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 - Extension: `RegisterCustomField[T]()`, `RegisterCustomDecoder[T]()`, `RegisterKeyParser()`, `RegisterKeyImporter()`, `RegisterKeyExporter()`
 - Error sentinels: `ImportError()`, `ParseError()`, `WhitelistError()`, `ContinueError()`
 - Files: `jwk.go`, `set.go`, `parser.go`, `convert.go`, `fetch.go`, `interface.go`, `errors.go`, `x509.go`, `filter.go`, `rsa.go`, `ecdsa.go`, `okp.go`, `symmetric.go`, `akp.go`, `accessors.go`, `io.go`
-- Sub-packages: `jwk/ecdsa` — elliptic curve registration (`RegisterCurve(alg, curve, PointValidator)`, `CurveFromAlgorithm`, `AlgorithmFromCurve`, `ValidatorFromCurve`, `PointValidator` interface, `PointValidatorFunc` adapter); `jwk/jwkbb` — X.509/PEM encoding building blocks (`EncodeX509`, `DecodeX509`); `jwk/jwkunsafe` — low-level key constructors (`NewKey`, `NewPublicKey`) for extension modules
+- Sub-packages: `jwk/ecdsa` — elliptic curve registration (`RegisterCurve(alg, curve, PointValidator)`, `CurveFromAlgorithm`, `AlgorithmFromCurve`, `ValidatorFromCurve`, `PointValidator` interface, `PointValidatorFunc` adapter); `jwk/jwkbb` — X.509/PEM encoding building blocks: primitives `EncodeX509(dst, v)` / `DecodeX509(block)`, plus the decoder+encoder registries (`X509Decoder` / `X509DecodeFunc` / `RegisterX509Decoder(ident, d) error` / `UnregisterX509Decoder(ident)` / `DecodePEM(src)`, and the symmetric encoder side `X509Encoder` / `X509EncodeFunc` / `RegisterX509Encoder(ident, e) error` / `UnregisterX509Encoder(ident)` / `EncodePEM(v)`); `jwk/jwkunsafe` — low-level key constructors (`NewKey`, `NewPublicKey`) for extension modules
 - Imports: jwa, cert, transform, internal/{base64,json,ecutil}
 
 ## jws/

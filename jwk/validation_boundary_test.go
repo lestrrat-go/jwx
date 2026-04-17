@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v4/jwk"
+	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
 	"github.com/stretchr/testify/require"
 )
 
@@ -89,7 +90,7 @@ func TestParseWithPEMDecoderRejectsInvalidImportedKey(t *testing.T) {
 
 func TestParseKeyWithX509DecoderRejectsInvalidImportedKey(t *testing.T) {
 	ident := "test-invalid-x509-import-boundary"
-	err := jwk.RegisterX509Decoder(ident, jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
+	err := jwkbb.RegisterX509Decoder(ident, jwkbb.X509DecodeFunc(func(block *pem.Block) (any, error) {
 		if block.Type != "INVALID ECDSA" {
 			return nil, fmt.Errorf("unsupported type")
 		}
@@ -97,7 +98,7 @@ func TestParseKeyWithX509DecoderRejectsInvalidImportedKey(t *testing.T) {
 	}))
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		jwk.UnregisterX509Decoder(ident)
+		jwkbb.UnregisterX509Decoder(ident)
 	})
 
 	src := []byte(`-----BEGIN INVALID ECDSA-----

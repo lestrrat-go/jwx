@@ -99,6 +99,18 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   shape used by `jwk.Import[T]`. `jwk.ParseKey()` itself is unchanged from
   v3 and still returns `jwk.Key`.
 
+* The custom X509 PEM decoder extension points moved from `jwk` to `jwk/jwkbb`:
+  `jwk.RegisterX509Decoder` / `jwk.UnregisterX509Decoder` / `jwk.X509Decoder` /
+  `jwk.X509DecodeFunc` are now `jwkbb.RegisterX509Decoder` /
+  `jwkbb.UnregisterX509Decoder` / `jwkbb.X509Decoder` / `jwkbb.X509DecodeFunc`.
+  `RegisterX509Decoder` returns an error on nil input rather than panicking.
+
+* `jwk/jwkbb` also gains a symmetric X509 **encoder** registry
+  (`jwkbb.RegisterX509Encoder` / `UnregisterX509Encoder`, `X509Encoder` /
+  `X509EncodeFunc`, `EncodePEM`) so extension modules can emit custom PEM
+  block types for key families that the stdlib `crypto/x509` package does
+  not natively handle.
+
 * `jwk.Fetch()` and `jwk.Cache` have both been removed from the main module, along
   with every other HTTP-touching entry point. The core `jwk` package no longer
   depends on `net/http` or `httprc`. All HTTP-backed JWKS retrieval — one-shot
