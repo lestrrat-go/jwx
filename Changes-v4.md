@@ -105,13 +105,16 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   `jwkbb.UnregisterX509Decoder` / `jwkbb.X509Decoder` / `jwkbb.X509DecodeFunc`.
   `RegisterX509Decoder` returns an error on nil input rather than panicking.
 
-* `jwk/jwkbb` also gains a symmetric X509 **encoder** registry
-  (`jwkbb.RegisterX509Encoder` / `UnregisterX509Encoder`, `X509Encoder` /
-  `X509EncodeFunc`), and a variadic `jwkbb.EncodePEM(keys ...any) ([]byte, error)`
-  that runs each raw key through the encoder chain and concatenates the
-  resulting PEM blocks. `jwkbb.X509Decoders()` / `jwkbb.X509Encoders()`
-  expose `iter.Seq` snapshots of the current registrations for callers
-  that need to drive their own dispatch loop.
+* `jwk/jwkbb` also gains an X509 **encoder** registry keyed by Go
+  type: `jwkbb.RegisterX509Encoder[T](X509Encoder[T]) error` /
+  `jwkbb.UnregisterX509Encoder[T]()`, with generic interface
+  `X509Encoder[T]` and func adapter `X509EncodeFunc[T]`. The variadic
+  `jwkbb.EncodePEM(keys ...any) ([]byte, error)` dispatches each key
+  to the encoder registered for its runtime type and concatenates the
+  resulting PEM blocks in order. `jwkbb.X509Decoders()` returns an
+  `iter.Seq` snapshot of the decoder chain for callers that need to
+  drive their own dispatch loop; there is no matching iterator on the
+  encoder side because dispatch is direct rather than chained.
 
 * `jwk.PEMDecoder`, `jwk.PEMDecodeFunc`, `jwk.PEMEncoder`,
   `jwk.PEMEncodeFunc`, `jwk.NewPEMDecoder`, and the

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"iter"
+	"reflect"
 	"sync"
 )
 
@@ -28,25 +29,51 @@ func (f X509DecodeFunc) DecodeX509(block *pem.Block) (any, error) {
 	return f(block)
 }
 
-// X509Encoder encodes a raw key into a PEM block type and its DER
-// bytes. Register a custom implementation via [RegisterX509Encoder] to
-// extend [EncodePEM] to additional key families such as PQC keys.
-type X509Encoder interface {
-	EncodeX509(v any) (blockType string, der []byte, err error)
+// X509Encoder encodes a value of type T into a PEM block type and its
+// DER bytes. Register a custom implementation via [RegisterX509Encoder]
+// to extend [EncodePEM] to additional key families such as PQC keys.
+//
+// The type parameter is the key under which the encoder is registered:
+// [EncodePEM] dispatches by the runtime type of each input value, so a
+// caller that registers `X509Encoder[*mypkg.Key]` will receive
+// `*mypkg.Key` values and nothing else.
+type X509Encoder[T any] interface {
+	EncodeX509(v T) (blockType string, der []byte, err error)
 }
 
 // X509EncodeFunc is a function adapter that implements [X509Encoder].
-type X509EncodeFunc func(v any) (blockType string, der []byte, err error)
+type X509EncodeFunc[T any] func(v T) (blockType string, der []byte, err error)
 
 // EncodeX509 calls the underlying function.
-func (f X509EncodeFunc) EncodeX509(v any) (string, []byte, error) {
+func (f X509EncodeFunc[T]) EncodeX509(v T) (string, []byte, error) {
 	return f(v)
 }
 
-// muX509 protects both the decoder and encoder registries. Readers
-// snapshot the relevant slice under RLock and iterate their own
-// immutable copy; writers rebuild the slice so in-flight readers are
-// unaffected.
+// x509Encoder is the registry-internal erased shape. Each registration
+// stores a [x509EncoderAdapter] that unboxes the `any` back to the
+// parameterized T and forwards to the user-supplied encoder.
+type x509Encoder interface {
+	encode(v any) (blockType string, der []byte, err error)
+}
+
+type x509EncoderAdapter[T any] struct {
+	enc X509Encoder[T]
+}
+
+func (a *x509EncoderAdapter[T]) encode(v any) (string, []byte, error) {
+	typed, ok := v.(T)
+	if !ok {
+		return "", nil, fmt.Errorf(`jwkbb: encoder registered for %T cannot encode %T`, *new(T), v)
+	}
+	return a.enc.EncodeX509(typed)
+}
+
+// muX509 protects both registries. Decoder readers take an RLock,
+// capture the current slice header, and release before iterating —
+// writers replace the variable with a freshly allocated slice so
+// in-flight readers keep walking their immutable copy. Encoder reads
+// are direct map lookups under RLock with no user code called while
+// the lock is held.
 var muX509 sync.RWMutex
 
 var (
@@ -55,14 +82,9 @@ var (
 	x509DecoderList   = []X509Decoder{}
 )
 
-var (
-	x509Encoders      = map[any]X509Encoder{}
-	x509EncoderIdents = []any{}
-	x509EncoderList   = []X509Encoder{}
-)
+var x509Encoders = map[reflect.Type]x509Encoder{}
 
 type identDefaultX509Decoder struct{}
-type identDefaultX509Encoder struct{}
 
 func init() {
 	if err := RegisterX509Decoder(identDefaultX509Decoder{}, X509DecodeFunc(func(block *pem.Block) (any, error) {
@@ -70,43 +92,72 @@ func init() {
 	})); err != nil {
 		panic(fmt.Sprintf("jwkbb: failed to register default X509 decoder: %s", err))
 	}
-	if err := RegisterX509Encoder(identDefaultX509Encoder{}, X509EncodeFunc(defaultX509Encode)); err != nil {
+
+	// Default encoders, one per stdlib crypto type. Splitting the
+	// old type-switch across discrete registrations is what lets
+	// extension modules slot in a new key family (ML-DSA, ML-KEM, …)
+	// just by calling RegisterX509Encoder[T] — no central dispatch to
+	// edit.
+	panicIfRegisterDefaultEncoderFailed(RegisterX509Encoder[*rsa.PrivateKey](X509EncodeFunc[*rsa.PrivateKey](rsaPrivateKeyEncoder)))
+	panicIfRegisterDefaultEncoderFailed(RegisterX509Encoder[*ecdsa.PrivateKey](X509EncodeFunc[*ecdsa.PrivateKey](ecdsaPrivateKeyEncoder)))
+	panicIfRegisterDefaultEncoderFailed(RegisterX509Encoder[ed25519.PrivateKey](X509EncodeFunc[ed25519.PrivateKey](ed25519PrivateKeyEncoder)))
+	panicIfRegisterDefaultEncoderFailed(RegisterX509Encoder[*rsa.PublicKey](X509EncodeFunc[*rsa.PublicKey](rsaPublicKeyEncoder)))
+	panicIfRegisterDefaultEncoderFailed(RegisterX509Encoder[*ecdsa.PublicKey](X509EncodeFunc[*ecdsa.PublicKey](ecdsaPublicKeyEncoder)))
+	panicIfRegisterDefaultEncoderFailed(RegisterX509Encoder[ed25519.PublicKey](X509EncodeFunc[ed25519.PublicKey](ed25519PublicKeyEncoder)))
+}
+
+func panicIfRegisterDefaultEncoderFailed(err error) {
+	if err != nil {
 		panic(fmt.Sprintf("jwkbb: failed to register default X509 encoder: %s", err))
 	}
 }
 
-// defaultX509Encode handles the stdlib crypto key types supported by
-// the main jwk package: RSA, ECDSA, and Ed25519 keys (public and
-// private). Anything else must be handled by a registered encoder.
-func defaultX509Encode(v any) (string, []byte, error) {
-	switch v := v.(type) {
-	case *rsa.PrivateKey:
-		marshaled, err := x509.MarshalPKCS8PrivateKey(v)
-		if err != nil {
-			return "", nil, err
-		}
-		return PrivateKeyBlockType, marshaled, nil
-	case *ecdsa.PrivateKey:
-		marshaled, err := x509.MarshalECPrivateKey(v)
-		if err != nil {
-			return "", nil, err
-		}
-		return ECPrivateKeyBlockType, marshaled, nil
-	case ed25519.PrivateKey:
-		marshaled, err := x509.MarshalPKCS8PrivateKey(v)
-		if err != nil {
-			return "", nil, err
-		}
-		return PrivateKeyBlockType, marshaled, nil
-	case *rsa.PublicKey, *ecdsa.PublicKey, ed25519.PublicKey:
-		marshaled, err := x509.MarshalPKIXPublicKey(v)
-		if err != nil {
-			return "", nil, err
-		}
-		return PublicKeyBlockType, marshaled, nil
-	default:
-		return "", nil, fmt.Errorf(`unsupported type %T for ASN.1 DER encoding: EncodePEM requires raw Go crypto keys (e.g. *rsa.PrivateKey, *ecdsa.PublicKey, ed25519.PrivateKey); convert a jwk.Key via jwk.Export[any] or a jwk.Set via jwk.ExportAll[any] first, or register a custom encoder with jwkbb.RegisterX509Encoder`, v)
+func rsaPrivateKeyEncoder(v *rsa.PrivateKey) (string, []byte, error) {
+	der, err := x509.MarshalPKCS8PrivateKey(v)
+	if err != nil {
+		return "", nil, err
 	}
+	return PrivateKeyBlockType, der, nil
+}
+
+func ecdsaPrivateKeyEncoder(v *ecdsa.PrivateKey) (string, []byte, error) {
+	der, err := x509.MarshalECPrivateKey(v)
+	if err != nil {
+		return "", nil, err
+	}
+	return ECPrivateKeyBlockType, der, nil
+}
+
+func ed25519PrivateKeyEncoder(v ed25519.PrivateKey) (string, []byte, error) {
+	der, err := x509.MarshalPKCS8PrivateKey(v)
+	if err != nil {
+		return "", nil, err
+	}
+	return PrivateKeyBlockType, der, nil
+}
+
+func rsaPublicKeyEncoder(v *rsa.PublicKey) (string, []byte, error) {
+	der, err := x509.MarshalPKIXPublicKey(v)
+	if err != nil {
+		return "", nil, err
+	}
+	return PublicKeyBlockType, der, nil
+}
+
+func ecdsaPublicKeyEncoder(v *ecdsa.PublicKey) (string, []byte, error) {
+	der, err := x509.MarshalPKIXPublicKey(v)
+	if err != nil {
+		return "", nil, err
+	}
+	return PublicKeyBlockType, der, nil
+}
+
+func ed25519PublicKeyEncoder(v ed25519.PublicKey) (string, []byte, error) {
+	der, err := x509.MarshalPKIXPublicKey(v)
+	if err != nil {
+		return "", nil, err
+	}
+	return PublicKeyBlockType, der, nil
 }
 
 // RegisterX509Decoder adds decoder to the registry keyed by ident.
@@ -184,87 +235,41 @@ func X509Decoders() iter.Seq[X509Decoder] {
 	}
 }
 
-// RegisterX509Encoder adds encoder to the registry keyed by ident.
-// ident must be comparable and non-nil; encoder must be non-nil. A
-// duplicate ident is a no-op (returns nil) to preserve idempotent
-// extension-module init() behavior.
+// RegisterX509Encoder installs encoder as the handler for values of
+// type T. [EncodePEM] dispatches by the runtime type of each input, so
+// exactly one encoder owns a given Go type. A later Register for the
+// same T overwrites the previous registration — the library uses this
+// to install its stdlib defaults in init(); callers that want to
+// override a default should call [UnregisterX509Encoder] first (or
+// accept the overwrite) and are responsible for restoring the default
+// at shutdown if the override was meant to be scoped.
 //
-// Encoders are tried in registration order and the first encoder that
-// returns without error wins for a given key. The built-in stdlib
-// encoder is registered first during package init, so a custom
-// encoder registered for a stdlib type (e.g. *rsa.PrivateKey) will
-// never be reached because the default encoder claims it first.
-// Register for types the default does not handle — PQC keys, custom
-// opaque types, etc.
-func RegisterX509Encoder(ident any, encoder X509Encoder) error {
-	if ident == nil {
-		return errors.New(`jwkbb.RegisterX509Encoder: ident must not be nil`)
-	}
+// encoder must be non-nil. The error return is reserved for future
+// validation; today it only surfaces a nil-encoder programming error.
+func RegisterX509Encoder[T any](encoder X509Encoder[T]) error {
 	if encoder == nil {
 		return errors.New(`jwkbb.RegisterX509Encoder: encoder must not be nil`)
 	}
-
 	muX509.Lock()
 	defer muX509.Unlock()
-	if _, ok := x509Encoders[ident]; ok {
-		return nil
-	}
-	x509Encoders[ident] = encoder
-	x509EncoderIdents = append(x509EncoderIdents, ident)
-	next := make([]X509Encoder, len(x509EncoderList)+1)
-	copy(next, x509EncoderList)
-	next[len(x509EncoderList)] = encoder
-	x509EncoderList = next
+	x509Encoders[reflect.TypeFor[T]()] = &x509EncoderAdapter[T]{enc: encoder}
 	return nil
 }
 
-// UnregisterX509Encoder removes the encoder registered under ident. A
-// no-op if no encoder is registered for ident.
-func UnregisterX509Encoder(ident any) {
+// UnregisterX509Encoder removes the encoder registered for type T. A
+// no-op if no encoder is registered for T.
+func UnregisterX509Encoder[T any]() {
 	muX509.Lock()
 	defer muX509.Unlock()
-	if _, ok := x509Encoders[ident]; !ok {
-		return
-	}
-	delete(x509Encoders, ident)
-
-	nextIdents := make([]any, 0, len(x509EncoderIdents)-1)
-	nextList := make([]X509Encoder, 0, len(x509EncoderList)-1)
-	for _, id := range x509EncoderIdents {
-		if id == ident {
-			continue
-		}
-		nextIdents = append(nextIdents, id)
-		nextList = append(nextList, x509Encoders[id])
-	}
-	x509EncoderIdents = nextIdents
-	x509EncoderList = nextList
-}
-
-// X509Encoders returns an iterator over every registered [X509Encoder]
-// in registration order. The iterator is backed by a snapshot taken at
-// call time, so concurrent Register/Unregister activity during
-// iteration does not mutate the sequence the caller is walking.
-func X509Encoders() iter.Seq[X509Encoder] {
-	muX509.RLock()
-	snapshot := x509EncoderList
-	muX509.RUnlock()
-	return func(yield func(X509Encoder) bool) {
-		for _, e := range snapshot {
-			if !yield(e) {
-				return
-			}
-		}
-	}
+	delete(x509Encoders, reflect.TypeFor[T]())
 }
 
 // EncodePEM encodes each key into a PEM block and returns the
 // concatenated PEM-encoded bytes in the order given.
 //
-// Each key is passed through every registered [X509Encoder] in
-// registration order; the first encoder that returns without error
-// produces the block for that key. An error from any key aborts the
-// call; partial output is not returned.
+// Each key is dispatched by its runtime Go type to the encoder
+// registered via [RegisterX509Encoder]. A key with no registered
+// encoder aborts the call; partial output is not returned.
 //
 // Calling EncodePEM with no keys returns an error.
 //
@@ -272,32 +277,31 @@ func X509Encoders() iter.Seq[X509Encoder] {
 // *ecdsa.PublicKey, ed25519.PrivateKey). To encode a [jwk.Key] or a
 // [jwk.Set], export to raw via `jwk.Export[any]` / `jwk.ExportAll[any]`
 // first and then hand the results here.
+//
+// Named types are looked up by exact identity: a value declared as a
+// raw `[]byte` will not match an encoder registered for
+// `ed25519.PublicKey` even though the underlying types are equal.
+// Callers that round-trip through `jwk.Export[any]` get the named
+// type back and do not need to worry about this.
 func EncodePEM(keys ...any) ([]byte, error) {
 	if len(keys) == 0 {
 		return nil, errors.New(`jwkbb.EncodePEM: at least one key is required`)
 	}
 
-	muX509.RLock()
-	snapshot := x509EncoderList
-	muX509.RUnlock()
-
 	var out []byte
 	for i, v := range keys {
-		var errs []error
-		encoded := false
-		for _, e := range snapshot {
-			blockType, der, err := e.EncodeX509(v)
-			if err != nil {
-				errs = append(errs, err)
-				continue
-			}
-			out = append(out, pem.EncodeToMemory(&pem.Block{Type: blockType, Bytes: der})...)
-			encoded = true
-			break
+		t := reflect.TypeOf(v)
+		muX509.RLock()
+		enc, ok := x509Encoders[t]
+		muX509.RUnlock()
+		if !ok {
+			return nil, fmt.Errorf(`jwkbb.EncodePEM: key #%d (%T): no encoder registered; EncodePEM requires raw Go crypto keys (e.g. *rsa.PrivateKey, *ecdsa.PublicKey, ed25519.PrivateKey). Convert a jwk.Key via jwk.Export[any] or a jwk.Set via jwk.ExportAll[any] first, or register a custom encoder with jwkbb.RegisterX509Encoder`, i, v)
 		}
-		if !encoded {
-			return nil, fmt.Errorf(`jwkbb.EncodePEM: key #%d (%T): %w`, i, v, errors.Join(errs...))
+		blockType, der, err := enc.encode(v)
+		if err != nil {
+			return nil, fmt.Errorf(`jwkbb.EncodePEM: key #%d (%T): %w`, i, v, err)
 		}
+		out = append(out, pem.EncodeToMemory(&pem.Block{Type: blockType, Bytes: der})...)
 	}
 	return out, nil
 }

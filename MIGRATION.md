@@ -49,7 +49,7 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `jwk.RegisterX509Decoder(ident, d)` | `jwkbb.RegisterX509Decoder(ident, d)` | Moved to `jwk/jwkbb`; returns error on nil input instead of panicking |
 | `jwk.UnregisterX509Decoder(ident)` | `jwkbb.UnregisterX509Decoder(ident)` | Moved to `jwk/jwkbb` |
 | `jwk.X509Decoder` / `jwk.X509DecodeFunc` | `jwkbb.X509Decoder` / `jwkbb.X509DecodeFunc` | Moved to `jwk/jwkbb` |
-| *(not available)* | `jwkbb.RegisterX509Encoder(ident, e)` / `jwkbb.UnregisterX509Encoder(ident)` / `jwkbb.X509Encoder` / `jwkbb.X509EncodeFunc` | New in v4: custom PEM encoders for `jwkbb.EncodePEM` (e.g. PQC key formats) |
+| *(not available)* | `jwkbb.RegisterX509Encoder[T](e)` / `jwkbb.UnregisterX509Encoder[T]()` / `jwkbb.X509Encoder[T]` / `jwkbb.X509EncodeFunc[T]` | New in v4: custom PEM encoders for `jwkbb.EncodePEM`, keyed by Go type (e.g. PQC key formats) |
 | `jwk.PEMDecoder` / `jwk.PEMDecodeFunc` / `jwk.PEMEncoder` / `jwk.PEMEncodeFunc` / `jwk.NewPEMDecoder()` | *(removed)* | Plumbing types removed; register a custom decoder through `jwkbb.RegisterX509Decoder` instead |
 | `jwk.WithPEMDecoder(d)` | *(removed)* | Use `jwkbb.RegisterX509Decoder(ident, d)` to install a custom PEM block decoder globally |
 | `jwk.WithPEM(true)` | `jwk.WithX509(true)` | Single option for "input is PEM-framed X.509"; `WithPEM` was a pre-release alias scheduled for removal |

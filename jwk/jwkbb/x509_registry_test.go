@@ -7,7 +7,6 @@ import (
 	"crypto/rsa"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
@@ -78,75 +77,6 @@ func TestRegisterX509Decoder_NilIdent(t *testing.T) {
 	})
 }
 
-func TestRegisterX509Encoder_NilError(t *testing.T) {
-	require.NotPanics(t, func() {
-		err := jwkbb.RegisterX509Encoder("test-nil-encoder", nil)
-		require.Error(t, err)
-	})
-}
-
-func TestRegisterX509Encoder_NilIdent(t *testing.T) {
-	require.NotPanics(t, func() {
-		err := jwkbb.RegisterX509Encoder(nil, jwkbb.X509EncodeFunc(func(any) (string, []byte, error) {
-			return "", nil, errors.New("unused")
-		}))
-		require.Error(t, err)
-	})
-}
-
-// A registered custom encoder must be reachable via X509Encoders() and
-// produce the bytes it returns.
-func TestRegisterX509Encoder_CustomReachableViaIterator(t *testing.T) {
-	type fakeKey struct{ tag string }
-
-	const blockType = "FAKE KEY"
-	ident := "test-custom-encoder-iter"
-
-	require.NoError(t, jwkbb.RegisterX509Encoder(ident, jwkbb.X509EncodeFunc(func(v any) (string, []byte, error) {
-		fk, ok := v.(*fakeKey)
-		if !ok {
-			return "", nil, fmt.Errorf("not my type")
-		}
-		return blockType, []byte("custom-der:" + fk.tag), nil
-	})))
-	t.Cleanup(func() { jwkbb.UnregisterX509Encoder(ident) })
-
-	// Walk the iterator until an encoder claims the fake key.
-	var gotType string
-	var gotDER []byte
-	for e := range jwkbb.X509Encoders() {
-		typ, der, err := e.EncodeX509(&fakeKey{tag: "abc"})
-		if err != nil {
-			continue
-		}
-		gotType, gotDER = typ, der
-		break
-	}
-	require.Equal(t, blockType, gotType, "custom encoder should be reachable via the registry iterator")
-	require.Equal(t, "custom-der:abc", string(gotDER))
-}
-
-// Duplicate-ident Register is a no-op.
-func TestRegisterX509Encoder_DuplicateIdentIsNoop(t *testing.T) {
-	ident := "test-duplicate-encoder"
-	enc := jwkbb.X509EncodeFunc(func(any) (string, []byte, error) {
-		return "", nil, errors.New("not handled")
-	})
-
-	require.NoError(t, jwkbb.RegisterX509Encoder(ident, enc))
-	t.Cleanup(func() { jwkbb.UnregisterX509Encoder(ident) })
-
-	// Second registration under the same ident is silent and successful.
-	require.NoError(t, jwkbb.RegisterX509Encoder(ident, enc))
-}
-
-// Unregister of an unknown ident is silent; no panic.
-func TestUnregisterX509Encoder_UnknownIdent(t *testing.T) {
-	require.NotPanics(t, func() {
-		jwkbb.UnregisterX509Encoder("never-registered")
-	})
-}
-
 // Unregister of an unknown decoder ident is silent; no panic.
 func TestUnregisterX509Decoder_UnknownIdent(t *testing.T) {
 	require.NotPanics(t, func() {
@@ -154,22 +84,62 @@ func TestUnregisterX509Decoder_UnknownIdent(t *testing.T) {
 	})
 }
 
-// Iterator early-termination (via break) must not leak goroutines or
-// leave locks held.
-func TestX509Encoders_IteratorEarlyExit(t *testing.T) {
-	seen := 0
-	for range jwkbb.X509Encoders() {
-		seen++
-		break
-	}
-	require.GreaterOrEqual(t, seen, 1, "at least the default encoder should be present")
-	// If the mutex were not released, a subsequent Register call would
-	// hang indefinitely; require.Eventually would mask that, so we
-	// just make a single register call that will deadlock the test if
-	// the snapshot iterator holds the lock.
-	ident := "iterator-exit-probe"
-	require.NoError(t, jwkbb.RegisterX509Encoder(ident, jwkbb.X509EncodeFunc(func(any) (string, []byte, error) {
-		return "", nil, errors.New("probe")
+// fakeKey is declared at package scope so its type identity is stable
+// across the encoder-registry tests that key off it.
+type fakeKey struct{ tag string }
+
+func fakeKeyEncoder(v *fakeKey) (string, []byte, error) {
+	return "FAKE KEY", []byte("custom-der:" + v.tag), nil
+}
+
+func TestRegisterX509Encoder_NilError(t *testing.T) {
+	require.NotPanics(t, func() {
+		err := jwkbb.RegisterX509Encoder[*fakeKey](nil)
+		require.Error(t, err)
+	})
+}
+
+// A registered custom encoder must be reachable via EncodePEM, which
+// dispatches by the runtime type of its input.
+func TestRegisterX509Encoder_CustomReachable(t *testing.T) {
+	require.NoError(t, jwkbb.RegisterX509Encoder[*fakeKey](jwkbb.X509EncodeFunc[*fakeKey](fakeKeyEncoder)))
+	t.Cleanup(func() { jwkbb.UnregisterX509Encoder[*fakeKey]() })
+
+	out, err := jwkbb.EncodePEM(&fakeKey{tag: "abc"})
+	require.NoError(t, err)
+
+	block, rest := pem.Decode(out)
+	require.NotNil(t, block, "EncodePEM should emit a decodable PEM block")
+	require.Equal(t, "FAKE KEY", block.Type, "custom encoder should own its type")
+	require.Equal(t, "custom-der:abc", string(block.Bytes))
+	require.Empty(t, rest, "no trailing bytes expected")
+}
+
+// Re-registering the same T overwrites the previous encoder. The
+// registry is a direct type→encoder dispatch, so "last registration
+// wins" is the intended semantic for both tests that swap in a
+// temporary encoder and extension modules that want to replace a
+// stdlib default.
+func TestRegisterX509Encoder_OverwritesSameType(t *testing.T) {
+	require.NoError(t, jwkbb.RegisterX509Encoder[*fakeKey](jwkbb.X509EncodeFunc[*fakeKey](func(*fakeKey) (string, []byte, error) {
+		return "", nil, errors.New("first encoder")
 	})))
-	jwkbb.UnregisterX509Encoder(ident)
+	t.Cleanup(func() { jwkbb.UnregisterX509Encoder[*fakeKey]() })
+
+	require.NoError(t, jwkbb.RegisterX509Encoder[*fakeKey](jwkbb.X509EncodeFunc[*fakeKey](fakeKeyEncoder)))
+
+	out, err := jwkbb.EncodePEM(&fakeKey{tag: "winner"})
+	require.NoError(t, err, "the second registration should own *fakeKey")
+
+	block, _ := pem.Decode(out)
+	require.NotNil(t, block)
+	require.Equal(t, "custom-der:winner", string(block.Bytes))
+}
+
+// Unregistering a type with no registered encoder is a silent no-op.
+func TestUnregisterX509Encoder_NoneRegistered(t *testing.T) {
+	type neverRegistered struct{}
+	require.NotPanics(t, func() {
+		jwkbb.UnregisterX509Encoder[neverRegistered]()
+	})
 }
