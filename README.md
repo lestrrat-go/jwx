@@ -51,7 +51,7 @@ import (
 
 func Example() {
   // Parse, serialize, slice and dice JWKs!
-  privkey, err := jwk.ParseKey(jsonRSAPrivateKey)
+  privkey, err := jwk.ParseKey[jwk.Key](jsonRSAPrivateKey)
   if err != nil {
     fmt.Printf("failed to parse JWK: %s\n", err)
     return

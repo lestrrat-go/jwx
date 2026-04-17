@@ -134,7 +134,7 @@ func Example_jwk_parse_key() {
     "kid":"1"
   }`
 
-  key, err := jwk.ParseKeyAs[jwk.ECDSAPublicKey]([]byte(src))
+  key, err := jwk.ParseKey[jwk.ECDSAPublicKey]([]byte(src))
   if err != nil {
     fmt.Printf("failed parse key: %s\n", err)
     return
@@ -193,7 +193,7 @@ z8CjezfckLs7UKJOlhu3OU9TFsiGDzSDBZdDWO1/uciJ/AAWeSmsBt8cKL0MirIr
 c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 -----END CERTIFICATE-----`
 
-  key, err := jwk.ParseKeyAs[jwk.RSAPublicKey]([]byte(src), jwk.WithPEM(true))
+  key, err := jwk.ParseKey[jwk.RSAPublicKey]([]byte(src), jwk.WithPEM(true))
   if err != nil {
     fmt.Printf("failed to parse key in PEM format: %s\n", err)
     return
@@ -396,7 +396,7 @@ func Example_jwk_struct_field() {
 
   // Parse the intercepted `Proxy.Key` as a `jwk.Key`
   // and assign it to `Container.Key`
-  key, err := jwk.ParseKey(p.Key)
+  key, err := jwk.ParseKey[jwk.Key](p.Key)
   if err != nil {
     fmt.Printf("failed to parse key: %s\n", err)
     return
@@ -465,7 +465,7 @@ func Example_jwk_import() {
   // What you want to do is to _parse_ `buf`.
   //
   //  keyset, _ := jwk.Parse(buf)
-  //  key, _    := jwk.ParseKey(buf)
+  //  key, _    := jwk.ParseKey[jwk.Key](buf)
   //
   // See other examples in examples/jwk_parse_key_example_test.go and
   // examples/jwk_parse_jwks_example_test.go
