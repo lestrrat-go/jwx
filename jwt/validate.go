@@ -449,10 +449,10 @@ func (ccs claimContainsString) Validate(_ context.Context, t Token) error {
 
 	if !slices.Contains(list, ccs.value) {
 		if ccs.makeErr != nil {
-			return ccs.makeErr(`%q not satisfied`, ccs.name)
+			return ccs.makeErr(`claim %q does not contain the expected value`, ccs.name)
 		}
 		return newClaimValidationError(ccs.name, ccs.value, list,
-			fmt.Sprintf(`%q not satisfied`, ccs.name))
+			fmt.Sprintf(`claim %q does not contain the expected value`, ccs.name))
 	}
 	return nil
 }
