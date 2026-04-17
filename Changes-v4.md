@@ -107,9 +107,11 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 * `jwk/jwkbb` also gains a symmetric X509 **encoder** registry
   (`jwkbb.RegisterX509Encoder` / `UnregisterX509Encoder`, `X509Encoder` /
-  `X509EncodeFunc`, `EncodePEM`) so extension modules can emit custom PEM
-  block types for key families that the stdlib `crypto/x509` package does
-  not natively handle.
+  `X509EncodeFunc`). `jwkbb.X509Decoders()` / `jwkbb.X509Encoders()`
+  expose `iter.Seq` snapshots of the current registrations so that
+  `jwk` (and extension-facing integrations) can drive their own
+  dispatch loop. End users keep calling `jwk.EncodePEM` / `jwk.ParseKey`
+  and get the custom PEM block types automatically.
 
 * `jwk.Fetch()` and `jwk.Cache` have both been removed from the main module, along
   with every other HTTP-touching entry point. The core `jwk` package no longer

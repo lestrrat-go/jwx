@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"iter"
 	"sync"
 )
 
@@ -154,31 +155,21 @@ func UnregisterX509Decoder(ident any) {
 	x509DecoderList = nextList
 }
 
-// DecodePEM decodes a single PEM block from src by trying each
-// registered [X509Decoder] in registration order. The first decoder
-// that returns without error wins. If every decoder fails, DecodePEM
-// returns the joined error chain wrapped with context.
-func DecodePEM(src []byte) (any, error) {
-	block, _ := pem.Decode(src)
-	if block == nil {
-		return nil, fmt.Errorf(`failed to decode PEM data`)
-	}
-
+// X509Decoders returns an iterator over every registered [X509Decoder]
+// in registration order. The iterator is backed by a snapshot taken at
+// call time, so concurrent Register/Unregister activity during
+// iteration does not mutate the sequence the caller is walking.
+func X509Decoders() iter.Seq[X509Decoder] {
 	muX509.RLock()
 	snapshot := x509DecoderList
 	muX509.RUnlock()
-
-	var errs []error
-	for _, d := range snapshot {
-		ret, err := d.DecodeX509(block)
-		if err != nil {
-			errs = append(errs, err)
-			continue
+	return func(yield func(X509Decoder) bool) {
+		for _, d := range snapshot {
+			if !yield(d) {
+				return
+			}
 		}
-		return ret, nil
 	}
-
-	return nil, fmt.Errorf(`failed to decode X509 data using any of the decoders: %w`, errors.Join(errs...))
 }
 
 // RegisterX509Encoder adds encoder to the registry keyed by ident.
@@ -230,25 +221,19 @@ func UnregisterX509Encoder(ident any) {
 	x509EncoderList = nextList
 }
 
-// EncodePEM encodes v into PEM-encoded bytes by trying each registered
-// [X509Encoder] in registration order. The first encoder that returns
-// without error wins. If every encoder fails, EncodePEM returns the
-// joined error chain wrapped with context.
-func EncodePEM(v any) ([]byte, error) {
+// X509Encoders returns an iterator over every registered [X509Encoder]
+// in registration order. The iterator is backed by a snapshot taken at
+// call time, so concurrent Register/Unregister activity during
+// iteration does not mutate the sequence the caller is walking.
+func X509Encoders() iter.Seq[X509Encoder] {
 	muX509.RLock()
 	snapshot := x509EncoderList
 	muX509.RUnlock()
-
-	var errs []error
-	for _, e := range snapshot {
-		blockType, der, err := e.EncodeX509(v)
-		if err != nil {
-			errs = append(errs, err)
-			continue
+	return func(yield func(X509Encoder) bool) {
+		for _, e := range snapshot {
+			if !yield(e) {
+				return
+			}
 		}
-		block := &pem.Block{Type: blockType, Bytes: der}
-		return pem.EncodeToMemory(block), nil
 	}
-
-	return nil, fmt.Errorf(`failed to encode %T using any of the encoders: %w`, v, errors.Join(errs...))
 }

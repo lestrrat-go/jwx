@@ -2,6 +2,7 @@ package jwk
 
 import (
 	"encoding/pem"
+	"errors"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
@@ -54,7 +55,18 @@ func EncodePEM(v any) ([]byte, error) {
 		}
 		v = raw
 	}
-	return jwkbb.EncodePEM(v)
+
+	var errs []error
+	for e := range jwkbb.X509Encoders() {
+		blockType, der, err := e.EncodeX509(v)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		block := &pem.Block{Type: blockType, Bytes: der}
+		return pem.EncodeToMemory(block), nil
+	}
+	return nil, fmt.Errorf(`failed to encode %T using any of the encoders: %w`, v, errors.Join(errs...))
 }
 
 // NewPEMDecoder returns a PEMDecoder that decodes keys in PEM encoded ASN.1 DER format.
@@ -83,11 +95,26 @@ func (pemDecoder) Decode(src []byte) (any, []byte, error) {
 	return ret, rest, nil
 }
 
-// decodeX509 decodes a PEM encoded ASN.1 DER format and returns the raw key.
-// It delegates to [jwkbb.DecodePEM], which iterates every registered
-// [jwkbb.X509Decoder] in registration order.
+// decodeX509 decodes a PEM encoded ASN.1 DER format and returns the raw
+// key. It iterates every [jwkbb.X509Decoder] registered via
+// [jwkbb.RegisterX509Decoder] in registration order; the first decoder
+// that succeeds wins.
 func decodeX509(src []byte) (any, error) {
-	return jwkbb.DecodePEM(src)
+	block, _ := pem.Decode(src)
+	if block == nil {
+		return nil, fmt.Errorf(`failed to decode PEM data`)
+	}
+
+	var errs []error
+	for d := range jwkbb.X509Decoders() {
+		ret, err := d.DecodeX509(block)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		return ret, nil
+	}
+	return nil, fmt.Errorf(`failed to decode X509 data using any of the decoders: %w`, errors.Join(errs...))
 }
 
 func decodeX509WithPEMDEcoder(src []byte, decoder PEMDecoder) (any, error) {
