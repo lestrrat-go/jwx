@@ -61,7 +61,7 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `jws.RegisterSigner(alg, any)` | `jws.RegisterSigner(alg, Signer)` | Typed parameter |
 | `jws.RegisterVerifier(alg, any)` | `jws.RegisterVerifier(alg, Verifier)` | Typed parameter |
 | `jwx.DecoderSettings(jwx.WithUseNumber(true))` | `jwx.Settings(jwx.WithUseNumber(true))` | API renamed |
-| `jwt.Settings(...)` / `jws.Settings(...)` / `jwe.Settings(...)` / `cert.Settings(...)` (void, panicked on bad input) | same name, now returns `error` | Invalid values return an error instead of panicking |
+| `jwt.Settings(...)` / `jws.Settings(...)` / `jwe.Settings(...)` / `cert.Settings(...)` / `jwx.Settings(...)` (void) | same name, now returns `error` | Invalid values return an error instead of panicking (jwx validates nil encoder/decoder; others validate their size limits) |
 | `errors.Is(err, jwt.TokenExpiredError())` | `errors.Is(err, jwt.TokenExpiredError{})` | Sentinel funcs → struct types; see Recipe 13 |
 | `-tags=jwx_goccy` | _(removed)_ | json/v2 is the only backend |
 | `-tags=jwx_es256k` | `github.com/jwx-go/es256k/v4` | Extension module |
@@ -475,19 +475,25 @@ These changes cannot be mechanically transformed and need human judgment:
 
 4. **Code that catches specific error messages**: If you matched on error message strings from the crypto layer (e.g., during JWS signing), those errors may now occur earlier (at `WithKey()` time) due to algorithm-key validation.
 
-5. **`Settings()` calls**: `jwt.Settings`, `jws.Settings`, `jwe.Settings`, and `cert.Settings` now return `error` instead of panicking on invalid inputs (e.g. a non-positive `WithMaxParseInputSize`). Call sites need to either check the returned error or explicitly discard it:
+5. **`Settings()` calls**: `jwt.Settings`, `jws.Settings`, `jwe.Settings`, `cert.Settings`, and `jwx.Settings` now return `error` instead of panicking (or silently accepting invalid state) on bad inputs. Call sites need to either check the returned error or explicitly discard it:
 
    ```go
-   // Before (v3): invalid value panicked
+   // Before (v3): invalid value panicked (or silently accepted)
    jwt.Settings(jwt.WithMaxParseInputSize(n))
+   jwx.Settings(jwx.WithBase64Encoder(enc))
 
    // After (v4): check the error
    if err := jwt.Settings(jwt.WithMaxParseInputSize(n)); err != nil {
        return err
    }
+   if err := jwx.Settings(jwx.WithBase64Encoder(enc)); err != nil {
+       return err
+   }
    ```
 
-   `jwk.Settings` and `jwx.Settings` remain void; they have no validatable options today.
+   Extension modules that install a backend in `init()` (e.g. `asmbase64`) must panic on error, matching the house style for `Register*` failures.
+
+   `jwk.Settings` remains void; its options have no validatable state today.
 
 ## Build System Changes
 
