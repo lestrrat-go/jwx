@@ -13,6 +13,7 @@ import (
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwk"
 	ourecdsa "github.com/lestrrat-go/jwx/v4/jwk/ecdsa"
+	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ed25519"
 )
@@ -59,7 +60,11 @@ func makeJwkCmd() *cli.Command {
 
 func dumpJWKSet(dst io.Writer, keyset jwk.Set, format string, preserve bool) error {
 	if format == "pem" {
-		buf, err := jwk.Pem(keyset)
+		raws, err := jwk.ExportAll[any](keyset)
+		if err != nil {
+			return fmt.Errorf(`failed to export keys: %w`, err)
+		}
+		buf, err := jwkbb.EncodePEM(raws...)
 		if err != nil {
 			return fmt.Errorf(`failed to format key in PEM format: %w`, err)
 		}

@@ -9,8 +9,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -21,7 +19,6 @@ import (
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/jwx/v4/jwa"
-	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
 	"github.com/lestrrat-go/option/v3"
 )
 
@@ -578,81 +575,6 @@ func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
 	}
 
 	return nil
-}
-
-// Pem serializes the given jwk.Key in PEM encoded ASN.1 DER format,
-// using either PKCS8 for private keys and PKIX for public keys.
-// If you need to encode using PKCS1 or SEC1, you must do it yourself.
-//
-// # Argument must be of type jwk.Key or jwk.Set
-//
-// Currently only EC (including Ed25519) and RSA keys (and jwk.Set
-// comprised of these key types) are supported.
-func Pem(v any) ([]byte, error) {
-	var set Set
-	switch v := v.(type) {
-	case Key:
-		set = NewSet()
-		if err := set.AddKey(v); err != nil {
-			return nil, fmt.Errorf(`failed to add key to set: %w`, err)
-		}
-	case Set:
-		set = v
-	default:
-		return nil, fmt.Errorf(`argument to Pem must be either jwk.Key or jwk.Set: %T`, v)
-	}
-
-	var ret []byte
-	for i := range set.Len() {
-		key, _ := set.Key(i)
-		typ, buf, err := asnEncode(key)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode content for key #%d: %w`, i, err)
-		}
-
-		var block pem.Block
-		block.Type = typ
-		block.Bytes = buf
-		ret = append(ret, pem.EncodeToMemory(&block)...)
-	}
-	return ret, nil
-}
-
-func asnEncode(key Key) (string, []byte, error) {
-	switch key := key.(type) {
-	case ECDSAPrivateKey:
-		rawkey, err := Export[*ecdsa.PrivateKey](key)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
-		}
-		buf, err := x509.MarshalECPrivateKey(rawkey)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
-		}
-		return jwkbb.ECPrivateKeyBlockType, buf, nil
-	case RSAPrivateKey, OKPPrivateKey:
-		rawkey, err := Export[any](key)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
-		}
-		buf, err := x509.MarshalPKCS8PrivateKey(rawkey)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
-		}
-		return jwkbb.PrivateKeyBlockType, buf, nil
-	case RSAPublicKey, ECDSAPublicKey, OKPPublicKey:
-		rawkey, err := Export[any](key)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
-		}
-		buf, err := x509.MarshalPKIXPublicKey(rawkey)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to marshal PKIX: %w`, err)
-		}
-		return jwkbb.PublicKeyBlockType, buf, nil
-	default:
-		return "", nil, fmt.Errorf(`unsupported key type %T`, key)
-	}
 }
 
 // CustomDecoder is a generic interface for custom field decoders.

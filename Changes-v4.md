@@ -107,11 +107,11 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 * `jwk/jwkbb` also gains a symmetric X509 **encoder** registry
   (`jwkbb.RegisterX509Encoder` / `UnregisterX509Encoder`, `X509Encoder` /
-  `X509EncodeFunc`). `jwkbb.X509Decoders()` / `jwkbb.X509Encoders()`
-  expose `iter.Seq` snapshots of the current registrations so that
-  `jwk` (and extension-facing integrations) can drive their own
-  dispatch loop. End users keep calling `jwk.EncodePEM` / `jwk.ParseKey`
-  and get the custom PEM block types automatically.
+  `X509EncodeFunc`), and a variadic `jwkbb.EncodePEM(keys ...any) ([]byte, error)`
+  that runs each raw key through the encoder chain and concatenates the
+  resulting PEM blocks. `jwkbb.X509Decoders()` / `jwkbb.X509Encoders()`
+  expose `iter.Seq` snapshots of the current registrations for callers
+  that need to drive their own dispatch loop.
 
 * `jwk.PEMDecoder`, `jwk.PEMDecodeFunc`, `jwk.PEMEncoder`,
   `jwk.PEMEncodeFunc`, `jwk.NewPEMDecoder`, and the
@@ -119,6 +119,24 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   `jwkbb.RegisterX509Decoder(ident, d)` to install a custom PEM block
   decoder globally. The encoder-side interfaces never had any callers
   outside their own plumbing.
+
+* `jwk.EncodePEM(v)` and `jwk.Pem(v)` are removed. Produce PEM through
+  `jwkbb.EncodePEM` instead; unwrap a `jwk.Key` or `jwk.Set` to raw
+  keys first:
+
+  ```go
+  // single key
+  raw, _ := jwk.Export[any](key)
+  pem, _ := jwkbb.EncodePEM(raw)
+
+  // whole set
+  raws, _ := jwk.ExportAll[any](set)
+  pem, _ := jwkbb.EncodePEM(raws...)
+  ```
+
+  RSA private keys now emit `RSA PRIVATE KEY` (PKCS#1) via the default
+  encoder. The previous `jwk.Pem` path emitted PKCS#8. Register a
+  custom `jwkbb.X509Encoder` if you need the old output format.
 
 * `jwk.Fetch()` and `jwk.Cache` have both been removed from the main module, along
   with every other HTTP-touching entry point. The core `jwk` package no longer

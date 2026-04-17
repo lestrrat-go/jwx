@@ -237,3 +237,47 @@ func X509Encoders() iter.Seq[X509Encoder] {
 		}
 	}
 }
+
+// EncodePEM encodes each key into a PEM block and returns the
+// concatenated PEM-encoded bytes in the order given.
+//
+// Each key is passed through every registered [X509Encoder] in
+// registration order; the first encoder that returns without error
+// produces the block for that key. An error from any key aborts the
+// call; partial output is not returned.
+//
+// Calling EncodePEM with no keys returns an error.
+//
+// Keys must be raw Go crypto values (e.g. *rsa.PrivateKey,
+// *ecdsa.PublicKey, ed25519.PrivateKey). To encode a [jwk.Key] or a
+// [jwk.Set], export to raw via `jwk.Export[any]` / `jwk.ExportAll[any]`
+// first and then hand the results here.
+func EncodePEM(keys ...any) ([]byte, error) {
+	if len(keys) == 0 {
+		return nil, errors.New(`jwkbb.EncodePEM: at least one key is required`)
+	}
+
+	muX509.RLock()
+	snapshot := x509EncoderList
+	muX509.RUnlock()
+
+	var out []byte
+	for i, v := range keys {
+		var errs []error
+		encoded := false
+		for _, e := range snapshot {
+			blockType, der, err := e.EncodeX509(v)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			out = append(out, pem.EncodeToMemory(&pem.Block{Type: blockType, Bytes: der})...)
+			encoded = true
+			break
+		}
+		if !encoded {
+			return nil, fmt.Errorf(`jwkbb.EncodePEM: key #%d (%T): %w`, i, v, errors.Join(errs...))
+		}
+	}
+	return out, nil
+}

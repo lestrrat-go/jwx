@@ -239,8 +239,10 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 			t.Run(fmt.Sprintf("WithPEM(%t)", usePEM), func(t *testing.T) {
 				var buf []byte
 				if usePEM {
-					pem, err := jwk.EncodePEM(key)
-					require.NoError(t, err, `jwk.EncodePEM should succeed`)
+					raw, err := jwk.Export[any](key)
+					require.NoError(t, err, `jwk.Export should succeed`)
+					pem, err := jwkbb.EncodePEM(raw)
+					require.NoError(t, err, `jwkbb.EncodePEM should succeed`)
 					buf = pem
 				} else {
 					jsonbuf, err := json.Marshal(key)
@@ -2208,7 +2210,11 @@ func TestECDSAPEM(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pem, err := jwk.EncodePEM(key)
+	raw, err := jwk.Export[any](key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pem, err := jwkbb.EncodePEM(raw)
 	if err != nil {
 		t.Fatal(err)
 	}

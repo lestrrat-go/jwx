@@ -49,9 +49,11 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `jwk.RegisterX509Decoder(ident, d)` | `jwkbb.RegisterX509Decoder(ident, d)` | Moved to `jwk/jwkbb`; returns error on nil input instead of panicking |
 | `jwk.UnregisterX509Decoder(ident)` | `jwkbb.UnregisterX509Decoder(ident)` | Moved to `jwk/jwkbb` |
 | `jwk.X509Decoder` / `jwk.X509DecodeFunc` | `jwkbb.X509Decoder` / `jwkbb.X509DecodeFunc` | Moved to `jwk/jwkbb` |
-| *(not available)* | `jwkbb.RegisterX509Encoder(ident, e)` / `jwkbb.UnregisterX509Encoder(ident)` / `jwkbb.X509Encoder` / `jwkbb.X509EncodeFunc` | New in v4: custom PEM encoders for `jwk.EncodePEM` (e.g. PQC key formats) |
+| *(not available)* | `jwkbb.RegisterX509Encoder(ident, e)` / `jwkbb.UnregisterX509Encoder(ident)` / `jwkbb.X509Encoder` / `jwkbb.X509EncodeFunc` | New in v4: custom PEM encoders for `jwkbb.EncodePEM` (e.g. PQC key formats) |
 | `jwk.PEMDecoder` / `jwk.PEMDecodeFunc` / `jwk.PEMEncoder` / `jwk.PEMEncodeFunc` / `jwk.NewPEMDecoder()` | *(removed)* | Plumbing types removed; register a custom decoder through `jwkbb.RegisterX509Decoder` instead |
 | `jwk.WithPEMDecoder(d)` | *(removed)* | Use `jwkbb.RegisterX509Decoder(ident, d)` to install a custom PEM block decoder globally |
+| `jwk.EncodePEM(v)` | `jwkbb.EncodePEM(raw)` | Unwrap `jwk.Key` with `jwk.Export[any]` first; accepts one or more raw keys |
+| `jwk.Pem(keyOrSet)` | `jwkbb.EncodePEM(jwk.ExportAll[any](set)...)` | Iterate a `jwk.Set` into raw keys via `jwk.ExportAll[any]`, then pass variadically. RSA private keys now emit `RSA PRIVATE KEY` (PKCS#1) by default — register a custom encoder for PKCS#8 if you need the old output |
 | `jwk.NewCache(ctx, client)` | `jwkfetch.NewCache(ctx, client)` | Extension module (see Recipe 6) |
 | `jwk.Fetch(ctx, url, opts...)` | `jwkfetch.NewClient(opts...).Fetch(ctx, url)` | Extension module (see Recipe 6) |
 | `jwk.WithHTTPClient(c)` | `jwkfetch.WithHTTPClient(c)` | Extension module |

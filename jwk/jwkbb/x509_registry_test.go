@@ -1,6 +1,10 @@
 package jwkbb_test
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -9,6 +13,54 @@ import (
 	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
 	"github.com/stretchr/testify/require"
 )
+
+func TestEncodePEM_SingleStdlibKey(t *testing.T) {
+	raw, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	out, err := jwkbb.EncodePEM(raw)
+	require.NoError(t, err)
+	block, _ := pem.Decode(out)
+	require.NotNil(t, block)
+	require.Equal(t, jwkbb.ECPrivateKeyBlockType, block.Type)
+}
+
+func TestEncodePEM_VariadicPreservesOrder(t *testing.T) {
+	ecRaw, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	rsaRaw, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	out, err := jwkbb.EncodePEM(ecRaw, rsaRaw)
+	require.NoError(t, err)
+
+	first, rest := pem.Decode(out)
+	require.NotNil(t, first)
+	require.Equal(t, jwkbb.ECPrivateKeyBlockType, first.Type, "first arg should be the first block")
+
+	second, rest2 := pem.Decode(rest)
+	require.NotNil(t, second)
+	require.Equal(t, jwkbb.RSAPrivateKeyBlockType, second.Type, "second arg should be the second block")
+	require.Empty(t, rest2, "no trailing bytes expected")
+}
+
+func TestEncodePEM_NoArgsError(t *testing.T) {
+	_, err := jwkbb.EncodePEM()
+	require.Error(t, err)
+}
+
+func TestEncodePEM_UnsupportedType(t *testing.T) {
+	_, err := jwkbb.EncodePEM("not a key")
+	require.Error(t, err)
+}
+
+func TestEncodePEM_FailsFastOnUnsupportedMidway(t *testing.T) {
+	good, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	_, err = jwkbb.EncodePEM(good, "not a key")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "key #1")
+}
 
 func TestRegisterX509Decoder_NilError(t *testing.T) {
 	require.NotPanics(t, func() {
