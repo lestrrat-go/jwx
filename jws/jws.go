@@ -741,23 +741,37 @@ func hasCustomSigVerifier(alg jwa.SignatureAlgorithm) bool {
 }
 
 // Settings allows you to set global settings for JWS operations.
-func Settings(options ...GlobalOption) {
+//
+// Returns a non-nil error and applies no changes if any option fails
+// validation (for example, a non-positive [WithMaxParseInputSize] or
+// [WithMaxSignatures]).
+func Settings(options ...GlobalOption) error {
+	var newMaxParseInputSize int64
+	var newMaxSignatures int64
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identMaxParseInputSize{}:
 			v := option.MustGet[int64](opt)
 			if v <= 0 {
-				panic("jws.Settings: WithMaxParseInputSize must be greater than zero")
+				return fmt.Errorf(`jws.Settings: WithMaxParseInputSize must be greater than zero, got %d`, v)
 			}
-			maxParseInputSize.Store(v)
+			newMaxParseInputSize = v
 		case identMaxSignatures{}:
 			v := option.MustGet[int](opt)
 			if v <= 0 {
-				panic("jws.Settings: WithMaxSignatures must be greater than zero")
+				return fmt.Errorf(`jws.Settings: WithMaxSignatures must be greater than zero, got %d`, v)
 			}
-			maxSignatures.Store(int64(v))
+			newMaxSignatures = int64(v)
 		}
 	}
+
+	if newMaxParseInputSize > 0 {
+		maxParseInputSize.Store(newMaxParseInputSize)
+	}
+	if newMaxSignatures > 0 {
+		maxSignatures.Store(newMaxSignatures)
+	}
+	return nil
 }
 
 // VerifyCompactFast is a fast path verification function for JWS messages

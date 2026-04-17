@@ -30,15 +30,16 @@ func init() {
 }
 
 // Settings controls global settings that are specific to JWTs.
-func Settings(options ...GlobalOption) {
-	muSettings.Lock()
-	defer muSettings.Unlock()
-
+//
+// Returns a non-nil error and applies no changes if any option fails
+// validation (for example, a non-positive [WithMaxParseInputSize]).
+func Settings(options ...GlobalOption) error {
 	var flattenAudience bool
 	var parsePedantic bool
 	var parsePrecision = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
 	var formatPrecision = types.MaxPrecision + 1 // illegal value, so we can detect nothing was set
 	truncation := time.Duration(-1)
+	var newMaxParseInputSize int64
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identTruncation{}:
@@ -62,10 +63,17 @@ func Settings(options ...GlobalOption) {
 		case identMaxParseInputSize{}:
 			v := option.MustGet[int64](opt)
 			if v <= 0 {
-				panic("jwt.Settings: WithMaxParseInputSize must be greater than zero")
+				return fmt.Errorf(`jwt.Settings: WithMaxParseInputSize must be greater than zero, got %d`, v)
 			}
-			maxParseInputSize.Store(v)
+			newMaxParseInputSize = v
 		}
+	}
+
+	muSettings.Lock()
+	defer muSettings.Unlock()
+
+	if newMaxParseInputSize > 0 {
+		maxParseInputSize.Store(newMaxParseInputSize)
 	}
 
 	if parsePrecision <= types.MaxPrecision { // remember we set default to max + 1
@@ -97,6 +105,8 @@ func Settings(options ...GlobalOption) {
 	if truncation >= 0 {
 		defaultTruncation.Store(int64(truncation))
 	}
+
+	return nil
 }
 
 var registry = json.NewRegistry()

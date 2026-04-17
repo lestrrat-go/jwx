@@ -56,7 +56,20 @@ func init() {
 	maxParseInputSize.Store(10 * 1024 * 1024)       // 10MB
 }
 
-func Settings(options ...GlobalOption) {
+// Settings configures process-global behavior for JWE operations.
+//
+// Returns a non-nil error and applies no changes if any option fails
+// validation (for example, a non-positive [WithMaxParseInputSize]).
+func Settings(options ...GlobalOption) error {
+	// Validate first so the call is all-or-nothing on error.
+	for _, opt := range options {
+		if opt.Ident() == (identMaxParseInputSize{}) {
+			if v := option.MustGet[int64](opt); v <= 0 {
+				return fmt.Errorf(`jwe.Settings: WithMaxParseInputSize must be greater than zero, got %d`, v)
+			}
+		}
+	}
+
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identMaxPBES2Count{}:
@@ -74,13 +87,10 @@ func Settings(options ...GlobalOption) {
 		case identCBCBufferSize{}:
 			aescbc.SetMaxBufferSize(option.MustGet[int64](opt))
 		case identMaxParseInputSize{}:
-			v := option.MustGet[int64](opt)
-			if v <= 0 {
-				panic("jwe.Settings: WithMaxParseInputSize must be greater than zero")
-			}
-			maxParseInputSize.Store(v)
+			maxParseInputSize.Store(option.MustGet[int64](opt))
 		}
 	}
+	return nil
 }
 
 const (
