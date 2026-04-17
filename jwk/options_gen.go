@@ -65,7 +65,6 @@ type identIgnoreParseError struct{}
 type identLocalRegistry struct{}
 type identMinRSAModulusBits struct{}
 type identMinRSAPublicExponent struct{}
-type identPEM struct{}
 type identStrictKeyUsage struct{}
 type identThumbprintHash struct{}
 type identX509 struct{}
@@ -92,10 +91,6 @@ func (identMinRSAModulusBits) String() string {
 
 func (identMinRSAPublicExponent) String() string {
 	return "WithMinRSAPublicExponent"
-}
-
-func (identPEM) String() string {
-	return "WithPEM"
 }
 
 func (identStrictKeyUsage) String() string {
@@ -183,14 +178,6 @@ func WithMinRSAPublicExponent(v int) GlobalOption {
 	return &globalOption{option.New(identMinRSAPublicExponent{}, v)}
 }
 
-// WithPEM specifies that the input to `Parse()` is a PEM encoded key.
-//
-// This option is planned to be deprecated in the future. The plan is to
-// replace it with `jwk.WithX509(true)`
-func WithPEM(v bool) ParseOption {
-	return &parseOption{option.New(identPEM{}, v)}
-}
-
 // WithStrictKeyUsage specifies if during JWK parsing, the "use" field
 // should be confined to the values that have been registered via
 // `jwk.RegisterKeyType()`. By default this option is true, and the
@@ -208,7 +195,10 @@ func WithThumbprintHash(v crypto.Hash) AssignKeyIDOption {
 	return &assignKeyIDOption{option.New(identThumbprintHash{}, v)}
 }
 
-// WithX509 specifies that the input to `Parse()` is an X.509 encoded key
+// WithX509 specifies that the input to `Parse()` / `ParseKey()` is a
+// PEM-framed X.509-encoded key (or key set). Custom PEM block types can
+// be handled by registering decoders via
+// `jwkbb.RegisterX509Decoder`.
 func WithX509(v bool) ParseOption {
 	return &parseOption{option.New(identX509{}, v)}
 }

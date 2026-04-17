@@ -251,7 +251,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 					t.Logf("%s", buf)
 				}
 
-				newkey, err := jwk.ParseKey(buf, jwk.WithPEM(usePEM))
+				newkey, err := jwk.ParseKey(buf, jwk.WithX509(usePEM))
 				require.NoError(t, err, `jwk.ParseKey should succeed`)
 			LOOP:
 				for _, k := range key.Keys() {
@@ -506,7 +506,7 @@ func TestParseKeyAs(t *testing.T) {
 			Type:  "EC PRIVATE KEY",
 			Bytes: derBytes,
 		})
-		key, err := jwk.ParseKeyAs[jwk.ECDSAPrivateKey](pemData, jwk.WithPEM(true))
+		key, err := jwk.ParseKeyAs[jwk.ECDSAPrivateKey](pemData, jwk.WithX509(true))
 		require.NoError(t, err)
 		require.NotNil(t, key)
 		require.Equal(t, jwa.EC(), key.KeyType())
@@ -1759,7 +1759,7 @@ ox0RaBsMD70mvTwKKmlCSD5HgZZTC0CfGWk4dQp/Mct5Z0x0HJMEJCJzpgTn3CRX
 z8CjezfckLs7UKJOlhu3OU9TFsiGDzSDBZdDWO1/uciJ/AAWeSmsBt8cKL0MirIr
 c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 -----END CERTIFICATE-----`
-	key, err := jwk.ParseKey([]byte(src), jwk.WithPEM(true))
+	key, err := jwk.ParseKey([]byte(src), jwk.WithX509(true))
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 	require.Equal(t, jwa.RSA(), key.KeyType(), `key type should be RSA`)
 
@@ -2218,7 +2218,7 @@ func TestECDSAPEM(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = jwk.ParseKey(pem, jwk.WithPEM(true))
+	_, err = jwk.ParseKey(pem, jwk.WithX509(true))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2466,7 +2466,7 @@ dGVzdCBkYXRh
 -----END TEST CUSTOM KEY-----`
 
 	// Test that our custom decoder can handle this via ParseKey
-	parsedKey, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	parsedKey, err := jwk.ParseKey([]byte(testPEMData), jwk.WithX509(true))
 	require.NoError(t, err)
 	require.NotNil(t, parsedKey)
 
@@ -2500,7 +2500,7 @@ dGVzdCBkYXRh
 -----END TEST UNREGISTER-----`
 
 	// Verify it works when registered
-	parsedKey1, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	parsedKey1, err := jwk.ParseKey([]byte(testPEMData), jwk.WithX509(true))
 	require.NoError(t, err)
 	require.NotNil(t, parsedKey1)
 
@@ -2508,7 +2508,7 @@ dGVzdCBkYXRh
 	jwkbb.UnregisterX509Decoder(customIdent)
 
 	// Verify it no longer works
-	parsedKey2, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	parsedKey2, err := jwk.ParseKey([]byte(testPEMData), jwk.WithX509(true))
 	require.Error(t, err)
 	require.Nil(t, parsedKey2)
 }
@@ -2553,7 +2553,7 @@ dGVzdCBkYXRh
 -----END TEST DUPLICATE-----`
 
 	// Verify it works after first registration
-	parsedKey1, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	parsedKey1, err := jwk.ParseKey([]byte(testPEMData), jwk.WithX509(true))
 	require.NoError(t, err)
 	require.NotNil(t, parsedKey1)
 	require.Equal(t, 1, callCount, "Decoder should be called once")
@@ -2562,7 +2562,7 @@ dGVzdCBkYXRh
 	jwkbb.RegisterX509Decoder(customIdent, decoder)
 
 	// Verify it still works after duplicate registration and decoder wasn't added twice
-	parsedKey2, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	parsedKey2, err := jwk.ParseKey([]byte(testPEMData), jwk.WithX509(true))
 	require.NoError(t, err)
 	require.NotNil(t, parsedKey2)
 	require.Equal(t, 2, callCount, "Decoder should be called once more, not duplicated")
@@ -2628,13 +2628,13 @@ func TestUnregisterX509Decoder_StaleIndexMiddle(t *testing.T) {
 	jwkbb.UnregisterX509Decoder(identB)
 
 	// B must no longer decode.
-	_, err := jwk.ParseKey(pemFor("TRIO B"), jwk.WithPEM(true))
+	_, err := jwk.ParseKey(pemFor("TRIO B"), jwk.WithX509(true))
 	require.Error(t, err, "TRIO B should fail after unregister")
 
 	// A and C must still decode.
-	_, err = jwk.ParseKey(pemFor("TRIO A"), jwk.WithPEM(true))
+	_, err = jwk.ParseKey(pemFor("TRIO A"), jwk.WithX509(true))
 	require.NoError(t, err, "TRIO A should still decode")
-	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
+	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithX509(true))
 	require.NoError(t, err, "TRIO C should still decode")
 
 	// Now unregister C by ident. Before the fix this would panic
@@ -2644,9 +2644,9 @@ func TestUnregisterX509Decoder_StaleIndexMiddle(t *testing.T) {
 	})
 
 	// C must no longer decode; A must still decode.
-	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
+	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithX509(true))
 	require.Error(t, err, "TRIO C should fail after second unregister")
-	_, err = jwk.ParseKey(pemFor("TRIO A"), jwk.WithPEM(true))
+	_, err = jwk.ParseKey(pemFor("TRIO A"), jwk.WithX509(true))
 	require.NoError(t, err, "TRIO A must survive unrelated unregister")
 
 	// Keep identA alive until cleanup fires.
@@ -2662,20 +2662,20 @@ func TestUnregisterX509Decoder_StaleIndexFirst(t *testing.T) {
 
 	jwkbb.UnregisterX509Decoder(identA)
 
-	_, err := jwk.ParseKey(pemFor("TRIO A"), jwk.WithPEM(true))
+	_, err := jwk.ParseKey(pemFor("TRIO A"), jwk.WithX509(true))
 	require.Error(t, err)
-	_, err = jwk.ParseKey(pemFor("TRIO B"), jwk.WithPEM(true))
+	_, err = jwk.ParseKey(pemFor("TRIO B"), jwk.WithX509(true))
 	require.NoError(t, err)
-	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
+	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithX509(true))
 	require.NoError(t, err)
 
 	require.NotPanics(t, func() {
 		jwkbb.UnregisterX509Decoder(identC)
 	})
 
-	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
+	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithX509(true))
 	require.Error(t, err)
-	_, err = jwk.ParseKey(pemFor("TRIO B"), jwk.WithPEM(true))
+	_, err = jwk.ParseKey(pemFor("TRIO B"), jwk.WithX509(true))
 	require.NoError(t, err, "TRIO B must survive unrelated unregister")
 
 	_ = identB
@@ -2710,7 +2710,7 @@ func TestX509DecoderConcurrent(t *testing.T) {
 				// Best-effort parse; error is fine (decoder may be
 				// unregistered at this moment). The point is that
 				// the read path must not race on the decoder slice.
-				_, _ = jwk.ParseKey(pemData, jwk.WithPEM(true))
+				_, _ = jwk.ParseKey(pemData, jwk.WithX509(true))
 			}
 		})
 	}

@@ -140,7 +140,7 @@ func TestRSAPEMImportRunsValidation(t *testing.T) {
 		E: 65537,
 	}
 
-	_, err := jwk.ParseKey(mustRSAPublicPEM(t, bad), jwk.WithPEM(true))
+	_, err := jwk.ParseKey(mustRSAPublicPEM(t, bad), jwk.WithX509(true))
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "rsa modulus too small")
 }

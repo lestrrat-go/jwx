@@ -329,8 +329,8 @@ func (ctx *setDecodeCtx) IgnoreParseError() bool {
 // [Parse] this method reports failure if the input is a JWK set. Only
 // use this function when you know that the data is a single JWK.
 //
-// Given a WithPEM(true) option, this function assumes that the given input
-// is PEM encoded ASN.1 DER format key.
+// Given a WithX509(true) option, this function assumes that the given input
+// is a PEM-framed X.509-encoded key.
 //
 // Note that a successful parsing of any type of key does NOT necessarily
 // guarantee a valid key. For example, no checks against expiration dates
@@ -366,12 +366,12 @@ func ParseKeyAs[T Key](data []byte, options ...ParseOption) (T, error) {
 }
 
 func doParseKey(data []byte, options ...ParseOption) (Key, error) {
-	var parsePEM bool
+	var parseX509 bool
 	var localReg *json.Registry
 	for _, opt := range options {
 		switch opt.Ident() {
-		case identPEM{}:
-			parsePEM = option.MustGet[bool](opt)
+		case identX509{}:
+			parseX509 = option.MustGet[bool](opt)
 		case identLocalRegistry{}:
 			localReg = option.MustGet[*json.Registry](opt)
 		case identTypedField{}:
@@ -385,7 +385,7 @@ func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 		}
 	}
 
-	if parsePEM {
+	if parseX509 {
 		raw, _, err := decodeX509(data)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to decode PEM/X.509 encoded key: %w`, err)
@@ -446,14 +446,11 @@ func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 // you know for sure that you have a single key, please see the documentation
 // for `jwk.ParseKey()`.
 func Parse(src []byte, options ...ParseOption) (Set, error) {
-	var parsePEM bool
 	var parseX509 bool
 	var localReg *json.Registry
 	var ignoreParseError bool
 	for _, opt := range options {
 		switch opt.Ident() {
-		case identPEM{}:
-			parsePEM = option.MustGet[bool](opt)
 		case identX509{}:
 			parseX509 = option.MustGet[bool](opt)
 		case identIgnoreParseError{}:
@@ -469,7 +466,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 
 	s := NewSet()
 
-	if parsePEM || parseX509 {
+	if parseX509 {
 		src = bytes.TrimSpace(src)
 		var keyCount int
 		for len(src) > 0 {

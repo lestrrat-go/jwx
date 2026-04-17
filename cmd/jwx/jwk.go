@@ -281,7 +281,7 @@ func makeJwkFormatCmd() *cli.Command {
 		switch format := c.String("input-format"); format {
 		case "json":
 		case "pem":
-			options = append(options, jwk.WithPEM(true))
+			options = append(options, jwk.WithX509(true))
 		default:
 			return fmt.Errorf(`invalid input format %s`, format)
 		}

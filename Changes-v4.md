@@ -120,6 +120,11 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   decoder globally. The encoder-side interfaces never had any callers
   outside their own plumbing.
 
+* `jwk.WithPEM(bool)` is removed. Use `jwk.WithX509(bool)` in its place
+  to tell `jwk.Parse` / `jwk.ParseKey` that the input is PEM-framed
+  X.509. Both options were aliases in pre-release v4; only `WithX509`
+  survives.
+
 * `jwk.EncodePEM(v)` and `jwk.Pem(v)` are removed. Produce PEM through
   `jwkbb.EncodePEM` instead; unwrap a `jwk.Key` or `jwk.Set` to raw
   keys first:

@@ -14,7 +14,7 @@ import (
 
 // X509Decoder decodes a single PEM block into a raw key. Register a
 // custom implementation via [RegisterX509Decoder] to extend
-// [DecodePEM] (and by extension `jwk.ParseKey` with `jwk.WithPEM(true)`)
+// [DecodePEM] (and by extension `jwk.ParseKey` with `jwk.WithX509(true)`)
 // to additional PEM block types such as PQC key formats.
 type X509Decoder interface {
 	DecodeX509(block *pem.Block) (any, error)
@@ -30,8 +30,7 @@ func (f X509DecodeFunc) DecodeX509(block *pem.Block) (any, error) {
 
 // X509Encoder encodes a raw key into a PEM block type and its DER
 // bytes. Register a custom implementation via [RegisterX509Encoder] to
-// extend [EncodePEM] (and by extension `jwk.EncodePEM`) to additional
-// key families such as PQC keys.
+// extend [EncodePEM] to additional key families such as PQC keys.
 type X509Encoder interface {
 	EncodeX509(v any) (blockType string, der []byte, err error)
 }
