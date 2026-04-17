@@ -15,11 +15,11 @@
 // Examples are stored in a separate Go module (to avoid adding
 // dependencies to this module), and thus does not appear in the
 // online documentation for this module.
-// You can find the examples in Github at https://github.com/lestrrat-go/jwx/tree/v3/examples
+// You can find the examples in Github at https://github.com/jwx-go/examples/tree/v4
 //
-// You can find more high level documentation at Github (https://github.com/lestrrat-go/jwx/tree/v2)
+// You can find more high level documentation at Github (https://github.com/lestrrat-go/jwx/tree/develop/v4/docs)
 //
-// FAQ style documentation can be found in the repository (https://github.com/lestrrat-go/jwx/tree/develop/v3/docs)
+// FAQ style documentation can be found in the repository (https://github.com/lestrrat-go/jwx/tree/develop/v4/docs/99-faq.md)
 package jwx
 
 import (
