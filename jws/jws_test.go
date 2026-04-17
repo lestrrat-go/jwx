@@ -54,7 +54,7 @@ func (r *infiniteByteReader) Read(p []byte) (int, error) {
 
 func TestSanity(t *testing.T) {
 	t.Run("sanity: Verify with single key", func(t *testing.T) {
-		key, err := jwk.ParseKey([]byte(`{
+		key, err := jwk.ParseKeyAs[jwk.Key]([]byte(`{
     "kty": "oct",
     "k": "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
   }`))
@@ -1005,7 +1005,7 @@ func TestRFC7797(t *testing.T) {
       "k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
      }`
 
-	key, err := jwk.ParseKey([]byte(keysrc))
+	key, err := jwk.ParseKeyAs[jwk.Key]([]byte(keysrc))
 	require.NoError(t, err, `jwk.Parse should succeed`)
 
 	t.Run("Invalid payload when b64 = false and NOT detached", func(t *testing.T) {
@@ -1597,7 +1597,7 @@ func TestGH840(t *testing.T) {
 		"d": "870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE"
 	}`)
 
-	_, err := jwk.ParseKey(untrustedJWK)
+	_, err := jwk.ParseKeyAs[jwk.Key](untrustedJWK)
 	require.Error(t, err, `jwk.ParseKey must reject an off-curve ECDSA JWK`)
 }
 
@@ -1756,7 +1756,7 @@ func TestUnpaddedSignatureR(t *testing.T) {
 	// This is the private key used to sign the payload
 	keySrc := `{"crv":"P-256","d":"MqGwMl-dlJFrMnu7rFyslPV8EdsVC7I4V19N-ADVqaU","kty":"EC","x":"Anf1p2lRrcXgZKpVRRC1xLxPiw_45PbOlygfbxvD8Es","y":"d0HiZq-aurVVLLtK-xqXPpzpWloZJNwKNve7akBDuvg"}`
 
-	privKey, err := jwk.ParseKey([]byte(keySrc))
+	privKey, err := jwk.ParseKeyAs[jwk.Key]([]byte(keySrc))
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 	pubKey, err := jwk.PublicKeyOf(privKey)

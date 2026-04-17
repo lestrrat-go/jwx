@@ -20,7 +20,7 @@ func TestHeader(t *testing.T) {
 	             "e":"AQAB",
 	             "alg":"RS256",
 	             "kid":"2011-04-29"}`
-	jwkPublicKey, err := jwk.ParseKey([]byte(publicKey))
+	jwkPublicKey, err := jwk.ParseKeyAs[jwk.Key]([]byte(publicKey))
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 	var chain cert.Chain

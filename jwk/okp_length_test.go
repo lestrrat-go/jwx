@@ -45,7 +45,7 @@ func TestOKPRejectsInvalidBuiltinLengths(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := jwk.ParseKey([]byte(tc.src))
+			_, err := jwk.ParseKeyAs[jwk.Key]([]byte(tc.src))
 			require.Error(t, err)
 			require.ErrorContains(t, err, tc.want)
 		})

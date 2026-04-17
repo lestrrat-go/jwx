@@ -291,7 +291,7 @@ func ParseJwkFile(_ context.Context, file string) (jwk.Key, error) {
 		return nil, fmt.Errorf(`failed to read from key file %s: %w`, file, err)
 	}
 
-	key, err := jwk.ParseKey(buf)
+	key, err := jwk.ParseKeyAs[jwk.Key](buf)
 	if err != nil {
 		return nil, fmt.Errorf(`filed to parse JWK in key file %s: %w`, file, err)
 	}

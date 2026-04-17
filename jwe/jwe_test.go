@@ -47,7 +47,7 @@ func init() {
       "qi":"VIMpMYbPf47dT1w_zDUXfPimsSegnMOA1zTaX7aGk_8urY6R8-ZW1FxU7AlWAyLWybqq6t16VFd7hQd0y6flUK4SlOydB61gwanOsXGOAOv82cHq0E3eL4HrtZkUuKvnPrMnsUUFlfUdybVzxyjz9JF_XyaY14ardLSjf4L_FNY"
      }`)
 
-	privkey, err := jwk.ParseKey(jwkstr)
+	privkey, err := jwk.ParseKeyAs[jwk.Key](jwkstr)
 	if err != nil {
 		panic(err)
 	}
@@ -146,7 +146,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
       "qi":"VIMpMYbPf47dT1w_zDUXfPimsSegnMOA1zTaX7aGk_8urY6R8-ZW1FxU7AlWAyLWybqq6t16VFd7hQd0y6flUK4SlOydB61gwanOsXGOAOv82cHq0E3eL4HrtZkUuKvnPrMnsUUFlfUdybVzxyjz9JF_XyaY14ardLSjf4L_FNY"
      }`)
 
-	privkey, err := jwk.ParseKey(jwkstr)
+	privkey, err := jwk.ParseKeyAs[jwk.Key](jwkstr)
 	require.NoError(t, err, `parsing jwk should succeed`)
 
 	rawkey, err := jwk.Export[*rsa.PrivateKey](privkey)
@@ -421,7 +421,7 @@ func Test_GHIssue207(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.Name, func(t *testing.T) {
-			webKey, err := jwk.ParseKey([]byte(tc.Key))
+			webKey, err := jwk.ParseKeyAs[jwk.Key]([]byte(tc.Key))
 			require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 			thumbprint, err := webKey.Thumbprint(crypto.SHA1)
@@ -571,7 +571,7 @@ func TestDecodePredefined_Direct(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.Algorithm.String(), func(t *testing.T) {
-			webKey, err := jwk.ParseKey([]byte(tc.Key))
+			webKey, err := jwk.ParseKeyAs[jwk.Key]([]byte(tc.Key))
 			require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 			thumbprint, err := webKey.Thumbprint(crypto.SHA1)
@@ -757,7 +757,7 @@ func TestGH840(t *testing.T) {
 		"d": "870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE"
 	}`)
 
-	_, err := jwk.ParseKey(untrustedJWK)
+	_, err := jwk.ParseKeyAs[jwk.Key](untrustedJWK)
 	require.Error(t, err, `jwk.ParseKey must reject an off-curve ECDSA JWK`)
 }
 

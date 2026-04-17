@@ -193,7 +193,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 	t.Helper()
 
 	def = complimentDef(def)
-	key, err := jwk.ParseKey(makeKeyJSON(def))
+	key, err := jwk.ParseKeyAs[jwk.Key](makeKeyJSON(def))
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 	t.Run("Fields", func(t *testing.T) {
@@ -248,7 +248,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 					t.Logf("%s", buf)
 				}
 
-				newkey, err := jwk.ParseKey(buf, jwk.WithPEM(usePEM))
+				newkey, err := jwk.ParseKeyAs[jwk.Key](buf, jwk.WithPEM(usePEM))
 				require.NoError(t, err, `jwk.ParseKey should succeed`)
 			LOOP:
 				for _, k := range key.Keys() {
@@ -463,7 +463,26 @@ func TestExportAll(t *testing.T) {
 
 const testOctKeyJSON = `{"kty":"oct","k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"}`
 
-func TestGenericParseKey(t *testing.T) {
+// TestParseKey exercises the non-generic entry point that returns jwk.Key.
+func TestParseKey(t *testing.T) {
+	t.Parallel()
+	t.Run("Valid", func(t *testing.T) {
+		t.Parallel()
+		key, err := jwk.ParseKey([]byte(testOctKeyJSON))
+		require.NoError(t, err)
+		require.NotNil(t, key)
+		require.Equal(t, jwa.OctetSeq(), key.KeyType())
+	})
+	t.Run("Invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := jwk.ParseKey([]byte(`not json`))
+		require.Error(t, err)
+	})
+}
+
+// TestParseKeyAs exercises the typed entry point and the
+// KeyTypeMismatchError it returns on a generic-parameter mismatch.
+func TestParseKeyAs(t *testing.T) {
 	t.Parallel()
 	t.Run("JSON", func(t *testing.T) {
 		t.Parallel()
@@ -512,16 +531,11 @@ func TestGenericParseKey(t *testing.T) {
 	})
 	t.Run("BaseInterface", func(t *testing.T) {
 		t.Parallel()
-		// Non-generic ParseKey always returns jwk.Key for valid input.
-		key, err := jwk.ParseKey([]byte(testOctKeyJSON))
+		// ParseKeyAs[jwk.Key] is the typed form of the non-generic ParseKey.
+		key, err := jwk.ParseKeyAs[jwk.Key]([]byte(testOctKeyJSON))
 		require.NoError(t, err)
 		require.NotNil(t, key)
 		require.Equal(t, jwa.OctetSeq(), key.KeyType())
-	})
-	t.Run("ErrorPropagation", func(t *testing.T) {
-		t.Parallel()
-		_, err := jwk.ParseKey([]byte(`not json`))
-		require.Error(t, err)
 	})
 }
 
@@ -559,7 +573,7 @@ func TestParse(t *testing.T) {
 		})
 		t.Run("jwk.ParseKey", func(t *testing.T) {
 			t.Helper()
-			key, err := jwk.ParseKey([]byte(src))
+			key, err := jwk.ParseKeyAs[jwk.Key]([]byte(src))
 			require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 			t.Run("Raw", func(t *testing.T) {
@@ -1266,7 +1280,7 @@ func TestIssue207(t *testing.T) {
 	// Using a loop here because we're using sync.Pool
 	// just for sanity.
 	for range 10 {
-		k, err := jwk.ParseKey([]byte(src))
+		k, err := jwk.ParseKeyAs[jwk.Key]([]byte(src))
 		require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 		thumb, err := k.Thumbprint(crypto.SHA1)
@@ -1278,7 +1292,7 @@ func TestIssue207(t *testing.T) {
 func TestIssue270(t *testing.T) {
 	t.Parallel()
 	const src = `{"kty":"EC","alg":"ECMR","crv":"P-521","key_ops":["deriveKey"],"x":"AJwCS845x9VljR-fcrN2WMzIJHDYuLmFShhyu8ci14rmi2DMFp8txIvaxG8n7ZcODeKIs1EO4E_Bldm_pxxs8cUn","y":"ASjz754cIQHPJObihPV8D7vVNfjp_nuwP76PtbLwUkqTk9J1mzCDKM3VADEk-Z1tP-DHiwib6If8jxnb_FjNkiLJ"}`
-	k, err := jwk.ParseKey([]byte(src))
+	k, err := jwk.ParseKeyAs[jwk.Key]([]byte(src))
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 	for _, usage := range []string{"sig", "enc"} {
@@ -1405,7 +1419,7 @@ func TestRSA(t *testing.T) {
 	   			"n": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx4cbbfAAtVT86zwu1RK7aPFFxuhDR1L6tSoc_BJECPebWKRXjBZCiFV4n3oknjhMstn64tZ_2W-5JsGY4Hc5n9yBXArwl93lqt7_RN5w6Cf0h4QyQ5v-65YGjQR0_FDW2QvzqY368QQMicAtaSqzs8KJZgnYb9c7d0zgdAZHzu6qMQvRL5hajrn1n91CbOpbISD08qNLyrdkt-bFTWhAI4vMQFh6WeZu0fM4lFd2NcRwr3XPksINHaQ-G_xBniIqbw0Ls1jF44-csFCur-kEgU8awapJzKnqDKgw"
 	   		}`
 
-		key, err := jwk.ParseKey([]byte(src))
+		key, err := jwk.ParseKeyAs[jwk.Key]([]byte(src))
 		require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 		tp, err := key.Thumbprint(crypto.SHA256)
@@ -1699,7 +1713,7 @@ func TestCustomField(t *testing.T) {
 	src := b.String()
 
 	t.Run("jwk.ParseKey", func(t *testing.T) {
-		key, err := jwk.ParseKey([]byte(src))
+		key, err := jwk.ParseKeyAs[jwk.Key]([]byte(src))
 		require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 		for _, name := range []string{rfc3339Key, rfc1123Key} {
@@ -1740,7 +1754,7 @@ ox0RaBsMD70mvTwKKmlCSD5HgZZTC0CfGWk4dQp/Mct5Z0x0HJMEJCJzpgTn3CRX
 z8CjezfckLs7UKJOlhu3OU9TFsiGDzSDBZdDWO1/uciJ/AAWeSmsBt8cKL0MirIr
 c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 -----END CERTIFICATE-----`
-	key, err := jwk.ParseKey([]byte(src), jwk.WithPEM(true))
+	key, err := jwk.ParseKeyAs[jwk.Key]([]byte(src), jwk.WithPEM(true))
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 	require.Equal(t, jwa.RSA(), key.KeyType(), `key type should be RSA`)
 
@@ -1845,7 +1859,7 @@ func TestTypedFields(t *testing.T) {
 		t.Run(fmt.Sprintf("%T", key), func(t *testing.T) {
 			for _, tc := range testcases {
 				t.Run(tc.Name, func(t *testing.T) {
-					got, err := jwk.ParseKey(serialized, tc.Options...)
+					got, err := jwk.ParseKeyAs[jwk.Key](serialized, tc.Options...)
 					require.NoError(t, err, `jwk.Parse should succeed`)
 					v, ok := got.Field("typed-field")
 					require.True(t, ok, `got.Field() should succeed`)
@@ -2116,10 +2130,10 @@ func TestGH567(t *testing.T) {
 		buf, err := json.Marshal(key)
 		require.NoError(t, err, `json.Marshal should succeed`)
 
-		_, err = jwk.ParseKey(buf)
+		_, err = jwk.ParseKeyAs[jwk.Key](buf)
 		require.NoError(t, err, `jwk.ParseKey (no WithIgnoreParseError) should succeed`)
 
-		_, err = jwk.ParseKey(buf, jwk.WithIgnoreParseError(true))
+		_, err = jwk.ParseKeyAs[jwk.Key](buf, jwk.WithIgnoreParseError(true))
 		require.Error(t, err, `jwk.ParseKey (no WithIgnoreParseError) should fail`)
 	})
 }
@@ -2155,7 +2169,7 @@ func TestGH664(t *testing.T) {
 			require.NoError(t, err, `jwk.Import should succeed`)
 
 			buf, _ := json.MarshalIndent(jwkPrivkey, "", "  ")
-			parsed, err := jwk.ParseKey(buf)
+			parsed, err := jwk.ParseKeyAs[jwk.Key](buf)
 			require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 			payload := []byte(`hello , world!`)
@@ -2181,7 +2195,7 @@ func TestGH730(t *testing.T) {
 // This test was lifted from #875. See tests under Roundtrip/WithPEM(true) for other key types
 func TestECDSAPEM(t *testing.T) {
 	// go make an EC key at https://mkjwk.org/
-	key, err := jwk.ParseKey([]byte(`{
+	key, err := jwk.ParseKeyAs[jwk.Key]([]byte(`{
 		"kty": "EC",
 		"d": "zqYPTs5gMEwtidOqjlFJSk6L4BQSfhCJX6FTgbuuiE0",
 		"crv": "P-256",
@@ -2195,7 +2209,7 @@ func TestECDSAPEM(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = jwk.ParseKey(pem, jwk.WithPEM(true))
+	_, err = jwk.ParseKeyAs[jwk.Key](pem, jwk.WithPEM(true))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2208,7 +2222,7 @@ func TestGH947(t *testing.T) {
 	// Validate() on the freshly-unmarshaled key, the zero-length coordinate
 	// is rejected cleanly at parse time — no bad key is ever handed back.
 	raw := []byte(`{"crv":"Ed25519","d":"","x":"","kty":"OKP"}`)
-	_, err := jwk.ParseKey(raw)
+	_, err := jwk.ParseKeyAs[jwk.Key](raw)
 	require.Error(t, err, `jwk.ParseKey must reject an OKP key with empty coordinates`)
 }
 
@@ -2324,7 +2338,7 @@ func TestGH1262(t *testing.T) {
 		_ = secretSrv // doing some non-standard encryption & response with encrypted data
 
 		// client
-		jwkCli, err := jwk.ParseKey(jwkBuf) // extract jwkBuf
+		jwkCli, err := jwk.ParseKeyAs[jwk.Key](jwkBuf) // extract jwkBuf
 		require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 		pubSrv, err := jwk.Export[*ecdh.PublicKey](jwkCli)
@@ -2480,7 +2494,7 @@ dGVzdCBkYXRh
 -----END TEST CUSTOM KEY-----`
 
 	// Test that our custom decoder can handle this via ParseKey
-	parsedKey, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	parsedKey, err := jwk.ParseKeyAs[jwk.Key]([]byte(testPEMData), jwk.WithPEM(true))
 	require.NoError(t, err)
 	require.NotNil(t, parsedKey)
 
@@ -2514,7 +2528,7 @@ dGVzdCBkYXRh
 -----END TEST UNREGISTER-----`
 
 	// Verify it works when registered
-	parsedKey1, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	parsedKey1, err := jwk.ParseKeyAs[jwk.Key]([]byte(testPEMData), jwk.WithPEM(true))
 	require.NoError(t, err)
 	require.NotNil(t, parsedKey1)
 
@@ -2522,7 +2536,7 @@ dGVzdCBkYXRh
 	jwk.UnregisterX509Decoder(customIdent)
 
 	// Verify it no longer works
-	parsedKey2, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	parsedKey2, err := jwk.ParseKeyAs[jwk.Key]([]byte(testPEMData), jwk.WithPEM(true))
 	require.Error(t, err)
 	require.Nil(t, parsedKey2)
 }
@@ -2559,7 +2573,7 @@ dGVzdCBkYXRh
 -----END TEST DUPLICATE-----`
 
 	// Verify it works after first registration
-	parsedKey1, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	parsedKey1, err := jwk.ParseKeyAs[jwk.Key]([]byte(testPEMData), jwk.WithPEM(true))
 	require.NoError(t, err)
 	require.NotNil(t, parsedKey1)
 	require.Equal(t, 1, callCount, "Decoder should be called once")
@@ -2568,7 +2582,7 @@ dGVzdCBkYXRh
 	jwk.RegisterX509Decoder(customIdent, decoder)
 
 	// Verify it still works after duplicate registration and decoder wasn't added twice
-	parsedKey2, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	parsedKey2, err := jwk.ParseKeyAs[jwk.Key]([]byte(testPEMData), jwk.WithPEM(true))
 	require.NoError(t, err)
 	require.NotNil(t, parsedKey2)
 	require.Equal(t, 2, callCount, "Decoder should be called once more, not duplicated")
@@ -2634,13 +2648,13 @@ func TestUnregisterX509Decoder_StaleIndexMiddle(t *testing.T) {
 	jwk.UnregisterX509Decoder(identB)
 
 	// B must no longer decode.
-	_, err := jwk.ParseKey(pemFor("TRIO B"), jwk.WithPEM(true))
+	_, err := jwk.ParseKeyAs[jwk.Key](pemFor("TRIO B"), jwk.WithPEM(true))
 	require.Error(t, err, "TRIO B should fail after unregister")
 
 	// A and C must still decode.
-	_, err = jwk.ParseKey(pemFor("TRIO A"), jwk.WithPEM(true))
+	_, err = jwk.ParseKeyAs[jwk.Key](pemFor("TRIO A"), jwk.WithPEM(true))
 	require.NoError(t, err, "TRIO A should still decode")
-	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
+	_, err = jwk.ParseKeyAs[jwk.Key](pemFor("TRIO C"), jwk.WithPEM(true))
 	require.NoError(t, err, "TRIO C should still decode")
 
 	// Now unregister C by ident. Before the fix this would panic
@@ -2650,9 +2664,9 @@ func TestUnregisterX509Decoder_StaleIndexMiddle(t *testing.T) {
 	})
 
 	// C must no longer decode; A must still decode.
-	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
+	_, err = jwk.ParseKeyAs[jwk.Key](pemFor("TRIO C"), jwk.WithPEM(true))
 	require.Error(t, err, "TRIO C should fail after second unregister")
-	_, err = jwk.ParseKey(pemFor("TRIO A"), jwk.WithPEM(true))
+	_, err = jwk.ParseKeyAs[jwk.Key](pemFor("TRIO A"), jwk.WithPEM(true))
 	require.NoError(t, err, "TRIO A must survive unrelated unregister")
 
 	// Keep identA alive until cleanup fires.
@@ -2668,20 +2682,20 @@ func TestUnregisterX509Decoder_StaleIndexFirst(t *testing.T) {
 
 	jwk.UnregisterX509Decoder(identA)
 
-	_, err := jwk.ParseKey(pemFor("TRIO A"), jwk.WithPEM(true))
+	_, err := jwk.ParseKeyAs[jwk.Key](pemFor("TRIO A"), jwk.WithPEM(true))
 	require.Error(t, err)
-	_, err = jwk.ParseKey(pemFor("TRIO B"), jwk.WithPEM(true))
+	_, err = jwk.ParseKeyAs[jwk.Key](pemFor("TRIO B"), jwk.WithPEM(true))
 	require.NoError(t, err)
-	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
+	_, err = jwk.ParseKeyAs[jwk.Key](pemFor("TRIO C"), jwk.WithPEM(true))
 	require.NoError(t, err)
 
 	require.NotPanics(t, func() {
 		jwk.UnregisterX509Decoder(identC)
 	})
 
-	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
+	_, err = jwk.ParseKeyAs[jwk.Key](pemFor("TRIO C"), jwk.WithPEM(true))
 	require.Error(t, err)
-	_, err = jwk.ParseKey(pemFor("TRIO B"), jwk.WithPEM(true))
+	_, err = jwk.ParseKeyAs[jwk.Key](pemFor("TRIO B"), jwk.WithPEM(true))
 	require.NoError(t, err, "TRIO B must survive unrelated unregister")
 
 	_ = identB
@@ -2716,7 +2730,7 @@ func TestX509DecoderConcurrent(t *testing.T) {
 				// Best-effort parse; error is fine (decoder may be
 				// unregistered at this moment). The point is that
 				// the read path must not race on the decoder slice.
-				_, _ = jwk.ParseKey(pemData, jwk.WithPEM(true))
+				_, _ = jwk.ParseKeyAs[jwk.Key](pemData, jwk.WithPEM(true))
 			}
 		})
 	}
