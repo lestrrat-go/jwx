@@ -42,6 +42,10 @@ const (
 // This function requires exactly one jws.WithKey() option. It rejects key
 // sets, key providers, and algorithms that require the full payload at
 // sign-time such as EdDSA and dsig custom-family algorithms.
+//
+// The payload reader is consumed exactly once. On signing failure the reader
+// cannot be rewound or retried; callers that need retry semantics must either
+// buffer the payload themselves or use jws.Sign with jws.WithDetachedPayload().
 func SignDetachedReader(payload io.Reader, options ...SignOption) ([]byte, error) {
 	var alg jwa.SignatureAlgorithm
 	var key any
@@ -203,6 +207,11 @@ func SignDetachedReader(payload io.Reader, options ...SignOption) ([]byte, error
 // This function requires exactly one jws.WithKey() option. It rejects key
 // sets, key providers, and algorithms that require the full payload at
 // verify-time such as EdDSA and dsig custom-family algorithms.
+//
+// The payload reader is consumed exactly once. On verification failure the
+// reader cannot be rewound or retried; callers that need retry semantics
+// must either buffer the payload themselves or use jws.Verify with
+// jws.WithDetachedPayload().
 func VerifyDetachedReader(src []byte, payload io.Reader, options ...VerifyOption) error {
 	var alg jwa.SignatureAlgorithm
 	var key any
