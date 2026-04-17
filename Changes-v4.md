@@ -93,11 +93,11 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   and fails fast on the first mismatch. For a heterogeneous set, use
   `T = any`; each element's dynamic type matches its source key's raw form.
 
-* `jwk.ParseKey()` returns `jwk.Key` directly (no generic type parameter).
-  Use `jwk.ParseKeyAs[T Key](data []byte, options ...ParseOption) (T, error)`
-  when a concrete subtype is required. On a type mismatch, `ParseKeyAs`
-  returns a `jwk.KeyTypeMismatchError` matching the shape used by
-  `jwk.Import[T]`.
+* `jwk.ParseKeyAs[T Key](data []byte, options ...ParseOption) (T, error)` is new.
+  Use it when you need a concrete subtype such as `jwk.RSAPrivateKey`; on a
+  type mismatch it returns a typed `jwk.KeyTypeMismatchError` matching the
+  shape used by `jwk.Import[T]`. `jwk.ParseKey()` itself is unchanged from
+  v3 and still returns `jwk.Key`.
 
 * `jwk.Fetch()` and `jwk.Cache` have both been removed from the main module, along
   with every other HTTP-touching entry point. The core `jwk` package no longer
