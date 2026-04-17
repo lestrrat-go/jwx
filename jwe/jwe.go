@@ -553,7 +553,7 @@ func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 
 func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
 	var tried int
-	var lastError error
+	var attemptErrors []error
 	for i, kp := range dc.keyProviders {
 		var sink algKeySink
 		if err := kp.FetchKeys(dc.ctx, &sink, recipient, msg); err != nil {
@@ -571,7 +571,7 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 
 			decrypted, err := dc.decryptContent(msg, alg, key, recipient, protectedHeaders, aad, computedAad)
 			if err != nil {
-				lastError = err
+				attemptErrors = append(attemptErrors, err)
 				continue
 			}
 
@@ -581,7 +581,11 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 			return decrypted, nil
 		}
 	}
-	return nil, fmt.Errorf(`jwe.Decrypt: tried %d keys, but failed to match any of the keys with recipient (last error = %w)`, tried, lastError)
+	// Preserve every per-key attempt error via errors.Join so that each
+	// constituent remains reachable through errors.Is / errors.As on the
+	// outer error. The top-level "jwe.Decrypt:" prefix is added by the
+	// caller (Decrypt) via makeDecryptError.
+	return nil, fmt.Errorf(`tried %d keys, but failed to match any of the keys with recipient: %w`, tried, errors.Join(attemptErrors...))
 }
 
 func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
