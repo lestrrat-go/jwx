@@ -50,7 +50,7 @@ func TestRSAInvalidParametersRejectedOnParse(t *testing.T) {
 	t.Run("small modulus", func(t *testing.T) {
 		payload := rsaPublicJWK("AQAB", "AQAB")
 
-		_, err := jwk.ParseKeyAs[jwk.Key](payload)
+		_, err := jwk.ParseKey(payload)
 		require.Error(t, err)
 		require.True(t, jwk.IsKeyValidationError(err))
 		require.Contains(t, err.Error(), "rsa modulus too small")
@@ -63,7 +63,7 @@ func TestRSAInvalidParametersRejectedOnParse(t *testing.T) {
 	t.Run("unsafe exponent", func(t *testing.T) {
 		payload := rsaPublicJWK(rfc7638RSAModulus, "AQ")
 
-		_, err := jwk.ParseKeyAs[jwk.Key](payload)
+		_, err := jwk.ParseKey(payload)
 		require.Error(t, err)
 		require.True(t, jwk.IsKeyValidationError(err))
 		require.Contains(t, err.Error(), "invalid rsa public exponent")
@@ -82,7 +82,7 @@ func TestRSAConfigureCompatibilityKnobs(t *testing.T) {
 
 		payload := rsaPublicJWKFromRaw(t, &raw.PublicKey)
 
-		_, err = jwk.ParseKeyAs[jwk.Key](payload)
+		_, err = jwk.ParseKey(payload)
 		require.NoError(t, err)
 	})
 
@@ -94,7 +94,7 @@ func TestRSAConfigureCompatibilityKnobs(t *testing.T) {
 
 		payload := rsaPublicJWK(rfc7638RSAModulus, "AQ")
 
-		_, err := jwk.ParseKeyAs[jwk.Key](payload)
+		_, err := jwk.ParseKey(payload)
 		require.NoError(t, err)
 	})
 }
@@ -140,7 +140,7 @@ func TestRSAPEMImportRunsValidation(t *testing.T) {
 		E: 65537,
 	}
 
-	_, err := jwk.ParseKeyAs[jwk.Key](mustRSAPublicPEM(t, bad), jwk.WithPEM(true))
+	_, err := jwk.ParseKey(mustRSAPublicPEM(t, bad), jwk.WithPEM(true))
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "rsa modulus too small")
 }

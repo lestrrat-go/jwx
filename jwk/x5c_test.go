@@ -41,7 +41,7 @@ func Test_X5CHeader(t *testing.T) {
   "x5c": ["bm90IGEgY2VydGlmaWNhdGU="]
 }`
 
-		_, err := jwk.ParseKeyAs[jwk.Key]([]byte(src))
+		_, err := jwk.ParseKey([]byte(src))
 		require.Error(t, err, `jwk.ParseKey should reject invalid x5c entries`)
 	})
 }

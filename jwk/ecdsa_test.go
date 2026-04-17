@@ -47,7 +47,7 @@ func TestECDSAInvalidPointsRejectedOnParse(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			body := ecdsaPointJWK(t, elliptic.P256(), "P-256", tc.x, tc.y)
 
-			_, err := jwk.ParseKeyAs[jwk.Key](body)
+			_, err := jwk.ParseKey(body)
 			require.Error(t, err, `ParseKey must reject invalid ECDSA point at parse time`)
 			require.True(t, jwk.IsKeyValidationError(err), `ParseKey error must unwrap to a key-validation error: %v`, err)
 
@@ -67,7 +67,7 @@ func TestECDSAInvalidPointsRejectedOnParse(t *testing.T) {
 			"x": "AYwhwiE1hXWdfwu-HlBSsY5Chxycu-LyE6WsZ_w2DO4",
 			"y": "zumemGclMFkimMsKMXlLdKYWtLle58e4N9hDPcN7lig"
 		}`)
-		key, err := jwk.ParseKeyAs[jwk.Key](body)
+		key, err := jwk.ParseKey(body)
 		require.NoError(t, err, `ParseKey on a valid P-256 key should succeed`)
 		require.NoError(t, key.Validate(), `Validate on a valid P-256 key should succeed`)
 		_, err = jwk.Export[*ecdsa.PublicKey](key)

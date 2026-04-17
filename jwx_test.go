@@ -110,7 +110,7 @@ func TestUseNumber(t *testing.T) {
 		defer jwx.Settings(jwx.WithUseNumber(false))
 
 		const jwkSrc = `{"kty":"oct","k":"c2VjcmV0","x-custom-num":12345}`
-		key, err := jwk.ParseKeyAs[jwk.Key]([]byte(jwkSrc))
+		key, err := jwk.ParseKey([]byte(jwkSrc))
 		require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 		num, err := jwk.Get[stdjson.Number](key, "x-custom-num")
