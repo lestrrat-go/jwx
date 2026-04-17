@@ -8,15 +8,21 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 ## Unreleased
 
+* [jws] **Bug fix (RFC compliance, interop):** `jws.Sign()` with
+  `jws.WithDetachedPayload()` + `jws.WithJSON()` now correctly omits the
+  `"payload"` member from the output, per RFC 7515 Appendix F. Previous
+  releases emitted the encoded payload anyway, producing output that was
+  indistinguishable from a non-detached JWS and that some peers rejected as
+  malformed detached JSON. The fix also preserves detached-ness through
+  `Message.UnmarshalJSON` / `MarshalJSON`, so parse/remarshal round-trips no
+  longer reintroduce the `"payload"` member. Callers already passing
+  `jws.WithDetachedPayload()` get the fix automatically — no API change.
+
 * [jws] Added `jws.SignDetachedReader()` and `jws.VerifyDetachedReader()` for
   one-pass detached payload processing from `io.Reader`. These are specialist
   APIs for detached payloads that should not be materialized in memory;
   `jws.Sign()` / `jws.Verify()` remain the default general-purpose entry
   points, including detached payloads already available as `[]byte`.
-
-* [jws] Fixed JSON detached serialization to omit the `"payload"` member when
-  `jws.Sign()` is used with `jws.WithDetachedPayload()` and `jws.WithJSON()`,
-  preserving RFC 7515 Appendix F semantics through parse/remarshal.
 
 ## Module
 
