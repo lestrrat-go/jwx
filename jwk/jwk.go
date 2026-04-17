@@ -78,7 +78,10 @@ func Import[T Key](raw any) (T, error) {
 	}
 	result, ok := key.(T)
 	if !ok {
-		return zero, importerr(`imported key is %T, not %T`, key, zero)
+		return zero, importerr(`%w`, KeyTypeMismatchError{
+			Got:  reflect.TypeOf(key),
+			Want: reflect.TypeFor[T](),
+		})
 	}
 	return result, nil
 }

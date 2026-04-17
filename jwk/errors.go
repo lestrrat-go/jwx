@@ -3,6 +3,7 @@ package jwk
 import (
 	"errors"
 	"fmt"
+	"reflect"
 )
 
 var cpe = &continueError{}
@@ -76,4 +77,42 @@ var errDefaultParseError = parseError{errors.New(`parse error`)}
 
 func ParseError() error {
 	return errDefaultParseError
+}
+
+//-------------------------------------------------------------------
+// KeyTypeMismatchError
+//-------------------------------------------------------------------
+
+// KeyTypeMismatchError is returned by [Import] when the imported key's
+// concrete type does not match the generic type parameter supplied by
+// the caller.
+//
+// Callers that need to distinguish "wrong generic type parameter" from
+// "key validation failed" should use [errors.Is] with
+// KeyTypeMismatchError{}, or [errors.AsType] to recover the Got and
+// Want fields.
+type KeyTypeMismatchError struct {
+	// Got is the runtime type of the key that was imported.
+	Got reflect.Type
+	// Want is the type requested via the Import type parameter.
+	Want reflect.Type
+}
+
+func (e KeyTypeMismatchError) Error() string {
+	return fmt.Sprintf(`imported key is %s, not %s`, typeName(e.Got), typeName(e.Want))
+}
+
+func (e KeyTypeMismatchError) Is(target error) bool {
+	_, ok := target.(KeyTypeMismatchError)
+	return ok
+}
+
+// typeName renders a reflect.Type similarly to the %T verb so that
+// KeyTypeMismatchError's message remains recognizable when either
+// field is nil.
+func typeName(t reflect.Type) string {
+	if t == nil {
+		return "<nil>"
+	}
+	return t.String()
 }
