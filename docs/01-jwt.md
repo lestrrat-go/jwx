@@ -337,7 +337,7 @@ func Example_jwt_parse_with_key() {
   // and only the verifier side sees the key material — we do both here
   // so the example is self-contained.
   const keysrc = `{"kty":"oct","k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"}`
-  key, err := jwk.ParseKey[jwk.Key]([]byte(keysrc))
+  key, err := jwk.ParseKey([]byte(keysrc))
   if err != nil {
     fmt.Printf("jwk.ParseKey failed: %s\n", err)
     return

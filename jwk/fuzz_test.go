@@ -17,7 +17,7 @@ func FuzzParseKey(f *testing.F) {
 	f.Add([]byte(`not-json`))
 
 	f.Fuzz(func(_ *testing.T, data []byte) {
-		_, _ = jwk.ParseKey[jwk.Key](data)
+		_, _ = jwk.ParseKey(data)
 	})
 }
 
@@ -39,7 +39,7 @@ func FuzzParseKeyRoundtrip(f *testing.F) {
 	f.Add([]byte(`{"kty":"OKP","crv":"Ed25519","x":"11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"}`))
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		key, err := jwk.ParseKey[jwk.Key](data)
+		key, err := jwk.ParseKey(data)
 		if err != nil {
 			return
 		}
@@ -47,7 +47,7 @@ func FuzzParseKeyRoundtrip(f *testing.F) {
 		serialized, err := json.Marshal(key)
 		require.NoError(t, err)
 
-		_, err = jwk.ParseKey[jwk.Key](serialized)
+		_, err = jwk.ParseKey(serialized)
 		require.NoError(t, err)
 	})
 }

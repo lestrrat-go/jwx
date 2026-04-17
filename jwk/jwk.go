@@ -327,9 +327,9 @@ func (ctx *setDecodeCtx) IgnoreParseError() bool {
 	return ctx.ignoreParseError
 }
 
-// ParseKey parses a single key JWK. Unlike `jwk.Parse` this method will
-// report failure if you attempt to pass a JWK set. Only use this function
-// when you know that the data is a single JWK.
+// ParseKey parses a single key JWK and returns it as a [Key]. Unlike
+// [Parse] this method reports failure if the input is a JWK set. Only
+// use this function when you know that the data is a single JWK.
 //
 // Given a WithPEM(true) option, this function assumes that the given input
 // is PEM encoded ASN.1 DER format key.
@@ -339,15 +339,19 @@ func (ctx *setDecodeCtx) IgnoreParseError() bool {
 // are performed for certificate expiration, no checks against missing
 // parameters are performed, etc.
 //
-// The type parameter T specifies the expected key type. Use [Key] when you
-// do not need a specific subtype:
+// Use [ParseKeyAs] when a concrete key subtype (e.g. [RSAPrivateKey],
+// [ECDSAPublicKey]) is required.
+func ParseKey(data []byte, options ...ParseOption) (Key, error) {
+	return doParseKey(data, options...)
+}
+
+// ParseKeyAs behaves like [ParseKey] but asserts the parsed key to the
+// concrete type T. On a type mismatch it returns a [KeyTypeMismatchError]
+// carrying the parsed and requested types; the underlying error chain also
+// satisfies [errors.Is] with a sentinel [ParseError].
 //
-//	key, err := jwk.ParseKey[jwk.Key](data)
-//
-// Use a concrete key type to obtain a typed result directly:
-//
-//	ecKey, err := jwk.ParseKey[jwk.ECDSAPublicKey](data)
-func ParseKey[T Key](data []byte, options ...ParseOption) (T, error) {
+//	ecKey, err := jwk.ParseKeyAs[jwk.ECDSAPublicKey](data)
+func ParseKeyAs[T Key](data []byte, options ...ParseOption) (T, error) {
 	var zero T
 	key, err := doParseKey(data, options...)
 	if err != nil {
@@ -355,7 +359,10 @@ func ParseKey[T Key](data []byte, options ...ParseOption) (T, error) {
 	}
 	result, ok := key.(T)
 	if !ok {
-		return zero, parseerr(`parsed key is %T, not %T`, key, zero)
+		return zero, parseerr(`%w`, KeyTypeMismatchError{
+			Got:  reflect.TypeOf(key),
+			Want: reflect.TypeFor[T](),
+		})
 	}
 	return result, nil
 }

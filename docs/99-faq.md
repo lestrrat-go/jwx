@@ -38,7 +38,7 @@ If you are in an environment where API changes disrupts your environment, you sh
 
 As stated in the documentation, `jwk.Import[T]()` creates different types of keys depending on the type of the input.
 
-Use `jwk.Import[T]()` to construct a JWK from a [*raw* key](./04-jwk.md#raw-key) such as `*rsa.PrivateKey`, `*ecdsa.PublicKey`, `[]byte`, etc. Use `jwk.Parse()` or `jwk.ParseKey[T]()` to parse a piece of data (`[]byte` and the like) that already holds an encoded JWK and create the appropriate key type from its contents.
+Use `jwk.Import[T]()` to construct a JWK from a [*raw* key](./04-jwk.md#raw-key) such as `*rsa.PrivateKey`, `*ecdsa.PublicKey`, `[]byte`, etc. Use `jwk.Parse()` or `jwk.ParseKey()` to parse a piece of data (`[]byte` and the like) that already holds an encoded JWK and create the appropriate key type from its contents. When you need a concrete key subtype (e.g. `jwk.RSAPublicKey`) use `jwk.ParseKeyAs[T]()`.
 
 See ["Using jwk.Import()"](./04-jwk.md#using-jwkimport) for more details.
 
