@@ -1,9 +1,5 @@
 name: Bazel
 on:
-  pull_request:
-    branches:
-      - v*
-      - develop/*
   push:
     branches-ignore:
       - main
