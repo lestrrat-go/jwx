@@ -818,4 +818,4 @@ Activate via a blank import — no API surface of its own:
 import _ "github.com/jwx-go/asmbase64/v4"
 ```
 
-The import registers an optimized RawURL encoder via `jwx.SetBase64Encoder()` and a decoder with automatic encoding detection via `jwx.SetBase64Decoder()`. All JWK, JWS, and JWT operations pick up the new backend automatically. See [`examples/jwx_asmbase64_example_test.go`](https://github.com/jwx-go/examples/blob/v4/jwx_asmbase64_example_test.go) for a runnable example.
+The import registers an optimized RawURL encoder and a decoder with automatic encoding detection via `jwx.Settings(jwx.WithBase64Encoder(...), jwx.WithBase64Decoder(...))`. All JWK, JWS, and JWT operations pick up the new backend automatically. See [`examples/jwx_asmbase64_example_test.go`](https://github.com/jwx-go/examples/blob/v4/jwx_asmbase64_example_test.go) for a runnable example.

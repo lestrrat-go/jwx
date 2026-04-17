@@ -6,13 +6,15 @@ Module: `github.com/lestrrat-go/jwx/v4` — flat layout, no physical `v3/` direc
 
 ## jwx (root)
 
-Format detection and global JSON decoder settings.
+Format detection and process-global settings (JSON decoder + base64 backend).
 
 - **GuessFormat(payload []byte) FormatKind** — heuristic detection of JWE/JWS/JWK/JWKS/JWT
-- **Settings(options ...GlobalOption)** — configure global settings (e.g., `WithUseNumber`)
+- **Settings(options ...GlobalOption)** — configure global settings (JSON, base64)
 - **WithUseNumber(v bool) GlobalOption** — decode JSON numbers as `json.Number` instead of `float64`
-- Key types: `FormatKind` (InvalidFormat, UnknownFormat, JWE, JWS, JWK, JWKS, JWT), `GlobalOption`
-- Files: `jwx.go`, `format.go`, `options.go`
+- **WithBase64Encoder(v Base64Encoder) GlobalOption** — replace the process-global base64 encoder (default: `encoding/base64.RawURLEncoding`)
+- **WithBase64Decoder(v Base64Decoder) GlobalOption** — replace the process-global base64 decoder (default: variant-detecting decoder)
+- Key types: `FormatKind` (InvalidFormat, UnknownFormat, JWE, JWS, JWK, JWKS, JWT), `GlobalOption`, `Base64Encoder` (alias of `internal/base64.Encoder`), `Base64Decoder` (alias of `internal/base64.Decoder`)
+- Files: `jwx.go`, `format.go`, `options.go`, `base64.go`
 
 ## jwa/
 
