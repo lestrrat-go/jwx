@@ -38,6 +38,19 @@ Only `jwt.UnknownPayloadTypeError()` remains a sentinel function (no struct type
 | `ClaimTypeMismatchError` | `Name`, `Got`, `Want` | Claim present but wrong type (`jwt.Get` type assertion failed) |
 | `ClaimAssignmentFailedError` | `Err` | Claim value assignment failed |
 
+## Exported Error Types (jwk)
+
+| Type | Structured Fields | Meaning |
+|------|------------------|---------|
+| `KeyTypeMismatchError` | `Got`, `Want` (both `reflect.Type`) | Generic type parameter on `Import[T]` / `ParseKeyAs[T]` does not match the resolved key type |
+
+## Exported Error Types (jwe)
+
+| Type | Structured Fields | Meaning |
+|------|------------------|---------|
+| `MissingContentEncryptionError` | *(none)* | `enc` missing from protected headers during `Decrypt` |
+| `AlgorithmMismatchError` | `Expected`, `Got` (both `jwa.KeyEncryptionAlgorithm`) | Per-recipient/protected `alg` does not match the key's algorithm |
+
 ## Sentinel Function Registry
 
 | Package | Function | Meaning |

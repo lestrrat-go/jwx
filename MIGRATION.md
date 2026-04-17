@@ -45,7 +45,7 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `RegisterCustomField(name, obj)` | `RegisterCustomField[T](name)` | All packages |
 | `jwk.RegisterProbeField(reflect.StructField{...})` | `jwk.RegisterProbeField[T](name, jsonKey)` | No `reflect` import needed |
 | `jwk.Import(raw)` | `jwk.Import[T](raw)` | Generic return type |
-| `jwk.ParseKey(data)` | `jwk.ParseKey[T](data)` | Generic return type |
+| `jwk.ParseKey(data)` | `jwk.ParseKey(data)` *(unchanged — returns `jwk.Key`)* / `jwk.ParseKeyAs[T](data)` | Typed subtype moved to `ParseKeyAs[T]` |
 | `jwk.NewCache(ctx, client)` | `jwkfetch.NewCache(ctx, client)` | Extension module (see Recipe 6) |
 | `jwk.Fetch(ctx, url, opts...)` | `jwkfetch.NewClient(opts...).Fetch(ctx, url)` | Extension module (see Recipe 6) |
 | `jwk.WithHTTPClient(c)` | `jwkfetch.WithHTTPClient(c)` | Extension module |

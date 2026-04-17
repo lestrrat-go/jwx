@@ -103,7 +103,7 @@ func TestParseKeyWithX509DecoderRejectsInvalidImportedKey(t *testing.T) {
 	src := []byte(`-----BEGIN INVALID ECDSA-----
 ZHVtbXk=
 -----END INVALID ECDSA-----`)
-	_, err = jwk.ParseKey[jwk.Key](src, jwk.WithPEM(true))
+	_, err = jwk.ParseKey(src, jwk.WithPEM(true))
 	require.Error(t, err)
 	require.True(t, jwk.IsKeyValidationError(err), `ParseKey should preserve key-validation identity`)
 }
@@ -111,7 +111,7 @@ ZHVtbXk=
 func TestParseKeyRejectsInvalidKeyFromCustomParser(t *testing.T) {
 	registerInvalidParser(t)
 
-	_, err := jwk.ParseKey[jwk.Key]([]byte(`{"kty":"EC","force-invalid-parser":true}`))
+	_, err := jwk.ParseKey([]byte(`{"kty":"EC","force-invalid-parser":true}`))
 	require.Error(t, err)
 	require.True(t, jwk.IsKeyValidationError(err), `ParseKey should validate keys returned from custom parsers`)
 }
