@@ -23,6 +23,7 @@
 package jwx
 
 import (
+	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/option/v3"
 )
@@ -67,6 +68,10 @@ func Settings(options ...GlobalOption) {
 		switch opt.Ident() {
 		case identUseNumber{}:
 			json.SetUseNumber(option.MustGet[bool](opt))
+		case identBase64Encoder{}:
+			base64.SetEncoder(option.MustGet[Base64Encoder](opt))
+		case identBase64Decoder{}:
+			base64.SetDecoder(option.MustGet[Base64Decoder](opt))
 		}
 	}
 }

@@ -57,6 +57,11 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   sub-package convention. `jwx.Settings(jwx.WithUseNumber(true))` preserves
   JSON numbers as `json.Number` in private/custom fields.
 
+* `jwx.SetBase64Encoder()` and `jwx.SetBase64Decoder()` have been removed.
+  Configure the base64 backend through `jwx.Settings()` instead:
+  `jwx.Settings(jwx.WithBase64Encoder(enc), jwx.WithBase64Decoder(dec))`.
+  The `jwx.Base64Encoder` / `jwx.Base64Decoder` interface types are unchanged.
+
 * `github.com/lestrrat-go/blackmagic` has been removed. Reflection-based conversions
   have been replaced with generics.
 
