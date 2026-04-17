@@ -263,6 +263,28 @@ func getB64Value(hdr Headers) bool {
 	return b64
 }
 
+// detectParseFormat inspects the first non-whitespace rune in src to
+// classify the input as compact or JSON serialization. Returns 0 on
+// empty or whitespace-only input so callers can distinguish "no usable
+// bytes" from a successful classification.
+func detectParseFormat(src []byte) int {
+	for i := 0; i < len(src); {
+		r := rune(src[i])
+		width := 1
+		if r >= utf8.RuneSelf {
+			r, width = utf8.DecodeRune(src[i:])
+		}
+		if !unicode.IsSpace(r) {
+			if r == tokens.OpenCurlyBracket {
+				return fmtJSON
+			}
+			return fmtCompact
+		}
+		i += width
+	}
+	return 0
+}
+
 // Parse parses contents from the given source and creates a jws.Message
 // struct. By default the input can be in either compact or full JSON serialization.
 //
@@ -311,21 +333,7 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 
 	// if format is 0 or both JSON/Compact, auto detect
 	if v := formats & (fmtJSON | fmtCompact); v == 0 || v == fmtJSON|fmtCompact {
-	CHECKLOOP:
-		for i := range src {
-			r := rune(src[i])
-			if r >= utf8.RuneSelf {
-				r, _ = utf8.DecodeRune(src)
-			}
-			if !unicode.IsSpace(r) {
-				if r == tokens.OpenCurlyBracket {
-					formats = fmtJSON
-				} else {
-					formats = fmtCompact
-				}
-				break CHECKLOOP
-			}
-		}
+		formats = detectParseFormat(src)
 	}
 
 	if formats&fmtCompact == fmtCompact {
