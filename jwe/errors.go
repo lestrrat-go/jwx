@@ -3,6 +3,8 @@ package jwe
 import (
 	"errors"
 	"fmt"
+
+	"github.com/lestrrat-go/jwx/v4/jwa"
 )
 
 type encryptError struct {
@@ -131,4 +133,65 @@ func ParseError() error {
 
 func makeParseError(prefix string, f string, args ...any) error {
 	return parseError{fmt.Errorf(prefix+": "+f, args...)}
+}
+
+//-------------------------------------------------------------------
+// MissingContentEncryptionError
+//-------------------------------------------------------------------
+
+// MissingContentEncryptionError is returned when jwe.Decrypt cannot
+// locate the content encryption algorithm ("enc") in the protected
+// headers of the JWE message.
+//
+// Use errors.Is with a zero-value MissingContentEncryptionError{} to
+// detect this failure mode programmatically:
+//
+//	if errors.Is(err, jwe.MissingContentEncryptionError{}) { ... }
+type MissingContentEncryptionError struct{}
+
+func (MissingContentEncryptionError) Error() string {
+	return `failed to retrieve content encryption algorithm from protected headers`
+}
+
+func (MissingContentEncryptionError) Is(target error) bool {
+	_, ok := target.(MissingContentEncryptionError)
+	return ok
+}
+
+//-------------------------------------------------------------------
+// AlgorithmMismatchError
+//-------------------------------------------------------------------
+
+// AlgorithmMismatchError is returned when jwe.Decrypt detects that
+// the key encryption algorithm ("alg") declared in the JWE headers
+// does not match the algorithm associated with the decryption key
+// supplied by the caller.
+//
+// Expected holds the algorithm bound to the caller's key (for example
+// via jwe.WithKey). Got holds the algorithm found in the per-recipient
+// or protected headers of the message.
+//
+// Use errors.Is with a zero-value AlgorithmMismatchError{} to detect
+// this failure mode, or errors.AsType to recover the Expected and Got
+// fields:
+//
+//	if mismatch, ok := errors.AsType[jwe.AlgorithmMismatchError](err); ok {
+//	    log.Printf("alg mismatch: expected %s, got %s", mismatch.Expected, mismatch.Got)
+//	}
+type AlgorithmMismatchError struct {
+	// Expected is the key encryption algorithm associated with the
+	// decryption key supplied by the caller.
+	Expected jwa.KeyEncryptionAlgorithm
+	// Got is the key encryption algorithm declared in the JWE
+	// per-recipient or protected headers.
+	Got jwa.KeyEncryptionAlgorithm
+}
+
+func (e AlgorithmMismatchError) Error() string {
+	return fmt.Sprintf(`key (%q) and recipient (%q) algorithms do not match`, e.Expected, e.Got)
+}
+
+func (AlgorithmMismatchError) Is(target error) bool {
+	_, ok := target.(AlgorithmMismatchError)
+	return ok
 }
