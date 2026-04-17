@@ -113,6 +113,13 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   dispatch loop. End users keep calling `jwk.EncodePEM` / `jwk.ParseKey`
   and get the custom PEM block types automatically.
 
+* `jwk.PEMDecoder`, `jwk.PEMDecodeFunc`, `jwk.PEMEncoder`,
+  `jwk.PEMEncodeFunc`, `jwk.NewPEMDecoder`, and the
+  `jwk.WithPEMDecoder` option are removed. Use
+  `jwkbb.RegisterX509Decoder(ident, d)` to install a custom PEM block
+  decoder globally. The encoder-side interfaces never had any callers
+  outside their own plumbing.
+
 * `jwk.Fetch()` and `jwk.Cache` have both been removed from the main module, along
   with every other HTTP-touching entry point. The core `jwk` package no longer
   depends on `net/http` or `httprc`. All HTTP-backed JWKS retrieval — one-shot

@@ -22,9 +22,8 @@ const _FormatKind_name = "InvalidFormatUnknownFormatJWEJWSJWKJWKSJWT"
 var _FormatKind_index = [...]uint8{0, 13, 26, 29, 32, 35, 39, 42}
 
 func (i FormatKind) String() string {
-	idx := int(i) - 0
-	if i < 0 || idx >= len(_FormatKind_index)-1 {
+	if i < 0 || i >= FormatKind(len(_FormatKind_index)-1) {
 		return "FormatKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _FormatKind_name[_FormatKind_index[idx]:_FormatKind_index[idx+1]]
+	return _FormatKind_name[_FormatKind_index[i]:_FormatKind_index[i+1]]
 }

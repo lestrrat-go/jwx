@@ -2418,25 +2418,6 @@ func TestExportEmbeddedKey(t *testing.T) {
 	})
 }
 
-func TestPEMDecodeFunc(t *testing.T) {
-	// PEMDecodeFunc should adapt a plain function to PEMDecoder and
-	// forward the call verbatim.
-	wantRaw := []byte("raw")
-	wantRest := []byte("rest")
-	wantErr := errors.New("boom")
-	var got []byte
-	var dec jwk.PEMDecoder = jwk.PEMDecodeFunc(func(src []byte) (any, []byte, error) {
-		got = src
-		return wantRaw, wantRest, wantErr
-	})
-
-	raw, rest, err := dec.Decode([]byte("src"))
-	require.Equal(t, []byte("src"), got, "adapter should forward the input")
-	require.Equal(t, any(wantRaw), raw)
-	require.Equal(t, wantRest, rest)
-	require.ErrorIs(t, err, wantErr)
-}
-
 func TestOKPRawKeyImporterFunc(t *testing.T) {
 	// OKPRawKeyImporterFunc should adapt a plain function to the
 	// OKPRawKeyImporter interface and forward the call verbatim.
@@ -2454,24 +2435,6 @@ func TestOKPRawKeyImporterFunc(t *testing.T) {
 	require.Equal(t, jwa.Ed25519(), crv)
 	require.Equal(t, wantX, x)
 	require.Equal(t, wantD, d)
-}
-
-func TestWithPEMDecoder(t *testing.T) {
-	// Generate a valid RSA private key
-	privateKey, err := jwxtest.GenerateRsaKey()
-	require.NoError(t, err)
-
-	// Encode it to PEM format
-	pemData, err := jwk.EncodePEM(privateKey)
-	require.NoError(t, err)
-
-	// Create a PEM decoder
-	decoder := jwk.NewPEMDecoder()
-
-	// Test that Parse with WithPEMDecoder works correctly
-	parsedKey, err := jwk.Parse(pemData, jwk.WithPEM(true), jwk.WithPEMDecoder(decoder))
-	require.NoError(t, err, "Parse should succeed with valid PEM data and custom decoder")
-	require.NotNil(t, parsedKey, "Parsed key should not be nil")
 }
 
 func TestRegisterX509Decoder(t *testing.T) {

@@ -66,7 +66,6 @@ type identLocalRegistry struct{}
 type identMinRSAModulusBits struct{}
 type identMinRSAPublicExponent struct{}
 type identPEM struct{}
-type identPEMDecoder struct{}
 type identStrictKeyUsage struct{}
 type identThumbprintHash struct{}
 type identX509 struct{}
@@ -97,10 +96,6 @@ func (identMinRSAPublicExponent) String() string {
 
 func (identPEM) String() string {
 	return "WithPEM"
-}
-
-func (identPEMDecoder) String() string {
-	return "WithPEMDecoder"
 }
 
 func (identStrictKeyUsage) String() string {
@@ -194,15 +189,6 @@ func WithMinRSAPublicExponent(v int) GlobalOption {
 // replace it with `jwk.WithX509(true)`
 func WithPEM(v bool) ParseOption {
 	return &parseOption{option.New(identPEM{}, v)}
-}
-
-// WithPEMDecoder specifies the PEMDecoder object to use when decoding
-// PEM encoded keys. This option can be passed to `jwk.Parse()`
-//
-// This option is planned to be deprecated in the future. The plan is to
-// use `jwkbb.RegisterX509Decoder()` to register a custom X.509 decoder globally.
-func WithPEMDecoder(v PEMDecoder) ParseOption {
-	return &parseOption{option.New(identPEMDecoder{}, v)}
 }
 
 // WithStrictKeyUsage specifies if during JWK parsing, the "use" field

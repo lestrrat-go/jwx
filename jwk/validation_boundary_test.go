@@ -17,12 +17,6 @@ import (
 
 type invalidImportRaw struct{}
 
-type invalidPEMDecoder struct{}
-
-func (invalidPEMDecoder) Decode([]byte) (any, []byte, error) {
-	return invalidImportRaw{}, nil, nil
-}
-
 type invalidReturningParser struct{}
 
 func (invalidReturningParser) ParseKey(_ *jwk.KeyProbe, _ jwk.KeyUnmarshaler, payload []byte) (jwk.Key, error) {
@@ -79,13 +73,6 @@ func TestImportRejectsInvalidKeyFromCustomImporter(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorIs(t, err, jwk.ImportError())
 	require.True(t, jwk.IsKeyValidationError(err), `Import should preserve key-validation identity`)
-}
-
-func TestParseWithPEMDecoderRejectsInvalidImportedKey(t *testing.T) {
-	_, err := jwk.Parse([]byte("dummy"), jwk.WithPEM(true), jwk.WithPEMDecoder(invalidPEMDecoder{}))
-	require.Error(t, err)
-	require.ErrorIs(t, err, jwk.ParseError())
-	require.True(t, jwk.IsKeyValidationError(err), `Parse should preserve key-validation identity`)
 }
 
 func TestParseKeyWithX509DecoderRejectsInvalidImportedKey(t *testing.T) {

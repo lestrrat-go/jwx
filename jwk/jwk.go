@@ -371,13 +371,10 @@ func ParseKeyAs[T Key](data []byte, options ...ParseOption) (T, error) {
 func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var parsePEM bool
 	var localReg *json.Registry
-	var pemDecoder PEMDecoder
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identPEM{}:
 			parsePEM = option.MustGet[bool](opt)
-		case identPEMDecoder{}:
-			pemDecoder = option.MustGet[PEMDecoder](opt)
 		case identLocalRegistry{}:
 			localReg = option.MustGet[*json.Registry](opt)
 		case identTypedField{}:
@@ -392,17 +389,7 @@ func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 	}
 
 	if parsePEM {
-		var raw any
-		var err error
-
-		// PEMDecoder should probably be deprecated, because of being a misnomer.
-		if pemDecoder != nil {
-			raw, err = decodeX509WithPEMDEcoder(data, pemDecoder)
-		} else {
-			// This version takes into account the various X509 decoders that are
-			// pre-registered.
-			raw, err = decodeX509(data)
-		}
+		raw, _, err := decodeX509(data)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to decode PEM/X.509 encoded key: %w`, err)
 		}
@@ -466,15 +453,12 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var parseX509 bool
 	var localReg *json.Registry
 	var ignoreParseError bool
-	var pemDecoder PEMDecoder
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identPEM{}:
 			parsePEM = option.MustGet[bool](opt)
 		case identX509{}:
 			parseX509 = option.MustGet[bool](opt)
-		case identPEMDecoder{}:
-			pemDecoder = option.MustGet[PEMDecoder](opt)
 		case identIgnoreParseError{}:
 			ignoreParseError = option.MustGet[bool](opt)
 		case identTypedField{}:
@@ -489,13 +473,10 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	s := NewSet()
 
 	if parsePEM || parseX509 {
-		if pemDecoder == nil {
-			pemDecoder = NewPEMDecoder()
-		}
 		src = bytes.TrimSpace(src)
 		var keyCount int
 		for len(src) > 0 {
-			raw, rest, err := pemDecoder.Decode(src)
+			raw, rest, err := decodeX509(src)
 			if err != nil {
 				return nil, parseerr(`failed to parse PEM encoded key: %w`, err)
 			}
