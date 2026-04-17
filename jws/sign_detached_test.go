@@ -386,4 +386,19 @@ func TestSignDetachedReader(t *testing.T) {
 		_, err = jws.Verify(signed, jws.WithKey(jwa.RS256(), &privkey.PublicKey), jws.WithDetachedPayload(payload))
 		require.NoError(t, err, `jws.Verify should accept SignDetachedReader+WithJSON output`)
 	})
+
+	t.Run("Does not mutate caller-provided protected headers", func(t *testing.T) {
+		privkey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err)
+		require.NoError(t, privkey.Set(jwk.KeyIDKey, "caller-kid"))
+
+		hdrs := jws.NewHeaders()
+		require.NoError(t, hdrs.Set("typ", "application/jose"))
+
+		_, err = jws.SignDetachedReader(bytes.NewReader(payload), jws.WithKey(jwa.RS256(), privkey, jws.WithProtectedHeaders(hdrs)))
+		require.NoError(t, err)
+
+		require.False(t, hdrs.Has(jws.AlgorithmKey), `caller's protected headers must not acquire "alg"`)
+		require.False(t, hdrs.Has(jws.KeyIDKey), `caller's protected headers must not acquire "kid"`)
+	})
 }

@@ -152,9 +152,17 @@ func SignDetachedReader(payload io.Reader, options ...SignOption) ([]byte, error
 		return nil, makeSignError(`failed to convert key: %w`, err)
 	}
 
-	// Build protected headers
+	// Clone caller-provided headers before mutating so re-using the same
+	// Headers instance across multiple Sign calls does not cause
+	// cross-contamination of alg/kid. Matches signatureBuilder.Build.
 	if protected == nil {
 		protected = NewHeaders()
+	} else {
+		cloned, err := protected.Clone()
+		if err != nil {
+			return nil, makeSignError(`failed to clone protected headers: %w`, err)
+		}
+		protected = cloned
 	}
 
 	if err := protected.Set(AlgorithmKey, alg); err != nil {
