@@ -52,6 +52,10 @@ func timeClaim(t Token, clock Clock, c string) time.Time {
 // See the various `WithXXX` functions for optional parameters
 // that can control the behavior of this method.
 func Validate(t Token, options ...ValidateOption) error {
+	if t == nil {
+		return jwterrs.ValidateErrorf(`jwt.Validate: token is nil`)
+	}
+
 	ctx := context.Background()
 	trunc := getDefaultTruncation()
 
