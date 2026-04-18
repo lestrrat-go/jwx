@@ -140,11 +140,13 @@ func (s *jwsSerializer) Serialize(ctx SerializeCtx, v any) (any, error) {
 	}
 
 	for _, opt := range s.options {
-		pc, ok := option.Get[interface{ Protected(jws.Headers) jws.Headers }](opt)
+		pc, ok := option.Get[interface {
+			SetProtectedDefault(jws.Headers) jws.Headers
+		}](opt)
 		if !ok {
 			continue
 		}
-		hdrs := pc.Protected(jws.NewHeaders())
+		hdrs := pc.SetProtectedDefault(jws.NewHeaders())
 		if err := setTypeOrCty(ctx, hdrs); err != nil {
 			return nil, err // this is already wrapped
 		}
