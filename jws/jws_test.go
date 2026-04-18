@@ -1348,6 +1348,31 @@ func TestJKU(t *testing.T) {
 		require.Contains(t, err.Error(), `signer-kid`, `error should name the missing kid`)
 		require.Contains(t, err.Error(), `not found`, `error should say the kid was not found`)
 	})
+	t.Run("ProtectedHeaderHasNoAlg", func(t *testing.T) {
+		// Craft a compact JWS whose protected header carries "jku" and
+		// "kid" but no "alg". jkuProvider used to return nil-no-error
+		// here — hiding the root cause — and now returns an explicit
+		// error naming the missing alg field.
+		protected := map[string]any{
+			"jku": srv.URL,
+			"kid": `my-awesome-key`,
+		}
+		phdr, err := json.Marshal(protected)
+		require.NoError(t, err, `json.Marshal should succeed`)
+		b64hdr := base64.EncodeToString(phdr)
+		b64payload := base64.EncodeToString(payload)
+		// Signature bytes do not matter — rejection happens before
+		// signature math.
+		signed := strings.Join([]string{b64hdr, b64payload, "AAAA"}, ".")
+
+		_, err = jws.Verify([]byte(signed), jws.WithVerifyAuto(nil,
+			jwk.WithFetchWhitelist(jwk.InsecureWhitelist{}),
+			jwk.WithHTTPClient(srv.Client()),
+		))
+		require.Error(t, err, `jws.Verify should fail when jku JWS has no alg`)
+		require.Contains(t, err.Error(), `"alg"`,
+			`error should name the missing alg field`)
+	})
 }
 
 func TestAlgorithmsForKey(t *testing.T) {
