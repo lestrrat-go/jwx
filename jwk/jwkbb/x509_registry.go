@@ -242,10 +242,17 @@ func RegisterX509Decoder[T any](blockType string, decoder X509Decoder[T]) error 
 
 // UnregisterX509Decoder removes the decoder registered for blockType.
 // A no-op if no decoder is registered for blockType.
-func UnregisterX509Decoder(blockType string) {
+//
+// The error return is reserved for future validation (for example,
+// refusing to unregister a built-in block type) and is always nil
+// today. Callers scripting Register/Unregister cycles should check
+// the returned value and propagate on failure to stay forward-
+// compatible, matching the convention on [RegisterX509Decoder].
+func UnregisterX509Decoder(blockType string) error {
 	muX509.Lock()
 	defer muX509.Unlock()
 	delete(x509Decoders, blockType)
+	return nil
 }
 
 // DecodeX509 dispatches block to the decoder registered for
@@ -283,12 +290,19 @@ func RegisterX509Encoder[T any](encoder X509Encoder[T]) error {
 	return nil
 }
 
-// UnregisterX509Encoder removes the encoder registered for type T. A
-// no-op if no encoder is registered for T.
-func UnregisterX509Encoder[T any]() {
+// UnregisterX509Encoder removes the encoder registered for type T.
+// A no-op if no encoder is registered for T.
+//
+// The error return is reserved for future validation (for example,
+// refusing to unregister a built-in type) and is always nil today.
+// Callers scripting Register/Unregister cycles should check the
+// returned value and propagate on failure to stay forward-
+// compatible, matching the convention on [RegisterX509Encoder].
+func UnregisterX509Encoder[T any]() error {
 	muX509.Lock()
 	defer muX509.Unlock()
 	delete(x509Encoders, reflect.TypeFor[T]())
+	return nil
 }
 
 // EncodePEM encodes each key into a PEM block and returns the

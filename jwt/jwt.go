@@ -624,8 +624,16 @@ func RegisterCustomDecoder[T any](name string, dec CustomDecodeFunc[T]) error {
 }
 
 // UnregisterCustomField removes the registration for a custom field.
-func UnregisterCustomField(name string) {
+//
+// The error return is reserved for future validation (for example,
+// refusing to unregister a built-in field) and is always nil today.
+// Callers — especially extension modules scripting Register/Unregister
+// cycles from init() — should check the returned value and propagate
+// on failure to stay forward-compatible, matching the convention on
+// [RegisterCustomField] / [RegisterCustomDecoder].
+func UnregisterCustomField(name string) error {
 	registry.Unregister(name)
+	return nil
 }
 
 func getDefaultTruncation() time.Duration {
