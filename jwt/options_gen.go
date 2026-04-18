@@ -459,6 +459,13 @@ func WithSignOption(v jws.SignOption) SignOption {
 // which is faster and matches RFC 7515. Set to false to enable auto-detection
 // for compatibility with non-conformant providers that may use padded or
 // standard base64 encoding.
+//
+// Caveat: strict decoding is applied on the fast path only. Messages
+// whose protected header carries a "crit" list bypass the fast path
+// (`jws.VerifyCompactFast` refuses them, see its godoc) and are
+// re-verified through `jws.Verify`, which uses the lenient
+// auto-detecting base64 decoder. As a result, "strict by default"
+// applies only when the message has no "crit" header.
 func WithStrictBase64Encoding(v bool) ParseOption {
 	return &parseOption{option.New(identStrictBase64Encoding{}, v)}
 }

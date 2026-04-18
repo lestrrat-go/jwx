@@ -235,7 +235,16 @@ func PublicSetOf(v Set, options ...PublicSetOption) (Set, error) {
 // that all fields will be copied onto the new public key. It is the caller's
 // responsibility to remove any fields, if necessary
 //
-// If `v` is a raw key, the key is first converted to a `jwk.Key`
+// If `v` is a raw key, the key is first converted to a `jwk.Key`.
+//
+// Symmetric (oct) key pass-through: a symmetric key has no distinct public
+// counterpart, so `PublicKeyOf` returns it unchanged. This is intentional,
+// but it means the returned value is NOT safe to publish: doing so would
+// leak the shared secret. Callers who intend to publish the result (for
+// example as part of a `/.well-known/jwks.json` document) must filter out
+// symmetric keys themselves, or use `PublicSetOf`, which rejects symmetric
+// keys by default and requires an explicit `jwk.WithAllowSymmetric(true)`
+// opt-in for the legacy pass-through behavior.
 func PublicKeyOf(v any) (Key, error) {
 	// This should catch all jwk.Key instances
 	if pk, ok := v.(PublicKeyer); ok {
