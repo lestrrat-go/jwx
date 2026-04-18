@@ -39,8 +39,11 @@ func Example_jws_verify_detached_stream() {
 	}
 
 	// Verify by streaming the payload through the hash function.
-	// The payload is read from an io.Reader and never fully buffered.
-	err = jws.VerifyDetachedReader(signed, bytes.NewReader(payload), jws.WithKey(jwa.HS256(), key))
+	// The payload is read from the io.Reader and never fully buffered.
+	_, err = jws.Verify(signed,
+		jws.WithKey(jwa.HS256(), key),
+		jws.WithDetachedPayloadReader(bytes.NewReader(payload)),
+	)
 	if err != nil {
 		fmt.Printf("failed to verify: %s\n", err)
 		return

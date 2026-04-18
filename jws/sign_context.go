@@ -2,6 +2,7 @@ package jws
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
@@ -10,13 +11,14 @@ import (
 )
 
 type signContext struct {
-	format      int
-	detached    bool
-	validateKey bool
-	payload     []byte
-	encoder     Base64Encoder
-	none        *signatureBuilder // special signature builder
-	sigbuilders []*signatureBuilder
+	format        int
+	detached      bool
+	validateKey   bool
+	payload       []byte
+	payloadReader io.Reader
+	encoder       Base64Encoder
+	none          *signatureBuilder // special signature builder
+	sigbuilders   []*signatureBuilder
 }
 
 var signContextPool = pool.New[*signContext](allocSignContext, freeSignContext)
@@ -40,6 +42,7 @@ func freeSignContext(ctx *signContext) *signContext {
 	ctx.encoder = base64.DefaultEncoder()
 	ctx.none = nil
 	ctx.payload = nil
+	ctx.payloadReader = nil
 
 	return ctx
 }
@@ -102,11 +105,28 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 
 			sc.sigbuilders = append(sc.sigbuilders, sb)
 		case identDetachedPayload{}:
+			if sc.payloadReader != nil {
+				return makeSignError(prefixJwsSign, `jws.WithDetachedPayload() and jws.WithDetachedPayloadReader() are mutually exclusive`)
+			}
 			if sc.payload != nil {
 				return makeSignError(prefixJwsSign, `the first argument to jws.Sign() must be nil when jws.WithDetachedPayload() is used`)
 			}
 			if err := option.Value(&sc.payload); err != nil {
 				return makeSignError(prefixJwsSign, `failed to retrieve detached payload option value: %w`, err)
+			}
+			sc.detached = true
+		case identDetachedPayloadReader{}:
+			if sc.payloadReader != nil {
+				return makeSignError(prefixJwsSign, `jws.WithDetachedPayloadReader() specified more than once`)
+			}
+			if sc.detached {
+				return makeSignError(prefixJwsSign, `jws.WithDetachedPayload() and jws.WithDetachedPayloadReader() are mutually exclusive`)
+			}
+			if sc.payload != nil {
+				return makeSignError(prefixJwsSign, `the first argument to jws.Sign() must be nil when jws.WithDetachedPayloadReader() is used`)
+			}
+			if err := option.Value(&sc.payloadReader); err != nil {
+				return makeSignError(prefixJwsSign, `failed to retrieve detached payload reader option value: %w`, err)
 			}
 			sc.detached = true
 		case identValidateKey{}:
