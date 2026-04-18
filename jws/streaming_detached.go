@@ -334,7 +334,15 @@ func newStreamingHasher(info streamingAlgorithmInfo, key any) (hash.Hash, error)
 		}
 		keyBytes, ok := key.([]byte)
 		if !ok {
-			return nil, fmt.Errorf(`HMAC key must be []byte, got %T`, key)
+			// Mirror dispatchHMACSign in jws/jwsbb/sign.go: route through
+			// keyconv.KeyAs[[]byte] so common footguns (e.g. passing a
+			// string secret) surface the same actionable message as the
+			// non-streaming path instead of a bare type mismatch.
+			converted, err := keyconv.KeyAs[[]byte](key)
+			if err != nil {
+				return nil, fmt.Errorf(`failed to convert HMAC key to []byte (streaming path): %w`, err)
+			}
+			keyBytes = converted
 		}
 		return hmac.New(meta.HashFunc, keyBytes), nil
 	case dsig.RSA:
