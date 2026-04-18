@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -243,21 +244,35 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 	lmhdrs := len(mhdrs)
 	lmfrms := len(mfrms)
 	lmcookies := len(mcookies)
-	var errors []any
+	// Render display text without fmt verbs. A dynamic fmt.Errorf format
+	// string would be brittle: caller-supplied keys flow through
+	// strconv.Quote, but strconv.Quote does not escape '%', so a key
+	// containing '%s' would otherwise turn into a format verb and mangle
+	// output. Write texts directly and propagate the underlying errors
+	// via errors.Join so errors.Is / errors.As still traverse them.
+	var errs []error
 	if lmhdrs > 0 || lmfrms > 0 || lmcookies > 0 {
 		b.WriteString(". Additionally, errors were encountered during attempts to verify using:")
 
 		if lmhdrs > 0 {
 			b.WriteString(" headers: (")
 			count := 0
-			for hdrkey, err := range mhdrs {
+			// Iterate ordered key slices so rendering is deterministic
+			// (map iteration would reorder per run).
+			for _, hdrkey := range hdrkeys {
+				err, ok := mhdrs[hdrkey]
+				if !ok {
+					continue
+				}
 				if count > 0 {
 					b.WriteString(", ")
 				}
 				b.WriteString("[header key: ")
 				b.WriteString(strconv.Quote(hdrkey))
-				b.WriteString(", error: %w]")
-				errors = append(errors, err)
+				b.WriteString(", error: ")
+				b.WriteString(err.Error())
+				b.WriteByte(tokens.CloseSquareBracket)
+				errs = append(errs, err)
 				count++
 			}
 			b.WriteString(")")
@@ -266,32 +281,49 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 		if lmcookies > 0 {
 			count := 0
 			b.WriteString(" cookies: (")
-			for cookiekey, err := range mcookies {
+			for _, cookiekey := range cookiekeys {
+				err, ok := mcookies[cookiekey]
+				if !ok {
+					continue
+				}
 				if count > 0 {
 					b.WriteString(", ")
 				}
 				b.WriteString("[cookie key: ")
 				b.WriteString(strconv.Quote(cookiekey))
-				b.WriteString(", error: %w]")
-				errors = append(errors, err)
+				b.WriteString(", error: ")
+				b.WriteString(err.Error())
+				b.WriteByte(tokens.CloseSquareBracket)
+				errs = append(errs, err)
 				count++
 			}
+			b.WriteString(")")
 		}
 
 		if lmfrms > 0 {
 			count := 0
 			b.WriteString(" forms: (")
-			for formkey, err := range mfrms {
+			for _, formkey := range formkeys {
+				err, ok := mfrms[formkey]
+				if !ok {
+					continue
+				}
 				if count > 0 {
 					b.WriteString(", ")
 				}
 				b.WriteString("[form key: ")
 				b.WriteString(strconv.Quote(formkey))
-				b.WriteString(", error: %w]")
-				errors = append(errors, err)
+				b.WriteString(", error: ")
+				b.WriteString(err.Error())
+				b.WriteByte(tokens.CloseSquareBracket)
+				errs = append(errs, err)
 				count++
 			}
+			b.WriteString(")")
 		}
 	}
-	return nil, fmt.Errorf(b.String(), errors...)
+	if len(errs) == 0 {
+		return nil, errors.New(b.String())
+	}
+	return nil, fmt.Errorf("%s: %w", b.String(), errors.Join(errs...))
 }
