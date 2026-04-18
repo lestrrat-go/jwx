@@ -41,3 +41,37 @@ func TestFindExportersCaseInsensitiveKeyKind(t *testing.T) {
 	require.NoError(t, err, "Export should dispatch via case-insensitive KeyKind")
 	require.Equal(t, sentinel, got, "Export should return sentinel from registered exporter")
 }
+
+// recipe10RawKey exercises the MIGRATION.md Recipe 10 custom-importer
+// syntax. Any change to jwk.RegisterKeyImporter's signature that breaks
+// bare-literal type inference (e.g. adding a second type parameter)
+// must break this test so the migration guide doesn't silently rot.
+type recipe10RawKey struct{ secret []byte }
+
+// TestMigrationRecipe10KeyImporterSyntax pins the Recipe 10 syntax shown
+// in MIGRATION.md: a bare function literal with a pointer argument whose
+// type parameter is inferred.
+func TestMigrationRecipe10KeyImporterSyntax(t *testing.T) {
+	// Intentionally mirrors MIGRATION.md Recipe 10 verbatim:
+	//
+	//	jwk.RegisterKeyImporter(func(src *myKeyType) (jwk.Key, error) {
+	//	    // ... convert — type parameter inferred, no assertion needed
+	//	})
+	require.NoError(t,
+		jwk.RegisterKeyImporter(func(src *recipe10RawKey) (jwk.Key, error) {
+			k, err := jwk.Import[jwk.Key](src.secret)
+			if err != nil {
+				return nil, err
+			}
+			require.NoError(t, k.Set(jwk.KeyIDKey, "recipe10"))
+			return k, nil
+		}),
+		"RegisterKeyImporter should accept Recipe 10 bare-literal form")
+
+	key, err := jwk.Import[jwk.Key](&recipe10RawKey{secret: []byte("recipe-10-secret-material")})
+	require.NoError(t, err, "Import should dispatch to the Recipe 10 importer")
+
+	kid, ok := key.KeyID()
+	require.True(t, ok, "imported key should carry the KID set by the importer")
+	require.Equal(t, "recipe10", kid, "KID should match the value set by the importer")
+}
