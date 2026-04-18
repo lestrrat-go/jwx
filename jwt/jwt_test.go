@@ -1804,4 +1804,3 @@ func TestGH1484(t *testing.T) {
 		}
 	})
 }
-
