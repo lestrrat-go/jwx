@@ -385,7 +385,7 @@ func parseJSON(data []byte, maxSigs int) (result *Message, err error) {
 func parseCompact(data []byte) (m *Message, err error) {
 	protected, payload, signature, err := jwsbb.SplitCompact(data)
 	if err != nil {
-		return nil, fmt.Errorf(`invalid compact serialization format: %w`, makeParseError(`jws.Parse`, `%w`, err))
+		return nil, makeParseError(`jws.Parse`, `invalid compact serialization format: %w`, err)
 	}
 	return parse(protected, payload, signature)
 }
