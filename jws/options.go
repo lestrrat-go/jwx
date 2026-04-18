@@ -75,11 +75,22 @@ type withKey struct {
 	keyPrevalidated bool   // true if algorithm-key validation was done at construction time
 }
 
-// Protected returns the protected headers. If w.protected is nil and v is
-// non-nil, v is stored as the protected headers before returning. This allows
-// callers to provide a default Headers that is used only when none was
-// explicitly configured via WithProtectedHeaders.
-func (w *withKey) Protected(v Headers) Headers {
+// SetProtectedDefault returns the protected headers, installing the
+// supplied default when none was configured via WithProtectedHeaders.
+//
+// Semantics:
+//   - If the caller already configured protected headers via
+//     WithProtectedHeaders, those are returned unchanged; the default
+//     is ignored.
+//   - If none were configured and the default is non-nil, the default
+//     is stored on the option and returned (making the call a side
+//     effect — hence the explicit "Set" prefix).
+//   - If none were configured and the default is nil, nil is returned.
+//
+// The method is both a getter and a conditional setter. The explicit
+// name reflects the side effect so callers reviewing code do not
+// mistake the call for a pure accessor.
+func (w *withKey) SetProtectedDefault(v Headers) Headers {
 	if w.protected == nil && v != nil {
 		w.protected = v
 		// Invalidate the precomputed header JSON because the caller
@@ -301,11 +312,10 @@ type withInsecureNoSignature struct {
 	protected Headers
 }
 
-// Protected returns the protected headers. If w.protected is nil and v is
-// non-nil, v is stored as the protected headers before returning. This allows
-// callers to provide a default Headers that is used only when none was
-// explicitly configured via WithProtectedHeaders.
-func (w *withInsecureNoSignature) Protected(v Headers) Headers {
+// SetProtectedDefault returns the protected headers, installing the
+// supplied default when none was configured via WithProtectedHeaders.
+// See (*withKey).SetProtectedDefault for the full semantics.
+func (w *withInsecureNoSignature) SetProtectedDefault(v Headers) Headers {
 	if w.protected == nil && v != nil {
 		w.protected = v
 	}
