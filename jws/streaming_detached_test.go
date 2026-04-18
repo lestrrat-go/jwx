@@ -944,6 +944,40 @@ func TestStreamingDetachedJSONGeneralSingleSignature(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// TestStreamingDetachedHMACStringKeyError locks in that passing a string
+// secret as an HMAC key on the streaming Verify path surfaces an actionable
+// error pointing the caller at the required key shape. Historically the
+// streaming HMAC branch returned the terse "HMAC key must be []byte, got
+// string" once a caller managed to reach the hasher; in v4 that case is
+// caught earlier by validateAlgorithmForKey with "unknown key type string",
+// and the hasher now additionally routes unrecognized keys through
+// keyconv.KeyAs[[]byte] to align with jws/jwsbb/sign.go's dispatchHMACSign.
+// Either layer's message is acceptable as long as the user gets something
+// more useful than a bare type mismatch.
+func TestStreamingDetachedHMACStringKeyError(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`hmac-string-key-payload`)
+	key := jwxtest.GenerateSymmetricKey()
+
+	signed, err := jws.Sign(payload, jws.WithKey(jwa.HS256(), key))
+	require.NoError(t, err)
+
+	_, err = jws.Verify(signed,
+		jws.WithKey(jwa.HS256(), "secret-as-string"),
+		jws.WithDetachedPayloadReader(bytes.NewReader(payload)),
+	)
+	require.Error(t, err)
+	msg := err.Error()
+	require.True(t,
+		strings.Contains(msg, "keyconv") ||
+			strings.Contains(msg, "convertible to []byte") ||
+			strings.Contains(msg, "unknown key type"),
+		"expected actionable key-type error, got %q", msg)
+	// Must NOT surface the legacy terse message from newStreamingHasher.
+	require.NotContains(t, msg, "HMAC key must be []byte, got")
+}
+
 // failingReader returns data up to failAt bytes, then fails with failErr.
 type failingReader struct {
 	data    []byte
