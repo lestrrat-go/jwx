@@ -31,8 +31,11 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
   Build-tag gating (`jwx_goccy`, `jwx_es256k`, `jwx_asmbase64`) is no longer supported.
 
-* `ReadFile()` has been removed from all packages. Use `ParseFS(fs.FS, path, ...options)`
-  instead, which accepts an `fs.FS` and a path within that filesystem.
+* `ParseFS(fs.FS, path, ...options)` has been added to all packages that previously
+  exposed `ReadFile()`. It accepts an `fs.FS` and a path within that filesystem, which
+  lets callers read from `embed.FS`, `testing/fstest`, or a CWD-sandboxed `os.DirFS`.
+  `ReadFile(path, ...options)` is retained for v3 source compatibility but is now
+  marked deprecated in favour of `ParseFS`.
 
 * Generic free functions have been added across all packages for type-safe field access:
 

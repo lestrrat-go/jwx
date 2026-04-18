@@ -4,10 +4,27 @@ package jws
 
 import (
 	"io/fs"
+	"os"
 )
 
+// ParseFS opens path on fsys and parses the contents.
 func ParseFS(fsys fs.FS, path string, options ...ParseOption) (*Message, error) {
 	f, err := fsys.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	return ParseReader(f, options...)
+}
+
+// ReadFile opens path with os.Open and parses the contents. It accepts
+// any path os.Open accepts, including absolute paths.
+//
+// Deprecated: prefer ParseFS, which works with any fs.FS (e.g. os.DirFS,
+// embed.FS, testing/fstest). ReadFile is retained for v3 source compatibility.
+func ReadFile(path string, options ...ParseOption) (*Message, error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}

@@ -41,7 +41,7 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 |----|-----|-------|
 | `import ".../jwx/v3/..."` | `import ".../jwx/v4/..."` | All packages |
 | `.Get(name, &dst)` | `.Field(name) (any, bool)` or `pkg.Get[T](obj, name)` | Key, Token, Headers |
-| `ReadFile(path, opts...)` | `ParseFS(fsys, path, opts...)` | All packages |
+| `ReadFile(path, opts...)` | `ReadFile(path, opts...)` *(still works, deprecated)* or `ParseFS(fsys, path, opts...)` | All packages; `ParseFS` is the preferred replacement |
 | `RegisterCustomField(name, obj)` | `RegisterCustomField[T](name)` | All packages |
 | `jwk.RegisterProbeField(reflect.StructField{...})` | `jwk.RegisterProbeField[T](name, jsonKey)` | No `reflect` import needed |
 | `jwk.Import(raw)` | `jwk.Import[T](raw)` | Generic return type |
@@ -176,17 +176,25 @@ key, err := jwk.Import[jwk.Key](someRawKey)
 
 ### Recipe 4: File Reading
 
+`ReadFile` is retained for source compatibility with v3 but is now deprecated.
+New code should use `ParseFS`, which takes an explicit `fs.FS` and works with
+`os.DirFS`, `embed.FS`, `testing/fstest`, or any other filesystem.
+
 ```go
-// Before
+// v3 code keeps working unchanged (deprecated):
 token, err := jwt.ReadFile("path/to/token.jwt")
 set, err := jwk.ReadFile("path/to/keys.json")
 msg, err := jws.ReadFile("path/to/message.jws")
 
-// After
+// Preferred in v4:
 token, err := jwt.ParseFS(os.DirFS("."), "path/to/token.jwt")
 set, err := jwk.ParseFS(os.DirFS("."), "path/to/keys.json")
 msg, err := jws.ParseFS(os.DirFS("."), "path/to/message.jws")
 ```
+
+Note: `os.DirFS(".")` rejects absolute paths and paths containing `..`
+(per `fs.ValidPath`). If you need to read by absolute path, either keep using
+`ReadFile` or call `ParseFS(os.DirFS("/"), path[1:])`.
 
 ### Recipe 5: Custom Signer/Verifier
 

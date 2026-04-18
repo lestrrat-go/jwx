@@ -35,11 +35,11 @@ This eliminates the hardcoded check `if option.OptionName == "WithCompact"`.
 
 **No other changes needed.** The function sizes are appropriate and the logic is clear.
 
-## genreadfile (81 lines)
+## genreadfile
 
 ### Current State
 
-The simplest generator. Hardcoded definitions for 4 packages (jwk, jws, jwe, jwt). Each generates a `ParseFS` function that opens a file via `fs.FS` and delegates to `ParseReader`.
+The simplest generator. Hardcoded definitions for 4 packages (jwk, jws, jwe, jwt). For each package it emits a `ParseFS` function (opens a file via `fs.FS` and delegates to `ParseReader`) and a `ReadFile` function (opens a path via `os.Open` and delegates to `ParseReader`). `ReadFile` is marked `// Deprecated:` in favour of `ParseFS`; both exist so v3 source keeps compiling while new code is steered toward the `fs.FS`-based entry point.
 
 ```go
 type definition struct {
@@ -53,6 +53,6 @@ Minimal. The only concern is that the definitions are hardcoded in Go rather tha
 
 ### Proposed Changes
 
-**No changes.** At 81 lines with clear, correct logic, refactoring this tool would be over-engineering. If a fifth package needs `ParseFS` in the future, adding one more struct literal to the slice is trivial.
+**No changes.** The logic is still small and clear. If a fifth package needs these helpers in the future, adding one more struct literal to the slice is trivial.
 
 The only shared helper this tool could benefit from is the `CodeFormatError` handling pattern (check error, print source, return wrapped error), which appears in every generator. If `internal/jwxcodegen/` provides a `WriteFileOrDump(o, filename)` helper, genreadfile could use it to save 4 lines. Not worth a separate change.

@@ -19,7 +19,7 @@ invoked via subcommand through `scripts/jwxcodegen.sh`.
 | `genheaders` | `generate-headers` | `jwe/objects.yml` | `jwe/headers_gen.go` |
 | `genjwk` | `generate-jwk` | `jwk/objects.yml` | `jwk/*_gen.go` |
 | `genjwa` | `generate-jwa` | `jwa/objects.yml` | `jwa/*_gen.go` |
-| `genreadfile` | `generate-readfile` | (none) | ReadFile helpers |
+| `genreadfile` | `generate-readfile` | (none) | `{jwk,jws,jwe,jwt}/io_gen.go` — `ParseFS` + deprecated `ReadFile` |
 
 ### Commands
 
