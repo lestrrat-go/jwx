@@ -944,6 +944,43 @@ func TestStreamingDetachedJSONGeneralSingleSignature(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// TestStreamingDetachedHMACStringKeyErrorMatchesNonStreaming asserts that
+// passing a raw string as the HMAC secret (the common "secret-as-string"
+// footgun) on the streaming path produces an actionable error that
+// identifies the offending key type, matching the non-streaming path's
+// behaviour. The option-layer validation in jws.Verify currently
+// short-circuits before newStreamingHasher is reached, so the observable
+// error comes from jws.AlgorithmsForKey and reads "unknown key type
+// string". If that gate is ever relaxed for HMAC, the streaming branch
+// in newStreamingHasher now routes through keyconv.ByteSliceKey — which
+// surfaces "keyconv:" — so the streaming and non-streaming paths stay
+// aligned either way.
+func TestStreamingDetachedHMACStringKeyErrorMatchesNonStreaming(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`hmac-string-key-payload`)
+	key, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err)
+
+	signed, err := jws.Sign(nil,
+		jws.WithKey(jwa.HS256(), key),
+		jws.WithDetachedPayloadReader(bytes.NewReader(payload)),
+	)
+	require.NoError(t, err)
+
+	_, err = jws.Verify(signed,
+		jws.WithKey(jwa.HS256(), "secret-as-string"),
+		jws.WithDetachedPayloadReader(bytes.NewReader(payload)),
+	)
+	require.Error(t, err)
+	msg := err.Error()
+	require.True(t,
+		strings.Contains(msg, "keyconv") ||
+			strings.Contains(msg, "convertible to []byte") ||
+			strings.Contains(msg, "unknown key type string"),
+		"expected error to name the offending key type; got %q", msg)
+}
+
 // failingReader returns data up to failAt bytes, then fails with failErr.
 type failingReader struct {
 	data    []byte
