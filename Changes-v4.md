@@ -6,48 +6,6 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 # Detailed list of changes
 
-## Unreleased
-
-* [jwk] Added `jwk.WithMaxKeys(int)` — caps the number of keys accepted
-  by `jwk.Parse` / `jwk.ParseReader` / `jwk.ParseString` in both the
-  JSON `"keys"` array and the PEM block stream (default **1000**).
-  Usable as a `jwk.Settings()` global or a per-call override.
-  Replaces the hardcoded internal PEM cap of the same value, so the
-  default behavior is unchanged. This is a structural/amplification
-  cap, not a raw-byte cap; see `docs/13-input-size.md`.
-
-* [jws] **Bug fix (RFC compliance, interop):** `jws.Sign()` with
-  `jws.WithDetachedPayload()` + `jws.WithJSON()` now correctly omits the
-  `"payload"` member from the output, per RFC 7515 Appendix F. Previous
-  releases emitted the encoded payload anyway, producing output that was
-  indistinguishable from a non-detached JWS and that some peers rejected as
-  malformed detached JSON. The fix also preserves detached-ness through
-  `Message.UnmarshalJSON` / `MarshalJSON`, so parse/remarshal round-trips no
-  longer reintroduce the `"payload"` member. Callers already passing
-  `jws.WithDetachedPayload()` get the fix automatically — no API change.
-
-* [jws] Added `jws.WithDetachedPayloadReader()` — a streaming variant of
-  `jws.WithDetachedPayload()` that accepts an `io.Reader` instead of a
-  `[]byte`, for detached payloads that should not be materialized in
-  memory. It is a `jws.Sign()` / `jws.Verify()` option; the two remain
-  the default entry points. The streaming path is a narrow specialist:
-  HMAC/RSA/ECDSA only. EdDSA, custom-family algorithms, and algorithms
-  registered via `jws.RegisterSigner()` / `jws.RegisterVerifier()` are
-  rejected with an error pointing callers at `jws.WithDetachedPayload()`
-  for the full-option path. On sign, multiple `jws.WithKey()` options
-  combined with `jws.WithJSON()` produce a general-form multi-signature
-  JWS (the payload is streamed once and fanned out to each signer). On
-  verify, only single-signature JWS input is supported;
-  `jws.WithKeySet()`, `jws.WithKeyProvider()`, and `jws.WithVerifyAuto()`
-  are not accepted.
-
-* [jws] Added `jws.Base64StreamEncoder` — the stream-capable extension
-  of `jws.Base64Encoder`. The default encoder and `*base64.Encoding`
-  values supplied via `jws.WithBase64Encoder()` are auto-wrapped, so
-  typical callers see no change. Custom encoders only need to implement
-  this additional interface if they want to be usable with
-  `jws.WithDetachedPayloadReader()`.
-
 ## Module
 
 * This module now requires Go 1.26
@@ -87,22 +45,19 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   kid, err := jwk.Get[string](key, "kid")
   ```
 
-  `Get[T]` is available in `jwk`, `jwt`, `jws`, and `jwe`.
+  `Get[T]` is available in `jwk`, `jwt`, `jws`, and `jwe`. If the field is
+  missing or has a different type than requested, the returned error can
+  be matched against a dedicated error type using `errors.Is`.
 
 * `RegisterCustomField[T](name)` and `RegisterCustomDecoder[T](name, dec)` are now
   generic, replacing the previous untyped registration functions. Available in `jwk`,
   `jwt`, `jws`, and `jwe`.
 
+* `Unregister*` functions now return `error` to match their `Register*`
+  counterparts. The current implementations always return `nil`, but you
+  should check the error to stay forward-compatible.
+
 * Internal JSON handling now uses `encoding/json/v2`.
-
-* `jwx.DecoderSettings()` has been renamed to `jwx.Settings()` to match the
-  sub-package convention. `jwx.Settings(jwx.WithUseNumber(true))` preserves
-  JSON numbers as `json.Number` in private/custom fields.
-
-* `jwx.SetBase64Encoder()` and `jwx.SetBase64Decoder()` have been removed.
-  Configure the base64 backend through `jwx.Settings()` instead:
-  `jwx.Settings(jwx.WithBase64Encoder(enc), jwx.WithBase64Decoder(dec))`.
-  The `jwx.Base64Encoder` / `jwx.Base64Decoder` interface types are unchanged.
 
 * `github.com/lestrrat-go/blackmagic` has been removed. Reflection-based conversions
   have been replaced with generics.
@@ -111,19 +66,30 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   to v3, which uses generics. Option values are now retrieved via `option.MustGet[T](opt)`
   instead of type-asserting `opt.Value()`.
 
+## JWA
+
+* `jwa.AKP()` has been added for the AKP (Algorithm Key Pair) key type, which
+  is a generic key type used by post-quantum algorithms such as ML-DSA and
+  ML-KEM. The matching `jwk.AKPPublicKey` and `jwk.AKPPrivateKey` types are
+  also available. Only the generic AKP machinery lives in core jwx; ML-KEM
+  key import/export is provided by `github.com/jwx-go/mlkem`.
+
 ## JWK
 
-* `jwk.PublicSetOf` now returns an error if the input set contains a
-  symmetric (`oct`) key, because the "public" form of a symmetric key
-  would be the secret itself — publishing the result (e.g. as
-  `/.well-known/jwks.json`) would leak the HMAC secret. Callers who
-  genuinely want the legacy pass-through can opt in with
-  `jwk.PublicSetOf(set, jwk.WithAllowSymmetric(true))`. The signature
-  is now variadic (`PublicSetOf(v Set, options ...PublicSetOption)`),
-  so existing call sites compile unchanged.
+* `jwk.ReadFile()` has been removed. Use `jwk.ParseFS()` instead.
 
-  `jwk.PublicKeyOf` on a single symmetric key is unchanged — it still
-  returns the key as-is, matching its documented behavior.
+* `jwk.Get[T]()` has been added as a replacement for `key.Get(name, &dst)`.
+  If the field is missing or has a different type than requested, the returned
+  error can be matched against `jwk.FieldNotFoundError` or
+  `jwk.FieldTypeMismatchError` using `errors.Is`.
+
+* `jwk.RegisterCustomField()` and `jwk.RegisterCustomDecoder()` are now
+  generic, replacing the previous untyped registration functions.
+
+* `jwk.UnregisterCustomField` and `jwk.UnregisterKeyUsage` now return `error`.
+
+* `jwk.AKPPublicKey` and `jwk.AKPPrivateKey` key types have been added.
+  Also see the JWA section.
 
 * `jwk.Import()` is now generic: `jwk.Import[T Key](raw any) (T, error)`.
   This replaces the previous `jwk.Import()` which returned an untyped `jwk.Key`.
@@ -209,23 +175,16 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   jwk.RegisterProbeField[string]("MyHint", "my_hint")
   ```
 
-* RSA JWK validation is now enforced consistently across JSON parse, JWKS parse,
-  PEM/X.509 parse, and `jwk.Import()`. Keys with moduli smaller than 2048 bits
-  or unsafe public exponents are now rejected by default. Compatibility knobs are available via
-  `jwk.Settings(jwk.WithMinRSAModulusBits(...), jwk.WithMinRSAPublicExponent(...))`.
-
 * `jwk.Settings()` now returns `error` for symmetry with `jwt.Settings`,
   `jws.Settings`, `jwe.Settings`, `cert.Settings`, and `jwx.Settings`. The
   current implementation always returns `nil` — the return is reserved for
   future validation. Callers should check the error to stay
   forward-compatible.
 
-* The `AKP` key type (Algorithm Key Pair, RFC 9802) has been added, exposed as
-  `jwa.AKP()` with `jwk.AKPPublicKey` / `jwk.AKPPrivateKey`. This is a generic
-  key type for post-quantum algorithms and is used by both ML-DSA (signature)
-  and ML-KEM (key encapsulation) support. ML-KEM key import/export lives in
-  the `github.com/jwx-go/mlkem` companion module; only the generic AKP
-  machinery is in core jwx.
+* `jwk.RegisterKeyImporter()` now returns an error on a second registration
+  for the same Go type, instead of silently overwriting the previous importer.
+  To swap a built-in importer deliberately, use the newly added
+  `jwk.UnregisterKeyImporter()` first.
 
 * `jwk.Set` now supports range-over-func iteration:
 
@@ -241,18 +200,23 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 ## JWT
 
-* `jwt.Parse()` with a single `jwt.WithKey(alg, key)` option and compact JWS input now
-  takes a fast path that bypasses format detection, option conversion, and the nested
-  decode loop, going directly to `jws.VerifyCompactFast()`. This reduces allocations
-  and improves parse+verify throughput.
+* `jwt.ReadFile()` has been removed. Use `jwt.ParseFS()` instead.
 
-* `jws.VerifyCompactFast()` now uses strict base64url decoding (RFC 7515, no padding)
-  instead of auto-detecting the encoding variant. This eliminates per-decode scanning
-  overhead and allows signature buffer pooling.
+* `jwt.Get[T]()` has been added as a replacement for `token.Get(name, &dst)`.
+  If the claim is missing or has a different type than requested, the returned
+  error can be matched against `jwt.ClaimNotFoundError` or
+  `jwt.ClaimTypeMismatchError` using `errors.Is`. Also applies to `jwt/openid`.
 
-* Added `jwt.WithStrictBase64Encoding(bool)` option (default: true). Set to false to
-  fall back to auto-detecting base64 encoding for compatibility with non-conformant
-  providers. When false, the fast path is bypassed.
+* `jwt.RegisterCustomField()` and `jwt.RegisterCustomDecoder()` are now
+  generic, replacing the previous untyped registration functions. Same
+  change applies to `jwt/openid`.
+
+* `jwt.UnregisterCustomField` now returns `error`. Same change applies to
+  `jwt/openid`.
+
+* `jwt.WithStrictBase64Encoding()` has been added. When set to `false`,
+  the parser falls back to auto-detecting base64 encoding for compatibility
+  with non-conformant providers. The default is strict RFC 7515 decoding.
 
 * `(jwt.Token).Claims()` returns `iter.Seq2[string, any]` for range-over-func iteration:
 
@@ -270,6 +234,19 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 ## JWS
 
+* `jws.ReadFile()` has been removed. Use `jws.ParseFS()` instead.
+
+* `jws.Get[T]()` has been added as a replacement for `headers.Get(name, &dst)`.
+  If the field is missing or has a different type than requested, the returned
+  error can be matched against `jws.FieldNotFoundError` or
+  `jws.FieldTypeMismatchError` using `errors.Is`.
+
+* `jws.RegisterCustomField()` and `jws.RegisterCustomDecoder()` are now
+  generic, replacing the previous untyped registration functions.
+
+* `jws.UnregisterSigner`, `jws.UnregisterVerifier`, and
+  `jws.UnregisterCustomField` now return `error`.
+
 * The legacy signer/verifier system has been removed. The entire `jws/legacy/` package
   is gone.
 
@@ -280,10 +257,30 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   `Signer2` / `Verifier2` interfaces. The old untyped factory signatures are no
   longer accepted.
 
+* `jws.VerifyCompactFast()` now uses strict base64url decoding instead of
+  auto-detecting the encoding variant.
+
+* `jws.Sign()` now returns an error when `jws.WithKey` and
+  `jws.WithProtectedHeaders` carry different non-empty `kid` values.
+  Previously the protected-header `kid` was silently overwritten with the
+  `jwk.Key`'s `kid`. Matching `kid`s still sign cleanly.
+
 * ML-DSA (FIPS 204) signature support is available via the `github.com/jwx-go/mldsa/v4`
   extension module.
 
 ## JWE
+
+* `jwe.ReadFile()` has been removed. Use `jwe.ParseFS()` instead.
+
+* `jwe.Get[T]()` has been added as a replacement for `headers.Get(name, &dst)`.
+  If the field is missing or has a different type than requested, the returned
+  error can be matched against `jwe.FieldNotFoundError` or
+  `jwe.FieldTypeMismatchError` using `errors.Is`.
+
+* `jwe.RegisterCustomField()` and `jwe.RegisterCustomDecoder()` are now
+  generic, replacing the previous untyped registration functions.
+
+* `jwe.UnregisterCustomField` now returns `error`.
 
 * `jwe.WithLegacyHeaderMerging()` has been removed. The default behavior is now
   spec-compliant: per-recipient headers are not merged into the protected header
@@ -342,3 +339,13 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   hybrid PQ HPKE variant (X25519 + ML-KEM-768) is available via
   `github.com/jwx-go/reddy-pqchpke/v4`. **These are based on draft specifications
   and the APIs are not yet stable.**
+
+## JWX
+
+* `jwx.DecoderSettings()` has been renamed to `jwx.Settings()` to match the
+  sub-package convention.
+
+* `jwx.SetBase64Encoder()` and `jwx.SetBase64Decoder()` have been removed.
+  Configure the base64 backend through `jwx.Settings()` using
+  `jwx.WithBase64Encoder()` and `jwx.WithBase64Decoder()` instead. The
+  `jwx.Base64Encoder` and `jwx.Base64Decoder` interface types are unchanged.
