@@ -35,6 +35,24 @@ type globalOption struct {
 
 func (*globalOption) globalOption() {}
 
+// GlobalParseOption describes an Option that can be passed to both
+// `jwk.Settings()` (to change the default globally) and
+// `jwk.Parse()` / `jwk.ParseReader()` / `jwk.ParseString()` (to
+// override per call).
+type GlobalParseOption interface {
+	Option
+	globalOption()
+	parseOption()
+}
+
+type globalParseOption struct {
+	Option
+}
+
+func (*globalParseOption) globalOption() {}
+
+func (*globalParseOption) parseOption() {}
+
 // ParseOption is a type of Option that can be passed to `jwk.Parse()`
 type ParseOption interface {
 	Option
@@ -63,6 +81,7 @@ type identAllowSymmetric struct{}
 type identForceAssign struct{}
 type identIgnoreParseError struct{}
 type identLocalRegistry struct{}
+type identMaxKeys struct{}
 type identMinRSAModulusBits struct{}
 type identMinRSAPublicExponent struct{}
 type identStrictKeyUsage struct{}
@@ -83,6 +102,10 @@ func (identIgnoreParseError) String() string {
 
 func (identLocalRegistry) String() string {
 	return "withLocalRegistry"
+}
+
+func (identMaxKeys) String() string {
+	return "WithMaxKeys"
 }
 
 func (identMinRSAModulusBits) String() string {
@@ -157,6 +180,25 @@ func WithIgnoreParseError(v bool) ParseOption {
 // This option is only available for internal code. Users don't get to play with it
 func withLocalRegistry(v *json.Registry) ParseOption {
 	return &parseOption{option.New(identLocalRegistry{}, v)}
+}
+
+// WithMaxKeys specifies the maximum number of keys allowed in a JWK
+// set passed to `jwk.Parse()` / `jwk.ParseReader()` / `jwk.ParseString()`.
+// If the "keys" array of a JSON-encoded JWKS, or the number of PEM
+// blocks in an X.509-encoded input, exceeds this value, parsing
+// returns an error. The default is 1000.
+//
+// This option can be passed to `jwk.Settings()` to change the default
+// globally, or to `jwk.Parse()` / `jwk.ParseReader()` /
+// `jwk.ParseString()` for a per-call override. A non-positive value
+// is rejected.
+//
+// The cap defends against amplification: each entry triggers a
+// probe + unmarshal + validation, each of which allocates. Bounding
+// raw input bytes remains the caller's responsibility — see
+// docs/13-input-size.md.
+func WithMaxKeys(v int) GlobalParseOption {
+	return &globalParseOption{option.New(identMaxKeys{}, v)}
 }
 
 // WithMinRSAModulusBits specifies the minimum RSA modulus size, in bits,

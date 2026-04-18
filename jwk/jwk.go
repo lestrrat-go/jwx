@@ -15,6 +15,7 @@ import (
 	"math/big"
 	"reflect"
 	"slices"
+	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
@@ -31,12 +32,16 @@ func bigIntToBytes(n *big.Int) ([]byte, error) {
 	return n.Bytes(), nil
 }
 
-// maxPEMKeys is the maximum number of PEM blocks that Parse() will
-// decode from a single input. This prevents resource exhaustion from
-// inputs containing thousands of small PEM blocks.
-const maxPEMKeys = 1000
+// maxKeys bounds the number of keys accepted by Parse() from a single
+// input. It applies to both the JSON `keys` array and the PEM block
+// stream: each entry triggers a probe + unmarshal + validation, and
+// callers cannot predict that amplification from the raw input size
+// alone. Tunable via WithMaxKeys / Settings(WithMaxKeys(...)).
+var maxKeys atomic.Int64
 
 func init() {
+	maxKeys.Store(1000)
+
 	if err := RegisterProbeField[string]("Kty", "kty"); err != nil {
 		panic(fmt.Errorf("failed to register mandatory probe for 'kty' field: %w", err))
 	}
@@ -458,6 +463,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var parseX509 bool
 	var localReg *json.Registry
 	var ignoreParseError bool
+	maxK := int(maxKeys.Load())
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identX509{}:
@@ -470,6 +476,12 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 				localReg = json.NewRegistry()
 			}
 			localReg.Register(pair.Name, pair.Value)
+		case identMaxKeys{}:
+			v := option.MustGet[int](opt)
+			if v <= 0 {
+				return nil, parseerr(`WithMaxKeys must be greater than zero, got %d`, v)
+			}
+			maxK = v
 		}
 	}
 
@@ -494,8 +506,8 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 				return nil, parseerr(`failed to add jwk.Key to set: %w`, err)
 			}
 			keyCount++
-			if keyCount > maxPEMKeys {
-				return nil, parseerr(`too many PEM blocks (max %d)`, maxPEMKeys)
+			if keyCount > maxK {
+				return nil, parseerr(`too many keys in PEM input: max %d`, maxK)
 			}
 			src = bytes.TrimSpace(rest)
 		}
@@ -513,6 +525,13 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		}
 		dcKs.SetDecodeCtx(dc)
 		defer func() { dcKs.SetDecodeCtx(nil) }()
+	}
+
+	// Propagate the resolved cap to Set.UnmarshalJSON. A scratch field
+	// rather than a ParseOption thread-through keeps json.Unmarshal happy.
+	if setter, ok := s.(interface{ setMaxKeys(int) }); ok {
+		setter.setMaxKeys(maxK)
+		defer setter.setMaxKeys(0)
 	}
 
 	if err := json.Unmarshal(src, s); err != nil {
@@ -705,11 +724,23 @@ func IsKeyValidationError(err error) bool {
 
 // Settings is used to configure global behavior of the jwk package.
 //
-// The error return is reserved for future validation. The current
-// implementation always returns nil, but callers — especially extension
-// modules calling this from init() — must check the return value and panic
-// on failure to stay forward-compatible.
+// Returns a non-nil error and applies no changes if any option fails
+// validation (for example, a non-positive [WithMaxKeys]). Extension
+// modules calling this from init() must check the return value and
+// panic on failure.
 func Settings(options ...GlobalOption) error {
+	var newMaxKeys int64
+	for _, opt := range options {
+		switch opt.Ident() {
+		case identMaxKeys{}:
+			v := option.MustGet[int](opt)
+			if v <= 0 {
+				return fmt.Errorf(`jwk.Settings: WithMaxKeys must be greater than zero, got %d`, v)
+			}
+			newMaxKeys = int64(v)
+		}
+	}
+
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identMinRSAModulusBits{}:
@@ -719,6 +750,10 @@ func Settings(options ...GlobalOption) error {
 		case identStrictKeyUsage{}:
 			strictKeyUsage.Store(option.MustGet[bool](opt))
 		}
+	}
+
+	if newMaxKeys > 0 {
+		maxKeys.Store(newMaxKeys)
 	}
 	return nil
 }

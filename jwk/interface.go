@@ -133,6 +133,7 @@ type set struct {
 	mu            sync.RWMutex
 	dc            DecodeCtx
 	privateParams map[string]any
+	maxKeys       int // scratch cap consumed by UnmarshalJSON; 0 means use global default
 }
 
 type PublicKeyer interface {

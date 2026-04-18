@@ -13,6 +13,7 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithForceAssign", identForceAssign{}.String())
 	require.Equal(t, "WithIgnoreParseError", identIgnoreParseError{}.String())
 	require.Equal(t, "withLocalRegistry", identLocalRegistry{}.String())
+	require.Equal(t, "WithMaxKeys", identMaxKeys{}.String())
 	require.Equal(t, "WithMinRSAModulusBits", identMinRSAModulusBits{}.String())
 	require.Equal(t, "WithMinRSAPublicExponent", identMinRSAPublicExponent{}.String())
 	require.Equal(t, "WithStrictKeyUsage", identStrictKeyUsage{}.String())
