@@ -399,6 +399,11 @@ func WithDetachedPayload(v []byte) SignVerifyOption {
 // failure the Reader cannot be rewound; callers that need retry
 // semantics must buffer the payload themselves.
 //
+// The Reader is accessed from the calling goroutine only; do not share
+// a single Reader between concurrent `jws.Sign` / `jws.Verify` calls
+// unless the Reader is itself goroutine-safe and positioned
+// independently for each call.
+//
 // Only the HMAC, RSA (PKCS#1 v1.5 and PSS), and ECDSA algorithm
 // families are supported by this option; EdDSA and custom-family
 // algorithms require the full payload in memory and will be rejected
