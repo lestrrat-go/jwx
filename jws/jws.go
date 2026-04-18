@@ -21,14 +21,11 @@
 // verification, the original payload is returned, so you can work on it.
 //
 // `jws.Sign()` and `jws.Verify()` are the default general-purpose entry
-// points, including for detached payloads that are already available as
-// `[]byte` via `jws.WithDetachedPayload()`.
-//
-// If the payload is detached and should be streamed from an `io.Reader`
-// without materializing it in memory, use `jws.SignDetachedReader()` and
-// `jws.VerifyDetachedReader()` instead. Those APIs are intentionally
-// narrower: single-key only, detached-payload only, and not all algorithms
-// can be streamed.
+// points. For detached payloads already available as `[]byte`, pass
+// `jws.WithDetachedPayload()`. For detached payloads that should be
+// streamed from an `io.Reader` without materializing them in memory, pass
+// `jws.WithDetachedPayloadReader()`. The streaming path is intentionally
+// narrower — single key, detached only, HMAC/RSA/ECDSA only.
 //
 // As a sidenote, consider using github.com/lestrrat-go/htmsig if you
 // looking for HTTP Message Signatures (RFC9421) -- it uses the same
@@ -165,6 +162,10 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 	// user to spell it out as `jws.Sign(..., jws.WithJSON(), jws.WithKey(...), jws.WithKey(...))`
 	if sc.format == fmtCompact && lsigner != 1 {
 		return nil, makeSignError(prefixJwsSign, `cannot have multiple signers (keys) specified for compact serialization. Use only one jws.WithKey()`)
+	}
+
+	if sc.payloadReader != nil {
+		return sc.signStreaming()
 	}
 
 	// For compact single-signature (the overwhelmingly common case),

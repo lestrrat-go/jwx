@@ -14,6 +14,14 @@ import (
 // but it uses a base64 encoding with padding.
 type Base64Encoder = base64.Encoder
 
+// Base64StreamEncoder is the stream-capable extension of [Base64Encoder].
+// Encoders that satisfy this interface can be used with the streaming
+// detached-payload path ([jws.WithDetachedPayloadReader]). The default
+// encoder (`encoding/base64.RawURLEncoding`) satisfies it. Custom
+// encoders that do not satisfy it cause [jws.Sign] / [jws.Verify] with
+// [jws.WithDetachedPayloadReader] to return an error.
+type Base64StreamEncoder = base64.StreamEncoder
+
 type DecodeCtx interface {
 	CollectRaw() bool
 }

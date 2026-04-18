@@ -54,19 +54,17 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 JSON Web Signatures per RFC 7515. Sign, verify, parse.
 
 - **Sign(payload []byte, ...SignOption) ([]byte, error)** — sign payload
-- **SignDetachedReader(payload io.Reader, ...SignOption) ([]byte, error)** — sign a detached payload from an `io.Reader` without materializing it in memory; specialist API, single-key only
 - **Verify(buf []byte, ...VerifyOption) ([]byte, error)** — verify and extract payload
-- **VerifyDetachedReader(src []byte, payload io.Reader, ...VerifyOption) error** — verify a compact or single-signature JSON detached JWS against an `io.Reader`; specialist API, single-key only
 - **VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error)** — fast-path verification
 - **Parse(src []byte, ...ParseOption) (*Message, error)** — parse without verification
 - **SplitCompact(src []byte) ([]byte, []byte, []byte, error)** — split compact JWS into parts
 - Key types: `Message`, `Signature`, `Headers`, `KeyProvider`, `KeySink`, `Base64Encoder`
-- Options: `WithKey()`, `WithKeySet()`, `WithVerifyAuto()`, `WithJSON()`, `WithDetachedPayload()`
+- Options: `WithKey()`, `WithKeySet()`, `WithVerifyAuto()`, `WithJSON()`, `WithDetachedPayload()`, `WithDetachedPayloadReader()` (streaming variant; single-key, HMAC/RSA/ECDSA only)
 - Global/per-call settings: `WithMaxParseInputSize()` (usable in both `Settings()` and `ParseReader()`/`ReadFile()`); `WithMaxSignatures()` (usable in both `Settings()` and `Parse()`/`ReadFile()`)
 - Registration: `RegisterSigner()`, `RegisterVerifier()`, `AlgorithmsForKey()`, `RegisterAlgorithmForKeyType()`, `RegisterAlgorithmForCurve()`
 - Error sentinels: `SignError()`, `VerifyError()`, `VerificationError()`, `ParseError()`
 - Sub-package: `jws/jwsbb` — compact serialization, signing, verification building blocks
-- Files: `jws.go`, `message.go`, `signer.go`, `verifier.go`, `headers.go`, `interface.go`, `errors.go`, `options.go`, `key_provider.go`, `sign_context.go`, `verify_context.go`
+- Files: `jws.go`, `message.go`, `signer.go`, `verifier.go`, `headers.go`, `interface.go`, `errors.go`, `options.go`, `key_provider.go`, `sign_context.go`, `verify_context.go`, `streaming_detached.go`
 - Imports: jwa, jwk, cert, internal/{base64,json,jwxio,pool,tokens}
 
 ## jwe/

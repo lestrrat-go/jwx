@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"slices"
 	"strings"
 
@@ -21,6 +22,7 @@ type verifyContext struct {
 	parseOptions       []ParseOption
 	dst                *Message
 	detachedPayload    []byte
+	payloadReader      io.Reader
 	keyProviders       []KeyProvider
 	keyUsed            *any
 	validateKey        bool
@@ -45,6 +47,7 @@ func freeVerifyContext(vc *verifyContext) *verifyContext {
 	vc.parseOptions = vc.parseOptions[:0]
 	vc.dst = nil
 	vc.detachedPayload = nil
+	vc.payloadReader = nil
 	vc.keyProviders = vc.keyProviders[:0]
 	vc.keyUsed = nil
 	vc.validateKey = false
@@ -62,6 +65,9 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 		case identMessage{}:
 			vc.dst = option.MustGet[*Message](opt)
 		case identDetachedPayload{}:
+			if vc.payloadReader != nil {
+				return makeVerifyError(`jws.WithDetachedPayload() and jws.WithDetachedPayloadReader() are mutually exclusive`)
+			}
 			vc.detachedPayload = option.MustGet[[]byte](opt)
 			// RFC 7797 "b64" auto-declaration. Detached-payload
 			// verification is the canonical use case for b64=false,
@@ -76,6 +82,15 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 			// standard names, etc. Only the "is in the caller's
 			// allowlist" check is short-circuited for "b64", and
 			// only when WithDetachedPayload was passed.
+			vc.criticalExtensions = append(vc.criticalExtensions, "b64")
+		case identDetachedPayloadReader{}:
+			if vc.detachedPayload != nil {
+				return makeVerifyError(`jws.WithDetachedPayload() and jws.WithDetachedPayloadReader() are mutually exclusive`)
+			}
+			vc.payloadReader = option.MustGet[io.Reader](opt)
+			// Same RFC 7797 "b64" auto-declaration as for
+			// identDetachedPayload; the streaming path is the other
+			// canonical use case for b64=false.
 			vc.criticalExtensions = append(vc.criticalExtensions, "b64")
 		case identKey{}:
 			pair := option.MustGet[*withKey](opt)
@@ -129,6 +144,10 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 }
 
 func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
+	if vc.payloadReader != nil {
+		return vc.verifyStreaming(buf)
+	}
+
 	msg, err := Parse(buf, vc.parseOptions...)
 	if err != nil {
 		return nil, makeVerifyError(`failed to parse jws: %w`, err)

@@ -105,8 +105,11 @@ func RegisterDsigAlgorithm(jwsAlg, dsigAlg string) error {
 	return nil
 }
 
-// getDsigAlgorithm returns the dsig algorithm name for a JWS algorithm
-func getDsigAlgorithm(jwsAlg string) (string, bool) {
+// GetDsigAlgorithm returns the dsig algorithm name registered for the given
+// JWS algorithm name. It returns ok=false if the algorithm has not been
+// registered; extension modules register new mappings with
+// [RegisterDsigAlgorithm] at init time.
+func GetDsigAlgorithm(jwsAlg string) (string, bool) {
 	v, ok := dsigAlgorithmDB.Load(jwsAlg)
 	if !ok {
 		return "", false

@@ -4,7 +4,6 @@ go_library(
     name = "jws",
     srcs = [
         "accessors.go",
-        "detached_reader.go",
         "errors.go",
         "headers.go",
         "headers_gen.go",
@@ -18,6 +17,7 @@ go_library(
         "sign_context.go",
         "signature_builder.go",
         "signer.go",
+        "streaming_detached.go",
         "verifier.go",
         "verify_context.go",
     ],
@@ -44,7 +44,6 @@ go_test(
     srcs = [
         "bench_marshal_test.go",
         "bench_serialize_test.go",
-        "detached_reader_test.go",
         "fuzz_test.go",
         "headers_nil_test.go",
         "headers_test.go",
@@ -53,6 +52,7 @@ go_test(
         "message_test.go",
         "options_gen_test.go",
         "signer_test.go",
+        "streaming_detached_test.go",
     ],
     embed = [":jws"],
     deps = [
