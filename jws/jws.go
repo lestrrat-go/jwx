@@ -424,9 +424,9 @@ func SplitCompactReader(rdr io.Reader) ([]byte, []byte, []byte, error) {
 }
 
 func parseCompact(data []byte) (m *Message, err error) {
-	protected, payload, signature, err := SplitCompact(data)
+	protected, payload, signature, err := jwsbb.SplitCompact(data)
 	if err != nil {
-		return nil, fmt.Errorf(`invalid compact serialization format: %w`, err)
+		return nil, makeParseError(`jws.Parse`, `invalid compact serialization format: %w`, err)
 	}
 	return parse(protected, payload, signature)
 }
