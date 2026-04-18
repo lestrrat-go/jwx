@@ -50,6 +50,14 @@ interfaces:
     comment: |
       GlobalParseOption describes an Option that can be passed to `jwe.Settings()`
       and `jwe.ReadFile()`.
+  - name: GlobalParseDecryptOption
+    methods:
+      - globalOption
+      - readFileOption
+      - decryptOption
+    comment: |
+      GlobalParseDecryptOption describes an Option that can be passed to
+      `jwe.Settings()`, `jwe.Parse*()` / `jwe.ReadFile()`, and `jwe.Decrypt()`.
   - name: ReadFileOption
     comment: |
       ReadFileOption is a type of `Option` that can be passed to `jwe.ReadFile`
@@ -236,17 +244,18 @@ options:
 
       This option has a global effect.
   - ident: MaxParseInputSize
-    interface: GlobalParseOption
+    interface: GlobalParseDecryptOption
     argument_type: int64
     comment: |
       WithMaxParseInputSize specifies the maximum byte length of input
       accepted by every `jwe.Parse*` entry point (`jwe.Parse`,
-      `jwe.ParseString`, and `jwe.ParseReader`). Inputs exceeding this
-      size are rejected before decoding. The default value is 10MB.
+      `jwe.ParseString`, `jwe.ParseReader`) and by `jwe.Decrypt`.
+      Inputs exceeding this size are rejected before any JSON/compact
+      decoding or cryptographic work. The default value is 10MB.
 
       This option can be passed to `jwe.Settings()` to change the default
-      globally, or to any `jwe.Parse*` call / `jwe.ReadFile()` for a
-      per-call override.
+      globally, or to any `jwe.Parse*` / `jwe.Decrypt` / `jwe.ReadFile()`
+      call for a per-call override.
   - ident: CritValidation
     interface: DecryptOption
     argument_type: bool

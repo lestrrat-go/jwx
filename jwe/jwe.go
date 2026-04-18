@@ -304,6 +304,7 @@ type decryptContext struct {
 	dst                     *Message
 	maxRecipients           int
 	maxDecompressBufferSize int64
+	maxParseInputSize       int64
 	maxPBES2Count           int
 	minPBES2Count           int
 	critValidation          bool
@@ -327,6 +328,7 @@ func freeDecryptContext(dc *decryptContext) *decryptContext {
 	dc.dst = nil
 	dc.maxRecipients = 0
 	dc.maxDecompressBufferSize = 0
+	dc.maxParseInputSize = 0
 	dc.maxPBES2Count = 0
 	dc.minPBES2Count = 0
 	dc.critValidation = false
@@ -338,6 +340,7 @@ func freeDecryptContext(dc *decryptContext) *decryptContext {
 func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 	dc.maxRecipients = int(maxRecipients.Load())
 	dc.maxDecompressBufferSize = maxDecompressBufferSize.Load()
+	dc.maxParseInputSize = maxParseInputSize.Load()
 	dc.maxPBES2Count = int(maxPBES2Count.Load())
 	dc.minPBES2Count = int(minPBES2Count.Load())
 
@@ -379,6 +382,15 @@ func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 			if err := option.Value(&dc.maxDecompressBufferSize); err != nil {
 				return fmt.Errorf("jwe.decrypt: WithMaxDecompressBufferSize must be int64: %w", err)
 			}
+		case identMaxParseInputSize{}:
+			var v int64
+			if err := option.Value(&v); err != nil {
+				return fmt.Errorf("jwe.decrypt: WithMaxParseInputSize must be int64: %w", err)
+			}
+			if v <= 0 {
+				return fmt.Errorf(`jwe.Decrypt: WithMaxParseInputSize must be greater than zero, got %d`, v)
+			}
+			dc.maxParseInputSize = v
 		case identMaxPBES2Count{}:
 			if err := option.Value(&dc.maxPBES2Count); err != nil {
 				return fmt.Errorf("jwe.decrypt: WithMaxPBES2Count must be int: %w", err)
@@ -1153,12 +1165,22 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 //
 //	jwe.Settings(jwe.WithMaxDecompressBufferSize(10*1024*1024)) // changes value globally
 //	jwe.Decrypt(..., jwe.WithMaxDecompressBufferSize(250*1024)) // changes just for this call
+//
+// Decrypt also enforces the `WithMaxParseInputSize` cap on the length of
+// buf before any JSON/compact parsing or cryptographic work, mirroring
+// the behavior of `jwe.Parse*`. The default is 10MB; override globally
+// with `jwe.Settings(jwe.WithMaxParseInputSize(...))` or per-call by
+// passing `jwe.WithMaxParseInputSize(...)` to `jwe.Decrypt`.
 func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	dc := decryptContextPool.Get()
 	defer decryptContextPool.Put(dc)
 
 	if err := dc.ProcessOptions(options); err != nil {
 		return nil, makeDecryptError(`failed to process options: %w`, err)
+	}
+
+	if dc.maxParseInputSize > 0 && int64(len(buf)) > dc.maxParseInputSize {
+		return nil, makeDecryptError(`input exceeded max size of %d bytes`, dc.maxParseInputSize)
 	}
 
 	ret, err := dc.DecryptMessage(buf)
