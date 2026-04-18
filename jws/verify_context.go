@@ -140,6 +140,20 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 		return makeVerifyError(`no verifiers available. Specify an algorithm and a key using jws.WithKey() (or jws.WithKeySet(), jws.WithKeyProvider(), or jws.WithVerifyAuto())`)
 	}
 
+	// Streaming verify has a narrower option surface than the full
+	// jws.Verify. The check used to fire deep inside verifyStreaming
+	// after Parse; hoist it here so a malformed option combination
+	// rejects before the caller's payload Reader is touched and
+	// before any parse work is done.
+	if vc.payloadReader != nil {
+		if len(vc.keyProviders) != 1 {
+			return makeVerifyError(`jws.WithDetachedPayloadReader() requires exactly one jws.WithKey(); jws.WithKeySet(), jws.WithKeyProvider() and jws.WithVerifyAuto() are not supported on the streaming path`)
+		}
+		if _, ok := vc.keyProviders[0].(*staticKeyProvider); !ok {
+			return makeVerifyError(`jws.WithDetachedPayloadReader() requires exactly one jws.WithKey(); jws.WithKeySet(), jws.WithKeyProvider() and jws.WithVerifyAuto() are not supported on the streaming path`)
+		}
+	}
+
 	return nil
 }
 

@@ -127,6 +127,14 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			return makeSignError(prefixJwsSign, `invalid jws.SignOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, opt.Ident()), `jws.ident`))
 		}
 	}
+
+	// Streaming sign rejects WithInsecureNoSignature up-front so the
+	// caller's payload Reader is not touched. The narrower streaming
+	// signer used to catch this after touching the reader.
+	if sc.payloadReader != nil && sc.none != nil {
+		return makeSignError(prefixJwsSign, `jws.WithInsecureNoSignature() cannot be combined with jws.WithDetachedPayloadReader(); use jws.Sign with jws.WithInsecureNoSignature() if you really need an unsecured in-memory JWS`)
+	}
+
 	return nil
 }
 
