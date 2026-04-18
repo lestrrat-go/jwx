@@ -563,3 +563,55 @@ These changes cannot be mechanically transformed and need human judgment:
    go get github.com/jwx-go/es256k/v4
    go get github.com/jwx-go/asmbase64/v4
    ```
+
+## New Capabilities Worth Adopting
+
+These are not breaking changes, but v3 callers moving to v4 may want to
+pick them up when a natural opportunity presents itself.
+
+### Streaming detached JWS for large payloads
+
+v3 required the entire payload in memory for both `jws.Sign` and
+`jws.Verify`, including the detached-payload variant
+(`jws.WithDetachedPayload([]byte)`). v4 adds
+`jws.WithDetachedPayloadReader(io.Reader)` for detached-payload
+sign/verify against payloads that should not be materialized
+(streaming file backups, multi-MB request bodies, etc.).
+
+```go
+// Signing a large file detached (v4)
+f, _ := os.Open("payload.bin")
+defer f.Close()
+signed, err := jws.Sign(nil,
+    jws.WithDetachedPayloadReader(f),
+    jws.WithKey(jwa.RS256(), privkey),
+)
+```
+
+Restrictions (enforced at sign/verify time):
+
+- First argument to `jws.Sign` / `jws.Verify` must be `nil`; the reader
+  supplies the payload bytes.
+- Algorithms are HMAC / RSA / ECDSA only. EdDSA cannot stream (RFC 8032
+  signs the full message, not a pre-computed digest) and custom algorithms
+  registered via `jws.RegisterSigner` / `jws.RegisterVerifier` are
+  rejected with a clear error pointing at `jws.WithDetachedPayload()`.
+- On verify, multi-signature / JSON-serialization input is not accepted;
+  `jws.WithKeySet`, `jws.WithKeyProvider`, and `jws.WithVerifyAuto` are
+  refused. Pass a single `jws.WithKey`.
+- The reader is consumed exactly once (no retry) and is accessed from
+  the calling goroutine only — do not share a Reader across concurrent
+  Sign/Verify calls unless it is itself goroutine-safe and
+  independently positioned per call.
+- Custom `jws.Base64Encoder` implementations must also satisfy
+  `jws.Base64StreamEncoder` (adds `NewEncoder(io.Writer) io.WriteCloser`)
+  to be usable on this path; the default encoder already does.
+
+On verify success the first return value is a non-nil zero-length
+`[]byte` — the verified payload was consumed by the Reader, not
+materialized for you. Top-level `jws.Verify` godoc and the option
+godoc each call this out.
+
+See the runnable `Example_jws_sign_detached_reader` /
+`Example_jws_verify_detached_reader` pair in the
+[`jwx-go/examples`](https://github.com/jwx-go/examples) companion repo.
