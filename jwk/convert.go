@@ -45,9 +45,26 @@ var keyExporters = make(map[KeyKind][]KeyExporter)
 var muKeyImporters sync.RWMutex
 var muKeyExporters sync.RWMutex
 
-// RegisterKeyImporter registers a KeyImporter for the given raw key. When `jwk.Import()` is called,
-// the library will look up the appropriate KeyImporter for the given raw key type (via `reflect`)
-// and execute the KeyImporters in succession until either one of them succeeds, or all of them fail.
+// RegisterKeyImporter registers a KeyImporter for the given raw key.
+// When `jwk.Import()` is called, the library looks up the importer for
+// the given raw key type (via `reflect`) and executes it.
+//
+// Importer dispatch is single-valued per Go type: there is exactly
+// one importer registered per `reflect.TypeOf(from)`. Registering a
+// second importer for the same raw-key type silently replaces the
+// previous entry — including built-in importers for
+// `*rsa.PrivateKey`, `*ecdsa.PrivateKey`, and so on. Callers that
+// need to guard against accidental overwrites should keep track of
+// registrations themselves and avoid double-registration at init()
+// time.
+//
+// This deliberately differs from the stacking behavior of
+// [RegisterKeyExporter] (keyed by [KeyKind] strings) and
+// [RegisterKeyParser] (an untyped-JSON fallback chain); importer
+// dispatch is a single-value map keyed by Go type, with no
+// equivalent dimension to try next. v4 turns the overwrite into
+// an error; v3 keeps the frozen silent-overwrite behavior for
+// backward compatibility.
 func RegisterKeyImporter(from any, conv KeyImporter) {
 	muKeyImporters.Lock()
 	defer muKeyImporters.Unlock()
