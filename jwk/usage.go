@@ -32,10 +32,18 @@ func RegisterKeyUsage(v string) error {
 	return nil
 }
 
-func UnregisterKeyUsage(v string) {
+// UnregisterKeyUsage removes v from the allowlist maintained by
+// [RegisterKeyUsage]. The error return is reserved for future
+// validation (for example, refusing to unregister a built-in usage
+// value like "sig" or "enc") and is always nil today. Callers
+// scripting Register/Unregister cycles should check the returned
+// value and propagate on failure to stay forward-compatible,
+// matching the convention on [RegisterKeyUsage].
+func UnregisterKeyUsage(v string) error {
 	muKeyUsageName.Lock()
 	defer muKeyUsageName.Unlock()
 	delete(keyUsageNames, v)
+	return nil
 }
 
 func init() {

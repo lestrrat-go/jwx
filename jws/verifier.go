@@ -70,6 +70,14 @@ func RegisterVerifier(alg jwa.SignatureAlgorithm, v Verifier) error {
 // some other operation (however unlikely, it is still possible).
 // Therefore, in order to completely remove the algorithm, you must
 // call jwa.UnregisterSignatureAlgorithm yourself.
-func UnregisterVerifier(alg jwa.SignatureAlgorithm) {
+//
+// The error return is reserved for future validation (for example,
+// refusing to unregister a built-in algorithm) and is always nil
+// today. Callers — especially those scripting
+// Register/Unregister cycles from init() — should check the
+// returned value and propagate on failure to stay
+// forward-compatible, matching the convention on [RegisterVerifier].
+func UnregisterVerifier(alg jwa.SignatureAlgorithm) error {
 	verifierDB.Delete(alg)
+	return nil
 }
