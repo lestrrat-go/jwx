@@ -37,6 +37,12 @@ func bigIntToBytes(n *big.Int) ([]byte, error) {
 // size alone. Tunable via WithMaxKeys / Configure(WithMaxKeys(...)).
 var maxKeys atomic.Int64
 
+// rejectDuplicateKID makes Parse/UnmarshalJSON fail when the JWKS
+// carries two or more keys with the same non-empty "kid". Default is
+// false (RFC 7517 allows duplicates; LookupKeyID returns the first).
+// Tunable via WithRejectDuplicateKID / Configure(WithRejectDuplicateKID(...)).
+var rejectDuplicateKID atomic.Bool
+
 func init() {
 	maxKeys.Store(1000)
 
@@ -340,6 +346,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var ignoreParseError bool
 	var pemDecoder PEMDecoder
 	maxK := int(maxKeys.Load())
+	rejectDupKid := rejectDuplicateKID.Load()
 	for _, option := range options {
 		switch option.Ident() {
 		case identPEM{}:
@@ -367,6 +374,10 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 				return nil, parseerr(`WithMaxKeys must be greater than zero, got %d`, v)
 			}
 			maxK = v
+		case identRejectDuplicateKID{}:
+			if err := option.Value(&rejectDupKid); err != nil {
+				return nil, parseerr(`failed to retrieve RejectDuplicateKID option value: %w`, err)
+			}
 		case identTypedField{}:
 			var pair typedFieldPair // temporary var needed for typed field
 			if err := option.Value(&pair); err != nil {
@@ -405,6 +416,11 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			}
 			src = bytes.TrimSpace(rest)
 		}
+		if rejectDupKid {
+			if kid, dup := firstDuplicateKID(s); dup {
+				return nil, parseerr(`duplicate "kid" %q in PEM input`, kid)
+			}
+		}
 		return s, nil
 	}
 
@@ -427,12 +443,34 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		setter.setMaxKeys(maxK)
 		defer setter.setMaxKeys(0)
 	}
+	if setter, ok := s.(interface{ setRejectDuplicateKID(bool) }); ok && rejectDupKid {
+		setter.setRejectDuplicateKID(true)
+		defer setter.setRejectDuplicateKID(false)
+	}
 
 	if err := json.Unmarshal(src, s); err != nil {
 		return nil, parseerr(`failed to unmarshal JWK set: %w`, err)
 	}
 
 	return s, nil
+}
+
+// firstDuplicateKID returns the first non-empty kid that appears more
+// than once in s, or ("", false) if every non-empty kid is unique.
+func firstDuplicateKID(s Set) (string, bool) {
+	seen := make(map[string]struct{}, s.Len())
+	for i := range s.Len() {
+		key, _ := s.Key(i)
+		kid, ok := key.KeyID()
+		if !ok || kid == "" {
+			continue
+		}
+		if _, dup := seen[kid]; dup {
+			return kid, true
+		}
+		seen[kid] = struct{}{}
+	}
+	return "", false
 }
 
 // ParseReader parses a JWK set from the incoming byte buffer.
@@ -767,6 +805,12 @@ func Configure(options ...GlobalOption) {
 			}
 			v64 := int64(v)
 			minRSAPublicExponentPtr = &v64
+		case identRejectDuplicateKID{}:
+			var v bool
+			if err := option.Value(&v); err != nil {
+				continue
+			}
+			rejectDuplicateKID.Store(v)
 		}
 	}
 

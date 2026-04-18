@@ -211,6 +211,10 @@ func (s *set) setMaxKeys(n int) {
 	s.maxKeys = n
 }
 
+func (s *set) setRejectDuplicateKID(v bool) {
+	s.rejectDuplicateKID = v
+}
+
 func (s *set) UnmarshalJSON(data []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -231,6 +235,7 @@ func (s *set) UnmarshalJSON(data []byte) error {
 	if maxK <= 0 {
 		maxK = int(maxKeys.Load())
 	}
+	rejectDupKid := s.rejectDuplicateKID || rejectDuplicateKID.Load()
 
 	var sawKeysField bool
 	dec := json.NewDecoder(bytes.NewReader(data))
@@ -263,6 +268,10 @@ LOOP:
 					return fmt.Errorf(`too many keys in "keys" array: got %d, max %d`, len(list), maxK)
 				}
 
+				var seenKIDs map[string]struct{}
+				if rejectDupKid {
+					seenKIDs = make(map[string]struct{}, len(list))
+				}
 				for i, keysrc := range list {
 					key, err := ParseKey(keysrc, options...)
 					if err != nil {
@@ -270,6 +279,14 @@ LOOP:
 							return fmt.Errorf(`failed to decode key #%d in "keys": %w`, i, err)
 						}
 						continue
+					}
+					if seenKIDs != nil {
+						if kid, ok := key.KeyID(); ok && kid != "" {
+							if _, dup := seenKIDs[kid]; dup {
+								return fmt.Errorf(`duplicate "kid" %q in "keys" array`, kid)
+							}
+							seenKIDs[kid] = struct{}{}
+						}
 					}
 					s.keys = append(s.keys, key)
 				}
