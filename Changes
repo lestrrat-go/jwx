@@ -5,6 +5,15 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.1.0 UNRELEASED
+  * [jwk] Add `jwk.WithMaxKeys(int)` — caps the number of keys accepted
+    by `jwk.Parse` / `jwk.ParseReader` / `jwk.ParseString` in both the
+    JSON `"keys"` array and the PEM/X.509 block stream (default 1000).
+    Usable as a `jwk.Configure()` global or a per-call override.
+    Replaces the hardcoded internal PEM cap of the same value, so the
+    default behavior is unchanged. Backport of the v4 amplification
+    cap that mirrors `jws.WithMaxSignatures` and
+    `jwe.WithMaxRecipients`.
+
   * [jws] Add `jws.WithDetachedPayloadReader(io.Reader)` — a streaming
     variant of `jws.WithDetachedPayload([]byte)` that consumes the
     payload from an `io.Reader` instead of a byte slice, so the payload

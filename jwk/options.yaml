@@ -45,6 +45,17 @@ interfaces:
     comment: |
       GlobalOption is a type of Option that can be passed to the `jwk.Configure()` to
       change the global configuration of the jwk package.
+  - name: GlobalParseOption
+    methods:
+      - globalOption
+      - fetchOption
+      - registerOption
+      - readFileOption
+    comment: |
+      GlobalParseOption describes an Option that can be passed to both
+      `jwk.Configure()` (to change the default globally) and
+      `jwk.Parse()` / `jwk.ParseReader()` / `jwk.ParseString()` (to
+      override per call).
   - name: PublicSetOption
     comment: |
       PublicSetOption is a type of Option that can be passed to `jwk.PublicSetOf()`
@@ -228,6 +239,24 @@ options:
       The default is 3. The exponent must still be odd and fit in a Go `int`.
       Lower this only for legacy interoperability. A value of 0 disables the
       minimum-exponent floor.
+  - ident: MaxKeys
+    interface: GlobalParseOption
+    argument_type: int
+    comment: |
+      WithMaxKeys specifies the maximum number of keys allowed in a JWK
+      set passed to `jwk.Parse()` / `jwk.ParseReader()` / `jwk.ParseString()`.
+      If the "keys" array of a JSON-encoded JWKS, or the number of PEM
+      blocks in a PEM/X.509-encoded input, exceeds this value, parsing
+      returns an error. The default is 1000.
+
+      This option can be passed to `jwk.Configure()` to change the
+      default globally, or to `jwk.Parse()` / `jwk.ParseReader()` /
+      `jwk.ParseString()` for a per-call override. A non-positive
+      value is rejected.
+
+      The cap defends against amplification: each entry triggers a
+      probe + unmarshal + validation, each of which allocates.
+      Bounding raw input bytes remains the caller's responsibility.
   - ident: AllowSymmetric
     interface: PublicSetOption
     argument_type: bool

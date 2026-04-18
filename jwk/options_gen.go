@@ -91,6 +91,30 @@ type globalOption struct {
 
 func (*globalOption) globalOption() {}
 
+// GlobalParseOption describes an Option that can be passed to both
+// `jwk.Configure()` (to change the default globally) and
+// `jwk.Parse()` / `jwk.ParseReader()` / `jwk.ParseString()` (to
+// override per call).
+type GlobalParseOption interface {
+	Option
+	globalOption()
+	fetchOption()
+	registerOption()
+	readFileOption()
+}
+
+type globalParseOption struct {
+	Option
+}
+
+func (*globalParseOption) globalOption() {}
+
+func (*globalParseOption) fetchOption() {}
+
+func (*globalParseOption) registerOption() {}
+
+func (*globalParseOption) readFileOption() {}
+
 // ParseOption is a type of Option that can be passed to `jwk.Parse()`
 // ParseOption also implements the `ReadFileOption` and `NewCacheOption`,
 // and thus safely be passed to `jwk.ReadFile` and `(*jwk.Cache).Configure()`
@@ -186,6 +210,7 @@ type identHTTPClient struct{}
 type identIgnoreParseError struct{}
 type identLocalRegistry struct{}
 type identMaxFetchBodySize struct{}
+type identMaxKeys struct{}
 type identMinRSAModulusBits struct{}
 type identMinRSAPublicExponent struct{}
 type identPEM struct{}
@@ -225,6 +250,10 @@ func (identLocalRegistry) String() string {
 
 func (identMaxFetchBodySize) String() string {
 	return "WithMaxFetchBodySize"
+}
+
+func (identMaxKeys) String() string {
+	return "WithMaxKeys"
 }
 
 func (identMinRSAModulusBits) String() string {
@@ -375,6 +404,24 @@ func withLocalRegistry(v *json.Registry) ParseOption {
 // override.
 func WithMaxFetchBodySize(v int64) GlobalFetchOption {
 	return &globalFetchOption{option.New(identMaxFetchBodySize{}, v)}
+}
+
+// WithMaxKeys specifies the maximum number of keys allowed in a JWK
+// set passed to `jwk.Parse()` / `jwk.ParseReader()` / `jwk.ParseString()`.
+// If the "keys" array of a JSON-encoded JWKS, or the number of PEM
+// blocks in a PEM/X.509-encoded input, exceeds this value, parsing
+// returns an error. The default is 1000.
+//
+// This option can be passed to `jwk.Configure()` to change the
+// default globally, or to `jwk.Parse()` / `jwk.ParseReader()` /
+// `jwk.ParseString()` for a per-call override. A non-positive
+// value is rejected.
+//
+// The cap defends against amplification: each entry triggers a
+// probe + unmarshal + validation, each of which allocates.
+// Bounding raw input bytes remains the caller's responsibility.
+func WithMaxKeys(v int) GlobalParseOption {
+	return &globalParseOption{option.New(identMaxKeys{}, v)}
 }
 
 // WithMinRSAModulusBits specifies the minimum RSA modulus size, in bits,

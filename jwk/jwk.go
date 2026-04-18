@@ -14,6 +14,7 @@ import (
 	"math/big"
 	"reflect"
 	"slices"
+	"sync/atomic"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
@@ -29,12 +30,16 @@ func bigIntToBytes(n *big.Int) ([]byte, error) {
 	return n.Bytes(), nil
 }
 
-// maxPEMKeys is the maximum number of PEM blocks that Parse() will
-// decode from a single input. This prevents resource exhaustion from
-// inputs containing thousands of small PEM blocks.
-const maxPEMKeys = 1000
+// maxKeys bounds the number of keys accepted by Parse() from a single
+// input. It applies to both the JSON `keys` array and the PEM/X.509
+// block stream: each entry triggers a probe + unmarshal + validation,
+// and callers cannot predict that amplification from the raw input
+// size alone. Tunable via WithMaxKeys / Configure(WithMaxKeys(...)).
+var maxKeys atomic.Int64
 
 func init() {
+	maxKeys.Store(1000)
+
 	if err := RegisterProbeField(reflect.StructField{
 		Name: "Kty",
 		Type: reflect.TypeFor[string](),
@@ -334,6 +339,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	var localReg *json.Registry
 	var ignoreParseError bool
 	var pemDecoder PEMDecoder
+	maxK := int(maxKeys.Load())
 	for _, option := range options {
 		switch option.Ident() {
 		case identPEM{}:
@@ -352,6 +358,15 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			if err := option.Value(&ignoreParseError); err != nil {
 				return nil, parseerr(`failed to retrieve IgnoreParseError option value: %w`, err)
 			}
+		case identMaxKeys{}:
+			var v int
+			if err := option.Value(&v); err != nil {
+				return nil, parseerr(`failed to retrieve MaxKeys option value: %w`, err)
+			}
+			if v <= 0 {
+				return nil, parseerr(`WithMaxKeys must be greater than zero, got %d`, v)
+			}
+			maxK = v
 		case identTypedField{}:
 			var pair typedFieldPair // temporary var needed for typed field
 			if err := option.Value(&pair); err != nil {
@@ -385,8 +400,8 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 				return nil, parseerr(`failed to add jwk.Key to set: %w`, err)
 			}
 			keyCount++
-			if keyCount > maxPEMKeys {
-				return nil, parseerr(`too many PEM blocks (max %d)`, maxPEMKeys)
+			if keyCount > maxK {
+				return nil, parseerr(`too many keys in PEM input: max %d`, maxK)
 			}
 			src = bytes.TrimSpace(rest)
 		}
@@ -404,6 +419,13 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		}
 		dcKs.SetDecodeCtx(dc)
 		defer func() { dcKs.SetDecodeCtx(nil) }()
+	}
+
+	// Propagate the resolved cap to Set.UnmarshalJSON. A scratch field
+	// rather than a ParseOption thread-through keeps json.Unmarshal happy.
+	if setter, ok := s.(interface{ setMaxKeys(int) }); ok {
+		setter.setMaxKeys(maxK)
+		defer setter.setMaxKeys(0)
 	}
 
 	if err := json.Unmarshal(src, s); err != nil {
@@ -694,6 +716,7 @@ func IsKeyValidationError(err error) bool {
 func Configure(options ...GlobalOption) {
 	var strictKeyUsagePtr *bool
 	var maxFetchBodySizePtr *int64
+	var maxKeysPtr *int64
 	var httpClientPtr *HTTPClient
 	var minRSAModulusBitsPtr *int64
 	var minRSAPublicExponentPtr *int64
@@ -714,6 +737,16 @@ func Configure(options ...GlobalOption) {
 				continue
 			}
 			maxFetchBodySizePtr = &v
+		case identMaxKeys{}:
+			var v int
+			if err := option.Value(&v); err != nil {
+				continue
+			}
+			if v <= 0 {
+				continue
+			}
+			v64 := int64(v)
+			maxKeysPtr = &v64
 		case identHTTPClient{}:
 			var v HTTPClient
 			if err := option.Value(&v); err != nil {
@@ -743,6 +776,10 @@ func Configure(options ...GlobalOption) {
 
 	if maxFetchBodySizePtr != nil {
 		maxFetchBodySize.Store(*maxFetchBodySizePtr)
+	}
+
+	if maxKeysPtr != nil {
+		maxKeys.Store(*maxKeysPtr)
 	}
 
 	if httpClientPtr != nil {

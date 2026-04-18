@@ -38,7 +38,7 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 - **NewCache(ctx, client) (*Cache, error)** — auto-refreshing JWKS cache
 - **AssignKeyID(key Key, ...AssignKeyIDOption) error** — compute and set kid via thumbprint
 - **Pem(v any) ([]byte, error)** — PEM encode
-- Global options: `WithStrictKeyUsage(bool)`, `WithHTTPClient(HTTPClient)`, `WithMaxFetchBodySize(int64)`, `WithMinRSAModulusBits(int)`, `WithMinRSAPublicExponent(int)`
+- Global options: `WithStrictKeyUsage(bool)`, `WithHTTPClient(HTTPClient)`, `WithMaxFetchBodySize(int64)`, `WithMinRSAModulusBits(int)`, `WithMinRSAPublicExponent(int)`, `WithMaxKeys(int)` (also accepted as a per-call `ParseOption`; caps `"keys"` array + PEM block count at 1000 by default)
 - Key interfaces: `Key`, `Set`, `RSAPublicKey`, `RSAPrivateKey`, `ECDSAPublicKey`, `ECDSAPrivateKey`, `OKPPublicKey`, `OKPPrivateKey`, `SymmetricKey`
 - Extension: `RegisterCustomField()`, `RegisterKeyParser()`, `RegisterKeyImporter()`, `RegisterKeyExporter()`
 - Error sentinels: `ImportError()`, `ParseError()`, `WhitelistError()`, `ContinueError()`
