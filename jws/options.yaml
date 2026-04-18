@@ -145,9 +145,12 @@ options:
       with `jws.WithDetachedPayload()` and a buffered copy of the
       payload.
 
-      On verify, the first return value of `jws.Verify()` is nil when this
-      option is used, because the payload was streamed from the caller
-      rather than extracted from the JWS envelope.
+      On verify, `jws.Verify()` returns a non-nil zero-length `[]byte` on
+      success when this option is used, because the payload was streamed
+      from the caller rather than extracted from the JWS envelope. Do not
+      read that slice as "the payload is empty" — the verified bytes are
+      whatever the caller read from the Reader, and callers that need
+      them must retain their own copy.
 
       `jws.WithBase64Encoder()` is honored as long as the supplied encoder
       implements `jws.Base64StreamEncoder` (i.e. provides a
