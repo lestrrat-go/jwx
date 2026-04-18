@@ -115,7 +115,7 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 				return makeSignError(prefixJwsSign, `jws.WithDetachedPayload() and jws.WithDetachedPayloadReader() are mutually exclusive`)
 			}
 			if sc.payload != nil {
-				return makeSignError(prefixJwsSign, `payload must be nil when jws.WithDetachedPayloadReader() is specified`)
+				return makeSignError(prefixJwsSign, `the first argument to jws.Sign() must be nil when jws.WithDetachedPayloadReader() is used`)
 			}
 			sc.payloadReader = option.MustGet[io.Reader](opt)
 			sc.detached = true
