@@ -173,6 +173,14 @@ options:
       accordingly. Use this option to clamp the cap lower if your
       deployment cannot tolerate the default worst case.
 
+      The cap is applied per recipient. RFC 7516 §5.3 allows each
+      recipient of a JSON-serialized JWE to carry its own "p2c" iteration
+      count in its per-recipient unprotected header, and jwe.Decrypt
+      honors that. For a JWE with N recipients, the worst-case PBKDF2
+      cost is therefore on the order of N * MaxPBES2Count iterations per
+      decrypt attempt. When accepting multi-recipient JSON JWEs from
+      untrusted senders, also clamp jwe.WithMaxRecipients.
+
       This option can be used for `jwe.Settings()`, which changes the behavior
       globally, or for `jwe.Decrypt()`, which changes the behavior for that
       specific call.
