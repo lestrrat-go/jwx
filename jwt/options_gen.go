@@ -301,6 +301,14 @@ func WithClock(v Clock) ValidateOption {
 // By default, jwt.Validate returns on the first validation error,
 // matching v3 behavior. Use WithCollectErrors(true) to gather all
 // validation errors in a single call.
+//
+// Configuration-level errors short-circuit regardless of this
+// option: a negative WithAcceptableSkew, an unsupported claim name
+// passed to WithMaxDelta/WithMinDelta, or a WithResetValidators(true)
+// call with no WithValidator() in the same Validate invocation each
+// abort the call with a single error. Only validator outcomes
+// (TokenExpiredError, InvalidAudienceError, caller-supplied
+// Validator return values, and similar) are collected.
 func WithCollectErrors(v bool) ValidateOption {
 	return &validateOption{option.New(identCollectErrors{}, v)}
 }
