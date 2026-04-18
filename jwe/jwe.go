@@ -494,13 +494,17 @@ func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 		}
 	}
 
-	// Process things that are common to the message. We deliberately do
-	// NOT merge msg.unprotectedHeaders into h: per RFC 7516 §5.3 only the
-	// protected header is integrity-checked, so algorithm parameters
-	// (alg, enc, epk, p2s, p2c, iv, tag, …) must come from the protected
-	// and per-recipient headers only. Merging unprotected headers here
-	// would let an attacker contribute or override parameters that the
-	// AEAD tag never covered.
+	// Clone the shared (top-level) protected header as our working copy.
+	// We deliberately do NOT merge msg.unprotectedHeaders (the shared,
+	// top-level *unprotected* header) here: it is never covered by the
+	// AEAD tag, so it must not contribute algorithm parameters.
+	//
+	// Per-recipient unprotected headers are a separate case — RFC 7516
+	// §5.3 explicitly permits them to carry recipient-specific algorithm
+	// parameters (alg, epk, p2s, p2c, iv, tag, apu, apv, …), and
+	// decryptContent merges recipient.Headers() onto this base below.
+	// That merge is bounded by WithMaxRecipients and, for PBES2, by
+	// WithMaxPBES2Count (applied per recipient).
 	h, err := msg.protectedHeaders.Clone()
 	if err != nil {
 		return nil, fmt.Errorf(`jwe.Decrypt: failed to copy protected headers: %w`, err)
