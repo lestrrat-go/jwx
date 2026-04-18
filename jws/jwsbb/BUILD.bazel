@@ -19,7 +19,6 @@ go_library(
     deps = [
         "//internal/base64",
         "//internal/ecutil",
-        "//internal/jwxio",
         "//internal/keyconv",
         "//internal/tokens",
         "@com_github_lestrrat_go_dsig//:dsig",

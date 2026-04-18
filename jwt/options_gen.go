@@ -161,7 +161,6 @@ type identFlattenAudience struct{}
 type identFormKey struct{}
 type identHeaderKey struct{}
 type identKeyProvider struct{}
-type identMaxParseInputSize struct{}
 type identNumericDateFormatPrecision struct{}
 type identNumericDateParsePedantic struct{}
 type identNumericDateParsePrecision struct{}
@@ -222,10 +221,6 @@ func (identHeaderKey) String() string {
 
 func (identKeyProvider) String() string {
 	return "WithKeyProvider"
-}
-
-func (identMaxParseInputSize) String() string {
-	return "WithMaxParseInputSize"
 }
 
 func (identNumericDateFormatPrecision) String() string {
@@ -376,17 +371,6 @@ func WithHeaderKey(v string) ParseOption {
 // for `jws.KeyProvider` in the `jws` package for details on how this works.
 func WithKeyProvider(v jws.KeyProvider) ParseOption {
 	return &parseOption{option.New(identKeyProvider{}, v)}
-}
-
-// WithMaxParseInputSize specifies the maximum number of bytes read from an
-// io.Reader in `jwt.ParseReader`. If the input exceeds this size,
-// `jwt.ParseReader` will return an error. The default value is 10MB.
-//
-// This option can be passed to `jwt.Settings()` to change the default
-// globally, or to `jwt.ParseReader()` / `jwt.ParseFS()` for a per-call
-// override.
-func WithMaxParseInputSize(v int64) GlobalParseOption {
-	return &globalParseOption{option.New(identMaxParseInputSize{}, v)}
 }
 
 // WithNumericDateFormatPrecision sets the precision up to which the

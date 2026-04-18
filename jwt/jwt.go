@@ -23,23 +23,14 @@ import (
 
 var muSettings sync.Mutex
 var defaultTruncation atomic.Int64
-var maxParseInputSize atomic.Int64
-
-func init() {
-	maxParseInputSize.Store(10 * 1024 * 1024) // 10MB
-}
 
 // Settings controls global settings that are specific to JWTs.
-//
-// Returns a non-nil error and applies no changes if any option fails
-// validation (for example, a non-positive [WithMaxParseInputSize]).
 func Settings(options ...GlobalOption) error {
 	var flattenAudience bool
 	var parsePedantic bool
 	var parsePrecision = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
 	var formatPrecision = types.MaxPrecision + 1 // illegal value, so we can detect nothing was set
 	truncation := time.Duration(-1)
-	var newMaxParseInputSize int64
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identTruncation{}:
@@ -60,21 +51,11 @@ func Settings(options ...GlobalOption) error {
 			if v >= 0 && v <= int(types.MaxPrecision) {
 				formatPrecision = uint32(v)
 			}
-		case identMaxParseInputSize{}:
-			v := option.MustGet[int64](opt)
-			if v <= 0 {
-				return fmt.Errorf(`jwt.Settings: WithMaxParseInputSize must be greater than zero, got %d`, v)
-			}
-			newMaxParseInputSize = v
 		}
 	}
 
 	muSettings.Lock()
 	defer muSettings.Unlock()
-
-	if newMaxParseInputSize > 0 {
-		maxParseInputSize.Store(newMaxParseInputSize)
-	}
 
 	if parsePrecision <= types.MaxPrecision { // remember we set default to max + 1
 		types.ParsePrecision.Store(parsePrecision)
@@ -193,24 +174,15 @@ func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
 	return tok, nil
 }
 
-// ParseReader calls Parse against an io.Reader
+// ParseReader calls Parse against an io.Reader.
+//
+// Bounding the input size is the caller's responsibility: wrap src with
+// [io.LimitReader] or [net/http.MaxBytesReader] before passing it in. See
+// docs/13-input-size.md for the rationale.
 func ParseReader(src io.Reader, options ...ParseOption) (Token, error) {
-	maxSize := maxParseInputSize.Load()
-	for _, opt := range options {
-		if opt.Ident() == (identMaxParseInputSize{}) {
-			maxSize = option.MustGet[int64](opt)
-			if maxSize <= 0 {
-				return nil, parseErrorf(`jwt.ParseReader`, `WithMaxParseInputSize must be greater than zero`)
-			}
-		}
-	}
-
-	data, err := io.ReadAll(io.LimitReader(src, maxSize+1))
+	data, err := io.ReadAll(src)
 	if err != nil {
 		return nil, parseErrorf(`jwt.ParseReader`, `failed to read from token data source: %w`, err)
-	}
-	if int64(len(data)) > maxSize {
-		return nil, parseErrorf(`jwt.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
 	}
 	tok, err := parseBytes(data, options...)
 	if err != nil {

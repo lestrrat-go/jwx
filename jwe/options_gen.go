@@ -167,7 +167,6 @@ type identKeyProvider struct{}
 type identKeyUsed struct{}
 type identMaxDecompressBufferSize struct{}
 type identMaxPBES2Count struct{}
-type identMaxParseInputSize struct{}
 type identMaxRecipients struct{}
 type identMergeProtectedHeaders struct{}
 type identMessage struct{}
@@ -221,10 +220,6 @@ func (identMaxDecompressBufferSize) String() string {
 
 func (identMaxPBES2Count) String() string {
 	return "WithMaxPBES2Count"
-}
-
-func (identMaxParseInputSize) String() string {
-	return "WithMaxParseInputSize"
 }
 
 func (identMaxRecipients) String() string {
@@ -408,18 +403,6 @@ func WithMaxDecompressBufferSize(v int64) GlobalDecryptOption {
 // specific call.
 func WithMaxPBES2Count(v int) GlobalDecryptOption {
 	return &globalDecryptOption{option.New(identMaxPBES2Count{}, v)}
-}
-
-// WithMaxParseInputSize specifies the maximum byte length of input
-// accepted by every `jwe.Parse*` entry point (`jwe.Parse`,
-// `jwe.ParseString`, and `jwe.ParseReader`). Inputs exceeding this
-// size are rejected before decoding. The default value is 10MB.
-//
-// This option can be passed to `jwe.Settings()` to change the default
-// globally, or to any `jwe.Parse*` call / `jwe.ParseFS()` for a
-// per-call override.
-func WithMaxParseInputSize(v int64) GlobalParseOption {
-	return &globalParseOption{option.New(identMaxParseInputSize{}, v)}
 }
 
 // WithMaxRecipients specifies the maximum number of recipients allowed

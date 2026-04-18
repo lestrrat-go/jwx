@@ -500,11 +500,11 @@ These changes cannot be mechanically transformed and need human judgment:
 
    ```go
    // Before (v3): invalid value panicked (or silently accepted)
-   jwt.Settings(jwt.WithMaxParseInputSize(n))
+   jws.Settings(jws.WithMaxSignatures(n))
    jwx.Settings(jwx.WithBase64Encoder(enc))
 
    // After (v4): check the error
-   if err := jwt.Settings(jwt.WithMaxParseInputSize(n)); err != nil {
+   if err := jws.Settings(jws.WithMaxSignatures(n)); err != nil {
        return err
    }
    if err := jwx.Settings(jwx.WithBase64Encoder(enc)); err != nil {

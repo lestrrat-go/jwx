@@ -21,7 +21,6 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithFormKey", identFormKey{}.String())
 	require.Equal(t, "WithHeaderKey", identHeaderKey{}.String())
 	require.Equal(t, "WithKeyProvider", identKeyProvider{}.String())
-	require.Equal(t, "WithMaxParseInputSize", identMaxParseInputSize{}.String())
 	require.Equal(t, "WithNumericDateFormatPrecision", identNumericDateFormatPrecision{}.String())
 	require.Equal(t, "WithNumericDateParsePedantic", identNumericDateParsePedantic{}.String())
 	require.Equal(t, "WithNumericDateParsePrecision", identNumericDateParsePrecision{}.String())

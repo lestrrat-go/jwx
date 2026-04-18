@@ -304,18 +304,6 @@ options:
 
       `jws.Sign()` will result in an error if `jws.WithPublicHeaders()` is used
       and the serialization format is compact serialization.
-  - ident: MaxParseInputSize
-    interface: GlobalParseOption
-    argument_type: int64
-    comment: |
-      WithMaxParseInputSize specifies the maximum byte length of input
-      accepted by every `jws.Parse*` entry point (`jws.Parse`,
-      `jws.ParseString`, and `jws.ParseReader`). Inputs exceeding this
-      size are rejected before decoding. The default value is 10MB.
-
-      This option can be passed to `jws.Settings()` to change the default
-      globally, or to any `jws.Parse*` call / `jws.ParseFS()` for a
-      per-call override.
   - ident: MaxSignatures
     interface: GlobalParseOption
     argument_type: int

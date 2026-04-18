@@ -15,7 +15,7 @@ Composition Layer
   jwt/openid → jwt, internal/{json,tokens,pool}
 
 Processing Layer
-  jws → jwa, jwk, cert, internal/{base64,json,jwxio,pool,tokens}
+  jws → jwa, jwk, cert, internal/{base64,json,pool,tokens}
        → jws/jwsbb
   jwe → jwa, jwk, cert, transform, internal/{base64,json,pool,tokens}
        → jwe/internal/{aescbc,cipher,concatkdf,content_crypt,keygen}
@@ -30,7 +30,7 @@ Leaf Packages (no internal deps)
   jwa → internal/tokens
   cert → internal/{base64,tokens}
   transform → (stdlib only)
-  internal/{base64,json,ecutil,pool,tokens,jwxio}
+  internal/{base64,json,ecutil,pool,tokens}
 ```
 
 ## Package Import Summary
