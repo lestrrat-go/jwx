@@ -25,6 +25,8 @@ import (
 // as the ctx.Err() value, short-circuiting the outer io.Copy loop.
 // A zero-length Read is still delivered to the underlying reader so
 // that an empty-payload verify completes normally.
+//
+//nolint:containedctx // narrow, request-scoped wrapper that the caller owns for the lifetime of a single Verify call; storing the ctx is the point.
 type ctxReader struct {
 	ctx context.Context
 	r   io.Reader
