@@ -2677,3 +2677,61 @@ func TestMaxKeys(t *testing.T) {
 		require.Equal(t, 5, set.Len())
 	})
 }
+
+func TestRejectDuplicateKID(t *testing.T) {
+	keyA, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err)
+	require.NoError(t, keyA.Set(jwk.KeyIDKey, "same-kid"))
+	keyB, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err)
+	require.NoError(t, keyB.Set(jwk.KeyIDKey, "same-kid"))
+
+	aJSON, err := json.Marshal(keyA)
+	require.NoError(t, err)
+	bJSON, err := json.Marshal(keyB)
+	require.NoError(t, err)
+
+	dupPayload := []byte(`{"keys":[` + string(aJSON) + `,` + string(bJSON) + `]}`)
+
+	t.Run("default accepts duplicate kid", func(t *testing.T) {
+		set, err := jwk.Parse(dupPayload)
+		require.NoError(t, err, `default parse should tolerate duplicate kids (RFC 7517 allows)`)
+		require.Equal(t, 2, set.Len(), `both keys should be in the set`)
+	})
+
+	t.Run("per-call rejects duplicate kid", func(t *testing.T) {
+		_, err := jwk.Parse(dupPayload, jwk.WithRejectDuplicateKID(true))
+		require.Error(t, err, `WithRejectDuplicateKID(true) should fail on duplicate kid`)
+		require.Contains(t, err.Error(), `same-kid`, `error should name the duplicate kid`)
+		require.Contains(t, err.Error(), `duplicate`, `error should say "duplicate"`)
+	})
+
+	t.Run("global setting rejects duplicate kid", func(t *testing.T) {
+		require.NoError(t, jwk.Settings(jwk.WithRejectDuplicateKID(true)))
+		defer func() {
+			require.NoError(t, jwk.Settings(jwk.WithRejectDuplicateKID(false)))
+		}()
+		_, err := jwk.Parse(dupPayload)
+		require.Error(t, err, `global WithRejectDuplicateKID should fail on duplicate kid`)
+		require.Contains(t, err.Error(), `same-kid`)
+	})
+
+	t.Run("empty kid entries are ignored", func(t *testing.T) {
+		// Two keys, neither carrying a kid. Reject-duplicates should
+		// still accept — the setting targets explicit duplicates, not
+		// the absence of a kid on multiple keys.
+		noKidA, err := jwxtest.GenerateSymmetricJwk()
+		require.NoError(t, err)
+		noKidB, err := jwxtest.GenerateSymmetricJwk()
+		require.NoError(t, err)
+		aJSON, err := json.Marshal(noKidA)
+		require.NoError(t, err)
+		bJSON, err := json.Marshal(noKidB)
+		require.NoError(t, err)
+		payload := []byte(`{"keys":[` + string(aJSON) + `,` + string(bJSON) + `]}`)
+
+		set, err := jwk.Parse(payload, jwk.WithRejectDuplicateKID(true))
+		require.NoError(t, err, `keyless kids should not trip the duplicate check`)
+		require.Equal(t, 2, set.Len())
+	})
+}
