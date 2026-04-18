@@ -275,6 +275,17 @@ func TestStreamingDetachedRejectsConflictingOptions(t *testing.T) {
 		require.ErrorContains(t, err, `mutually exclusive`)
 	})
 
+	t.Run("Sign rejects non-nil payload with reader", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := jws.Sign(payload,
+			jws.WithKey(jwa.HS256(), key),
+			jws.WithDetachedPayloadReader(bytes.NewReader(payload)),
+		)
+		require.Error(t, err)
+		require.ErrorContains(t, err, `first argument to jws.Sign() must be nil`)
+	})
+
 	t.Run("Sign rejects insecure no-signature", func(t *testing.T) {
 		t.Parallel()
 
