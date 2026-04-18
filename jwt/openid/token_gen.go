@@ -46,9 +46,6 @@ const (
 	ZoneinfoKey            = "zoneinfo"
 )
 
-// stdClaimNames is a list of all standard claim names defined in the JWT specification.
-var stdClaimNames = []string{AddressKey, AudienceKey, BirthdateKey, EmailKey, EmailVerifiedKey, ExpirationKey, FamilyNameKey, GenderKey, GivenNameKey, IssuedAtKey, IssuerKey, JwtIDKey, LocaleKey, MiddleNameKey, NameKey, NicknameKey, NotBeforeKey, PhoneNumberKey, PhoneNumberVerifiedKey, PictureKey, PreferredUsernameKey, ProfileKey, SubjectKey, UpdatedAtKey, WebsiteKey, ZoneinfoKey}
-
 type Token interface {
 	// Address returns the value for "address" field of the token
 	Address() (*AddressClaim, bool)

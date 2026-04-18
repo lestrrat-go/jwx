@@ -4,10 +4,12 @@ import (
 	"crypto/elliptic"
 	"fmt"
 	"math/big"
+	"slices"
 	"sync"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/stretchr/testify/require"
 )
 
 var noopValidator = PointValidatorFunc(func(_, _ *big.Int) error { return nil })
@@ -24,9 +26,9 @@ type uniqueTestCurve struct {
 
 // TestConcurrentRegisterAndLookup is a race-detector test. It runs many
 // goroutines that call the read-side lookup functions while a writer
-// goroutine repeatedly calls RegisterCurve. Without RLock on the reads,
-// `go test -race` flags the concurrent map access; with RLock, the test
-// passes cleanly.
+// goroutine repeatedly calls RegisterCurve. The Algorithms path also
+// iterates the returned slice so `go test -race` exercises the snapshot
+// semantics rather than only the map lookups.
 //
 // Each writer iteration wraps elliptic.P256() in a fresh uniqueTestCurve
 // pointer so it gets a distinct interface identity and passes the
@@ -52,6 +54,9 @@ func TestConcurrentRegisterAndLookup(_ *testing.T) {
 					_, _ = CurveFromAlgorithm(jwa.P256())
 					_, _ = AlgorithmFromCurve(elliptic.P256())
 					_ = IsCurveAvailable(jwa.P256())
+					for _, alg := range Algorithms() {
+						_ = alg
+					}
 				}
 			}
 		})
@@ -108,4 +113,31 @@ func TestRegisterCurveRejectsDuplicates(t *testing.T) {
 			t.Fatal(`RegisterCurve must refuse a nil validator`)
 		}
 	})
+}
+
+func TestAlgorithmsReturnsSnapshot(t *testing.T) {
+	registered := jwa.NewEllipticCurveAlgorithm("snapshot-test-registered")
+	tampered := jwa.NewEllipticCurveAlgorithm("snapshot-test-tampered")
+
+	err := RegisterCurve(registered, &uniqueTestCurve{Curve: elliptic.P256()}, noopValidator)
+	require.NoError(t, err, `RegisterCurve should succeed`)
+
+	algorithms := Algorithms()
+	require.NotEmpty(t, algorithms, `Algorithms should return registered curves`)
+
+	found := false
+	for i, alg := range algorithms {
+		if alg != registered {
+			continue
+		}
+
+		algorithms[i] = tampered
+		found = true
+		break
+	}
+	require.True(t, found, `Algorithms snapshot should include the registered curve`)
+
+	refreshed := Algorithms()
+	require.True(t, slices.Contains(refreshed, registered), `registry snapshot should still contain the registered curve`)
+	require.False(t, slices.Contains(refreshed, tampered), `mutating the returned slice must not modify the registry`)
 }

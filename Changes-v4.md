@@ -75,6 +75,11 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   sub-package convention. `jwx.Settings(jwx.WithUseNumber(true))` preserves
   JSON numbers as `json.Number` in private/custom fields.
 
+* `jwx.SetBase64Encoder()` and `jwx.SetBase64Decoder()` have been removed.
+  Configure the base64 backend through `jwx.Settings()` instead:
+  `jwx.Settings(jwx.WithBase64Encoder(enc), jwx.WithBase64Decoder(dec))`.
+  The `jwx.Base64Encoder` / `jwx.Base64Decoder` interface types are unchanged.
+
 * `github.com/lestrrat-go/blackmagic` has been removed. Reflection-based conversions
   have been replaced with generics.
 
@@ -101,7 +106,67 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 * `jwk.Export()` is now generic: `jwk.Export[T any](key Key) (T, error)`.
 
-* `jwk.ParseKey()` is now generic: `jwk.ParseKey[T Key](data []byte, ...options) (T, error)`.
+* `jwk.ExportAll[T any](set Set) ([]T, error)` is new — the plural counterpart
+  to `jwk.Export[T]`. Exports every key in a [Set], preserving insertion order,
+  and fails fast on the first mismatch. For a heterogeneous set, use
+  `T = any`; each element's dynamic type matches its source key's raw form.
+
+* `jwk.ParseKeyAs[T Key](data []byte, options ...ParseOption) (T, error)` is new.
+  Use it when you need a concrete subtype such as `jwk.RSAPrivateKey`; on a
+  type mismatch it returns a typed `jwk.KeyTypeMismatchError` matching the
+  shape used by `jwk.Import[T]`. `jwk.ParseKey()` itself is unchanged from
+  v3 and still returns `jwk.Key`.
+
+* The custom X509 PEM decoder extension points moved from `jwk` to
+  `jwk/jwkbb` and were reshaped into a block-type-keyed registry:
+  `jwkbb.RegisterX509Decoder[T](blockType string, d X509Decoder[T]) error`
+  / `jwkbb.UnregisterX509Decoder(blockType string)`. The interface and
+  its func adapter are now generic: `X509Decoder[T]` /
+  `X509DecodeFunc[T]`, with `T` being the decoder's concrete return
+  type. `jwkbb.DecodeX509(block *pem.Block) (any, error)` is the
+  single public dispatch entry point — it looks up the decoder for
+  `block.Type` and calls it. There is no iterator API: registration
+  is direct O(1) dispatch rather than an ordered chain.
+
+* `jwk/jwkbb` also gains an X509 **encoder** registry keyed by Go
+  type: `jwkbb.RegisterX509Encoder[T](X509Encoder[T]) error` /
+  `jwkbb.UnregisterX509Encoder[T]()`, with generic interface
+  `X509Encoder[T]` and func adapter `X509EncodeFunc[T]`. The variadic
+  `jwkbb.EncodePEM(keys ...any) ([]byte, error)` dispatches each key
+  to the encoder registered for its runtime type and concatenates the
+  resulting PEM blocks in order.
+
+* `jwk.PEMDecoder`, `jwk.PEMDecodeFunc`, `jwk.PEMEncoder`,
+  `jwk.PEMEncodeFunc`, `jwk.NewPEMDecoder`, and the
+  `jwk.WithPEMDecoder` option are removed. Use
+  `jwkbb.RegisterX509Decoder(ident, d)` to install a custom PEM block
+  decoder globally. The encoder-side interfaces never had any callers
+  outside their own plumbing.
+
+* `jwk.WithPEM(bool)` is removed. Use `jwk.WithX509(bool)` in its place
+  to tell `jwk.Parse` / `jwk.ParseKey` that the input is PEM-framed
+  X.509. Both options were aliases in pre-release v4; only `WithX509`
+  survives.
+
+* `jwk.EncodePEM(v)` and `jwk.Pem(v)` are removed. Produce PEM through
+  `jwkbb.EncodePEM` instead; unwrap a `jwk.Key` or `jwk.Set` to raw
+  keys first:
+
+  ```go
+  // single key
+  raw, _ := jwk.Export[any](key)
+  pem, _ := jwkbb.EncodePEM(raw)
+
+  // whole set
+  raws, _ := jwk.ExportAll[any](set)
+  pem, _ := jwkbb.EncodePEM(raws...)
+  ```
+
+  The default encoder emits PKCS#8 (`PRIVATE KEY` block) for RSA and
+  Ed25519 private keys, matching the v3 `jwk.Pem` output. ECDSA private
+  keys continue to emit SEC1 (`EC PRIVATE KEY`). Register a custom
+  `jwkbb.X509Encoder` if you need a different block type (for example,
+  `RSA PRIVATE KEY` / PKCS#1).
 
 * `jwk.Fetch()` and `jwk.Cache` have both been removed from the main module, along
   with every other HTTP-touching entry point. The core `jwk` package no longer

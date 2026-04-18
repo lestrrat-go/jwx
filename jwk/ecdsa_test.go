@@ -3,6 +3,7 @@ package jwk_test
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"errors"
 	"math/big"
 	"testing"
 
@@ -46,7 +47,7 @@ func TestECDSAInvalidPointsRejectedOnParse(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			body := ecdsaPointJWK(t, elliptic.P256(), "P-256", tc.x, tc.y)
 
-			_, err := jwk.ParseKey[jwk.Key](body)
+			_, err := jwk.ParseKey(body)
 			require.Error(t, err, `ParseKey must reject invalid ECDSA point at parse time`)
 			require.True(t, jwk.IsKeyValidationError(err), `ParseKey error must unwrap to a key-validation error: %v`, err)
 
@@ -66,7 +67,7 @@ func TestECDSAInvalidPointsRejectedOnParse(t *testing.T) {
 			"x": "AYwhwiE1hXWdfwu-HlBSsY5Chxycu-LyE6WsZ_w2DO4",
 			"y": "zumemGclMFkimMsKMXlLdKYWtLle58e4N9hDPcN7lig"
 		}`)
-		key, err := jwk.ParseKey[jwk.Key](body)
+		key, err := jwk.ParseKey(body)
 		require.NoError(t, err, `ParseKey on a valid P-256 key should succeed`)
 		require.NoError(t, key.Validate(), `Validate on a valid P-256 key should succeed`)
 		_, err = jwk.Export[*ecdsa.PublicKey](key)
@@ -86,6 +87,8 @@ func TestECDSAImportRejectsInvalidPoints(t *testing.T) {
 		}
 		_, err := jwk.Import[jwk.Key](bad)
 		require.Error(t, err, `jwk.Import must reject an off-curve ecdsa.PublicKey`)
+		require.ErrorIs(t, err, jwk.ImportError(), `Import error should be classified as jwk.ImportError`)
+		require.True(t, errors.Is(err, jwk.ImportError()), `errors.Is should match jwk.ImportError`)
 	})
 
 	t.Run("identity public key", func(t *testing.T) {
@@ -96,5 +99,7 @@ func TestECDSAImportRejectsInvalidPoints(t *testing.T) {
 		}
 		_, err := jwk.Import[jwk.Key](bad)
 		require.Error(t, err, `jwk.Import must reject the identity point`)
+		require.ErrorIs(t, err, jwk.ImportError(), `Import error should be classified as jwk.ImportError`)
+		require.True(t, errors.Is(err, jwk.ImportError()), `errors.Is should match jwk.ImportError`)
 	})
 }

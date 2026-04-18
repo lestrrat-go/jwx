@@ -1,6 +1,6 @@
 //go:generate ./scripts/jwxcodegen.sh generate-readfile
 //go:generate ./scripts/jwxcodegen.sh generate-all-options
-//go:generate stringer -type=FormatKind
+//go:generate go tool stringer -type=FormatKind
 //go:generate mv formatkind_string.go formatkind_string_gen.go
 
 // Package jwx contains tools that deal with the various JWx (JOSE)
@@ -12,17 +12,32 @@
 //	JWA (https://tools.ietf.org/html/rfc7518)
 //	JWT (https://tools.ietf.org/html/rfc7519)
 //
+// # Requirements
+//
+// v4 uses the experimental encoding/json/v2 API, so consumers must build
+// with:
+//
+//   - Go 1.26.0 or later (see go.mod for the exact minimum)
+//   - GOEXPERIMENT=jsonv2 set in the environment for every `go build`,
+//     `go test`, `go run`, and `go generate` invocation
+//
+// Without GOEXPERIMENT=jsonv2 the Go toolchain reports
+// `build constraints exclude all Go files` and the module will not build.
+//
 // Examples are stored in a separate Go module (to avoid adding
 // dependencies to this module), and thus does not appear in the
 // online documentation for this module.
-// You can find the examples in Github at https://github.com/lestrrat-go/jwx/tree/v3/examples
+// You can find the examples in Github at https://github.com/jwx-go/examples/tree/v4
 //
-// You can find more high level documentation at Github (https://github.com/lestrrat-go/jwx/tree/v2)
+// You can find more high level documentation at Github (https://github.com/lestrrat-go/jwx/tree/develop/v4/docs)
 //
-// FAQ style documentation can be found in the repository (https://github.com/lestrrat-go/jwx/tree/develop/v3/docs)
+// FAQ style documentation can be found in the repository (https://github.com/lestrrat-go/jwx/tree/develop/v4/docs/99-faq.md)
 package jwx
 
 import (
+	"fmt"
+
+	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/option/v3"
 )
@@ -62,11 +77,35 @@ var _ implementationNoteStreaming
 // begins parsing JWx payloads. See the godoc on individual GlobalOption
 // constructors (e.g. [WithUseNumber]) for the concurrency contract of
 // each setting.
-func Settings(options ...GlobalOption) {
+//
+// Returns a non-nil error and applies no changes if any option fails
+// validation (for example, a nil [WithBase64Encoder] or [WithBase64Decoder]).
+func Settings(options ...GlobalOption) error {
+	// Validate first so the call is all-or-nothing on error.
+	// For interface-typed options, a nil value is unwrapped when passed
+	// through any, so option.Get returns ok=false — treat that as "nil".
+	for _, opt := range options {
+		switch opt.Ident() {
+		case identBase64Encoder{}:
+			if v, ok := option.Get[Base64Encoder](opt); !ok || v == nil {
+				return fmt.Errorf(`jwx.Settings: WithBase64Encoder must not be nil`)
+			}
+		case identBase64Decoder{}:
+			if v, ok := option.Get[Base64Decoder](opt); !ok || v == nil {
+				return fmt.Errorf(`jwx.Settings: WithBase64Decoder must not be nil`)
+			}
+		}
+	}
+
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identUseNumber{}:
 			json.SetUseNumber(option.MustGet[bool](opt))
+		case identBase64Encoder{}:
+			base64.SetEncoder(option.MustGet[Base64Encoder](opt))
+		case identBase64Decoder{}:
+			base64.SetDecoder(option.MustGet[Base64Decoder](opt))
 		}
 	}
+	return nil
 }

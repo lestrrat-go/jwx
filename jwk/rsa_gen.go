@@ -1878,17 +1878,6 @@ func (h *rsaPrivateKey) Keys() []string {
 	return keys
 }
 
-var rsaStandardFields KeyFilter
-
-func init() {
-	rsaStandardFields = NewFieldNameFilter(KeyTypeKey, KeyUsageKey, KeyOpsKey, AlgorithmKey, KeyIDKey, X509URLKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, RSAEKey, RSANKey, RSADKey, RSADPKey, RSADQKey, RSAPKey, RSAQKey, RSAQIKey)
-}
-
-// RSAStandardFieldsFilter returns a KeyFilter that filters out standard RSA fields.
-func RSAStandardFieldsFilter() KeyFilter {
-	return rsaStandardFields
-}
-
 func init() {
 	registry.Register(jwa.RSA().String(), registry.Constructor{
 		Public:  func() any { return newRSAPublicKey() },

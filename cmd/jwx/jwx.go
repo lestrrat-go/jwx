@@ -117,7 +117,7 @@ func getKeyFile(keyfile, format string) (jwk.Set, error) {
 	switch format {
 	case "json":
 	case "pem":
-		keyoptions = append(keyoptions, jwk.WithPEM(true))
+		keyoptions = append(keyoptions, jwk.WithX509(true))
 	default:
 		return nil, fmt.Errorf(`invalid JWK format "%s"`, format)
 	}

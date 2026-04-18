@@ -23,6 +23,8 @@ func init() {
 	normalizedAKP = KeyKind(jwa.AKP().String()).normalize()
 }
 
+const akpPrivateZKey = "z"
+
 func akpKeyKind(algfn func() (jwa.KeyAlgorithm, bool)) KeyKind {
 	if alg, ok := algfn(); ok {
 		return KeyKind(jwa.AKP().String() + ":" + alg.String()).normalize()
@@ -37,7 +39,7 @@ func makeAKPPublicKey(src Key) (Key, error) {
 	newKey := newAKPPublicKey()
 	for _, k := range src.Keys() {
 		switch k {
-		case AKPPrivKey:
+		case AKPPrivKey, akpPrivateZKey:
 			continue
 		default:
 			v, ok := src.Field(k)

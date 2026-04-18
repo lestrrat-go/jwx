@@ -29,8 +29,6 @@ jobs:
           path: |
             ~/go/pkg/mod
             ~/.cache/go-build
-            ~/.cache/bazel
-            ~/.cache/bazelisk
           key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
           restore-keys: |
             ${{ runner.os }}-go-
@@ -50,5 +48,3 @@ jobs:
         run: make tidy
       - name: Run smoke tests
         run: make smoke
-      - uses: bazelbuild/setup-bazelisk@b39c379c82683a5f25d34f0d062761f62693e0b2 # v3.0.0
-      - run: bazel build //...

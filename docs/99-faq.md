@@ -34,13 +34,13 @@ If you are in an environment where API changes disrupts your environment, you sh
 
 ## "Why can't I create my jwk.Key?"
 
-### 1. You are passing the wrong parameter to `jwk.New()`.
+### 1. You are passing the wrong parameter to `jwk.Import()`.
 
-As stated in the documentation, `jwk.New()` creates different types of keys depending on the type of the input.
+As stated in the documentation, `jwk.Import[T]()` creates different types of keys depending on the type of the input.
 
-Use `jwk.New()` to construct a JWK from the [*raw* key](./04-jwk.md#raw-key). Use `jwk.Parse()` or `jwk.ParseKey()` to parse a piece of data (`[]byte` and the like) and create the appropriate key type from its contents.
+Use `jwk.Import[T]()` to construct a JWK from a [*raw* key](./04-jwk.md#raw-key) such as `*rsa.PrivateKey`, `*ecdsa.PublicKey`, `[]byte`, etc. Use `jwk.Parse()` or `jwk.ParseKey()` to parse a piece of data (`[]byte` and the like) that already holds an encoded JWK and create the appropriate key type from its contents. When you need a concrete key subtype (e.g. `jwk.RSAPublicKey`) use `jwk.ParseKeyAs[T]()`.
 
-See ["Using jwk.New()"](./04-jwk.md#using-jwknew) for more details.
+See ["Using jwk.Import()"](./04-jwk.md#using-jwkimport) for more details.
 
 ### 2. You are not decoding PEM.
 
@@ -92,18 +92,23 @@ In order to allow passing either `jwa.SignatureAlgorithm` or `jwa.KeyEncrypionAl
 This caused a bit of confusion for some users because this field was the only "untyped" field that potentially could have been typed. Most notably, some people wanted to do the following, but couldn't:
 
 ```go
-jwt.Verify(token, jwt.WithKey(key.Algorithm(), key))
+jwt.Parse(token, jwt.WithKey(key.Algorithm(), key))
 ```
 
 Since version 2.0.0 `jwk.Key` now stores the `alg` field as a `jwa.KeyAlgorithm` type, which is just an interface that covers `jwa.SignatureAlgorithm`, `jwa.KeyEncryptionAlgorithm`, or any other type that we may need to represent in the future.
 
-Now you should be able to just pass the `alg` value to most high-level functions and methods such as `jwt.Verify`, `jws.Sign`, and `jwe.Encrypt`
+Now you should be able to just pass the `alg` value to most high-level functions and methods such as `jwt.Parse`, `jws.Sign`, and `jwe.Encrypt`
+
+That convenience is still operation-specific. For JWS helpers such as `jws.Sign()` and
+`jws.Verify()`, the value must resolve to a `jwa.SignatureAlgorithm`. For JWE helpers, it
+must resolve to the appropriate key-encryption algorithm. Passing the wrong kind of
+algorithm, such as `jwa.A128KW()` to `jws.WithKey()`, compiles but fails at runtime.
 
 ### When do we use `jwa.KeyAlgorithm`
 
 There are some functions that accept `jwa.KeyAlgorithm`, while there are others that expect `jwa.SignatureAlgorithm` or `jwa.KeyEncryptionAlgorithm`. So when do we use which?
 
-The guideline is as follows: If it's a high-level function/method that the users regularly use, use `jwa.KeyAlgorithm`. For example, almost everybody who use `jwt` will want to verify the JWS signed payload, so `jwt.Sign()`, and `jwt.Verify()` expect `jwa.KeyAlgorithm`. On the other hand, `jwt.Serializer` uses `jwa.SignatureAlgorithm` and such. This is a low-level utility, and users are not really meant to use it for their most basic needs: therefore they use the specific algorithm type.
+The guideline is as follows: If it's a high-level function/method that the users regularly use, use `jwa.KeyAlgorithm`. For example, almost everybody who use `jwt` will want to verify the JWS signed payload, so `jwt.Sign()`, and `jwt.Parse()` expect `jwa.KeyAlgorithm`. On the other hand, `jwt.Serializer` uses `jwa.SignatureAlgorithm` and such. This is a low-level utility, and users are not really meant to use it for their most basic needs: therefore they use the specific algorithm type. This does not mean every algorithm kind is valid for every operation; the operation still decides whether it accepts signature or key-encryption algorithms.
 
 ## Why are your options objects, and not callbacks?
 

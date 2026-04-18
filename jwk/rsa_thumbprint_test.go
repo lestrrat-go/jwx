@@ -28,7 +28,7 @@ const rfc7638RSAJWK = `{
 const rfc7638ExpectedThumbprintHex = "3736cbb1787cb8309c77ee8c3705c5e16ffb9e859715901f1e4c59b11182f57b"
 
 func TestRSA_Thumbprint_RFC7638Vector(t *testing.T) {
-	k, err := jwk.ParseKey[jwk.Key]([]byte(rfc7638RSAJWK))
+	k, err := jwk.ParseKey([]byte(rfc7638RSAJWK))
 	require.NoError(t, err)
 
 	got, err := k.Thumbprint(crypto.SHA256)
@@ -46,7 +46,7 @@ func TestRSA_ExponentTruncation_Rejected(t *testing.T) {
 	// e = 0x01_00_00_00_00_00_00_01 (65 bits) — fits neither 32-bit nor 64-bit int.
 	payload := rsaPublicJWK(rfc7638RSAModulus, "AQAAAAAAAAAB")
 
-	_, err := jwk.ParseKey[jwk.Key](payload)
+	_, err := jwk.ParseKey(payload)
 	require.Error(t, err, "parse must reject oversized exponent")
 	require.Contains(t, err.Error(), "rsa public exponent too large")
 }
@@ -68,7 +68,7 @@ func TestRSA_Thumbprint_UsesStoredBytes(t *testing.T) {
 	jwkE3 := rsaPublicJWK(rfc7638RSAModulus, "Aw")
 
 	thumb := func(payload []byte) []byte {
-		k, err := jwk.ParseKey[jwk.Key](payload)
+		k, err := jwk.ParseKey(payload)
 		require.NoError(t, err)
 		tp, err := k.Thumbprint(crypto.SHA256)
 		require.NoError(t, err)
@@ -92,13 +92,13 @@ func TestRSA_BitsUintSize(t *testing.T) {
 // ensure the tests don't drift from Parse/Export behavior. Marshal the
 // RFC 7638 JWK back out and confirm it round-trips.
 func TestRSA_RFC7638_RoundTrip(t *testing.T) {
-	k, err := jwk.ParseKey[jwk.Key]([]byte(rfc7638RSAJWK))
+	k, err := jwk.ParseKey([]byte(rfc7638RSAJWK))
 	require.NoError(t, err)
 
 	buf, err := json.Marshal(k)
 	require.NoError(t, err)
 
-	k2, err := jwk.ParseKey[jwk.Key](buf)
+	k2, err := jwk.ParseKey(buf)
 	require.NoError(t, err)
 
 	tp1, err := k.Thumbprint(crypto.SHA256)

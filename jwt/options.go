@@ -173,9 +173,6 @@ type withKeySet struct {
 // and you do not mind the verification process having to possibly
 // attempt using multiple times before succeeding to verify. See
 // `jws.InferAlgorithmFromKey` option
-//
-// If you have only one key in the set, and are sure you want to
-// use that key, you can use the `jwt.WithDefaultKey` option.
 func WithKeySet(set jwk.Set, options ...any) ParseOption {
 	return &parseOption{option.New(identKeySet{}, &withKeySet{
 		set:     set,

@@ -291,6 +291,17 @@ func WithCEK(v *[]byte) DecryptOption {
 // a payload using `jwe.Encrypt` (Yes, we know it can only be "" or "DEF",
 // but the way the specification is written it could allow for more options,
 // and therefore this option takes an argument)
+//
+// Compression can leak information about the plaintext through message
+// length, so enable it only when you understand that tradeoff.
+//
+// This library does not enforce an encrypt-side plaintext size limit before
+// compression. Callers that accept untrusted or arbitrarily large payloads
+// must bound the input size before calling `jwe.Encrypt` with this option.
+//
+// Recipients may independently reject compressed messages whose
+// decompressed payload exceeds their `jwe.WithMaxDecompressBufferSize`
+// setting.
 func WithCompress(v jwa.CompressionAlgorithm) EncryptOption {
 	return &encryptOption{option.New(identCompress{}, v)}
 }

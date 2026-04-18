@@ -83,16 +83,6 @@ func generateTokenConstants(o *codegen.Output, obj *codegen.Object) {
 	}
 	o.L(")") // end const
 
-	// Create a stdClaimNames array
-	o.LL("// stdClaimNames is a list of all standard claim names defined in the JWT specification.")
-	o.L("var stdClaimNames = []string{")
-	for i, f := range fields {
-		if i > 0 {
-			o.R(", ")
-		}
-		o.R("%sKey", f.Name(true))
-	}
-	o.R("}")
 }
 
 func generateTokenInterface(o *codegen.Output, obj *codegen.Object, pkgPrefix string) {

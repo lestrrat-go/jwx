@@ -380,13 +380,16 @@ func ParseReader(src io.Reader, options ...ParseOption) (*Message, error) {
 		}
 	}
 
-	limited := io.LimitReader(src, maxSize+1)
-	data, err := jwxio.ReadAllFromFiniteSource(limited)
+	data, err := jwxio.ReadAllFromFiniteSource(src, maxSize+1)
 	if err == nil {
 		if int64(len(data)) > maxSize {
 			return nil, makeParseError(`jws.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
 		}
 		return Parse(data, options...)
+	}
+
+	if errors.Is(err, jwxio.InputTooLargeError()) {
+		return nil, makeParseError(`jws.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
 	}
 
 	if !errors.Is(err, jwxio.NonFiniteSourceError()) {
@@ -448,6 +451,12 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 	decodedSignature, err := base64.Decode(signature)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to decode signature: %w`, err)
+	}
+	if len(decodedSignature) == 0 {
+		alg, ok := hdr.Algorithm()
+		if !ok || alg != jwa.NoSignature() {
+			return nil, fmt.Errorf(`empty compact signature requires protected header "alg" to be "none"`)
+		}
 	}
 
 	var msg Message
@@ -746,23 +755,37 @@ func hasCustomSigVerifier(alg jwa.SignatureAlgorithm) bool {
 }
 
 // Settings allows you to set global settings for JWS operations.
-func Settings(options ...GlobalOption) {
+//
+// Returns a non-nil error and applies no changes if any option fails
+// validation (for example, a non-positive [WithMaxParseInputSize] or
+// [WithMaxSignatures]).
+func Settings(options ...GlobalOption) error {
+	var newMaxParseInputSize int64
+	var newMaxSignatures int64
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identMaxParseInputSize{}:
 			v := option.MustGet[int64](opt)
 			if v <= 0 {
-				panic("jws.Settings: WithMaxParseInputSize must be greater than zero")
+				return fmt.Errorf(`jws.Settings: WithMaxParseInputSize must be greater than zero, got %d`, v)
 			}
-			maxParseInputSize.Store(v)
+			newMaxParseInputSize = v
 		case identMaxSignatures{}:
 			v := option.MustGet[int](opt)
 			if v <= 0 {
-				panic("jws.Settings: WithMaxSignatures must be greater than zero")
+				return fmt.Errorf(`jws.Settings: WithMaxSignatures must be greater than zero, got %d`, v)
 			}
-			maxSignatures.Store(int64(v))
+			newMaxSignatures = int64(v)
 		}
 	}
+
+	if newMaxParseInputSize > 0 {
+		maxParseInputSize.Store(newMaxParseInputSize)
+	}
+	if newMaxSignatures > 0 {
+		maxSignatures.Store(newMaxSignatures)
+	}
+	return nil
 }
 
 // VerifyCompactFast is a fast path verification function for JWS messages

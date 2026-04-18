@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"encoding/base64"
 	"math/big"
 	"net"
 	"net/url"
@@ -33,6 +34,9 @@ func parseURI(s string) *url.URL {
 }
 
 func TestCert(t *testing.T) {
+	restoreCertSettings()
+	defer restoreCertSettings()
+
 	privkey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err, `jwxtest.GenerateRsaKey`)
 
@@ -113,4 +117,52 @@ func TestCert(t *testing.T) {
 
 	_, err = cert.Parse(b64)
 	require.NoError(t, err, `cert.Parse should succeed`)
+}
+
+func TestParseRejectsInvalidCertificate(t *testing.T) {
+	restoreCertSettings()
+	defer restoreCertSettings()
+
+	src := base64.StdEncoding.EncodeToString([]byte(`not a certificate`))
+	_, err := cert.Parse([]byte(src))
+	require.Error(t, err, `cert.Parse should reject base64 that is not an X.509 certificate`)
+}
+
+func TestParseRejectsDefaultMaxCertificateSize(t *testing.T) {
+	restoreCertSettings()
+	defer restoreCertSettings()
+
+	oversized := make([]byte, testDefaultMaxCertificateSize+1)
+	src := base64.StdEncoding.EncodeToString(oversized)
+
+	_, err := cert.Parse([]byte(src))
+	require.Error(t, err, `cert.Parse should enforce the default max certificate size`)
+}
+
+func TestParseAllowsUnlimitedCertificateSize(t *testing.T) {
+	restoreCertSettings()
+	defer restoreCertSettings()
+
+	cert.Settings(cert.WithMaxCertificateSize(1))
+	_, err := cert.Parse(certBytes)
+	require.Error(t, err, `cert.Parse should respect the configured size limit`)
+
+	cert.Settings(cert.WithMaxCertificateSize(0))
+	_, err = cert.Parse(certBytes)
+	require.NoError(t, err, `cert.Parse should succeed when the size limit is disabled`)
+}
+
+func TestSettingsRejectNegativeValues(t *testing.T) {
+	restoreCertSettings()
+	defer restoreCertSettings()
+
+	t.Run(`WithMaxChainLength`, func(t *testing.T) {
+		require.Error(t, cert.Settings(cert.WithMaxChainLength(-1)),
+			`negative max chain length should return an error`)
+	})
+
+	t.Run(`WithMaxCertificateSize`, func(t *testing.T) {
+		require.Error(t, cert.Settings(cert.WithMaxCertificateSize(-1)),
+			`negative max certificate size should return an error`)
+	})
 }

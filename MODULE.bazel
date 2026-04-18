@@ -28,4 +28,5 @@ use_repo(
     "com_github_stretchr_testify",
     "com_github_valyala_fastjson",
     "org_golang_x_crypto",
+    "org_golang_x_tools",
 )

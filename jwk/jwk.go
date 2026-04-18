@@ -9,8 +9,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -20,6 +18,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/option/v3"
 )
 
@@ -46,7 +45,8 @@ func init() {
 	}
 }
 
-// Import creates a jwk.Key from the given key (RSA/ECDSA/symmetric keys).
+// Import creates a validated jwk.Key from the given key
+// (RSA/ECDSA/symmetric keys).
 //
 // The constructor auto-detects the type of key to be instantiated
 // based on the input type:
@@ -65,6 +65,9 @@ func init() {
 // Use a concrete key type to obtain a typed result directly:
 //
 //	rsaKey, err := jwk.Import[jwk.RSAPrivateKey](rawRSAKey)
+//
+// Import validates the populated JWK before returning it. Malformed raw
+// keys fail at import time instead of being returned for later validation.
 func Import[T Key](raw any) (T, error) {
 	var zero T
 	key, err := doImport(raw)
@@ -73,16 +76,20 @@ func Import[T Key](raw any) (T, error) {
 	}
 	result, ok := key.(T)
 	if !ok {
-		return zero, importerr(`imported key is %T, not %T`, key, zero)
+		return zero, importerr(`%w`, KeyTypeMismatchError{
+			Got:  reflect.TypeOf(key),
+			Want: reflect.TypeFor[T](),
+		})
 	}
 	return result, nil
 }
 
 func validateImportedKey(key Key) error {
-	if v, ok := key.(interface{ Validate() error }); ok {
-		if err := v.Validate(); err != nil {
-			return importerr(`key validation failed: %w`, err)
-		}
+	if key == nil {
+		return nil
+	}
+	if err := key.Validate(); err != nil {
+		return importerr(`key validation failed: %w`, err)
 	}
 	return nil
 }
@@ -126,16 +133,13 @@ func importBuiltinKey(raw any) (Key, error) {
 	}
 }
 
-func doImport(raw any) (Key, error) {
+func convertRawKey(raw any) (Key, error) {
 	if raw == nil {
-		return nil, importerr(`a non-nil key is required`)
+		return nil, fmt.Errorf(`a non-nil key is required`)
 	}
 
 	key, err := importBuiltinKey(raw)
 	if err == nil {
-		if err := validateImportedKey(key); err != nil {
-			return nil, err
-		}
 		return key, nil
 	}
 	if !errors.Is(err, errNotBuiltinKey) {
@@ -146,17 +150,31 @@ func doImport(raw any) (Key, error) {
 	conv, ok := keyImporters[reflect.TypeOf(raw)]
 	muKeyImporters.RUnlock()
 	if !ok {
-		return nil, importerr(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
+		return nil, fmt.Errorf(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}
 
-	key, err = conv.Import(raw)
+	return conv.Import(raw)
+}
+
+func doImport(raw any) (Key, error) {
+	key, err := convertRawKey(raw)
 	if err != nil {
-		return nil, err
+		return nil, importerr(`%w`, err)
 	}
 	if err := validateImportedKey(key); err != nil {
 		return nil, err
 	}
 	return key, nil
+}
+
+func validateReturnedKey(key Key) error {
+	if key == nil {
+		return nil
+	}
+	if err := key.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // PublicSetOf returns a new jwk.Set consisting of
@@ -193,7 +211,7 @@ func PublicSetOf(v Set, options ...PublicSetOption) (Set, error) {
 		if !ok {
 			return nil, fmt.Errorf(`key not found`)
 		}
-		if _, isSymmetric := k.(SymmetricKey); isSymmetric && !allowSymmetric {
+		if k.KeyType() == jwa.OctetSeq() && !allowSymmetric {
 			kid, _ := k.KeyID()
 			return nil, fmt.Errorf(`jwk.PublicSetOf: input set contains a symmetric key (kid=%q, index=%d); symmetric keys have no public form and would leak secret material if published. Remove symmetric keys from the set before calling PublicSetOf, or pass jwk.WithAllowSymmetric(true) to opt into legacy pass-through behavior`, kid, i)
 		}
@@ -307,27 +325,31 @@ func (ctx *setDecodeCtx) IgnoreParseError() bool {
 	return ctx.ignoreParseError
 }
 
-// ParseKey parses a single key JWK. Unlike `jwk.Parse` this method will
-// report failure if you attempt to pass a JWK set. Only use this function
-// when you know that the data is a single JWK.
+// ParseKey parses a single key JWK and returns it as a [Key]. Unlike
+// [Parse] this method reports failure if the input is a JWK set. Only
+// use this function when you know that the data is a single JWK.
 //
-// Given a WithPEM(true) option, this function assumes that the given input
-// is PEM encoded ASN.1 DER format key.
+// Given a WithX509(true) option, this function assumes that the given input
+// is a PEM-framed X.509-encoded key.
 //
 // Note that a successful parsing of any type of key does NOT necessarily
 // guarantee a valid key. For example, no checks against expiration dates
 // are performed for certificate expiration, no checks against missing
 // parameters are performed, etc.
 //
-// The type parameter T specifies the expected key type. Use [Key] when you
-// do not need a specific subtype:
+// Use [ParseKeyAs] when a concrete key subtype (e.g. [RSAPrivateKey],
+// [ECDSAPublicKey]) is required.
+func ParseKey(data []byte, options ...ParseOption) (Key, error) {
+	return doParseKey(data, options...)
+}
+
+// ParseKeyAs behaves like [ParseKey] but asserts the parsed key to the
+// concrete type T. On a type mismatch it returns a [KeyTypeMismatchError]
+// carrying the parsed and requested types; the underlying error chain also
+// satisfies [errors.Is] with a sentinel [ParseError].
 //
-//	key, err := jwk.ParseKey[jwk.Key](data)
-//
-// Use a concrete key type to obtain a typed result directly:
-//
-//	ecKey, err := jwk.ParseKey[jwk.ECDSAPublicKey](data)
-func ParseKey[T Key](data []byte, options ...ParseOption) (T, error) {
+//	ecKey, err := jwk.ParseKeyAs[jwk.ECDSAPublicKey](data)
+func ParseKeyAs[T Key](data []byte, options ...ParseOption) (T, error) {
 	var zero T
 	key, err := doParseKey(data, options...)
 	if err != nil {
@@ -335,21 +357,21 @@ func ParseKey[T Key](data []byte, options ...ParseOption) (T, error) {
 	}
 	result, ok := key.(T)
 	if !ok {
-		return zero, parseerr(`parsed key is %T, not %T`, key, zero)
+		return zero, parseerr(`%w`, KeyTypeMismatchError{
+			Got:  reflect.TypeOf(key),
+			Want: reflect.TypeFor[T](),
+		})
 	}
 	return result, nil
 }
 
 func doParseKey(data []byte, options ...ParseOption) (Key, error) {
-	var parsePEM bool
+	var parseX509 bool
 	var localReg *json.Registry
-	var pemDecoder PEMDecoder
 	for _, opt := range options {
 		switch opt.Ident() {
-		case identPEM{}:
-			parsePEM = option.MustGet[bool](opt)
-		case identPEMDecoder{}:
-			pemDecoder = option.MustGet[PEMDecoder](opt)
+		case identX509{}:
+			parseX509 = option.MustGet[bool](opt)
 		case identLocalRegistry{}:
 			localReg = option.MustGet[*json.Registry](opt)
 		case identTypedField{}:
@@ -363,22 +385,19 @@ func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 		}
 	}
 
-	if parsePEM {
-		var raw any
-		var err error
-
-		// PEMDecoder should probably be deprecated, because of being a misnomer.
-		if pemDecoder != nil {
-			raw, err = decodeX509WithPEMDEcoder(data, pemDecoder)
-		} else {
-			// This version takes into account the various X509 decoders that are
-			// pre-registered.
-			raw, err = decodeX509(data)
-		}
+	if parseX509 {
+		raw, _, err := decodeX509(data)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to decode PEM/X.509 encoded key: %w`, err)
 		}
-		return doImport(raw)
+		key, err := convertRawKey(raw)
+		if err != nil {
+			return nil, fmt.Errorf(`jwk.Parse: failed to create jwk.Key from %T: %w`, raw, err)
+		}
+		if err := validateReturnedKey(key); err != nil {
+			return nil, fmt.Errorf(`jwk.Parse: %w`, err)
+		}
+		return key, nil
 	}
 
 	probe, err := keyProbe.Probe(data)
@@ -397,6 +416,9 @@ func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 		parser := parsers[i]
 		key, err := parser.ParseKey(probe, &unmarshaler, data)
 		if err == nil {
+			if err := validateReturnedKey(key); err != nil {
+				return nil, fmt.Errorf(`jwk.Parse: %w`, err)
+			}
 			return key, nil
 		}
 
@@ -424,19 +446,13 @@ func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 // you know for sure that you have a single key, please see the documentation
 // for `jwk.ParseKey()`.
 func Parse(src []byte, options ...ParseOption) (Set, error) {
-	var parsePEM bool
 	var parseX509 bool
 	var localReg *json.Registry
 	var ignoreParseError bool
-	var pemDecoder PEMDecoder
 	for _, opt := range options {
 		switch opt.Ident() {
-		case identPEM{}:
-			parsePEM = option.MustGet[bool](opt)
 		case identX509{}:
 			parseX509 = option.MustGet[bool](opt)
-		case identPEMDecoder{}:
-			pemDecoder = option.MustGet[PEMDecoder](opt)
 		case identIgnoreParseError{}:
 			ignoreParseError = option.MustGet[bool](opt)
 		case identTypedField{}:
@@ -450,20 +466,20 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 
 	s := NewSet()
 
-	if parsePEM || parseX509 {
-		if pemDecoder == nil {
-			pemDecoder = NewPEMDecoder()
-		}
+	if parseX509 {
 		src = bytes.TrimSpace(src)
 		var keyCount int
 		for len(src) > 0 {
-			raw, rest, err := pemDecoder.Decode(src)
+			raw, rest, err := decodeX509(src)
 			if err != nil {
 				return nil, parseerr(`failed to parse PEM encoded key: %w`, err)
 			}
-			key, err := doImport(raw)
+			key, err := convertRawKey(raw)
 			if err != nil {
 				return nil, parseerr(`failed to create jwk.Key from %T: %w`, raw, err)
+			}
+			if err := validateReturnedKey(key); err != nil {
+				return nil, parseerr(`%w`, err)
 			}
 			if err := s.AddKey(key); err != nil {
 				return nil, parseerr(`failed to add jwk.Key to set: %w`, err)
@@ -556,81 +572,6 @@ func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
 	}
 
 	return nil
-}
-
-// Pem serializes the given jwk.Key in PEM encoded ASN.1 DER format,
-// using either PKCS8 for private keys and PKIX for public keys.
-// If you need to encode using PKCS1 or SEC1, you must do it yourself.
-//
-// # Argument must be of type jwk.Key or jwk.Set
-//
-// Currently only EC (including Ed25519) and RSA keys (and jwk.Set
-// comprised of these key types) are supported.
-func Pem(v any) ([]byte, error) {
-	var set Set
-	switch v := v.(type) {
-	case Key:
-		set = NewSet()
-		if err := set.AddKey(v); err != nil {
-			return nil, fmt.Errorf(`failed to add key to set: %w`, err)
-		}
-	case Set:
-		set = v
-	default:
-		return nil, fmt.Errorf(`argument to Pem must be either jwk.Key or jwk.Set: %T`, v)
-	}
-
-	var ret []byte
-	for i := range set.Len() {
-		key, _ := set.Key(i)
-		typ, buf, err := asnEncode(key)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode content for key #%d: %w`, i, err)
-		}
-
-		var block pem.Block
-		block.Type = typ
-		block.Bytes = buf
-		ret = append(ret, pem.EncodeToMemory(&block)...)
-	}
-	return ret, nil
-}
-
-func asnEncode(key Key) (string, []byte, error) {
-	switch key := key.(type) {
-	case ECDSAPrivateKey:
-		rawkey, err := Export[*ecdsa.PrivateKey](key)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
-		}
-		buf, err := x509.MarshalECPrivateKey(rawkey)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
-		}
-		return pmECPrivateKey, buf, nil
-	case RSAPrivateKey, OKPPrivateKey:
-		rawkey, err := Export[any](key)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
-		}
-		buf, err := x509.MarshalPKCS8PrivateKey(rawkey)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
-		}
-		return pmPrivateKey, buf, nil
-	case RSAPublicKey, ECDSAPublicKey, OKPPublicKey:
-		rawkey, err := Export[any](key)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
-		}
-		buf, err := x509.MarshalPKIXPublicKey(rawkey)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to marshal PKIX: %w`, err)
-		}
-		return pmPublicKey, buf, nil
-	default:
-		return "", nil, fmt.Errorf(`unsupported key type %T`, key)
-	}
 }
 
 // CustomDecoder is a generic interface for custom field decoders.

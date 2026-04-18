@@ -1489,17 +1489,6 @@ func (h *akpPrivateKey) Keys() []string {
 	return keys
 }
 
-var akpStandardFields KeyFilter
-
-func init() {
-	akpStandardFields = NewFieldNameFilter(KeyTypeKey, KeyUsageKey, KeyOpsKey, AlgorithmKey, KeyIDKey, X509URLKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, AKPPubKey, AKPPrivKey)
-}
-
-// AKPStandardFieldsFilter returns a KeyFilter that filters out standard AKP fields.
-func AKPStandardFieldsFilter() KeyFilter {
-	return akpStandardFields
-}
-
 func init() {
 	registry.Register(jwa.AKP().String(), registry.Constructor{
 		Public:  func() any { return newAKPPublicKey() },

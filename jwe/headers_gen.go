@@ -734,7 +734,7 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 			if err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, EphemeralPublicKeyKey, err)
 			}
-			key, err := jwk.ParseKey[jwk.Key](raw)
+			key, err := jwk.ParseKey(raw)
 			if err != nil {
 				return fmt.Errorf(`failed to parse JWK for key %s: %w`, EphemeralPublicKeyKey, err)
 			}
@@ -744,7 +744,7 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 			if err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, JWKKey, err)
 			}
-			key, err := jwk.ParseKey[jwk.Key](raw)
+			key, err := jwk.ParseKey(raw)
 			if err != nil {
 				return fmt.Errorf(`failed to parse JWK for key %s: %w`, JWKKey, err)
 			}

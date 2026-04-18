@@ -30,7 +30,7 @@ func myFunc(src *rsa.PrivateKey) (jwk.Key, error) {
 
 Implementation: `RegisterKeyImporter[T any](fn func(T) (Key, error))` uses `reflect.TypeFor[T]()` to derive the map key at registration time. The runtime dispatch in `Import()` still uses `reflect.TypeOf(raw)` — this is unavoidable since the input type is only known at call time.
 
-`RegisterKeyImporterI(from any, conv KeyImporter)` is available for cases requiring the full `KeyImporter` interface.
+Callers holding a full `KeyImporter` value can register it through the same entry point by passing `imp.Import` as the function: `RegisterKeyImporter[T](imp.Import)`.
 
 ### Type-safe generic accessors
 

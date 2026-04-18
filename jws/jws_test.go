@@ -41,11 +41,20 @@ const examplePayload = `{"iss":"joe",` + "\r\n" + ` "exp":1300819380,` + "\r\n" 
 const exampleCompactSerialization = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
 const badValue = "%badvalue%"
 
+type infiniteByteReader struct{ b byte }
+
+func (r *infiniteByteReader) Read(p []byte) (int, error) {
+	for i := range p {
+		p[i] = r.b
+	}
+	return len(p), nil
+}
+
 // ES256K support has been moved to the github.com/jwx-go/es256k extension module.
 
 func TestSanity(t *testing.T) {
 	t.Run("sanity: Verify with single key", func(t *testing.T) {
-		key, err := jwk.ParseKey[jwk.Key]([]byte(`{
+		key, err := jwk.ParseKey([]byte(`{
     "kty": "oct",
     "k": "AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
   }`))
@@ -215,6 +224,71 @@ func TestParseReader(t *testing.T) {
 			require.Error(t, err, "Parsing compact serialization with bad signature should be an error")
 		}
 	})
+}
+
+func TestParseCompactEmptySignature(t *testing.T) {
+	t.Parallel()
+
+	testcases := []struct {
+		Name   string
+		Header string
+		OK     bool
+	}{
+		{
+			Name:   "SignedAlgorithmRejected",
+			Header: `{"alg":"HS256"}`,
+		},
+		{
+			Name:   "MissingAlgorithmRejected",
+			Header: `{"typ":"JWT"}`,
+		},
+		{
+			Name:   "NoSignatureAllowed",
+			Header: `{"alg":"none"}`,
+			OK:     true,
+		},
+	}
+
+	payload := base64.Encode([]byte("test"))
+
+	for _, tc := range testcases {
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+
+			protected := string(base64.Encode([]byte(tc.Header)))
+			compact := protected + "." + string(payload) + "."
+
+			msg, err := jws.Parse([]byte(compact))
+			if tc.OK {
+				require.NoError(t, err, `jws.Parse should succeed`)
+				require.Len(t, msg.Signatures(), 1, `message should contain one signature`)
+				require.Empty(t, msg.Signatures()[0].Signature(), `signature should be empty`)
+			} else {
+				require.Error(t, err, `jws.Parse should fail`)
+				require.ErrorIs(t, err, jws.ParseError(), `error should match jws.ParseError`)
+			}
+
+			msg, err = jws.ParseString(compact)
+			if tc.OK {
+				require.NoError(t, err, `jws.ParseString should succeed`)
+				require.Len(t, msg.Signatures(), 1, `message should contain one signature`)
+				require.Empty(t, msg.Signatures()[0].Signature(), `signature should be empty`)
+			} else {
+				require.Error(t, err, `jws.ParseString should fail`)
+				require.ErrorIs(t, err, jws.ParseError(), `error should match jws.ParseError`)
+			}
+
+			msg, err = jws.ParseReader(bufio.NewReader(strings.NewReader(compact)))
+			if tc.OK {
+				require.NoError(t, err, `jws.ParseReader should succeed`)
+				require.Len(t, msg.Signatures(), 1, `message should contain one signature`)
+				require.Empty(t, msg.Signatures()[0].Signature(), `signature should be empty`)
+			} else {
+				require.Error(t, err, `jws.ParseReader should fail`)
+				require.ErrorIs(t, err, jws.ParseError(), `error should match jws.ParseError`)
+			}
+		})
+	}
 }
 
 type dummyCryptoSigner struct {
@@ -931,7 +1005,7 @@ func TestRFC7797(t *testing.T) {
       "k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"
      }`
 
-	key, err := jwk.ParseKey[jwk.Key]([]byte(keysrc))
+	key, err := jwk.ParseKey([]byte(keysrc))
 	require.NoError(t, err, `jwk.Parse should succeed`)
 
 	t.Run("Invalid payload when b64 = false and NOT detached", func(t *testing.T) {
@@ -1523,7 +1597,7 @@ func TestGH840(t *testing.T) {
 		"d": "870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE"
 	}`)
 
-	_, err := jwk.ParseKey[jwk.Key](untrustedJWK)
+	_, err := jwk.ParseKey(untrustedJWK)
 	require.Error(t, err, `jwk.ParseKey must reject an off-curve ECDSA JWK`)
 }
 
@@ -1682,7 +1756,7 @@ func TestUnpaddedSignatureR(t *testing.T) {
 	// This is the private key used to sign the payload
 	keySrc := `{"crv":"P-256","d":"MqGwMl-dlJFrMnu7rFyslPV8EdsVC7I4V19N-ADVqaU","kty":"EC","x":"Anf1p2lRrcXgZKpVRRC1xLxPiw_45PbOlygfbxvD8Es","y":"d0HiZq-aurVVLLtK-xqXPpzpWloZJNwKNve7akBDuvg"}`
 
-	privKey, err := jwk.ParseKey[jwk.Key]([]byte(keySrc))
+	privKey, err := jwk.ParseKey([]byte(keySrc))
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 	pubKey, err := jwk.PublicKeyOf(privKey)
@@ -1865,6 +1939,13 @@ func TestMaxParseInputSize(t *testing.T) {
 		require.Error(t, err, `jws.ParseReader should reject input exceeding per-call max size`)
 		require.Contains(t, err.Error(), `exceeded max size`)
 	})
+	t.Run("direct oversized limited reader is rejected", func(t *testing.T) {
+		rdr := &io.LimitedReader{R: &infiniteByteReader{b: 'x'}, N: 103}
+		_, err := jws.ParseReader(rdr, jws.WithMaxParseInputSize(100))
+		require.Error(t, err, `jws.ParseReader should reject oversized limited readers`)
+		require.ErrorIs(t, err, jws.ParseError())
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
 	t.Run("input within limit is accepted", func(t *testing.T) {
 		data := []byte(`not-valid-jws-but-small`)
 		_, err := jws.ParseReader(bytes.NewReader(data), jws.WithMaxParseInputSize(1024))
@@ -1892,15 +1973,11 @@ func TestMaxParseInputSize(t *testing.T) {
 			require.NotContains(t, err.Error(), `exceeded max size`)
 		}
 	})
-	t.Run("negative value panics in Settings", func(t *testing.T) {
-		require.Panics(t, func() {
-			jws.Settings(jws.WithMaxParseInputSize(-1))
-		})
+	t.Run("negative value returns error from Settings", func(t *testing.T) {
+		require.Error(t, jws.Settings(jws.WithMaxParseInputSize(-1)))
 	})
-	t.Run("zero value panics in Settings", func(t *testing.T) {
-		require.Panics(t, func() {
-			jws.Settings(jws.WithMaxParseInputSize(0))
-		})
+	t.Run("zero value returns error from Settings", func(t *testing.T) {
+		require.Error(t, jws.Settings(jws.WithMaxParseInputSize(0)))
 	})
 	t.Run("negative per-call value returns error", func(t *testing.T) {
 		data := []byte(`test`)
@@ -2151,17 +2228,26 @@ func TestAlgorithmsForKeyCryptoSigner(t *testing.T) {
 	})
 }
 
-func TestVerifyWithNonSignatureAlgorithm(t *testing.T) {
+func TestWithKeyRejectsNonSignatureAlgorithm(t *testing.T) {
 	hmacKey := jwxtest.GenerateSymmetricKey()
 	signed, err := jws.Sign([]byte("test"), jws.WithKey(jwa.HS256(), hmacKey))
 	require.NoError(t, err)
 
-	// jwa.A128KW is a KeyEncryptionAlgorithm, not a SignatureAlgorithm.
-	// Previously the unchecked type assertion in verify_context would panic.
-	_, err = jws.Verify(signed, jws.WithKey(jwa.A128KW(), hmacKey))
-	require.Error(t, err)
-	require.True(t, errors.Is(err, jws.VerifyError()))
-	require.Contains(t, err.Error(), "SignatureAlgorithm")
+	t.Run("Sign", func(t *testing.T) {
+		// jwa.A128KW is a KeyEncryptionAlgorithm, not a SignatureAlgorithm.
+		_, err := jws.Sign([]byte("test"), jws.WithKey(jwa.A128KW(), hmacKey))
+		require.Error(t, err)
+		require.True(t, errors.Is(err, jws.SignError()))
+		require.Contains(t, err.Error(), "SignatureAlgorithm")
+	})
+
+	t.Run("Verify", func(t *testing.T) {
+		// Previously the unchecked type assertion in verify_context would panic.
+		_, err := jws.Verify(signed, jws.WithKey(jwa.A128KW(), hmacKey))
+		require.Error(t, err)
+		require.True(t, errors.Is(err, jws.VerifyError()))
+		require.Contains(t, err.Error(), "SignatureAlgorithm")
+	})
 }
 
 func TestCompactErrorsUseSignError(t *testing.T) {

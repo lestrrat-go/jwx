@@ -172,6 +172,11 @@ func Example_mldsa_jwk() {
 	// JWK keys can be serialized to JSON for storage or transmission.
 	// The JSON representation follows the AKP key format with base64url-encoded
 	// "pub" (public key bytes) and "priv" (seed bytes) fields.
+	//
+	// Note: core jwk validation for AKP keys only checks that "alg" is set
+	// and that "pub"/"priv" are non-empty. Parameter-set-specific length
+	// checks are performed by the companion module when it reconstructs or
+	// uses the key.
 	serialized, err := json.Marshal(privJWK)
 	if err != nil {
 		fmt.Printf("failed to serialize JWK: %s\n", err)
@@ -181,7 +186,7 @@ func Example_mldsa_jwk() {
 	// Parse back from JSON. Because the mldsa package registered the ML-DSA
 	// signature algorithms at init time, jwk.ParseKey can resolve "ML-DSA-44"
 	// in the "alg" field and reconstruct the key correctly.
-	parsed, err := jwk.ParseKey[jwk.Key](serialized)
+	parsed, err := jwk.ParseKey(serialized)
 	if err != nil {
 		fmt.Printf("failed to parse JWK: %s\n", err)
 		return
@@ -363,7 +368,7 @@ func Example_jws_ed448() {
 		return
 	}
 
-	parsed, err := jwk.ParseKey[jwk.Key](buf)
+	parsed, err := jwk.ParseKey(buf)
 	if err != nil {
 		fmt.Printf("failed to parse JWK: %s\n", err)
 		return
@@ -533,10 +538,10 @@ func Example_jwe_encrypt_hpke5() {
   var pub circlx448.Key
   circlx448.KeyGen(&pub, &seed)
 
-  // Wrap the raw X448 key pair into the x448mod types that implement
-  // jwx's key agreement interfaces. NewPrivateKey takes the seed (private
-  // scalar) and the corresponding public key.
-  privKey := x448mod.NewPrivateKey(seed, pub)
+  // Wrap the raw X448 seed into the x448mod type that implements jwx's
+  // key agreement interfaces. NewPrivateKey derives the public key from
+  // the seed so the private scalar and exported public JWK cannot drift.
+  privKey := x448mod.NewPrivateKey(seed)
 
   // Import to JWK. The resulting key has kty="OKP" and crv="X448".
   // We need a JWK because jwe.Encrypt/Decrypt work with JWK keys
@@ -630,7 +635,9 @@ func Example_jwe_encrypt_hpke6() {
   var pub circlx448.Key
   circlx448.KeyGen(&pub, &seed)
 
-  privKey := x448mod.NewPrivateKey(seed, pub)
+  // NewPrivateKey derives the public key from the seed, which avoids
+  // constructing a JWK whose public and private halves disagree.
+  privKey := x448mod.NewPrivateKey(seed)
 
   privJWK, err := jwk.Import[jwk.Key](privKey)
   if err != nil {
@@ -731,7 +738,7 @@ decrypted, _ := jwe.Decrypt(encrypted, jwe.WithKey(jwxmlkem.MLKEM768(), dk))
 
 Supported algorithms: `ML-KEM-768`, `ML-KEM-1024` (direct), and `ML-KEM-768+A192KW`, `ML-KEM-1024+A256KW` (key wrap variants). Raw `*mlkem.EncapsulationKey*`/`*mlkem.DecapsulationKey*` values and `jwk.Key` values are both accepted via `jwe.WithKey`. See [`examples/mlkem_encrypt_decrypt_example_test.go`](https://github.com/jwx-go/examples/blob/v4/mlkem_encrypt_decrypt_example_test.go) for a runnable example.
 
-**JWK round-trip caveat:** `draft-ietf-jose-pqc-kem` defines the `priv` field as the 32-byte `d` seed only, while stdlib `crypto/mlkem` requires the full 64-byte `d || z` seed. On re-import, a fresh random `z` is generated. Decapsulation of valid ciphertexts is unaffected, but JWK round-trips are not bitwise-identical. See the [module README](https://github.com/jwx-go/mlkem) for details.
+**JWK round-trip behavior:** `draft-ietf-jose-pqc-kem` defines the `priv` field as the 32-byte `d` seed only, while stdlib `crypto/mlkem` requires the full 64-byte `d || z` seed. This module stores `d` in `priv` and preserves the implicit-rejection value in a private `z` field so ML-KEM private JWKs round-trip back to the same stdlib seed. Legacy ML-KEM JWKs without `z` still import; on export, the module derives a deterministic fallback `z` from `d` and the ML-KEM parameter set so reconstructed keys remain stable across processes and restarts. See the [module README](https://github.com/jwx-go/mlkem) for details.
 
 ---
 
@@ -811,4 +818,4 @@ Activate via a blank import — no API surface of its own:
 import _ "github.com/jwx-go/asmbase64/v4"
 ```
 
-The import registers an optimized RawURL encoder via `jwx.SetBase64Encoder()` and a decoder with automatic encoding detection via `jwx.SetBase64Decoder()`. All JWK, JWS, and JWT operations pick up the new backend automatically. See [`examples/jwx_asmbase64_example_test.go`](https://github.com/jwx-go/examples/blob/v4/jwx_asmbase64_example_test.go) for a runnable example.
+The import registers an optimized RawURL encoder and a decoder with automatic encoding detection via `jwx.Settings(jwx.WithBase64Encoder(...), jwx.WithBase64Decoder(...))`. All JWK, JWS, and JWT operations pick up the new backend automatically. See [`examples/jwx_asmbase64_example_test.go`](https://github.com/jwx-go/examples/blob/v4/jwx_asmbase64_example_test.go) for a runnable example.

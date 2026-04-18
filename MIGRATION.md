@@ -45,7 +45,16 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `RegisterCustomField(name, obj)` | `RegisterCustomField[T](name)` | All packages |
 | `jwk.RegisterProbeField(reflect.StructField{...})` | `jwk.RegisterProbeField[T](name, jsonKey)` | No `reflect` import needed |
 | `jwk.Import(raw)` | `jwk.Import[T](raw)` | Generic return type |
-| `jwk.ParseKey(data)` | `jwk.ParseKey[T](data)` | Generic return type |
+| `jwk.ParseKey(data)` | `jwk.ParseKey(data)` *(unchanged — returns `jwk.Key`)* / `jwk.ParseKeyAs[T](data)` | Typed subtype moved to `ParseKeyAs[T]` |
+| `jwk.RegisterX509Decoder(ident, d)` | `jwkbb.RegisterX509Decoder[T](blockType, d)` | Moved to `jwk/jwkbb` and keyed by the PEM block type string. `T` is the decoder's concrete return type. Returns error on empty blockType or nil decoder instead of panicking; registering the same blockType twice overwrites. |
+| `jwk.UnregisterX509Decoder(ident)` | `jwkbb.UnregisterX509Decoder(blockType)` | Takes the PEM block type rather than an opaque ident |
+| `jwk.X509Decoder` / `jwk.X509DecodeFunc` | `jwkbb.X509Decoder[T]` / `jwkbb.X509DecodeFunc[T]` | Moved to `jwk/jwkbb` and made generic; `T` is the decoder's return type |
+| *(not available)* | `jwkbb.RegisterX509Encoder[T](e)` / `jwkbb.UnregisterX509Encoder[T]()` / `jwkbb.X509Encoder[T]` / `jwkbb.X509EncodeFunc[T]` | New in v4: custom PEM encoders for `jwkbb.EncodePEM`, keyed by Go type (e.g. PQC key formats) |
+| `jwk.PEMDecoder` / `jwk.PEMDecodeFunc` / `jwk.PEMEncoder` / `jwk.PEMEncodeFunc` / `jwk.NewPEMDecoder()` | *(removed)* | Plumbing types removed; register a custom decoder through `jwkbb.RegisterX509Decoder` instead |
+| `jwk.WithPEMDecoder(d)` | *(removed)* | Use `jwkbb.RegisterX509Decoder(ident, d)` to install a custom PEM block decoder globally |
+| `jwk.WithPEM(true)` | `jwk.WithX509(true)` | Single option for "input is PEM-framed X.509"; `WithPEM` was a pre-release alias scheduled for removal |
+| `jwk.EncodePEM(v)` | `jwkbb.EncodePEM(raw)` | Unwrap `jwk.Key` with `jwk.Export[any]` first; accepts one or more raw keys |
+| `jwk.Pem(keyOrSet)` | `jwkbb.EncodePEM(jwk.ExportAll[any](set)...)` | Iterate a `jwk.Set` into raw keys via `jwk.ExportAll[any]`, then pass variadically |
 | `jwk.NewCache(ctx, client)` | `jwkfetch.NewCache(ctx, client)` | Extension module (see Recipe 6) |
 | `jwk.Fetch(ctx, url, opts...)` | `jwkfetch.NewClient(opts...).Fetch(ctx, url)` | Extension module (see Recipe 6) |
 | `jwk.WithHTTPClient(c)` | `jwkfetch.WithHTTPClient(c)` | Extension module |
@@ -61,6 +70,7 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `jws.RegisterSigner(alg, any)` | `jws.RegisterSigner(alg, Signer)` | Typed parameter |
 | `jws.RegisterVerifier(alg, any)` | `jws.RegisterVerifier(alg, Verifier)` | Typed parameter |
 | `jwx.DecoderSettings(jwx.WithUseNumber(true))` | `jwx.Settings(jwx.WithUseNumber(true))` | API renamed |
+| `jwt.Settings(...)` / `jws.Settings(...)` / `jwe.Settings(...)` / `cert.Settings(...)` / `jwx.Settings(...)` (void) | same name, now returns `error` | Invalid values return an error instead of panicking (jwx validates nil encoder/decoder; others validate their size limits) |
 | `errors.Is(err, jwt.TokenExpiredError())` | `errors.Is(err, jwt.TokenExpiredError{})` | Sentinel funcs → struct types; see Recipe 13 |
 | `-tags=jwx_goccy` | _(removed)_ | json/v2 is the only backend |
 | `-tags=jwx_es256k` | `github.com/jwx-go/es256k/v4` | Extension module |
@@ -68,6 +78,18 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `jwa.ES256K()` | `es256k.ES256K()` | `import "github.com/jwx-go/es256k/v4"` |
 | `jwa.Ed448()` | `ed448.Curve()` | `import "github.com/jwx-go/ed448/v4"` |
 | `jwa.EdDSAEd448()` | `ed448.EdDSAEd448()` | `import "github.com/jwx-go/ed448/v4"` |
+| `jwt.TokenFilter` / `jws.HeaderFilter` / `jwe.HeaderFilter` / `jwk.KeyFilter` | `jwxfilter.Filter[jwt.Token]` / `Filter[jws.Headers]` / `Filter[jwe.Headers]` / `Filter[jwk.Key]` | Moved to companion `github.com/jwx-go/jwxfilter/v4`; collapsed into one generic interface. |
+| `jwt.NewClaimNameFilter(...)` | `jwtfilter.ByName(...)` | Moved to `github.com/jwx-go/jwxfilter/v4/jwtfilter`. |
+| `jwt.StandardClaimsFilter()` | `jwtfilter.Standard()` | Moved to `github.com/jwx-go/jwxfilter/v4/jwtfilter`. |
+| `jws.NewHeaderNameFilter(...)` | `jwsfilter.ByName(...)` | Moved to `github.com/jwx-go/jwxfilter/v4/jwsfilter`. |
+| `jws.StandardHeadersFilter()` | `jwsfilter.Standard()` | Moved to `github.com/jwx-go/jwxfilter/v4/jwsfilter`. |
+| `jwe.NewHeaderNameFilter(...)` | `jwefilter.ByName(...)` | Moved to `github.com/jwx-go/jwxfilter/v4/jwefilter`. |
+| `jwe.StandardHeadersFilter()` | `jwefilter.Standard()` | Moved to `github.com/jwx-go/jwxfilter/v4/jwefilter`. |
+| `jwk.NewFieldNameFilter(...)` | `jwkfilter.ByName(...)` | Moved to `github.com/jwx-go/jwxfilter/v4/jwkfilter`. |
+| `jwk.RSAStandardFieldsFilter()` / `ECDSAStandardFieldsFilter()` / `OKPStandardFieldsFilter()` / `SymmetricStandardFieldsFilter()` / `AKPStandardFieldsFilter()` | `jwkfilter.RSAStandard()` / `ECDSAStandard()` / `OKPStandard()` / `SymmetricStandard()` / `AKPStandard()` | Moved to `github.com/jwx-go/jwxfilter/v4/jwkfilter`. |
+| `openid.StandardClaimsFilter()` | `openidfilter.Standard()` | Moved to `github.com/jwx-go/jwxfilter/v4/openidfilter`. |
+| `transform.AsMap` / `transform.Mappable` | `jwxfilter.AsMap` / `jwxfilter.Mappable` | Moved to `github.com/jwx-go/jwxfilter/v4` (root package). |
+| `transform.FilterLogic` / `FilterLogicFunc` / `Filterable` / `NameBasedFilter` / `NewNameBasedFilter` / `Apply` / `Reject` | _(removed from public API)_ | These were experimental internal primitives; the companion keeps equivalents unexported. Use a `<type>filter.ByName(...)` constructor instead. |
 
 ## Migration Recipes
 
@@ -473,6 +495,46 @@ These changes cannot be mechanically transformed and need human judgment:
 3. **`json.Number` usage**: If you relied on `json.Number` type preservation via `jwx.WithUseNumber(true)`, use `jwx.Settings(jwx.WithUseNumber(true))` instead. The API was renamed from `DecoderSettings` to `Settings` to match the sub-package convention.
 
 4. **Code that catches specific error messages**: If you matched on error message strings from the crypto layer (e.g., during JWS signing), those errors may now occur earlier (at `WithKey()` time) due to algorithm-key validation.
+
+5. **`Settings()` calls**: `jwt.Settings`, `jws.Settings`, `jwe.Settings`, `cert.Settings`, and `jwx.Settings` now return `error` instead of panicking (or silently accepting invalid state) on bad inputs. Call sites need to either check the returned error or explicitly discard it:
+
+   ```go
+   // Before (v3): invalid value panicked (or silently accepted)
+   jwt.Settings(jwt.WithMaxParseInputSize(n))
+   jwx.Settings(jwx.WithBase64Encoder(enc))
+
+   // After (v4): check the error
+   if err := jwt.Settings(jwt.WithMaxParseInputSize(n)); err != nil {
+       return err
+   }
+   if err := jwx.Settings(jwx.WithBase64Encoder(enc)); err != nil {
+       return err
+   }
+   ```
+
+   Extension modules that install a backend in `init()` (e.g. `asmbase64`) must panic on error, matching the house style for `Register*` failures.
+
+   `jwk.Settings` remains void; its options have no validatable state today.
+
+6. **Filter + transform usage**: All filter types/constructors and the `transform` package moved out of core into `github.com/jwx-go/jwxfilter/v4`. If your code references `jwt.TokenFilter`, `jws.HeaderFilter`, `jwe.HeaderFilter`, `jwk.KeyFilter`, any `New*Filter` / `*StandardFilter()` / `openid.StandardClaimsFilter`, or anything in `transform`, add a dependency on the new companion and update imports:
+
+   ```sh
+   go get github.com/jwx-go/jwxfilter/v4
+   ```
+
+   ```go
+   // Before
+   import "github.com/lestrrat-go/jwx/v4/transform"
+   filter := jwt.NewClaimNameFilter("sub", "iss")
+   stripped, _ := filter.Filter(token)
+
+   // After
+   import "github.com/jwx-go/jwxfilter/v4/jwtfilter"
+   filter := jwtfilter.ByName("sub", "iss")
+   stripped, _ := filter.Filter(token)
+   ```
+
+   The four old filter interfaces (`jwt.TokenFilter`, `jws.HeaderFilter`, `jwe.HeaderFilter`, `jwk.KeyFilter`) collapse into one generic interface: `jwxfilter.Filter[T]`. The generic primitives in the old `transform` package (`FilterLogic`, `FilterLogicFunc`, `Filterable`, `NameBasedFilter`, `NewNameBasedFilter`, `Apply`, `Reject`) are no longer part of the public API — the companion keeps them unexported. Consumers that used them directly must migrate to the `<type>filter.ByName(...)` constructors.
 
 ## Build System Changes
 

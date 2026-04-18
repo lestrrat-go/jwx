@@ -301,13 +301,21 @@ type MissingRequiredClaimError struct {
 	Claim string
 }
 
-func (err *MissingRequiredClaimError) Is(target error) bool {
-	_, ok := target.(*MissingRequiredClaimError)
-	return ok
+func (err MissingRequiredClaimError) Is(target error) bool {
+	switch target.(type) {
+	case MissingRequiredClaimError, *MissingRequiredClaimError:
+		return true
+	default:
+		return false
+	}
+}
+
+func (err MissingRequiredClaimError) Unwrap() error {
+	return err.error
 }
 
 func missingRequiredClaimErrorf(name string) error {
-	return &MissingRequiredClaimError{Claim: name, error: fmt.Errorf(`required claim "%s" is missing`, name)}
+	return MissingRequiredClaimError{Claim: name, error: fmt.Errorf(`required claim "%s" is missing`, name)}
 }
 
 //-------------------------------------------------------------------

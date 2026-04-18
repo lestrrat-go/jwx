@@ -113,11 +113,12 @@ Internal `internal/json` package provides the abstraction. Custom field registry
 
 ## Base64 Backend
 
-Pluggable at runtime via `SetBase64Encoder`/`SetBase64Decoder` (exposed as `jwx.SetBase64Encoder`/`jwx.SetBase64Decoder` in the top-level package):
-- Default: `encoding/base64`
+Pluggable at runtime via `jwx.Settings(jwx.WithBase64Encoder(...), jwx.WithBase64Decoder(...))`:
+- Default encoder: `encoding/base64.RawURLEncoding`
+- Default decoder: encoding-variant-detecting decoder in `internal/base64`
 - Reader-based detached JWS APIs (`jws.SignDetachedReader`, `jws.VerifyDetachedReader`) reject `jws.WithBase64Encoder()` and stream the payload with standard-library raw URL encoding
 
-Internal `internal/base64` package abstracts the choice.
+Internal `internal/base64` package abstracts the choice; the encoder/decoder are held in `atomic.Value` slots and `jwx.Settings` dispatches to `base64.SetEncoder`/`base64.SetDecoder`.
 
 ## Multi-Module Layout
 

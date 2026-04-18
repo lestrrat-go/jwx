@@ -7,8 +7,10 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 	"crypto/rsa"
+	stdbase64 "encoding/base64"
 	stdjson "encoding/json"
 	"fmt"
+	"sync/atomic"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v4"
@@ -108,7 +110,7 @@ func TestUseNumber(t *testing.T) {
 		defer jwx.Settings(jwx.WithUseNumber(false))
 
 		const jwkSrc = `{"kty":"oct","k":"c2VjcmV0","x-custom-num":12345}`
-		key, err := jwk.ParseKey[jwk.Key]([]byte(jwkSrc))
+		key, err := jwk.ParseKey([]byte(jwkSrc))
 		require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 		num, err := jwk.Get[stdjson.Number](key, "x-custom-num")
@@ -131,6 +133,101 @@ func TestUseNumber(t *testing.T) {
 		_, err = jwe.Decrypt(encrypted, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
 		require.NoError(t, err, `jwe.Decrypt should succeed`)
 	})
+}
+
+type countingBase64Encoder struct {
+	calls atomic.Int64
+}
+
+func (c *countingBase64Encoder) Encode(dst, src []byte) {
+	c.calls.Add(1)
+	stdbase64.RawURLEncoding.Encode(dst, src)
+}
+
+func (c *countingBase64Encoder) EncodedLen(n int) int {
+	return stdbase64.RawURLEncoding.EncodedLen(n)
+}
+
+func (c *countingBase64Encoder) EncodeToString(src []byte) string {
+	c.calls.Add(1)
+	return stdbase64.RawURLEncoding.EncodeToString(src)
+}
+
+func (c *countingBase64Encoder) AppendEncode(dst, src []byte) []byte {
+	c.calls.Add(1)
+	return stdbase64.RawURLEncoding.AppendEncode(dst, src)
+}
+
+type countingBase64Decoder struct {
+	calls atomic.Int64
+}
+
+func (c *countingBase64Decoder) Decode(src []byte) ([]byte, error) {
+	c.calls.Add(1)
+	dst := make([]byte, stdbase64.RawURLEncoding.DecodedLen(len(src)))
+	n, err := stdbase64.RawURLEncoding.Decode(dst, src)
+	if err != nil {
+		return nil, err
+	}
+	return dst[:n], nil
+}
+
+// DO NOT MAKE THIS TEST PARALLEL. This test uses features with global side effects.
+func TestBase64Settings(t *testing.T) {
+	key, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)
+
+	t.Run("WithBase64Encoder routes through Settings", func(t *testing.T) {
+		enc := &countingBase64Encoder{}
+		jwx.Settings(jwx.WithBase64Encoder(enc))
+		t.Cleanup(func() {
+			jwx.Settings(jwx.WithBase64Encoder(stdbase64.RawURLEncoding))
+		})
+
+		_, err := jws.Sign([]byte("Lorem ipsum"), jws.WithKey(jwa.RS256(), key))
+		require.NoError(t, err, `jws.Sign should succeed`)
+		require.Greater(t, enc.calls.Load(), int64(0), `custom encoder should be invoked`)
+	})
+
+	t.Run("WithBase64Decoder routes through Settings", func(t *testing.T) {
+		signed, err := jws.Sign([]byte("Lorem ipsum"), jws.WithKey(jwa.RS256(), key))
+		require.NoError(t, err, `jws.Sign should succeed`)
+
+		dec := &countingBase64Decoder{}
+		jwx.Settings(jwx.WithBase64Decoder(dec))
+		t.Cleanup(func() {
+			// Restore the default decoder by installing a fresh detect-variant
+			// decoder. There is no exported sentinel for "default", but the
+			// base64.RawURLEncoding suffices for the remainder of the test run
+			// because every jwx payload is RawURL-encoded.
+			jwx.Settings(jwx.WithBase64Decoder(rawURLDecoder{}))
+		})
+
+		_, err = jws.Verify(signed, jws.WithKey(jwa.RS256(), key.PublicKey))
+		require.NoError(t, err, `jws.Verify should succeed`)
+		require.Greater(t, dec.calls.Load(), int64(0), `custom decoder should be invoked`)
+	})
+
+	t.Run("nil encoder returns error and applies no changes", func(t *testing.T) {
+		require.Error(t, jwx.Settings(jwx.WithBase64Encoder(nil)),
+			`nil encoder should be rejected`)
+	})
+
+	t.Run("nil decoder returns error and applies no changes", func(t *testing.T) {
+		require.Error(t, jwx.Settings(jwx.WithBase64Decoder(nil)),
+			`nil decoder should be rejected`)
+	})
+}
+
+type rawURLDecoder struct{}
+
+func (rawURLDecoder) Decode(src []byte) ([]byte, error) {
+	dst := make([]byte, stdbase64.RawURLEncoding.DecodedLen(len(src)))
+	n, err := stdbase64.RawURLEncoding.Decode(dst, src)
+	if err != nil {
+		return nil, err
+	}
+	return dst[:n], nil
 }
 
 // Test compatibility against `jose` tool

@@ -17,6 +17,17 @@ The rest of this document focuses on developing the jwx library itself.
 
 This project requires **Go 1.26.0** or later. Check `go.mod` for the exact version.
 
+## GOEXPERIMENT
+
+v4 depends on `encoding/json/v2` which requires `GOEXPERIMENT=jsonv2`. The Makefile exports this automatically, but any direct `go build`, `go test`, or `go run` invocation **must** set it:
+
+```bash
+GOEXPERIMENT=jsonv2 go test ./...
+GOEXPERIMENT=jsonv2 go build ./...
+```
+
+Without this, builds fail with `build constraints exclude all Go files` errors.
+
 ## Module Path vs Physical Layout
 
 This repository uses a **flat layout** with vanity import paths. There is no physical `v4/` directory.
@@ -149,7 +160,6 @@ Tests are run via `./scripts/test.sh` which iterates over:
 | `jwe/` | JSON Web Encryption - `Encrypt()` and `Decrypt()` |
 | `jwt/` | JSON Web Tokens - claims and validation |
 | `jwt/openid/` | OpenID Connect ID tokens |
-| `transform/` | Token transformation utilities |
 
 ## Relevant RFCs
 

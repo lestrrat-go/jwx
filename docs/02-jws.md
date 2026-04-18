@@ -216,6 +216,14 @@ func Example_jws_sign() {
 source: [examples/jws_sign_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_sign_example_test.go)
 <!-- END INCLUDE -->
 
+> Warning: the symmetric literals in the examples are deliberately short for readability. Production `HS*` keys should be random secrets that meet the minimum sizes described in [the JWK docs](04-jwk.md).
+
+For normal JWS code, prefer passing a concrete `jwa.SignatureAlgorithm` constant such as
+`jwa.HS256()` or `jwa.RS256()` to `jws.WithKey()`. The option accepts `jwa.KeyAlgorithm`
+so it can forward `(jwk.Key).Algorithm()`, but that metadata is still operation-specific:
+passing a JWE key-encryption algorithm such as `jwa.A128KW()` to `jws.WithKey()` compiles
+and then fails at runtime because JWS only accepts signature algorithms.
+
 ## Generating a JWS message in JSON serialization format
 
 Generally the only time you need to use a JSON serialization format is when you have to generate multiple signatures for a given payload using multiple signing algorithms and keys.
@@ -369,6 +377,11 @@ To verify a JWS message using a single key, use `jws.Verify()` with the `jws.Wit
 It will automatically do the right thing whether it's serialized in compact form or JSON form.
 
 The `alg` must be explicitly specified. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
+
+As with signing, prefer a concrete `jwa.SignatureAlgorithm` constant when you already know
+you are verifying a JWS. Passing `(jwk.Key).Algorithm()` through `jws.WithKey()` only works
+when that JWK is already marked with a signature algorithm; JWE algorithms are rejected at
+runtime.
 
 <!-- INCLUDE(examples/jws_verify_with_key_example_test.go) -->
 ```go
@@ -819,20 +832,20 @@ package examples_test
 import (
   "fmt"
 
+  "github.com/jwx-go/jwxfilter/v4/jwsfilter"
   "github.com/lestrrat-go/jwx/v4/jwa"
   "github.com/lestrrat-go/jwx/v4/jwk"
   "github.com/lestrrat-go/jwx/v4/jws"
 )
 
 func Example_jws_header_filter_basic() {
-  // Create a key for signing
   key, err := jwk.Import[jwk.Key]([]byte(`my-secret-key`))
   if err != nil {
     fmt.Printf("failed to create key: %s\n", err)
     return
   }
 
-  // Create headers with both standard and custom fields
+  // Build JWS headers with both RFC 7515 standard fields and custom ones.
   headers := jws.NewHeaders()
   headers.Set(jws.AlgorithmKey, jwa.HS256())
   headers.Set(jws.KeyIDKey, "key-2024")
@@ -841,7 +854,6 @@ func Example_jws_header_filter_basic() {
   headers.Set("app-version", "v1.2.3")
   headers.Set("environment", "production")
 
-  // Sign with custom headers
   payload := []byte(`{"user": "alice", "role": "admin"}`)
   signed, err := jws.Sign(payload, jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(headers)))
   if err != nil {
@@ -849,7 +861,6 @@ func Example_jws_header_filter_basic() {
     return
   }
 
-  // Parse the signed message to access headers
   msg, err := jws.Parse(signed)
   if err != nil {
     fmt.Printf("failed to parse: %s\n", err)
@@ -858,26 +869,27 @@ func Example_jws_header_filter_basic() {
 
   originalHeaders := msg.Signatures()[0].ProtectedHeaders()
 
-  // Filter 1: Extract only custom fields using HeaderNameFilter
-  customFilter := jws.NewHeaderNameFilter("custom-claim", "app-version", "environment")
-  _, err = customFilter.Filter(originalHeaders)
-  if err != nil {
+  // Filters were extracted out of core into github.com/jwx-go/jwxfilter/v4.
+  // jwsfilter.ByName builds a filter over jws.Headers for the given
+  // field names; Filter keeps the match, Reject removes it. Each call
+  // returns a fresh jws.Headers, so the original is left untouched.
+  customFilter := jwsfilter.ByName("custom-claim", "app-version", "environment")
+  if _, err = customFilter.Filter(originalHeaders); err != nil {
     fmt.Printf("failed to filter custom headers: %s\n", err)
     return
   }
 
-  // Filter 2: Extract only standard fields using StandardHeadersFilter
-  standardFilter := jws.StandardHeadersFilter()
-  _, err = standardFilter.Filter(originalHeaders)
-  if err != nil {
+  // jwsfilter.Standard() is the preset for the 11 RFC 7515 headers
+  // (alg, cty, crit, jwk, jku, kid, typ, x5c, x5t, x5t#S256, x5u).
+  if _, err = jwsfilter.Standard().Filter(originalHeaders); err != nil {
     fmt.Printf("failed to filter standard headers: %s\n", err)
     return
   }
 
-  // Filter 3: Remove sensitive custom fields using Reject
-  sensitiveFilter := jws.NewHeaderNameFilter("custom-claim")
-  _, err = sensitiveFilter.Reject(originalHeaders)
-  if err != nil {
+  // Reject removes the named fields and keeps everything else — useful
+  // for scrubbing a specific sensitive extension header before logging.
+  sensitiveFilter := jwsfilter.ByName("custom-claim")
+  if _, err = sensitiveFilter.Reject(originalHeaders); err != nil {
     fmt.Printf("failed to reject sensitive headers: %s\n", err)
     return
   }
@@ -899,6 +911,7 @@ package examples_test
 import (
   "fmt"
 
+  "github.com/jwx-go/jwxfilter/v4/jwsfilter"
   "github.com/lestrrat-go/jwx/v4/jwa"
   "github.com/lestrrat-go/jwx/v4/jwk"
   "github.com/lestrrat-go/jwx/v4/jws"
@@ -957,7 +970,7 @@ func Example_jws_header_filter_advanced() {
     originalHeaders := sig.ProtectedHeaders()
 
     // Use case 1: Filter by service-related fields
-    serviceFilter := jws.NewHeaderNameFilter("service", "datacenter", "backup-priority")
+    serviceFilter := jwsfilter.ByName("service", "datacenter", "backup-priority")
     _, err := serviceFilter.Filter(originalHeaders)
     if err != nil {
       fmt.Printf("failed to filter service headers: %s\n", err)
@@ -965,7 +978,7 @@ func Example_jws_header_filter_advanced() {
     }
 
     // Use case 2: Create public headers (remove internal fields)
-    internalFilter := jws.NewHeaderNameFilter("internal-use", "security-level")
+    internalFilter := jwsfilter.ByName("internal-use", "security-level")
     _, err = internalFilter.Reject(originalHeaders)
     if err != nil {
       fmt.Printf("failed to create public headers: %s\n", err)
@@ -973,7 +986,7 @@ func Example_jws_header_filter_advanced() {
     }
 
     // Use case 3: Combine standard filter with custom filtering
-    standardFilter := jws.StandardHeadersFilter()
+    standardFilter := jwsfilter.Standard()
     customFieldsOnly, err := standardFilter.Reject(originalHeaders)
     if err != nil {
       fmt.Printf("failed to extract custom fields: %s\n", err)
@@ -981,7 +994,7 @@ func Example_jws_header_filter_advanced() {
     }
 
     // Then filter custom fields for specific categories
-    operationalFilter := jws.NewHeaderNameFilter("service", "version", "datacenter")
+    operationalFilter := jwsfilter.ByName("service", "version", "datacenter")
     _, err = operationalFilter.Filter(customFieldsOnly)
     if err != nil {
       fmt.Printf("failed to filter operational headers: %s\n", err)

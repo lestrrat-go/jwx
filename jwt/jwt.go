@@ -1,7 +1,6 @@
 //go:generate ../scripts/jwxcodegen.sh generate-jwt -objects=objects.yml
-//go:generate stringer -type=TokenOption -output=token_options_gen.go
+//go:generate go tool stringer -type=TokenOption -output=token_options_gen.go
 
-// Package jwt implements JSON Web Tokens as described in https://tools.ietf.org/html/rfc7519
 package jwt
 
 import (
@@ -31,15 +30,16 @@ func init() {
 }
 
 // Settings controls global settings that are specific to JWTs.
-func Settings(options ...GlobalOption) {
-	muSettings.Lock()
-	defer muSettings.Unlock()
-
+//
+// Returns a non-nil error and applies no changes if any option fails
+// validation (for example, a non-positive [WithMaxParseInputSize]).
+func Settings(options ...GlobalOption) error {
 	var flattenAudience bool
 	var parsePedantic bool
 	var parsePrecision = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
 	var formatPrecision = types.MaxPrecision + 1 // illegal value, so we can detect nothing was set
 	truncation := time.Duration(-1)
+	var newMaxParseInputSize int64
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identTruncation{}:
@@ -63,10 +63,17 @@ func Settings(options ...GlobalOption) {
 		case identMaxParseInputSize{}:
 			v := option.MustGet[int64](opt)
 			if v <= 0 {
-				panic("jwt.Settings: WithMaxParseInputSize must be greater than zero")
+				return fmt.Errorf(`jwt.Settings: WithMaxParseInputSize must be greater than zero, got %d`, v)
 			}
-			maxParseInputSize.Store(v)
+			newMaxParseInputSize = v
 		}
+	}
+
+	muSettings.Lock()
+	defer muSettings.Unlock()
+
+	if newMaxParseInputSize > 0 {
+		maxParseInputSize.Store(newMaxParseInputSize)
 	}
 
 	if parsePrecision <= types.MaxPrecision { // remember we set default to max + 1
@@ -98,6 +105,8 @@ func Settings(options ...GlobalOption) {
 	if truncation >= 0 {
 		defaultTruncation.Store(int64(truncation))
 	}
+
+	return nil
 }
 
 var registry = json.NewRegistry()
@@ -115,27 +124,32 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // The token must be encoded in JWS compact format, or a raw JSON form of JWT
 // without any signatures.
 //
-// If you need JWE support on top of JWS, you will need to rollout your
-// own workaround.
+// Signed input is verified by default. Pass `jwt.WithKey()`,
+// `jwt.WithKeySet()`, `jwt.WithKeyProvider()`, or `jwt.WithVerifyAuto()`
+// when verification is required. A bare `jwt.Parse()` call returns an error;
+// to intentionally skip verification, pass `jwt.WithVerify(false)` or use
+// `jwt.ParseInsecure()`.
 //
-// If the token is signed, and you want to verify the payload matches the signature,
-// you must pass the jwt.WithKey(alg, key) or jwt.WithKeySet(jwk.Set) option.
-// If you do not specify these parameters, no verification will be performed.
+// `Parse()` also accepts `ValidateOption` values. Validation runs by default
+// after parsing, so `jwt.WithValidate(true)` is only needed to override a
+// prior `jwt.WithValidate(false)` in the same option set. Pass
+// `jwt.WithValidate(false)` if you need to defer validation and call
+// `Validate()` yourself later.
+//
+// To produce nested JWTs, use
+// `jwt.NewSerializer().Sign(...).Encrypt(...).Serialize(...)`. `Parse()` does
+// not decrypt JWE envelopes; decrypt the outer JWE before calling it.
 //
 // During verification, if the JWS headers specify a key ID (`kid`), the
 // key used for verification must match the specified ID. If you are somehow
 // using a key without a `kid` (which is highly unlikely if you are working
-// with a JWT from a well-know provider), you can work around this by modifying
-// the `jwk.Key` and setting the `kid` header.
-//
-// If you also want to assert the validity of the JWT itself (i.e. expiration
-// and such), use the `Validate()` function on the returned token, or pass the
-// `WithValidate(true)` option. Validate options can also be passed to
-// `Parse`
+// with a JWT from a well-known provider), you can work around this by
+// modifying the `jwk.Key` and setting its `kid` field.
 //
 // This function takes both ParseOption and ValidateOption types:
-// ParseOptions control the parsing behavior, and ValidateOptions are
-// passed to `Validate()` when `jwt.WithValidate` is specified.
+// ParseOptions control parsing and verification behavior, and
+// ValidateOptions are passed to `Validate()` when automatic validation is
+// enabled.
 func Parse(s []byte, options ...ParseOption) (Token, error) {
 	tok, err := parseBytes(s, options...)
 	if err != nil {

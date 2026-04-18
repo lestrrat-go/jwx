@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -46,7 +47,7 @@ func init() {
       "qi":"VIMpMYbPf47dT1w_zDUXfPimsSegnMOA1zTaX7aGk_8urY6R8-ZW1FxU7AlWAyLWybqq6t16VFd7hQd0y6flUK4SlOydB61gwanOsXGOAOv82cHq0E3eL4HrtZkUuKvnPrMnsUUFlfUdybVzxyjz9JF_XyaY14ardLSjf4L_FNY"
      }`)
 
-	privkey, err := jwk.ParseKey[jwk.Key](jwkstr)
+	privkey, err := jwk.ParseKey(jwkstr)
 	if err != nil {
 		panic(err)
 	}
@@ -145,7 +146,7 @@ func TestParse_RSAES_OAEP_AES_GCM(t *testing.T) {
       "qi":"VIMpMYbPf47dT1w_zDUXfPimsSegnMOA1zTaX7aGk_8urY6R8-ZW1FxU7AlWAyLWybqq6t16VFd7hQd0y6flUK4SlOydB61gwanOsXGOAOv82cHq0E3eL4HrtZkUuKvnPrMnsUUFlfUdybVzxyjz9JF_XyaY14ardLSjf4L_FNY"
      }`)
 
-	privkey, err := jwk.ParseKey[jwk.Key](jwkstr)
+	privkey, err := jwk.ParseKey(jwkstr)
 	require.NoError(t, err, `parsing jwk should succeed`)
 
 	rawkey, err := jwk.Export[*rsa.PrivateKey](privkey)
@@ -420,7 +421,7 @@ func Test_GHIssue207(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.Name, func(t *testing.T) {
-			webKey, err := jwk.ParseKey[jwk.Key]([]byte(tc.Key))
+			webKey, err := jwk.ParseKey([]byte(tc.Key))
 			require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 			thumbprint, err := webKey.Thumbprint(crypto.SHA1)
@@ -570,7 +571,7 @@ func TestDecodePredefined_Direct(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.Algorithm.String(), func(t *testing.T) {
-			webKey, err := jwk.ParseKey[jwk.Key]([]byte(tc.Key))
+			webKey, err := jwk.ParseKey([]byte(tc.Key))
 			require.NoError(t, err, `jwk.ParseKey should succeed`)
 
 			thumbprint, err := webKey.Thumbprint(crypto.SHA1)
@@ -756,7 +757,7 @@ func TestGH840(t *testing.T) {
 		"d": "870MB6gfuTJ4HtUnUvYMyJpr5eUZNP4Bk43bVdj3eAE"
 	}`)
 
-	_, err := jwk.ParseKey[jwk.Key](untrustedJWK)
+	_, err := jwk.ParseKey(untrustedJWK)
 	require.Error(t, err, `jwk.ParseKey must reject an off-curve ECDSA JWK`)
 }
 
@@ -800,6 +801,58 @@ func TestGH924(t *testing.T) {
 	)
 	require.NoError(t, err, `jwe.Decrypt should succeed`)
 	require.Equal(t, payload, decrypted, `decrypt messages match`)
+}
+
+func TestDecryptRejectsNonStringAESGCMKWHeaders(t *testing.T) {
+	sharedKey := []byte("0123456789abcdef")
+	payload := []byte("Lorem Ipsum")
+
+	encrypted, err := jwe.Encrypt(
+		payload,
+		jwe.WithJSON(),
+		jwe.WithKey(jwa.A128GCMKW(), sharedKey),
+		jwe.WithContentEncryption(jwa.A128GCM()),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.A128GCMKW(), sharedKey))
+	require.NoError(t, err, `baseline jwe.Decrypt should succeed`)
+	require.Equal(t, payload, decrypted, `baseline plaintext should round-trip`)
+
+	for _, field := range []string{jwe.InitializationVectorKey, jwe.TagKey} {
+		t.Run(field, func(t *testing.T) {
+			var parsed map[string]any
+			require.NoError(t, json.Unmarshal(encrypted, &parsed), `freshly encrypted JWE should parse as JSON`)
+
+			protectedB64, ok := parsed["protected"].(string)
+			require.True(t, ok, `flattened JSON JWE should contain protected headers`)
+
+			protectedJSON, err := base64.RawURLEncoding.DecodeString(protectedB64)
+			require.NoError(t, err, `protected header should be base64url encoded`)
+
+			var protected map[string]any
+			require.NoError(t, json.Unmarshal(protectedJSON, &protected), `protected header should decode as JSON`)
+
+			_, ok = protected[field]
+			require.True(t, ok, `protected header should contain %q`, field)
+
+			protected[field] = 1
+
+			protectedJSON, err = json.Marshal(protected)
+			require.NoError(t, err, `re-marshaling tampered protected header should succeed`)
+
+			parsed["protected"] = base64.RawURLEncoding.EncodeToString(protectedJSON)
+
+			tampered, err := json.Marshal(parsed)
+			require.NoError(t, err, `re-marshaling tampered JWE should succeed`)
+
+			_, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.A128GCMKW(), sharedKey))
+			require.Error(t, err, `jwe.Decrypt must reject non-string AES-GCM-KW headers`)
+			require.Contains(t, err.Error(), field)
+			require.Contains(t, err.Error(), `not a string`)
+			require.NotContains(t, err.Error(), `GCM requires`)
+		})
+	}
 }
 
 func TestKeyEncrypterFuncAdapter(t *testing.T) {
@@ -906,6 +959,123 @@ func TestGH1001(t *testing.T) {
 	require.NotNil(t, cek, `cek should not be nil`)
 }
 
+func TestEncryptStaticCEKLength(t *testing.T) {
+	makeCEK := func(size int) []byte {
+		cek := make([]byte, size)
+		for i := range cek {
+			cek[i] = byte(i + 1)
+		}
+		return cek
+	}
+
+	t.Run("default content encryption is A256GCM", func(t *testing.T) {
+		_, err := jwe.EncryptStatic(
+			[]byte("Lorem Ipsum"),
+			makeCEK(16),
+			jwe.WithKey(jwa.RSA_OAEP(), &rsaPrivKey.PublicKey),
+		)
+		require.Error(t, err, `jwe.EncryptStatic should fail`)
+		require.ErrorIs(t, err, jwe.EncryptError(), `error should be of type jwe.EncryptError`)
+		require.ErrorContains(t, err, `content encryption key length 16 does not match enc "A256GCM" (expected 32 bytes)`)
+	})
+
+	t.Run("matching CEK lengths succeed for every supported enc", func(t *testing.T) {
+		testcases := []struct {
+			alg  jwa.ContentEncryptionAlgorithm
+			size int
+		}{
+			{alg: jwa.A128GCM(), size: 16},
+			{alg: jwa.A192GCM(), size: 24},
+			{alg: jwa.A256GCM(), size: 32},
+			{alg: jwa.A128CBC_HS256(), size: 32},
+			{alg: jwa.A192CBC_HS384(), size: 48},
+			{alg: jwa.A256CBC_HS512(), size: 64},
+		}
+
+		for _, tc := range testcases {
+			t.Run(tc.alg.String(), func(t *testing.T) {
+				payload := []byte("Lorem Ipsum")
+				encrypted, err := jwe.EncryptStatic(
+					payload,
+					makeCEK(tc.size),
+					jwe.WithKey(jwa.RSA_OAEP(), &rsaPrivKey.PublicKey),
+					jwe.WithContentEncryption(tc.alg),
+				)
+				require.NoError(t, err, `jwe.EncryptStatic should succeed`)
+
+				decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), &rsaPrivKey))
+				require.NoError(t, err, `jwe.Decrypt should succeed`)
+				require.Equal(t, payload, decrypted, `decrypted message should match`)
+			})
+		}
+	})
+
+	t.Run("mismatched CEK lengths fail clearly", func(t *testing.T) {
+		testcases := []struct {
+			name string
+			alg  jwa.ContentEncryptionAlgorithm
+			size int
+			want string
+		}{
+			{
+				name: "gcm",
+				alg:  jwa.A128GCM(),
+				size: 15,
+				want: `content encryption key length 15 does not match enc "A128GCM" (expected 16 bytes)`,
+			},
+			{
+				name: "cbc+hmac",
+				alg:  jwa.A256CBC_HS512(),
+				size: 32,
+				want: `content encryption key length 32 does not match enc "A256CBC-HS512" (expected 64 bytes)`,
+			},
+		}
+
+		for _, tc := range testcases {
+			t.Run(tc.name, func(t *testing.T) {
+				_, err := jwe.EncryptStatic(
+					[]byte("Lorem Ipsum"),
+					makeCEK(tc.size),
+					jwe.WithKey(jwa.RSA_OAEP(), &rsaPrivKey.PublicKey),
+					jwe.WithContentEncryption(tc.alg),
+				)
+				require.Error(t, err, `jwe.EncryptStatic should fail`)
+				require.ErrorIs(t, err, jwe.EncryptError(), `error should be of type jwe.EncryptError`)
+				require.ErrorContains(t, err, tc.want)
+			})
+		}
+	})
+
+	t.Run("DIRECT validates the final CEK instead of the EncryptStatic input", func(t *testing.T) {
+		sharedKey := bytes.Repeat([]byte{0x42}, 16)
+		payload := []byte("Lorem Ipsum")
+
+		encrypted, err := jwe.EncryptStatic(
+			payload,
+			makeCEK(1),
+			jwe.WithKey(jwa.DIRECT(), sharedKey),
+			jwe.WithContentEncryption(jwa.A128GCM()),
+		)
+		require.NoError(t, err, `jwe.EncryptStatic should succeed`)
+
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.DIRECT(), sharedKey))
+		require.NoError(t, err, `jwe.Decrypt should succeed`)
+		require.Equal(t, payload, decrypted, `decrypted message should match`)
+	})
+
+	t.Run("DIRECT reports the final CEK length on mismatch", func(t *testing.T) {
+		_, err := jwe.EncryptStatic(
+			[]byte("Lorem Ipsum"),
+			makeCEK(32),
+			jwe.WithKey(jwa.DIRECT(), bytes.Repeat([]byte{0x24}, 16)),
+			jwe.WithContentEncryption(jwa.A256GCM()),
+		)
+		require.Error(t, err, `jwe.EncryptStatic should fail`)
+		require.ErrorIs(t, err, jwe.EncryptError(), `error should be of type jwe.EncryptError`)
+		require.ErrorContains(t, err, `content encryption key length 16 does not match enc "A256GCM" (expected 32 bytes)`)
+	})
+}
+
 func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 	token := []byte("eyJhbGciOiJQQkVTMi1IUzI1NitBMTI4S1ciLCJlbmMiOiJBMjU2R0NNIiwicDJjIjoyMDAwMDAwMDAwLCJwMnMiOiJNNzczSnlmV2xlX2FsSXNrc0NOTU9BIn0=.S8B1kXdIR7BM6i_TaGsgqEOxU-1Sgdakp4mHq7UVhn-_REzOiGz2gg.gU_LfzhBXtQdwYjh.9QUIS-RWkLc.m9TudmzUoCzDhHsGGfzmCA")
 	key, err := jwk.Import[jwk.Key]([]byte(`abcdefg`))
@@ -952,6 +1122,26 @@ func TestGHSA_7f9x_gw85_8grf(t *testing.T) {
 			// timeout occurred as it should
 		}
 	}
+}
+
+func rewriteCompactPBES2Count(t *testing.T, token []byte, count any) []byte {
+	t.Helper()
+
+	segs := bytes.Split(token, []byte{'.'})
+	require.Len(t, segs, 5, `compact JWE should have 5 segments`)
+
+	protectedJSON, err := base64.RawURLEncoding.DecodeString(string(segs[0]))
+	require.NoError(t, err, `protected header should decode`)
+
+	var protected map[string]any
+	require.NoError(t, json.Unmarshal(protectedJSON, &protected), `protected header should parse`)
+	protected[jwe.CountKey] = count
+
+	protectedJSON, err = json.Marshal(protected)
+	require.NoError(t, err, `protected header should marshal`)
+
+	segs[0] = []byte(base64.RawURLEncoding.EncodeToString(protectedJSON))
+	return bytes.Join(segs, []byte{'.'})
 }
 
 func TestMinPBES2Count(t *testing.T) {
@@ -1092,6 +1282,36 @@ func TestPBES2CountEncrypt(t *testing.T) {
 		decrypted, err := jwe.Decrypt(encrypted2, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
 		require.NoError(t, err)
 		require.Equal(t, payload, decrypted)
+	})
+}
+
+func TestPBES2RejectsNonIntegerCount(t *testing.T) {
+	password := []byte(`supersecret`)
+	key, err := jwk.Import[jwk.Key](password)
+	require.NoError(t, err, `jwk.Import should succeed`)
+
+	encrypted, err := jwe.Encrypt(
+		[]byte(`hello world`),
+		jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+		jwe.WithPBES2Count(2000),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	tampered := rewriteCompactPBES2Count(t, encrypted, 1500.9)
+
+	t.Run("default decoder rejects fractional count", func(t *testing.T) {
+		_, err := jwe.Decrypt(tampered, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.Error(t, err, `jwe.Decrypt should fail`)
+		require.Contains(t, err.Error(), `invalid 'p2c' value`)
+	})
+
+	t.Run("UseNumber decoder rejects fractional count", func(t *testing.T) {
+		json.SetUseNumber(true)
+		defer json.SetUseNumber(false)
+
+		_, err := jwe.Decrypt(tampered, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.Error(t, err, `jwe.Decrypt should fail`)
+		require.Contains(t, err.Error(), `invalid 'p2c' value`)
 	})
 }
 
@@ -1364,6 +1584,44 @@ func TestDecrypt_fail(t *testing.T) {
 		require.Error(t, err, `jwe.Decrypt should fail`)
 		require.ErrorIs(t, err, jwe.DecryptError(), `error should be of type jwe.DecryptError`)
 		require.ErrorIs(t, err, jwe.ParseError(), `error should be of type jwe.ParseError`)
+	})
+	t.Run("multiple keys all fail with different reasons", func(t *testing.T) {
+		// Encrypt with RSA-OAEP, then attempt decrypt with several keys that
+		// each fail for a different reason. The returned error chain must
+		// surface every per-key failure, not just the last one.
+		privkey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+		encrypted, err := jwe.Encrypt([]byte("Lorem Ipsum"), jwe.WithKey(jwa.RSA_OAEP(), privkey))
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+		// Key 1: correct alg (RSA-OAEP), but a different RSA key → CEK decrypt fails.
+		wrongRSAKey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+		// Key 2: RSA-OAEP-256 alg, but the protected header says RSA-OAEP → alg mismatch.
+		anotherRSAKey, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
+
+		_, err = jwe.Decrypt(encrypted,
+			jwe.WithKey(jwa.RSA_OAEP(), wrongRSAKey),
+			jwe.WithKey(jwa.RSA_OAEP_256(), anotherRSAKey),
+		)
+		require.Error(t, err, `jwe.Decrypt should fail`)
+		require.ErrorIs(t, err, jwe.DecryptError(), `error should be of type jwe.DecryptError`)
+		require.ErrorIs(t, err, jwe.RecipientError(), `error should be of type jwe.RecipientError`)
+
+		// Both per-key failure reasons must be present in the error chain,
+		// not just the last one.
+		msg := err.Error()
+		require.Contains(t, msg, `failed to decrypt key`,
+			`error should preserve the first (wrong-key) attempt failure`)
+		require.Contains(t, msg, `algorithms do not match`,
+			`error should preserve the second (alg-mismatch) attempt failure`)
+		require.Contains(t, msg, `tried 2 keys`,
+			`error should report that 2 keys were tried`)
+		require.NotContains(t, msg, `last error =`,
+			`error should no longer use the "last error =" framing`)
 	})
 }
 func BenchmarkParseCompat(b *testing.B) {
@@ -1728,4 +1986,89 @@ func TestDecryptIgnoresUnprotectedHeader(t *testing.T) {
 	decrypted, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.RSA_OAEP(), privkey))
 	require.NoError(t, err, `jwe.Decrypt must ignore unprotected-header overrides`)
 	require.Equal(t, []byte(payload), decrypted, `plaintext should still round-trip through the tampered JWE`)
+}
+
+// TestDecryptSubstepTypedErrors pins the contract that
+// jwe.decryptContent surfaces programmatically distinguishable errors
+// for its well-known substep failures. Callers should be able to match
+// these with errors.Is / errors.AsType without falling back to
+// substring checks on the error message.
+func TestDecryptSubstepTypedErrors(t *testing.T) {
+	t.Run("MissingContentEncryptionError when enc is absent from protected header", func(t *testing.T) {
+		privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+		require.NoError(t, err, `rsa.GenerateKey should succeed`)
+
+		const payload = `lorem ipsum`
+		encrypted, err := jwe.Encrypt(
+			[]byte(payload),
+			jwe.WithKey(jwa.RSA_OAEP(), &privkey.PublicKey),
+			jwe.WithContentEncryption(jwa.A128GCM()),
+			jwe.WithJSON(),
+		)
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+		var parsed map[string]any
+		require.NoError(t, json.Unmarshal(encrypted, &parsed), `freshly encrypted JWE should parse as JSON`)
+
+		// Strip "enc" from the base64url-encoded protected header and
+		// re-encode. The AEAD tag will no longer verify, but that never
+		// matters because decryptContent checks for "enc" in the
+		// protected header BEFORE any AEAD work happens.
+		protectedEncoded, ok := parsed["protected"].(string)
+		require.True(t, ok, `protected header should be a string`)
+		protectedBytes, err := base64.RawURLEncoding.DecodeString(protectedEncoded)
+		require.NoError(t, err, `protected header should decode as base64url`)
+		var protectedJSON map[string]any
+		require.NoError(t, json.Unmarshal(protectedBytes, &protectedJSON), `protected header should parse as JSON`)
+		delete(protectedJSON, "enc")
+		newProtected, err := json.Marshal(protectedJSON)
+		require.NoError(t, err, `re-marshaling protected header should succeed`)
+		parsed["protected"] = base64.RawURLEncoding.EncodeToString(newProtected)
+
+		tampered, err := json.Marshal(parsed)
+		require.NoError(t, err, `re-marshaling tampered JWE should succeed`)
+
+		_, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.RSA_OAEP(), privkey))
+		require.Error(t, err, `jwe.Decrypt should fail when "enc" is missing`)
+		require.ErrorIs(t, err, jwe.DecryptError(), `error should wrap jwe.DecryptError`)
+		require.ErrorIs(t, err, jwe.MissingContentEncryptionError{}, `error should be programmatically matchable as jwe.MissingContentEncryptionError`)
+	})
+
+	t.Run("AlgorithmMismatchError when per-recipient alg differs from key alg", func(t *testing.T) {
+		privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+		require.NoError(t, err, `rsa.GenerateKey should succeed`)
+
+		const payload = `lorem ipsum`
+		encrypted, err := jwe.Encrypt(
+			[]byte(payload),
+			jwe.WithKey(jwa.RSA_OAEP(), &privkey.PublicKey),
+			jwe.WithContentEncryption(jwa.A128GCM()),
+			jwe.WithJSON(),
+		)
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+		var parsed map[string]any
+		require.NoError(t, json.Unmarshal(encrypted, &parsed), `freshly encrypted JWE should parse as JSON`)
+
+		// Overwrite the flattened per-recipient header's "alg" with a
+		// different valid algorithm. decryptContent's alg-match loop
+		// inspects recipient.Headers() first and surfaces a typed
+		// mismatch when it does not match the caller's key alg.
+		parsed["header"] = map[string]any{
+			"alg": jwa.RSA1_5().String(),
+		}
+
+		tampered, err := json.Marshal(parsed)
+		require.NoError(t, err, `re-marshaling tampered JWE should succeed`)
+
+		_, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.RSA_OAEP(), privkey))
+		require.Error(t, err, `jwe.Decrypt should fail when per-recipient alg differs from the key alg`)
+		require.ErrorIs(t, err, jwe.DecryptError(), `error should wrap jwe.DecryptError`)
+		require.ErrorIs(t, err, jwe.AlgorithmMismatchError{}, `error should be programmatically matchable as jwe.AlgorithmMismatchError`)
+
+		mismatch, ok := errors.AsType[jwe.AlgorithmMismatchError](err)
+		require.True(t, ok, `errors.AsType should extract jwe.AlgorithmMismatchError`)
+		require.Equal(t, jwa.RSA_OAEP(), mismatch.Expected, `Expected should be the caller's key algorithm`)
+		require.Equal(t, jwa.RSA1_5(), mismatch.Got, `Got should be the algorithm declared in the per-recipient header`)
+	})
 }

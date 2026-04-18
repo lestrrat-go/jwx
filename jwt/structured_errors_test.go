@@ -145,6 +145,7 @@ func TestStructuredErrors(t *testing.T) {
 		require.ErrorIs(t, err, jwt.InvalidIssuerError{})
 		_, ok := errors.AsType[jwt.ClaimValidationError](err)
 		require.False(t, ok, "issuer error should not be ClaimValidationError")
+		require.EqualError(t, err, `jwt.Validate: validation failed: "iss" not satisfied: claim "iss" does not have the expected value`)
 
 		// Audience mismatch
 		err = jwt.Validate(tok, jwt.WithAudience("wrong-aud"))
@@ -152,6 +153,7 @@ func TestStructuredErrors(t *testing.T) {
 		require.ErrorIs(t, err, jwt.InvalidAudienceError{})
 		_, ok = errors.AsType[jwt.ClaimValidationError](err)
 		require.False(t, ok, "audience error should not be ClaimValidationError")
+		require.EqualError(t, err, `jwt.Validate: validation failed: "aud" not satisfied: claim "aud" does not contain the expected value`)
 	})
 
 	t.Run("TimeDeltaError from MaxDeltaIs", func(t *testing.T) {

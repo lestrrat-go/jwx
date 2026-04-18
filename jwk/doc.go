@@ -9,14 +9,14 @@
 // work for third party key types (see section on "Registering a key type" below).
 //
 // Users can create a JWK in two ways. One is to unmarshal a JSON representation of a
-// key. The second one is to use `jwk.Import()` to import a raw key and convert it to
-// a jwk.Key.
+// key. The second one is to use `jwk.Import()` to import a raw key, validate it,
+// and convert it to a jwk.Key.
 //
 // # Simple Usage
 //
 // You can parse a JWK from a JSON payload:
 //
-//	jwk.ParseKey[jwk.Key]([]byte(`{"kty":"EC",...}`))
+//	jwk.ParseKey([]byte(`{"kty":"EC",...}`))
 //
 // You can go back and forth between raw key types and JWKs:
 //
@@ -26,7 +26,7 @@
 // When you know the expected key type, use a concrete type parameter:
 //
 //	rsaKey, _ := jwk.Import[jwk.RSAPrivateKey](rsaPrivateKey)
-//	ecKey, _ := jwk.ParseKey[jwk.ECDSAPublicKey](jsonData)
+//	ecKey, _ := jwk.ParseKeyAs[jwk.ECDSAPublicKey](jsonData)
 //
 // You can use them to sign/verify/encrypt/decrypt:
 //

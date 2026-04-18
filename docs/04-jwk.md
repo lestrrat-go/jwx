@@ -134,7 +134,7 @@ func Example_jwk_parse_key() {
     "kid":"1"
   }`
 
-  key, err := jwk.ParseKey[jwk.ECDSAPublicKey]([]byte(src))
+  key, err := jwk.ParseKeyAs[jwk.ECDSAPublicKey]([]byte(src))
   if err != nil {
     fmt.Printf("failed parse key: %s\n", err)
     return
@@ -193,7 +193,7 @@ z8CjezfckLs7UKJOlhu3OU9TFsiGDzSDBZdDWO1/uciJ/AAWeSmsBt8cKL0MirIr
 c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 -----END CERTIFICATE-----`
 
-  key, err := jwk.ParseKey[jwk.RSAPublicKey]([]byte(src), jwk.WithPEM(true))
+  key, err := jwk.ParseKeyAs[jwk.RSAPublicKey]([]byte(src), jwk.WithPEM(true))
   if err != nil {
     fmt.Printf("failed to parse key in PEM format: %s\n", err)
     return
@@ -396,7 +396,7 @@ func Example_jwk_struct_field() {
 
   // Parse the intercepted `Proxy.Key` as a `jwk.Key`
   // and assign it to `Container.Key`
-  key, err := jwk.ParseKey[jwk.Key](p.Key)
+  key, err := jwk.ParseKey(p.Key)
   if err != nil {
     fmt.Printf("failed to parse key: %s\n", err)
     return
@@ -422,6 +422,8 @@ There are other ways to creating keys from a raw key, but they require knowing i
 Use [`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Import) when you have a key type which you do not know its underlying type in advance.
 
 It automatically creates the appropriate underlying key based on the given argument type.
+The returned key has already passed `Validate()`, so malformed raw keys fail at
+import time instead of being returned for later validation.
 
 | Argument Type | Key Type | Note |
 |---------------|----------|------|
@@ -463,7 +465,7 @@ func Example_jwk_import() {
   // What you want to do is to _parse_ `buf`.
   //
   //  keyset, _ := jwk.Parse(buf)
-  //  key, _    := jwk.ParseKey[jwk.Key](buf)
+  //  key, _    := jwk.ParseKey(buf)
   //
   // See other examples in examples/jwk_parse_key_example_test.go and
   // examples/jwk_parse_jwks_example_test.go
@@ -522,6 +524,8 @@ func Example_jwk_import() {
 ```
 source: [examples/jwk_import_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_import_example_test.go)
 <!-- END INCLUDE -->
+
+> Warning: `jwk.Import[jwk.SymmetricKey]([]byte(...))` only requires a non-empty octet string. When the key is used with a specific algorithm, size it yourself: use at least 32/48/64 bytes for `HS256`/`HS384`/`HS512`; 16/24/32 bytes for `A128KW`/`A192KW`/`A256KW`, `A128GCM`/`A192GCM`/`A256GCM`, and `A128GCMKW`/`A192GCMKW`/`A256GCMKW`; and 32/48/64 bytes for `A128CBC-HS256`/`A192CBC-HS384`/`A256CBC-HS512`.
 
 # Fetching JWK Sets
 

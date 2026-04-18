@@ -27,6 +27,8 @@ s.signKey = symKey
 s.verifyKey = s.signKey
 ```
 
+For `HS256`, use at least 32 random bytes in real deployments. The short literal above is for readability only; production code should load the key from configuration or secret storage.
+
 ### Using RS256
 
 In this example we assume that your keys are stored in PEM-encoded files `private-key.pem` and `public-key.pem`.

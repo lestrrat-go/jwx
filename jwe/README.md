@@ -6,7 +6,7 @@ Package jwe implements JWE as described in [RFC 7516](https://tools.ietf.org/htm
 
 | Algorithm                                | Constant in [jwa](../jwa) | Note |
 |:-----------------------------------------|:--------------------------|:-----|
-| RSA-PKCS1v1.5                            | jwa.RSA1_5                |      |
+| RSA-PKCS1v1.5                            | jwa.RSA1_5                | Legacy interop only; prefer RSA-OAEP for new code |
 | RSA-OAEP-SHA1                            | jwa.RSA_OAEP              |      |
 | RSA-OAEP-SHA256                          | jwa.RSA_OAEP_256          |      |
 | AES key wrap (128/192/256)               | jwa.A128KW / A192KW / A256KW |   |
@@ -21,11 +21,11 @@ Package jwe implements JWE as described in [RFC 7516](https://tools.ietf.org/htm
 
 ## Supported content encryption algorithms
 
-| Algorithm                   | Constant in [jwa](../jwa) |
-|:----------------------------|:--------------------------|
-| AES-CBC + HMAC-SHA256 (128) | jwa.A128CBC_HS256         |
-| AES-CBC + HMAC-SHA384 (192) | jwa.A192CBC_HS384         |
-| AES-CBC + HMAC-SHA512 (256) | jwa.A256CBC_HS512         |
-| AES-GCM (128)               | jwa.A128GCM               |
-| AES-GCM (192)               | jwa.A192GCM               |
-| AES-GCM (256)               | jwa.A256GCM               |
+| Algorithm                   | Constant in [jwa](../jwa) | Required CEK length |
+|:----------------------------|:--------------------------|:--------------------|
+| AES-CBC + HMAC-SHA256 (128) | jwa.A128CBC_HS256         | 32 bytes            |
+| AES-CBC + HMAC-SHA384 (192) | jwa.A192CBC_HS384         | 48 bytes            |
+| AES-CBC + HMAC-SHA512 (256) | jwa.A256CBC_HS512         | 64 bytes            |
+| AES-GCM (128)               | jwa.A128GCM               | 16 bytes            |
+| AES-GCM (192)               | jwa.A192GCM               | 24 bytes            |
+| AES-GCM (256)               | jwa.A256GCM               | 32 bytes            |

@@ -721,17 +721,6 @@ func (h *symmetricKey) Keys() []string {
 	return keys
 }
 
-var symmetricStandardFields KeyFilter
-
-func init() {
-	symmetricStandardFields = NewFieldNameFilter(KeyTypeKey, KeyUsageKey, KeyOpsKey, AlgorithmKey, KeyIDKey, X509URLKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, SymmetricOctetsKey)
-}
-
-// SymmetricStandardFieldsFilter returns a KeyFilter that filters out standard Symmetric fields.
-func SymmetricStandardFieldsFilter() KeyFilter {
-	return symmetricStandardFields
-}
-
 func init() {
 	registry.Register(jwa.OctetSeq().String(), registry.Constructor{
 		Private: func() any { return newSymmetricKey() },
