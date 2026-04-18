@@ -279,6 +279,16 @@ func Encrypt(payload []byte, options ...EncryptOption) ([]byte, error) {
 // `EncryptStatic` validates the final CEK length before payload encryption
 // and returns an error if it does not match the selected `enc` algorithm.
 //
+// NOTE: when the chosen key-encryption algorithm derives the CEK rather than
+// wrapping it — specifically `jwa.DIRECT()`, bare `jwa.ECDH_ES()` (without
+// a key-wrap suffix), and direct ML-KEM modes — the `cek` argument supplied
+// here is ignored for content encryption. In those modes the effective CEK
+// is the shared/derived key produced by the `jwe.WithKey()` input, and the
+// byte-length check described above is enforced against that derived CEK,
+// not against the value passed as `cek`. To pin the CEK deterministically,
+// pair `EncryptStatic` only with key-wrapping algorithms such as
+// `jwa.RSA_OAEP()`, `jwa.A256KW()`, or `jwa.ECDH_ES_A256KW()`.
+//
 // DO NOT attempt to use this function unless you completely understand the
 // security implications to using static CEKs. You have been warned.
 //
