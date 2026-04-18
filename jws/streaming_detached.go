@@ -292,6 +292,7 @@ func (vc *verifyContext) verifyStreaming(buf []byte) ([]byte, error) {
 // algorithm name, since dsig.AlgorithmInfo itself does not include it.
 type streamingAlgorithmInfo struct {
 	dsig.AlgorithmInfo
+
 	Name string
 }
 
