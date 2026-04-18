@@ -552,7 +552,13 @@ func WithPretty(v bool) WithJSONSuboption {
 // WithProtected is used with `jws.WithKey()` option when used with `jws.Sign()`
 // to specify a protected header to be attached to the JWS signature.
 //
-// It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`
+// It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`.
+//
+// kid precedence: if the supplied headers include a "kid" and the
+// `jwk.Key` passed to `jws.WithKey()` also carries one, the
+// `jwk.Key`'s kid wins and the header kid is silently overwritten.
+// Callers that want to keep the header kid must strip it from the
+// key first (e.g. `key.Remove(jwk.KeyIDKey)`).
 func WithProtectedHeaders(v Headers) WithKeySuboption {
 	return &withKeySuboption{option.New(identProtectedHeaders{}, v)}
 }
