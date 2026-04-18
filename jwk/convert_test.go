@@ -1,6 +1,7 @@
 package jwk_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v4/jwa"
@@ -74,4 +75,48 @@ func TestMigrationRecipe10KeyImporterSyntax(t *testing.T) {
 	kid, ok := key.KeyID()
 	require.True(t, ok, "imported key should carry the KID set by the importer")
 	require.Equal(t, "recipe10", kid, "KID should match the value set by the importer")
+}
+
+// dupImporterKey is a fake raw key type used by TestRegisterKeyImporterRejectsDuplicate.
+// It is intentionally package-local so it does not collide with any
+// built-in importer.
+type dupImporterKey struct{}
+
+func TestRegisterKeyImporterRejectsDuplicate(t *testing.T) {
+	// Importer body isn't exercised — the test only asserts that the
+	// Register/Unregister bookkeeping is correct. Return a non-nil
+	// error so the function doesn't look like a (nil, nil) sentinel
+	// that nilnil flags.
+	fn := func(dupImporterKey) (jwk.Key, error) {
+		return nil, errors.New("dupImporterKey: importer body not exercised by this test")
+	}
+
+	t.Run("first registration succeeds", func(t *testing.T) {
+		require.NoError(t, jwk.RegisterKeyImporter(fn))
+		defer jwk.UnregisterKeyImporter[dupImporterKey]()
+	})
+
+	t.Run("duplicate registration is rejected", func(t *testing.T) {
+		require.NoError(t, jwk.RegisterKeyImporter(fn))
+		defer jwk.UnregisterKeyImporter[dupImporterKey]()
+
+		err := jwk.RegisterKeyImporter(fn)
+		require.Error(t, err, `second RegisterKeyImporter should error`)
+		require.Contains(t, err.Error(), `already registered`,
+			`error should say the type is already registered`)
+	})
+
+	t.Run("Unregister + Register allows replacement", func(t *testing.T) {
+		require.NoError(t, jwk.RegisterKeyImporter(fn))
+		require.True(t, jwk.UnregisterKeyImporter[dupImporterKey](),
+			`UnregisterKeyImporter should report removal`)
+		require.NoError(t, jwk.RegisterKeyImporter(fn),
+			`RegisterKeyImporter should succeed after Unregister`)
+		defer jwk.UnregisterKeyImporter[dupImporterKey]()
+	})
+
+	t.Run("Unregister on unknown type returns false", func(t *testing.T) {
+		require.False(t, jwk.UnregisterKeyImporter[dupImporterKey](),
+			`Unregister should return false when no importer was registered`)
+	})
 }
