@@ -2656,7 +2656,9 @@ func TestMaxKeys(t *testing.T) {
 		rsaKey, err := jwxtest.GenerateRsaKey()
 		require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)
 
-		pemBlock := mustRSAPublicPEM(t, &rsaKey.PublicKey)
+		der, err := x509.MarshalPKIXPublicKey(&rsaKey.PublicKey)
+		require.NoError(t, err, `x509.MarshalPKIXPublicKey should succeed`)
+		pemBlock := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der})
 
 		buildPEM := func(n int) []byte {
 			var buf bytes.Buffer
