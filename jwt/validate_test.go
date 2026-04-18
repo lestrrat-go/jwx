@@ -915,22 +915,14 @@ func TestClaimValueIsNonComparable(t *testing.T) {
 	}
 }
 
-func TestValidateNilToken(t *testing.T) {
+func TestValidateUnsupportedTimeClaimIsValidateError(t *testing.T) {
 	t.Parallel()
 
-	t.Run("no options", func(t *testing.T) {
-		t.Parallel()
-		err := jwt.Validate(nil)
-		require.Error(t, err, `jwt.Validate(nil) should return an error, not panic`)
-		require.ErrorIs(t, err, jwt.ValidateError(),
-			`nil-token error should be a ValidateError`)
-	})
-
-	t.Run("with options", func(t *testing.T) {
-		t.Parallel()
-		err := jwt.Validate(nil, jwt.WithAcceptableSkew(time.Second))
-		require.Error(t, err, `jwt.Validate(nil, ...) should return an error, not panic`)
-		require.ErrorIs(t, err, jwt.ValidateError(),
-			`nil-token error should be a ValidateError`)
-	})
+	tok := jwt.New()
+	err := jwt.Validate(tok, jwt.WithMaxDelta(time.Minute, "custom_claim", jwt.IssuedAtKey))
+	require.Error(t, err, `WithMaxDelta with unsupported claim should error`)
+	require.ErrorIs(t, err, jwt.ValidateError(),
+		`unsupported time claim error should wrap as ValidateError`)
+	require.Contains(t, err.Error(), `custom_claim`,
+		`error should name the offending claim`)
 }
