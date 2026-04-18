@@ -39,7 +39,6 @@ var minPBES2Count atomic.Int64
 var pbes2Count atomic.Int64
 var maxRecipients atomic.Int64
 var maxDecompressBufferSize atomic.Int64
-var maxParseInputSize atomic.Int64
 
 func init() {
 	// maxPBES2Count: 1_000_000 covers OWASP 2023's 600k HS256 floor with
@@ -53,23 +52,10 @@ func init() {
 	pbes2Count.Store(0)
 	maxRecipients.Store(100)
 	maxDecompressBufferSize.Store(10 * 1024 * 1024) // 10MB
-	maxParseInputSize.Store(10 * 1024 * 1024)       // 10MB
 }
 
 // Settings configures process-global behavior for JWE operations.
-//
-// Returns a non-nil error and applies no changes if any option fails
-// validation (for example, a non-positive [WithMaxParseInputSize]).
 func Settings(options ...GlobalOption) error {
-	// Validate first so the call is all-or-nothing on error.
-	for _, opt := range options {
-		if opt.Ident() == (identMaxParseInputSize{}) {
-			if v := option.MustGet[int64](opt); v <= 0 {
-				return fmt.Errorf(`jwe.Settings: WithMaxParseInputSize must be greater than zero, got %d`, v)
-			}
-		}
-	}
-
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identMaxPBES2Count{}:
@@ -86,8 +72,6 @@ func Settings(options ...GlobalOption) error {
 			maxDecompressBufferSize.Store(option.MustGet[int64](opt))
 		case identCBCBufferSize{}:
 			aescbc.SetMaxBufferSize(option.MustGet[int64](opt))
-		case identMaxParseInputSize{}:
-			maxParseInputSize.Store(option.MustGet[int64](opt))
 		}
 	}
 	return nil
@@ -1072,23 +1056,9 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 // Parse parses the JWE message into a Message object. The JWE message
 // can be either compact or full JSON format.
 //
-// Parse enforces the `WithMaxParseInputSize` cap on the length of buf,
-// matching the behavior of ParseReader. Callers who pre-read bytes into
-// memory (e.g. HTTP middleware, database values) therefore get the same
-// hardening as the io.Reader path.
-func Parse(buf []byte, options ...ParseOption) (*Message, error) {
-	maxSize := maxParseInputSize.Load()
-	for _, opt := range options {
-		if opt.Ident() == (identMaxParseInputSize{}) {
-			maxSize = option.MustGet[int64](opt)
-			if maxSize <= 0 {
-				return nil, makeParseError(`jwe.Parse`, `WithMaxParseInputSize must be greater than zero`)
-			}
-		}
-	}
-	if maxSize > 0 && int64(len(buf)) > maxSize {
-		return nil, makeParseError(`jwe.Parse`, `input exceeded max size of %d bytes`, maxSize)
-	}
+// Bounding the input size is the caller's responsibility; this function
+// trusts the caller-provided buf. See docs/13-input-size.md.
+func Parse(buf []byte, _ ...ParseOption) (*Message, error) {
 	return parseJSONOrCompact(buf, false, int(maxRecipients.Load()))
 }
 
@@ -1120,8 +1090,8 @@ func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool, maxR int) (*Mess
 }
 
 // ParseString is the same as Parse, but takes a string.
-func ParseString(s string, options ...ParseOption) (*Message, error) {
-	msg, err := Parse([]byte(s), options...)
+func ParseString(s string, _ ...ParseOption) (*Message, error) {
+	msg, err := Parse([]byte(s))
 	if err != nil {
 		return nil, makeParseError(`jwe.ParseString`, `%w`, err)
 	}
@@ -1129,26 +1099,16 @@ func ParseString(s string, options ...ParseOption) (*Message, error) {
 }
 
 // ParseReader is the same as Parse, but takes an io.Reader.
-func ParseReader(src io.Reader, options ...ParseOption) (*Message, error) {
-	maxSize := maxParseInputSize.Load()
-
-	for _, opt := range options {
-		if opt.Ident() == (identMaxParseInputSize{}) {
-			maxSize = option.MustGet[int64](opt)
-			if maxSize <= 0 {
-				return nil, makeParseError(`jwe.ParseReader`, `WithMaxParseInputSize must be greater than zero`)
-			}
-		}
-	}
-
-	buf, err := io.ReadAll(io.LimitReader(src, maxSize+1))
+//
+// Bounding the input size is the caller's responsibility: wrap src with
+// [io.LimitReader] or [net/http.MaxBytesReader] before passing it in. See
+// docs/13-input-size.md for the rationale.
+func ParseReader(src io.Reader, _ ...ParseOption) (*Message, error) {
+	buf, err := io.ReadAll(src)
 	if err != nil {
 		return nil, makeParseError(`jwe.ParseReader`, `failed to read from io.Reader: %w`, err)
 	}
-	if int64(len(buf)) > maxSize {
-		return nil, makeParseError(`jwe.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
-	}
-	msg, err := Parse(buf, options...)
+	msg, err := Parse(buf)
 	if err != nil {
 		return nil, makeParseError(`jwe.ParseReader`, `%w`, err)
 	}

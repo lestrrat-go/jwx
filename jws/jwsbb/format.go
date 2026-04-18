@@ -6,7 +6,6 @@ import (
 	"io"
 
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
-	"github.com/lestrrat-go/jwx/v4/internal/jwxio"
 	"github.com/lestrrat-go/jwx/v4/internal/tokens"
 )
 
@@ -109,20 +108,6 @@ func InvalidNumberOfSegmentsError() error {
 	return errInvalidNumberOfSegments
 }
 
-// maxSplitCompactReaderSize caps the number of bytes SplitCompactReader will
-// consume from any io.Reader. It matches the default jws.maxParseInputSize
-// (10 MiB). Callers that need a different limit should wrap their reader
-// with io.LimitReader before calling SplitCompactReader.
-const maxSplitCompactReaderSize = 10 * 1024 * 1024
-
-var errInputTooLarge = errors.New(`jwsbb: input exceeds maximum size`)
-
-// InputTooLargeError returns the sentinel error used when SplitCompactReader
-// reads more than its internal size cap from a non-finite source.
-func InputTooLargeError() error {
-	return errInputTooLarge
-}
-
 // SplitCompact parses a compact JWS serialization into its three components.
 // This function validates that the input has exactly 3 segments separated by periods
 // and returns the base64-encoded components without decoding them.
@@ -166,9 +151,11 @@ func SplitCompactString(src string) (protected, payload, signature []byte, err e
 }
 
 // SplitCompactReader parses a compact JWS serialization from an io.Reader.
-// This function handles both finite and streaming sources efficiently.
-// For finite sources, it reads all data at once. For streaming sources,
-// it uses a buffer-based approach to find segment boundaries.
+// It reads the entire input from rdr and dispatches to [SplitCompact].
+//
+// Bounding the input size is the caller's responsibility: wrap rdr with
+// [io.LimitReader] or [net/http.MaxBytesReader] before passing it in. See
+// docs/13-input-size.md for the rationale.
 //
 // Parameters:
 //   - rdr: Reader containing the compact JWS data
@@ -181,87 +168,9 @@ func SplitCompactString(src string) (protected, payload, signature []byte, err e
 //
 // The function validates that exactly 3 segments are present, separated by periods.
 func SplitCompactReader(rdr io.Reader) (protected, payload, signature []byte, err error) {
-	data, err := jwxio.ReadAllFromFiniteSource(rdr, maxSplitCompactReaderSize+1)
-	if err == nil {
-		if int64(len(data)) > maxSplitCompactReaderSize {
-			return nil, nil, nil, InputTooLargeError()
-		}
-		return SplitCompact(data)
-	}
-
-	if errors.Is(err, jwxio.InputTooLargeError()) {
-		return nil, nil, nil, InputTooLargeError()
-	}
-
-	if !errors.Is(err, jwxio.NonFiniteSourceError()) {
+	data, err := io.ReadAll(rdr)
+	if err != nil {
 		return nil, nil, nil, err
 	}
-
-	// Streaming fallback: the type switch in ReadAllFromFiniteSource
-	// rejected before reading any bytes, so rdr is still at position 0.
-	limited := io.LimitReader(rdr, maxSplitCompactReaderSize+1)
-
-	var periods int
-	var state int
-	var total int64
-
-	buf := make([]byte, 4096)
-	var sofar []byte
-
-	for {
-		// read next bytes
-		n, err := limited.Read(buf)
-		total += int64(n)
-		if total > maxSplitCompactReaderSize {
-			return nil, nil, nil, InputTooLargeError()
-		}
-		// return on unexpected read error
-		if err != nil && err != io.EOF {
-			return nil, nil, nil, io.ErrUnexpectedEOF
-		}
-
-		// append to current buffer
-		sofar = append(sofar, buf[:n]...)
-		// loop to capture multiple tokens.Period in current buffer
-		for loop := true; loop; {
-			var i = bytes.IndexByte(sofar, tokens.Period)
-			if i == -1 && err != io.EOF {
-				// no tokens.Period found -> exit and read next bytes (outer loop)
-				loop = false
-				continue
-			} else if i == -1 && err == io.EOF {
-				// no tokens.Period found -> process rest and exit
-				i = len(sofar)
-				loop = false
-			} else {
-				// tokens.Period found
-				periods++
-			}
-
-			// Reaching this point means we have found a tokens.Period or EOF and process the rest of the buffer
-			switch state {
-			case 0:
-				protected = sofar[:i]
-				state++
-			case 1:
-				payload = sofar[:i]
-				state++
-			case 2:
-				signature = sofar[:i]
-			}
-			// Shorten current buffer
-			if len(sofar) > i {
-				sofar = sofar[i+1:]
-			}
-		}
-		// Exit on EOF
-		if err == io.EOF {
-			break
-		}
-	}
-	if periods != 2 {
-		return nil, nil, nil, InvalidNumberOfSegmentsError()
-	}
-
-	return protected, payload, signature, nil
+	return SplitCompact(data)
 }

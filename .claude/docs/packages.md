@@ -60,12 +60,12 @@ JSON Web Signatures per RFC 7515. Sign, verify, parse.
 - **SplitCompact(src []byte) ([]byte, []byte, []byte, error)** — split compact JWS into parts
 - Key types: `Message`, `Signature`, `Headers`, `KeyProvider`, `KeySink`, `Base64Encoder`
 - Options: `WithKey()`, `WithKeySet()`, `WithVerifyAuto()`, `WithJSON()`, `WithDetachedPayload()`, `WithDetachedPayloadReader()` (streaming variant; single-key, HMAC/RSA/ECDSA only)
-- Global/per-call settings: `WithMaxParseInputSize()` (usable in both `Settings()` and `ParseReader()`/`ReadFile()`); `WithMaxSignatures()` (usable in both `Settings()` and `Parse()`/`ReadFile()`)
+- Global/per-call settings: `WithMaxSignatures()` (usable in both `Settings()` and `Parse()`/`ReadFile()`)
 - Registration: `RegisterSigner()`, `RegisterVerifier()`, `AlgorithmsForKey()`, `RegisterAlgorithmForKeyType()`, `RegisterAlgorithmForCurve()`
 - Error sentinels: `SignError()`, `VerifyError()`, `VerificationError()`, `ParseError()`
 - Sub-package: `jws/jwsbb` — compact serialization, signing, verification building blocks
 - Files: `jws.go`, `message.go`, `signer.go`, `verifier.go`, `headers.go`, `interface.go`, `errors.go`, `options.go`, `key_provider.go`, `sign_context.go`, `verify_context.go`, `streaming_detached.go`
-- Imports: jwa, jwk, cert, internal/{base64,json,jwxio,pool,tokens}
+- Imports: jwa, jwk, cert, internal/{base64,json,pool,tokens}
 
 ## jwe/
 
@@ -78,7 +78,7 @@ JSON Web Encryption per RFC 7516. Encrypt, decrypt, parse.
 - **Settings(options ...GlobalOption)** — configure global jwe settings
 - Key types: `Message`, `Recipient`, `Headers`, `KeyProvider`, `KeyEncrypter`, `KeyDecrypter`
 - Options: `WithKey()`, `WithKeySet()`, `WithContentEncryption()`, `WithCompress()`, `WithJSON()`, `WithProtectedHeaders()`
-- Global/per-call settings: `WithMaxPBES2Count()`, `WithMinPBES2Count()`, `WithMaxDecompressBufferSize()`, `WithMaxRecipients()` (usable in both `Settings()` and `Decrypt()`); `WithMaxParseInputSize()` (usable in both `Settings()` and `ParseReader()`/`ReadFile()`); `WithCBCBufferSize()` (global only)
+- Global/per-call settings: `WithMaxPBES2Count()`, `WithMinPBES2Count()`, `WithMaxDecompressBufferSize()`, `WithMaxRecipients()` (usable in both `Settings()` and `Decrypt()`); `WithCBCBufferSize()` (global only)
 - Error sentinels: `EncryptError()`, `DecryptError()`, `HPKEError()`, `RecipientError()`, `ParseError()`
 - Internal subpackages: `jwe/internal/{aescbc,cipher,concatkdf,content_crypt,keygen}`, `jwe/jwebb` — building blocks including HPKE extension interfaces (`HPKEKeyEncrypter`, `HPKEKeyDecrypter`), custom HPKE encrypt/decrypt bridges (`KeyEncryptHPKECustom`, `KeyDecryptHPKECustom`), and dynamic algorithm registration (`RegisterHPKEAlgorithm`)
 - Files: `jwe.go`, `message.go`, `interface.go`, `headers.go`, `errors.go`, `options.go`, `key_provider.go`, `compress.go`, `filter.go`
@@ -98,7 +98,6 @@ JSON Web Tokens per RFC 7519. Parse, sign, validate.
 - Validator factories: `IsExpirationValid()`, `IsIssuedAtValid()`, `IsNbfValid()`, `IsRequired()`, `ClaimValueIs()`, `ClaimContainsString()`
 - Key types: `Token` (interface), `Validator`, `ValidatorFunc`, `Clock`, `ClockFunc`, `Serializer`, `TokenFilter`
 - Token options: `FlattenAudience` per-token option
-- Global/per-call settings: `WithMaxParseInputSize()` (usable in both `Settings()` and `ParseReader()`/`ReadFile()`)
 - Error types (use zero-value for `errors.Is`, `errors.AsType[T]` for structured fields): `TokenExpiredError`, `TokenNotYetValidError`, `InvalidIssuedAtError`, `InvalidIssuerError`, `InvalidAudienceError`, `ValidationError`, `ParseError`, `MissingRequiredClaimError`, `ClaimNotFoundError`, `ClaimAssignmentFailedError`, `ClaimValidationError`, `TimeDeltaError`
 - Options: `WithCollectErrors(bool)` — collect all validation errors instead of first-error-only
 - Files: `jwt.go`, `validate.go`, `serialize.go`, `http.go`, `filter.go`, `errors.go`, `options.go`, `fastpath.go`, `token_options.go`
@@ -150,6 +149,5 @@ Shared utilities. Not public API.
 | `keyconv` | Key type conversions between jwk.Key and Go crypto types |
 | `jose` | Test helper for jose CLI integration |
 | `jwxtest` | Test key generation helpers (RSA, ECDSA, Ed25519, symmetric) |
-| `jwxio` | Safe IO: `ReadAllFromFiniteSource(rdr, maxBytes)` |
 | `tokens` | String constants for algorithm names and separators |
 | `pool` | Generic object pool (`Pool[T]`, `SlicePool[T]`) |
