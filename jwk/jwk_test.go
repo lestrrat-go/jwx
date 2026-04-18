@@ -1320,6 +1320,9 @@ func TestReadFile(t *testing.T) {
 	defer clean()
 	_, err = jwk.ParseFS(os.DirFS(filepath.Dir(fn)), filepath.Base(fn))
 	require.NoError(t, err, `jwk.ParseFS should succeed`)
+
+	_, err = jwk.ReadFile(fn)
+	require.NoError(t, err, `jwk.ReadFile should succeed`)
 }
 
 func TestRSA(t *testing.T) {

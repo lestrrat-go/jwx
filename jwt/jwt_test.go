@@ -762,6 +762,11 @@ func TestReadFile(t *testing.T) {
 	require.NoError(t, err, `jwt.ParseFS should succeed`)
 	_, err = jwt.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()), jwt.WithVerify(false), jwt.WithValidate(true), jwt.WithIssuer("lestrrrrrat"))
 	require.Error(t, err, `jwt.ParseFS should fail`)
+
+	// ReadFile accepts the absolute path returned by os.CreateTemp — a case
+	// os.DirFS would reject. Exercises the v3 source-compatible entry point.
+	_, err = jwt.ReadFile(f.Name(), jwt.WithVerify(false), jwt.WithValidate(true), jwt.WithIssuer("lestrrat"))
+	require.NoError(t, err, `jwt.ReadFile should succeed`)
 }
 
 func TestCustomField(t *testing.T) {

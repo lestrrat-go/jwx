@@ -615,6 +615,9 @@ func TestReadFile(t *testing.T) {
 
 	_, err = jwe.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()))
 	require.NoError(t, err, `jwe.ParseFS should succeed`)
+
+	_, err = jwe.ReadFile(f.Name())
+	require.NoError(t, err, `jwe.ReadFile should succeed`)
 }
 
 func TestCustomField(t *testing.T) {

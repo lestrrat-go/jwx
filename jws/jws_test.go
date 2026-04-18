@@ -687,6 +687,9 @@ func TestReadFile(t *testing.T) {
 
 	_, err = jws.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()))
 	require.NoError(t, err, `jws.ParseFS should succeed`)
+
+	_, err = jws.ReadFile(f.Name())
+	require.NoError(t, err, `jws.ReadFile should succeed`)
 }
 
 func TestVerifyNonUniqueKid(t *testing.T) {
