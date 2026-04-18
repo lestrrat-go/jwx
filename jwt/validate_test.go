@@ -965,6 +965,7 @@ func TestValidateNilToken(t *testing.T) {
 	t.Parallel()
 
 	t.Run("fast path (no options)", func(t *testing.T) {
+		t.Parallel()
 		err := jwt.Validate(nil)
 		require.Error(t, err, `jwt.Validate(nil) should return an error, not panic`)
 		require.ErrorIs(t, err, jwt.ValidationError{},
@@ -972,6 +973,7 @@ func TestValidateNilToken(t *testing.T) {
 	})
 
 	t.Run("slow path (with options)", func(t *testing.T) {
+		t.Parallel()
 		err := jwt.Validate(nil, jwt.WithAcceptableSkew(time.Second))
 		require.Error(t, err, `jwt.Validate(nil, ...) should return an error, not panic`)
 		require.ErrorIs(t, err, jwt.ValidationError{},
