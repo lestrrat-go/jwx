@@ -136,6 +136,14 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // `jwt.WithValidate(false)` if you need to defer validation and call
 // `Validate()` yourself later.
 //
+// The default validators check only the time-based claims: `exp`
+// (via `IsExpirationValid`), `nbf` (via `IsNbfValid`), and `iat`
+// (via `IsIssuedAtValid`). Issuer (`iss`), audience (`aud`), subject
+// (`sub`), and any other claim are NOT validated unless the caller
+// explicitly requests it by passing the corresponding option, e.g.
+// `jwt.WithIssuer()`, `jwt.WithAudience()`, `jwt.WithSubject()`, or a
+// custom `jwt.WithValidator()`. See `jwt.Validate` for details.
+//
 // To produce nested JWTs, use
 // `jwt.NewSerializer().Sign(...).Encrypt(...).Serialize(...)`. `Parse()` does
 // not decrypt JWE envelopes; decrypt the outer JWE before calling it.
