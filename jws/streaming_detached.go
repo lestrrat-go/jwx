@@ -319,9 +319,9 @@ func resolveStreamingAlgorithm(alg jwa.SignatureAlgorithm) (streamingAlgorithmIn
 	}
 	switch info.Family {
 	case dsig.EdDSAFamily:
-		return streamingAlgorithmInfo{}, fmt.Errorf(`algorithm %q does not support streaming because it requires the full payload; use jws.WithDetachedPayload() if the payload fits in memory`, alg)
+		return streamingAlgorithmInfo{}, fmt.Errorf(`algorithm %q is incompatible with streaming detached payloads: RFC 8032 EdDSA signs the full message, not a pre-computed digest, so the payload cannot be streamed. If the payload fits in memory, use jws.WithDetachedPayload(). If it does not, use a digest-based algorithm such as HS256, RS256, or ES256.`, alg)
 	case dsig.Custom:
-		return streamingAlgorithmInfo{}, fmt.Errorf(`algorithm %q is a custom-family algorithm and does not support streaming; use jws.WithDetachedPayload() if the payload fits in memory`, alg)
+		return streamingAlgorithmInfo{}, fmt.Errorf(`algorithm %q is a custom-family algorithm and does not support streaming because the library cannot know whether the algorithm pre-hashes the payload. Use jws.WithDetachedPayload() if the payload fits in memory.`, alg)
 	}
 	return streamingAlgorithmInfo{AlgorithmInfo: info, Name: dsigAlg}, nil
 }
