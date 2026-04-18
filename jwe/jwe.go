@@ -784,7 +784,7 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 
 	if useRawCEK {
 		if len(ec.builders) != 1 {
-			return fmt.Errorf(`multiple recipients for ECDH-ES/DIRECT mode supported`)
+			return fmt.Errorf(`multiple recipients for ECDH-ES/DIRECT mode are not supported`)
 		}
 	}
 
