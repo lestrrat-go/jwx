@@ -5,6 +5,7 @@ package jwt
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -321,6 +322,19 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 			// that sentinel, fall through to jws.Verify below so
 			// the full validateCritical rule set applies.
 			if !errors.Is(err, jws.ErrCritPresent()) {
+				// The fast path uses strict base64url (RFC 7515).
+				// A caller whose issuer emits padded/standard
+				// base64 can re-run with jwt.WithStrictBase64Encoding(false)
+				// to fall back to jws.Verify's lenient decoder.
+				// The error message itself doesn't point at that
+				// escape hatch, so surface the hint here.
+				var corrupt base64.CorruptInputError
+				if errors.As(err, &corrupt) {
+					return nil, _JwsVerifyDone, fmt.Errorf(
+						`jwt.Parse: base64 decode failed; if the issuer emits padded/standard base64, set jwt.WithStrictBase64Encoding(false): %w`,
+						err,
+					)
+				}
 				return nil, _JwsVerifyDone, err
 			}
 		}

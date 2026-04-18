@@ -185,6 +185,9 @@ func TestStrictBase64Encoding(t *testing.T) {
 		t.Parallel()
 		_, err := jwt.Parse(paddedCompact, jwt.WithKey(alg, key))
 		require.Error(t, err, `jwt.Parse should fail: padded payload not decodable with strict base64`)
+		// The error should point the caller at the escape hatch.
+		require.Contains(t, err.Error(), `WithStrictBase64Encoding(false)`,
+			`error should name the option that flips to lenient base64`)
 	})
 
 	// Lenient mode with no verification: auto-detection handles padded base64.

@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"fmt"
 
@@ -80,6 +81,17 @@ func parseCompactFast(data []byte, ctx *fastParseCtx) (Token, error) {
 		// the default-strict (empty) WithCritExtension allowlist.
 		if errors.Is(err, jws.ErrCritPresent()) {
 			return parseCompactCritFallback(data, ctx)
+		}
+		// The fast path uses strict base64url (RFC 7515). A caller
+		// whose issuer emits padded/standard base64 can re-parse with
+		// jwt.WithStrictBase64Encoding(false) to fall back to the
+		// lenient decoder used by jws.Verify. The underlying error
+		// doesn't point at that escape hatch, so surface the hint
+		// before wrapping.
+		var corrupt base64.CorruptInputError
+		if errors.As(err, &corrupt) {
+			return nil, parseErrorf(`jwt.Parse`,
+				`base64 decode failed; if the issuer emits padded/standard base64, set jwt.WithStrictBase64Encoding(false): %w`, err)
 		}
 		return nil, parseErrorf(`jwt.Parse`, `%w`, err)
 	}
