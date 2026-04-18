@@ -960,3 +960,21 @@ func TestValidateClockSnapshottedOnce(t *testing.T) {
 		`jwt.Validate should call clock.Now() exactly once per call`,
 	)
 }
+
+func TestValidateNilToken(t *testing.T) {
+	t.Parallel()
+
+	t.Run("fast path (no options)", func(t *testing.T) {
+		err := jwt.Validate(nil)
+		require.Error(t, err, `jwt.Validate(nil) should return an error, not panic`)
+		require.ErrorIs(t, err, jwt.ValidationError{},
+			`nil-token error should be a ValidationError`)
+	})
+
+	t.Run("slow path (with options)", func(t *testing.T) {
+		err := jwt.Validate(nil, jwt.WithAcceptableSkew(time.Second))
+		require.Error(t, err, `jwt.Validate(nil, ...) should return an error, not panic`)
+		require.ErrorIs(t, err, jwt.ValidationError{},
+			`nil-token error should be a ValidationError`)
+	})
+}
