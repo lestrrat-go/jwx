@@ -5,6 +5,32 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.1.0 UNRELEASED
+  * [jws] Add `jws.WithDetachedPayloadReader(io.Reader)` — a streaming
+    variant of `jws.WithDetachedPayload([]byte)` that consumes the
+    payload from an `io.Reader` instead of a byte slice, so the payload
+    is never materialized in memory. It is a `jws.Sign()` / `jws.Verify()`
+    option; the two remain the default entry points. Only HMAC/RSA/ECDSA
+    algorithms are supported; EdDSA, custom-family algorithms, and
+    algorithms registered via `jws.RegisterSigner()` / `jws.RegisterVerifier()`
+    are rejected with a clear error pointing at `jws.WithDetachedPayload()`.
+    On sign, multiple `jws.WithKey()` options combined with `jws.WithJSON()`
+    produce a general-form multi-signature JWS (the payload is streamed
+    once and fanned out to each signer). On verify, only single-signature
+    JWS input is supported; `jws.WithKeySet()`, `jws.WithKeyProvider()`,
+    and `jws.WithVerifyAuto()` are not accepted. (#1663)
+
+  * [jws] Add `jws.Base64StreamEncoder` — the stream-capable extension
+    of `jws.Base64Encoder`. The default encoder and `*base64.Encoding`
+    values supplied via `jws.WithBase64Encoder()` are auto-wrapped, so
+    typical callers see no change. Custom encoders only need to
+    implement this additional interface if they want to be usable with
+    `jws.WithDetachedPayloadReader()`. (#1663)
+
+  * [jws] Fix `jws.Sign` with `WithDetachedPayload` + `WithJSON` to
+    omit the `"payload"` member from the output per RFC 7515
+    Appendix F. Previously the payload was still emitted, producing
+    non-detached JSON. (#1663)
+
   * [jwk] BREAKING: `jwk.PublicSetOf` now returns an error when the input
     set contains a symmetric (oct) key. Previously, symmetric keys were
     silently passed through — which meant callers following the documented

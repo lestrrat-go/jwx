@@ -284,6 +284,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	m.payload = nil
 	m.signatures = nil
 	m.b64 = true
+	m.detached = false
 
 	var mup messageUnmarshalProbe
 	mup.Header = NewHeaders()
@@ -374,7 +375,11 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		b64 = getB64Value(sig.protected)
 	}
 
-	if mup.Payload != nil {
+	if mup.Payload == nil {
+		// RFC 7515 Appendix F: detached content is signaled in the
+		// JSON Serialization by omitting the "payload" member.
+		m.detached = true
+	} else {
 		if !b64 { // NOT base64 encoded
 			m.payload = []byte(*mup.Payload)
 		} else {
@@ -415,24 +420,36 @@ func (m Message) marshalFlattened() ([]byte, error) {
 		wrote = true
 	}
 
-	if wrote {
-		buf.WriteRune(tokens.Comma)
+	// RFC 7515 Appendix F: detached content is signaled in the JSON
+	// Serialization by omitting the "payload" member.
+	if !m.detached {
+		if wrote {
+			buf.WriteRune(tokens.Comma)
+		}
+		buf.WriteString(`"payload":"`)
+		buf.Write(base64.Encode(m.payload))
+		buf.WriteRune('"')
+		wrote = true
 	}
-	buf.WriteString(`"payload":"`)
-	buf.Write(base64.Encode(m.payload))
-	buf.WriteRune('"')
 
 	if protected := sig.protected; protected != nil {
 		protectedbuf, err := json.Marshal(protected)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to marshal "protected" (flattened format): %w`, err)
 		}
-		buf.WriteString(`,"protected":"`)
+		if wrote {
+			buf.WriteRune(tokens.Comma)
+		}
+		buf.WriteString(`"protected":"`)
 		buf.Write(base64.Encode(protectedbuf))
 		buf.WriteRune('"')
+		wrote = true
 	}
 
-	buf.WriteString(`,"signature":"`)
+	if wrote {
+		buf.WriteRune(tokens.Comma)
+	}
+	buf.WriteString(`"signature":"`)
 	buf.Write(base64.Encode(sig.signature))
 	buf.WriteRune('"')
 	buf.WriteRune(tokens.CloseCurlyBracket)
@@ -445,9 +462,15 @@ func (m Message) marshalFull() ([]byte, error) {
 	buf := pool.BytesBuffer().Get()
 	defer pool.BytesBuffer().Put(buf)
 
-	buf.WriteString(`{"payload":"`)
-	buf.Write(base64.Encode(m.payload))
-	buf.WriteString(`","signatures":[`)
+	// RFC 7515 Appendix F: detached content is signaled in the JSON
+	// Serialization by omitting the "payload" member.
+	if m.detached {
+		buf.WriteString(`{"signatures":[`)
+	} else {
+		buf.WriteString(`{"payload":"`)
+		buf.Write(base64.Encode(m.payload))
+		buf.WriteString(`","signatures":[`)
+	}
 	for i, sig := range m.signatures {
 		if i > 0 {
 			buf.WriteRune(tokens.Comma)

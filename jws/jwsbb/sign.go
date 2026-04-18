@@ -21,7 +21,7 @@ import (
 // Not all algorithms require this parameter, but it is included for consistency.
 // 99% of the time, you can pass nil for rr, and it will work fine.
 func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
-	dsigAlg, ok := getDsigAlgorithm(alg)
+	dsigAlg, ok := GetDsigAlgorithm(alg)
 	if !ok {
 		// For custom algorithms registered with dsig, JWS name = dsig name
 		dsigAlg = alg

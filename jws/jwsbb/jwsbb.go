@@ -83,8 +83,8 @@ var jwsToDsigAlgorithm = map[string]string{
 	edDSAEd25519: dsig.EdDSA,
 }
 
-// getDsigAlgorithm returns the dsig algorithm name for a JWS algorithm
-func getDsigAlgorithm(jwsAlg string) (string, bool) {
+// GetDsigAlgorithm returns the dsig algorithm name for a JWS algorithm.
+func GetDsigAlgorithm(jwsAlg string) (string, bool) {
 	dsigAlg, ok := jwsToDsigAlgorithm[jwsAlg]
 	return dsigAlg, ok
 }

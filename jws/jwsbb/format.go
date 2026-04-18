@@ -39,6 +39,26 @@ func SignBuffer(buf, hdr, payload []byte, encoder base64.Encoder, encodePayload 
 	return buf
 }
 
+// SigningPrefix returns base64url(hdr) + "." — the portion of the signing
+// input that precedes the (possibly base64-encoded) payload.
+//
+// Parameters:
+//   - buf: Reusable scratch buffer (can be nil for automatic allocation);
+//     any prior contents are discarded, matching [SignBuffer]. This is not
+//     an append-style API.
+//   - hdr: Raw header bytes (will be base64-encoded)
+//   - encoder: Base64 encoder to use for encoding the header
+func SigningPrefix(buf, hdr []byte, encoder base64.Encoder) []byte {
+	l := encoder.EncodedLen(len(hdr)) + 1
+	if cap(buf) < l {
+		buf = make([]byte, 0, l)
+	}
+	buf = buf[:0]
+	buf = encoder.AppendEncode(buf, hdr)
+	buf = append(buf, tokens.Period)
+	return buf
+}
+
 // AppendSignature appends a base64-encoded signature to a JWS signing input buffer.
 // This completes the compact JWS serialization by adding the final signature component.
 // The input buffer should contain the signing input (header.payload), and this function

@@ -110,6 +110,67 @@ options:
       Other crit extensions still require explicit declaration.
        
       If you have to verify using this option, you should know exactly how and why this works.
+  - ident: DetachedPayloadReader
+    interface: SignVerifyOption
+    argument_type: io.Reader
+    comment: |
+      WithDetachedPayloadReader is the streaming variant of
+      `jws.WithDetachedPayload()`: the detached payload is consumed from an
+      `io.Reader` instead of a `[]byte`. Use this when the detached payload
+      is too large to comfortably materialize in memory.
+
+      For detached payloads that already fit in memory, prefer
+      `jws.WithDetachedPayload()`; the byte-slice path supports the full
+      option and algorithm surface, while the Reader path is a narrow
+      specialist.
+
+      The Reader is consumed exactly once. On signing or verification
+      failure the Reader cannot be rewound; callers that need retry
+      semantics must buffer the payload themselves.
+
+      Only the HMAC, RSA (PKCS#1 v1.5 and PSS), and ECDSA algorithm
+      families are supported by this option; EdDSA and custom-family
+      algorithms require the full payload in memory and will be rejected
+      with a clear error. The option is mutually exclusive with
+      `jws.WithDetachedPayload()` and `jws.WithInsecureNoSignature()`.
+      Algorithms registered via `jws.RegisterSigner()` /
+      `jws.RegisterVerifier()` are likewise unreachable through this
+      path (the streaming code dispatches directly against the dsig
+      algorithm registry).
+
+      On sign, multiple `jws.WithKey()` options may be combined with
+      `jws.WithJSON()` to produce a general-form multi-signature JWS;
+      the payload is streamed once and fanned out to each signer. All
+      signers must agree on the RFC 7797 `"b64"` flag, since the
+      produced JWS has a single payload segment on the wire. Compact
+      serialization still allows exactly one signature.
+
+      On verify, this option supports only single-signature JWS input
+      (compact or flattened/general-single-signature JSON). To verify
+      one signature out of a multi-signature JWS, use `jws.Verify()`
+      with `jws.WithDetachedPayload()` and a buffered copy of the
+      payload.
+
+      On verify, the first return value of `jws.Verify()` is nil when
+      this option is used, because the payload was streamed from the
+      caller rather than extracted from the JWS envelope.
+
+      `jws.WithBase64Encoder()` is honored as long as the supplied
+      encoder implements `jws.Base64StreamEncoder` (i.e. provides a
+      stream-capable `NewEncoder(io.Writer) io.WriteCloser`). The
+      default encoder (`encoding/base64.RawURLEncoding`) satisfies
+      this automatically. Custom encoders that only implement the
+      basic `jws.Base64Encoder` interface cause `jws.Sign()` /
+      `jws.Verify()` to return an error when combined with this
+      option, rather than silently falling back to a different encoder
+      for the payload.
+
+      Like `jws.WithDetachedPayload()`, on verify this option
+      implicitly declares RFC 7797 `"b64"` as a recognized `crit`
+      extension.
+
+      When this option is used with `jws.Sign()`, the first parameter
+      (normally the payload) must be set to `nil`.
   - ident: Base64Encoder
     interface: SignVerifyCompactOption
     argument_type: Base64Encoder

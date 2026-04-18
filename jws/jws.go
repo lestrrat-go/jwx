@@ -179,6 +179,10 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		return nil, makeSignError(prefixJwsSign, `cannot have multiple signers (keys) specified for compact serialization. Use only one jws.WithKey()`)
 	}
 
+	if sc.payloadReader != nil {
+		return sc.signStreaming()
+	}
+
 	// Create a Message object with all the bits and bobs, and we'll
 	// serialize it in the end
 	var result Message
