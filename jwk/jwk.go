@@ -704,7 +704,12 @@ func IsKeyValidationError(err error) bool {
 }
 
 // Settings is used to configure global behavior of the jwk package.
-func Settings(options ...GlobalOption) {
+//
+// The error return is reserved for future validation. The current
+// implementation always returns nil, but callers — especially extension
+// modules calling this from init() — must check the return value and panic
+// on failure to stay forward-compatible.
+func Settings(options ...GlobalOption) error {
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identMinRSAModulusBits{}:
@@ -715,6 +720,7 @@ func Settings(options ...GlobalOption) {
 			strictKeyUsage.Store(option.MustGet[bool](opt))
 		}
 	}
+	return nil
 }
 
 // These are used when validating keys.
