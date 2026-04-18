@@ -92,3 +92,35 @@ func TestKeySetProviderFetchAllKeysAlgPrefilter(t *testing.T) {
 		require.GreaterOrEqual(t, len(sink.pairs), 2, "both keys should be sunk when header has no alg")
 	})
 }
+
+// TestKeySetProviderUseEncSurfacesError pins that a JWKS entry marked
+// use="enc" raises a structured error instead of a silent skip —
+// previously users who dropped an encryption key into their sig JWKS
+// saw only the generic "could not be verified with any of the keys"
+// message.
+func TestKeySetProviderUseEncSurfacesError(t *testing.T) {
+	t.Parallel()
+
+	rsaRaw, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	rsaKey, err := jwk.Import(rsaRaw)
+	require.NoError(t, err)
+	require.NoError(t, rsaKey.Set(jwk.KeyIDKey, "signer-kid"))
+	require.NoError(t, rsaKey.Set(jwk.KeyUsageKey, "enc"))
+
+	kp := &keySetProvider{
+		requireKid: false,
+	}
+
+	sig := NewSignature()
+	hdr := NewHeaders()
+	require.NoError(t, hdr.Set(AlgorithmKey, jwa.RS256()))
+	sig.SetProtectedHeaders(hdr)
+
+	_, err = kp.selectKey(&countingKeySink{}, rsaKey, sig, &Message{})
+	require.Error(t, err, `selectKey should error on use=enc`)
+	require.Contains(t, err.Error(), `signer-kid`, `error should name the kid`)
+	require.Contains(t, err.Error(), `use="enc"`, `error should quote the usage`)
+	require.Contains(t, err.Error(), `not usable for signature verification`,
+		`error should explain the mismatch`)
+}
