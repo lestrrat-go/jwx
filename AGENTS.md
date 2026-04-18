@@ -252,6 +252,7 @@ Read linked doc BEFORE working in that area. No exceptions.
 | Extension modules (ES256K, Ed448, ML-DSA, ML-KEM, X448, compsig, asmbase64, jwkcache) | `docs/10-extensions.md` |
 | Companion modules, CI templates, `/jwx-companion-bulk` | `.claude/docs/companions.md` |
 | Reverse-syncing action versions from companion workflows into templates | `.claude/docs/companion-template-sync.md` |
+| Cutting a release / tagging a new version | `.claude/docs/release.md` |
 
 ## Cache Maintenance
 
