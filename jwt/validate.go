@@ -25,7 +25,7 @@ func isSupportedTimeClaim(c string) error {
 	case ExpirationKey, IssuedAtKey, NotBeforeKey:
 		return nil
 	}
-	return fmt.Errorf(`unsupported time claim %s`, strconv.Quote(c))
+	return validateErrorf(`unsupported time claim %s in jwt.WithMaxDelta/jwt.WithMinDelta`, strconv.Quote(c))
 }
 
 func timeClaim(t Token, clock Clock, c string) time.Time {
