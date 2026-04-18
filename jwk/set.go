@@ -207,6 +207,10 @@ func (s *set) MarshalJSON() ([]byte, error) {
 	return ret, nil
 }
 
+func (s *set) setMaxKeys(n int) {
+	s.maxKeys = n
+}
+
 func (s *set) UnmarshalJSON(data []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -221,6 +225,11 @@ func (s *set) UnmarshalJSON(data []byte) error {
 			options = append(options, withLocalRegistry(localReg))
 		}
 		ignoreParseError = dc.IgnoreParseError()
+	}
+
+	maxK := s.maxKeys
+	if maxK <= 0 {
+		maxK = int(maxKeys.Load())
 	}
 
 	var sawKeysField bool
@@ -248,6 +257,10 @@ LOOP:
 				var list []json.RawMessage
 				if err := dec.Decode(&list); err != nil {
 					return fmt.Errorf(`failed to decode "keys": %w`, err)
+				}
+
+				if len(list) > maxK {
+					return fmt.Errorf(`too many keys in "keys" array: got %d, max %d`, len(list), maxK)
 				}
 
 				for i, keysrc := range list {

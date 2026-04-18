@@ -9,6 +9,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"io"
@@ -2869,5 +2870,113 @@ func TestGH1529(t *testing.T) {
 		require.NoError(t, set2.Get("foo", &v2), `set2.Get should succeed`)
 		require.Equal(t, "bar", v1, `set1.Get("foo") should still return "bar"`)
 		require.Equal(t, "baz", v2, `set2.Get("foo") should return "baz"`)
+	})
+}
+
+func TestMaxKeys(t *testing.T) {
+	key, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`)
+	keyJSON, err := json.Marshal(key)
+	require.NoError(t, err, `json.Marshal should succeed`)
+	keyStr := string(keyJSON)
+
+	makeJWKS := func(n int) []byte {
+		entries := make([]string, n)
+		for i := range entries {
+			entries[i] = keyStr
+		}
+		return []byte(`{"keys":[` + strings.Join(entries, ",") + `]}`)
+	}
+
+	t.Run("parse accepts within default limit", func(t *testing.T) {
+		set, err := jwk.Parse(makeJWKS(1000))
+		require.NoError(t, err, `jwk.Parse should succeed at the default limit`)
+		require.Equal(t, 1000, set.Len())
+	})
+
+	t.Run("parse rejects over default limit", func(t *testing.T) {
+		_, err := jwk.Parse(makeJWKS(1001))
+		require.Error(t, err, `jwk.Parse should fail beyond the default limit`)
+		require.Contains(t, err.Error(), `too many keys`)
+	})
+
+	t.Run("per-call parse override tightens", func(t *testing.T) {
+		_, err := jwk.Parse(makeJWKS(6), jwk.WithMaxKeys(5))
+		require.Error(t, err, `jwk.Parse should fail with per-call limit of 5`)
+		require.Contains(t, err.Error(), `too many keys`)
+
+		set, err := jwk.Parse(makeJWKS(5), jwk.WithMaxKeys(5))
+		require.NoError(t, err, `jwk.Parse should accept exactly the per-call limit`)
+		require.Equal(t, 5, set.Len())
+	})
+
+	t.Run("Configure global override", func(t *testing.T) {
+		jwk.Configure(jwk.WithMaxKeys(5))
+		defer jwk.Configure(jwk.WithMaxKeys(1000))
+
+		_, err := jwk.Parse(makeJWKS(6))
+		require.Error(t, err, `jwk.Parse should fail with the lowered global limit`)
+		require.Contains(t, err.Error(), `too many keys`)
+
+		set, err := jwk.Parse(makeJWKS(5))
+		require.NoError(t, err, `jwk.Parse should succeed at the lowered global limit`)
+		require.Equal(t, 5, set.Len())
+	})
+
+	t.Run("per-call override defeats lowered global", func(t *testing.T) {
+		jwk.Configure(jwk.WithMaxKeys(5))
+		defer jwk.Configure(jwk.WithMaxKeys(1000))
+
+		set, err := jwk.Parse(makeJWKS(10), jwk.WithMaxKeys(10))
+		require.NoError(t, err, `per-call WithMaxKeys(10) should override global 5`)
+		require.Equal(t, 10, set.Len())
+	})
+
+	t.Run("parse rejects non-positive values", func(t *testing.T) {
+		_, err := jwk.Parse(makeJWKS(1), jwk.WithMaxKeys(0))
+		require.Error(t, err, `jwk.Parse should reject WithMaxKeys(0)`)
+		require.Contains(t, err.Error(), `WithMaxKeys`)
+
+		_, err = jwk.Parse(makeJWKS(1), jwk.WithMaxKeys(-1))
+		require.Error(t, err, `jwk.Parse should reject WithMaxKeys(-1)`)
+		require.Contains(t, err.Error(), `WithMaxKeys`)
+	})
+
+	t.Run("rejects before decoding entries", func(t *testing.T) {
+		const n = 200000
+		parts := make([]string, n)
+		for i := range parts {
+			parts[i] = `{"kty":"oct","k":"AAAA"}`
+		}
+		body := []byte(`{"keys":[` + strings.Join(parts, ",") + `]}`)
+
+		_, err := jwk.Parse(body, jwk.WithMaxKeys(16))
+		require.Error(t, err, `jwk.Parse should reject oversized keys array`)
+		require.Contains(t, err.Error(), `too many keys`)
+	})
+
+	t.Run("PEM path honors WithMaxKeys", func(t *testing.T) {
+		rsaKey, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)
+
+		der, err := x509.MarshalPKIXPublicKey(&rsaKey.PublicKey)
+		require.NoError(t, err, `x509.MarshalPKIXPublicKey should succeed`)
+		pemBlock := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: der})
+
+		buildPEM := func(n int) []byte {
+			var buf bytes.Buffer
+			for range n {
+				buf.Write(pemBlock)
+			}
+			return buf.Bytes()
+		}
+
+		_, err = jwk.Parse(buildPEM(6), jwk.WithPEM(true), jwk.WithMaxKeys(5))
+		require.Error(t, err, `jwk.Parse should reject PEM input beyond WithMaxKeys(5)`)
+		require.Contains(t, err.Error(), `too many keys`)
+
+		set, err := jwk.Parse(buildPEM(5), jwk.WithPEM(true), jwk.WithMaxKeys(5))
+		require.NoError(t, err, `jwk.Parse should accept exactly the per-call PEM limit`)
+		require.Equal(t, 5, set.Len())
 	})
 }
