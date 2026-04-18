@@ -509,6 +509,13 @@ func WithPretty(v bool) WithJSONSuboption {
 //
 // It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`.
 //
+// kid precedence: if the supplied headers include a non-empty "kid"
+// and the `jwk.Key` passed to `jws.WithKey()` also carries a non-empty
+// but different kid, `jws.Sign()` fails with an explicit mismatch
+// error rather than silently letting one win. To force a specific kid
+// from the headers, strip it from the key (e.g. via `key.Remove(jwk.KeyIDKey)`)
+// or the other way around; matching kids on both sides still work.
+//
 // Note that `jwe.WithProtectedHeaders()` exists as well, but it is a top-level
 // `jwe.EncryptOption` passed directly to `jwe.Encrypt()`, not a `jwe.WithKey()`
 // suboption. The two serve different roles and have different types; the Go

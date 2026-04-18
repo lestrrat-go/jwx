@@ -127,6 +127,17 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (buildResult,
 
 	if key, ok := sb.key.(jwk.Key); ok {
 		if kid, ok := key.KeyID(); ok && kid != "" {
+			// If the caller already placed a kid into the protected
+			// header via WithProtectedHeaders and it disagrees with
+			// the jwk.Key's kid, fail loudly. Silently preferring
+			// one is a footgun in multi-kid routing setups; callers
+			// who want the override should strip kid from the key or
+			// omit it from the custom headers.
+			if existing, ok := protected.KeyID(); ok && existing != "" && existing != kid {
+				return br, makeSignError(prefixJwsSign,
+					`conflicting "kid" values: jws.WithProtectedHeaders carries %q but jws.WithKey's jwk.Key carries %q — remove one`,
+					existing, kid)
+			}
 			if err := protected.Set(KeyIDKey, kid); err != nil {
 				return br, makeSignError(prefixJwsSign, `failed to set "kid" header: %w`, err)
 			}
