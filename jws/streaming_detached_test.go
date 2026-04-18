@@ -354,7 +354,7 @@ func TestStreamingDetachedEdDSARejected(t *testing.T) {
 		jws.WithDetachedPayloadReader(bytes.NewReader(payload)),
 	)
 	require.Error(t, err)
-	require.ErrorContains(t, err, `does not support streaming`)
+	require.ErrorContains(t, err, `RFC 8032 EdDSA signs the full message`)
 
 	signed, err := jws.Sign(nil, jws.WithKey(jwa.EdDSA(), edKey), jws.WithDetachedPayload(payload))
 	require.NoError(t, err)
@@ -364,7 +364,7 @@ func TestStreamingDetachedEdDSARejected(t *testing.T) {
 		jws.WithDetachedPayloadReader(bytes.NewReader(payload)),
 	)
 	require.Error(t, err)
-	require.ErrorContains(t, err, `does not support streaming`)
+	require.ErrorContains(t, err, `RFC 8032 EdDSA signs the full message`)
 }
 
 func TestStreamingDetachedB64False(t *testing.T) {
