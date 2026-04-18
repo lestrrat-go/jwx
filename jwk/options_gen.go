@@ -84,6 +84,7 @@ type identLocalRegistry struct{}
 type identMaxKeys struct{}
 type identMinRSAModulusBits struct{}
 type identMinRSAPublicExponent struct{}
+type identRejectDuplicateKID struct{}
 type identStrictKeyUsage struct{}
 type identThumbprintHash struct{}
 type identX509 struct{}
@@ -114,6 +115,10 @@ func (identMinRSAModulusBits) String() string {
 
 func (identMinRSAPublicExponent) String() string {
 	return "WithMinRSAPublicExponent"
+}
+
+func (identRejectDuplicateKID) String() string {
+	return "WithRejectDuplicateKID"
 }
 
 func (identStrictKeyUsage) String() string {
@@ -218,6 +223,29 @@ func WithMinRSAModulusBits(v int) GlobalOption {
 // minimum-exponent floor.
 func WithMinRSAPublicExponent(v int) GlobalOption {
 	return &globalOption{option.New(identMinRSAPublicExponent{}, v)}
+}
+
+// WithRejectDuplicateKID instructs `jwk.Parse()` /
+// `jwk.ParseReader()` / `jwk.ParseString()` and the companion
+// `Set.UnmarshalJSON()` to return an error when the JWKS contains
+// two or more keys with the same non-empty `kid`. Keys without a
+// kid are not considered.
+//
+// Default is false — first-match-wins is retained for
+// compatibility with RFC 7517 (which permits, but does not
+// mandate, unique kids) and with existing callers that rely on
+// `(jwk.Set).LookupKeyID` returning the first entry. Use this
+// option when your issuer should guarantee kid uniqueness and a
+// duplicate is a sign of misconfiguration worth surfacing at
+// parse time rather than at verify time.
+//
+// Can be set globally via `jwk.Settings()` or per-call on
+// `jwk.Parse()` / `jwk.ParseReader()` / `jwk.ParseString()`.
+//
+// This does not affect `(*Set).AddKey` — programmatic additions
+// remain permissive (AddKey dedupes only by pointer identity).
+func WithRejectDuplicateKID(v bool) GlobalParseOption {
+	return &globalParseOption{option.New(identRejectDuplicateKID{}, v)}
 }
 
 // WithStrictKeyUsage specifies if during JWK parsing, the "use" field
