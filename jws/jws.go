@@ -31,7 +31,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
-	"errors"
 	"fmt"
 	"io"
 	"slices"
@@ -42,7 +41,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
-	"github.com/lestrrat-go/jwx/v3/internal/jwxio"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
@@ -53,11 +51,9 @@ import (
 var registry = json.NewRegistry()
 
 var maxSignatures atomic.Int64
-var maxParseInputSize atomic.Int64
 
 func init() {
 	maxSignatures.Store(100)
-	maxParseInputSize.Store(10 * 1024 * 1024) // 10MB
 }
 
 var signers = make(map[jwa.SignatureAlgorithm]Signer)
@@ -295,15 +291,12 @@ func detectParseFormat(src []byte) int {
 // will attempt to autodetect the format. If one or the other is specified,
 // only the specified format will be attempted.
 //
-// Parse enforces the `WithMaxParseInputSize` cap on the length of src,
-// matching the behavior of ParseReader. Callers who pre-read bytes into
-// memory (e.g. HTTP middleware, database values) therefore get the same
-// hardening as the io.Reader path.
+// Bounding the input size is the caller's responsibility; this function
+// trusts the caller-provided src. See docs/13-input-size.md.
 //
 // On error, returns a jws.ParseError.
 func Parse(src []byte, options ...ParseOption) (*Message, error) {
 	maxSigs := int(maxSignatures.Load())
-	maxSize := maxParseInputSize.Load()
 
 	var formats int
 	for _, option := range options {
@@ -326,18 +319,7 @@ func Parse(src []byte, options ...ParseOption) (*Message, error) {
 			if maxSigs <= 0 {
 				return nil, makeParseError(`jws.Parse`, `WithMaxSignatures must be greater than zero`)
 			}
-		case identMaxParseInputSize{}:
-			if err := option.Value(&maxSize); err != nil {
-				return nil, makeParseError(`jws.Parse`, `invalid WithMaxParseInputSize: %w`, err)
-			}
-			if maxSize <= 0 {
-				return nil, makeParseError(`jws.Parse`, `WithMaxParseInputSize must be greater than zero`)
-			}
 		}
-	}
-
-	if maxSize > 0 && int64(len(src)) > maxSize {
-		return nil, makeParseError(`jws.Parse`, `input exceeded max size of %d bytes`, maxSize)
 	}
 
 	// if format is 0 or both JSON/Compact, auto detect
@@ -377,45 +359,16 @@ func ParseString(src string, options ...ParseOption) (*Message, error) {
 // ParseReader parses contents from the given source and creates a jws.Message
 // struct. The input can be in either compact or full JSON serialization.
 //
+// Bounding the input size is the caller's responsibility: wrap src with
+// [io.LimitReader] or [net/http.MaxBytesReader] before passing it in. See
+// docs/13-input-size.md for the rationale.
+//
 // On error, returns a jws.ParseError.
 func ParseReader(src io.Reader, options ...ParseOption) (*Message, error) {
-	maxSize := maxParseInputSize.Load()
-	for _, option := range options {
-		if option.Ident() == (identMaxParseInputSize{}) {
-			if err := option.Value(&maxSize); err != nil {
-				return nil, makeParseError(`jws.ParseReader`, `invalid WithMaxParseInputSize: %w`, err)
-			}
-			if maxSize <= 0 {
-				return nil, makeParseError(`jws.ParseReader`, `WithMaxParseInputSize must be greater than zero`)
-			}
-		}
-	}
-
-	data, err := jwxio.ReadAllFromFiniteSource(src, maxSize+1)
-	if err == nil {
-		if int64(len(data)) > maxSize {
-			return nil, makeParseError(`jws.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
-		}
-		return Parse(data, options...)
-	}
-
-	if errors.Is(err, jwxio.InputTooLargeError()) {
-		return nil, makeParseError(`jws.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
-	}
-
-	if !errors.Is(err, jwxio.NonFiniteSourceError()) {
-		return nil, makeParseError(`jws.ParseReader`, `failed to read from finite source: %w`, err)
-	}
-
-	// Non-finite source: read all with size limit
-	buf, err := io.ReadAll(io.LimitReader(src, maxSize+1))
+	buf, err := io.ReadAll(src)
 	if err != nil {
 		return nil, makeParseError(`jws.ParseReader`, `failed to read from io.Reader: %w`, err)
 	}
-	if int64(len(buf)) > maxSize {
-		return nil, makeParseError(`jws.ParseReader`, `input exceeded max size of %d bytes`, maxSize)
-	}
-
 	return Parse(buf, options...)
 }
 
@@ -791,15 +744,6 @@ func Settings(options ...GlobalOption) {
 	for _, option := range options {
 		switch option.Ident() {
 		case identLegacySigners{}:
-		case identMaxParseInputSize{}:
-			var v int64
-			if err := option.Value(&v); err != nil {
-				panic(fmt.Sprintf("jws.Settings: value for WithMaxParseInputSize must be int64: %s", err))
-			}
-			if v <= 0 {
-				panic("jws.Settings: WithMaxParseInputSize must be greater than zero")
-			}
-			maxParseInputSize.Store(v)
 		case identMaxSignatures{}:
 			var v int
 			if err := option.Value(&v); err != nil {

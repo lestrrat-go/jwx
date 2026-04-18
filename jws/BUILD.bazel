@@ -29,7 +29,6 @@ go_library(
         "//internal/base64",
         "//internal/ecutil",
         "//internal/json",
-        "//internal/jwxio",
         "//internal/tokens",
         "//internal/keyconv",
         "//internal/pool",

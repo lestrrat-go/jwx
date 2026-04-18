@@ -189,10 +189,9 @@ func (sc *signContext) signStreaming() ([]byte, error) {
 }
 
 // verifyStreaming is invoked from VerifyMessage() when vc.payloadReader is
-// set. It parses the JWS envelope through jws.Parse (so
-// WithMaxParseInputSize is honored), then re-builds the signing input by
-// feeding base64(header) "." base64(payload) into a hash.Hash fed from the
-// supplied io.Reader and calls dsig.VerifyDigest.
+// set. It parses the JWS envelope through jws.Parse, then re-builds the
+// signing input by feeding base64(header) "." base64(payload) into a
+// hash.Hash fed from the supplied io.Reader and calls dsig.VerifyDigest.
 func (vc *verifyContext) verifyStreaming(buf []byte) ([]byte, error) {
 	if len(vc.keyProviders) != 1 {
 		return nil, makeVerifyError(`jws.WithDetachedPayloadReader() requires exactly one jws.WithKey(); jws.WithKeySet(), jws.WithKeyProvider() and jws.WithVerifyAuto() are not supported on the streaming path`)

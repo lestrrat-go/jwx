@@ -235,18 +235,6 @@ options:
       In v2, this option was called MaxBufferSize.
 
       This option has a global effect.
-  - ident: MaxParseInputSize
-    interface: GlobalParseOption
-    argument_type: int64
-    comment: |
-      WithMaxParseInputSize specifies the maximum byte length of input
-      accepted by every `jwe.Parse*` entry point (`jwe.Parse`,
-      `jwe.ParseString`, and `jwe.ParseReader`). Inputs exceeding this
-      size are rejected before decoding. The default value is 10MB.
-
-      This option can be passed to `jwe.Settings()` to change the default
-      globally, or to any `jwe.Parse*` call / `jwe.ReadFile()` for a
-      per-call override.
   - ident: CritValidation
     interface: DecryptOption
     argument_type: bool

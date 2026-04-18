@@ -22,7 +22,6 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithLegacyHeaderMerging", identLegacyHeaderMerging{}.String())
 	require.Equal(t, "WithMaxDecompressBufferSize", identMaxDecompressBufferSize{}.String())
 	require.Equal(t, "WithMaxPBES2Count", identMaxPBES2Count{}.String())
-	require.Equal(t, "WithMaxParseInputSize", identMaxParseInputSize{}.String())
 	require.Equal(t, "WithMaxRecipients", identMaxRecipients{}.String())
 	require.Equal(t, "WithMergeProtectedHeaders", identMergeProtectedHeaders{}.String())
 	require.Equal(t, "WithMessage", identMessage{}.String())
