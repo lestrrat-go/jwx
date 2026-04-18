@@ -206,7 +206,10 @@ func WithAudience(s string) ValidateOption {
 	return WithValidator(audienceClaimContainsString(s))
 }
 
-// WithClaimValue specifies the expected value for a given claim
+// WithClaimValue specifies the expected value for a given claim.
+// The stored and expected values are compared with reflect.DeepEqual,
+// so slice-, map-, and struct-valued claims are supported in addition
+// to scalars. See [ClaimValueIs] for edge-case semantics.
 func WithClaimValue(name string, v any) ValidateOption {
 	return WithValidator(ClaimValueIs(name, v))
 }

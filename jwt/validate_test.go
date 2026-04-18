@@ -853,6 +853,69 @@ func TestClaimValidator(t *testing.T) {
 	}
 }
 
+func TestClaimValueIsNonComparable(t *testing.T) {
+	t.Parallel()
+
+	const claimName = "non-comparable"
+
+	testcases := []struct {
+		Name     string
+		Stored   any
+		Expected any
+		WantPass bool
+	}{
+		{
+			Name:     "equal maps",
+			Stored:   map[string]any{"k": "v"},
+			Expected: map[string]any{"k": "v"},
+			WantPass: true,
+		},
+		{
+			Name:     "different maps",
+			Stored:   map[string]any{"k": "v"},
+			Expected: map[string]any{"k": "other"},
+			WantPass: false,
+		},
+		{
+			Name:     "equal slices",
+			Stored:   []string{"a", "b"},
+			Expected: []string{"a", "b"},
+			WantPass: true,
+		},
+		{
+			Name:     "different slices",
+			Stored:   []string{"a", "b"},
+			Expected: []string{"a", "c"},
+			WantPass: false,
+		},
+		{
+			Name:     "stored non-comparable, expected string",
+			Stored:   map[string]any{"k": "v"},
+			Expected: "scalar",
+			WantPass: false,
+		},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.Name, func(t *testing.T) {
+			t.Parallel()
+			tok := jwt.New()
+			require.NoError(t, tok.Set(claimName, tc.Stored))
+
+			var err error
+			require.NotPanics(t, func() {
+				err = jwt.Validate(tok, jwt.WithClaimValue(claimName, tc.Expected))
+			}, "Validate must not panic on non-comparable claim values")
+
+			if tc.WantPass {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			require.ErrorIs(t, err, jwt.ClaimValidationError{})
+		})
+	}
+}
+
 // countingClock returns successive samples from a fixed sequence and
 // records how many times Now was called. Used to lock in the invariant
 // that jwt.Validate samples the clock exactly once per call, so that

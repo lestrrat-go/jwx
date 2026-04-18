@@ -3,6 +3,7 @@ package jwt
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"slices"
 	"strconv"
 	"time"
@@ -474,9 +475,11 @@ type claimValueIs struct {
 }
 
 // ClaimValueIs creates a Validator that checks if the value of claim `name`
-// matches `value`. The comparison is done using a simple `==` comparison,
-// and therefore complex comparisons may fail using this code. If you
-// need to do more, use a custom Validator.
+// matches `value`. The comparison is done with reflect.DeepEqual, so
+// slice-, map-, and struct-valued claims are supported in addition to
+// scalars. Function-valued claims follow reflect.DeepEqual semantics
+// (equal only when both sides are nil). If you need finer-grained
+// matching than DeepEqual provides, use a custom Validator.
 func ClaimValueIs(name string, value any) Validator {
 	return &claimValueIs{
 		name:  name,
@@ -493,7 +496,7 @@ func (cv *claimValueIs) Validate(_ context.Context, t Token) error {
 		return newClaimValidationError(cv.name, cv.value, nil,
 			fmt.Sprintf(`claim %q does not exist`, cv.name))
 	}
-	if v != cv.value {
+	if !reflect.DeepEqual(v, cv.value) {
 		if cv.makeErr != nil {
 			return cv.makeErr(`claim %[1]q does not have the expected value`, cv.name)
 		}
