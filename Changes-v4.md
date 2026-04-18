@@ -6,6 +6,40 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 # Detailed list of changes
 
+## Unreleased
+
+* [jws] **Bug fix (RFC compliance, interop):** `jws.Sign()` with
+  `jws.WithDetachedPayload()` + `jws.WithJSON()` now correctly omits the
+  `"payload"` member from the output, per RFC 7515 Appendix F. Previous
+  releases emitted the encoded payload anyway, producing output that was
+  indistinguishable from a non-detached JWS and that some peers rejected as
+  malformed detached JSON. The fix also preserves detached-ness through
+  `Message.UnmarshalJSON` / `MarshalJSON`, so parse/remarshal round-trips no
+  longer reintroduce the `"payload"` member. Callers already passing
+  `jws.WithDetachedPayload()` get the fix automatically — no API change.
+
+* [jws] Added `jws.WithDetachedPayloadReader()` — a streaming variant of
+  `jws.WithDetachedPayload()` that accepts an `io.Reader` instead of a
+  `[]byte`, for detached payloads that should not be materialized in
+  memory. It is a `jws.Sign()` / `jws.Verify()` option; the two remain
+  the default entry points. The streaming path is a narrow specialist:
+  HMAC/RSA/ECDSA only. EdDSA, custom-family algorithms, and algorithms
+  registered via `jws.RegisterSigner()` / `jws.RegisterVerifier()` are
+  rejected with an error pointing callers at `jws.WithDetachedPayload()`
+  for the full-option path. On sign, multiple `jws.WithKey()` options
+  combined with `jws.WithJSON()` produce a general-form multi-signature
+  JWS (the payload is streamed once and fanned out to each signer). On
+  verify, only single-signature JWS input is supported;
+  `jws.WithKeySet()`, `jws.WithKeyProvider()`, and `jws.WithVerifyAuto()`
+  are not accepted.
+
+* [jws] Added `jws.Base64StreamEncoder` — the stream-capable extension
+  of `jws.Base64Encoder`. The default encoder and `*base64.Encoding`
+  values supplied via `jws.WithBase64Encoder()` are auto-wrapped, so
+  typical callers see no change. Custom encoders only need to implement
+  this additional interface if they want to be usable with
+  `jws.WithDetachedPayloadReader()`.
+
 ## Module
 
 * This module now requires Go 1.26

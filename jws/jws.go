@@ -20,6 +20,13 @@
 // and verify the result using `algorithm` and `key`. Upon successful
 // verification, the original payload is returned, so you can work on it.
 //
+// `jws.Sign()` and `jws.Verify()` are the default general-purpose entry
+// points. For detached payloads already available as `[]byte`, pass
+// `jws.WithDetachedPayload()`. For detached payloads that should be
+// streamed from an `io.Reader` without materializing them in memory, pass
+// `jws.WithDetachedPayloadReader()`. The streaming path is intentionally
+// narrower — single key, detached only, HMAC/RSA/ECDSA only.
+//
 // As a sidenote, consider using github.com/lestrrat-go/htmsig if you
 // looking for HTTP Message Signatures (RFC9421) -- it uses the same
 // underlying signing/verification mechanisms as this module.
@@ -157,6 +164,10 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		return nil, makeSignError(prefixJwsSign, `cannot have multiple signers (keys) specified for compact serialization. Use only one jws.WithKey()`)
 	}
 
+	if sc.payloadReader != nil {
+		return sc.signStreaming()
+	}
+
 	// For compact single-signature (the overwhelmingly common case),
 	// bypass Message construction and Compact() entirely.
 	// Build() returns the signing input buffer (base64(hdr).base64(payload))
@@ -253,6 +264,10 @@ func getB64Value(hdr Headers) bool {
 	return b64
 }
 
+// detectParseFormat inspects the first non-whitespace rune in src to
+// classify the input as compact or JSON serialization. Returns 0 on
+// empty or whitespace-only input so callers can distinguish "no usable
+// bytes" from a successful classification.
 func detectParseFormat(src []byte) int {
 	for i := 0; i < len(src); {
 		r := rune(src[i])

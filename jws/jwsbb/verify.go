@@ -31,7 +31,7 @@ func Verify(key any, alg string, payload, signature []byte) error {
 // [crypto.SignerOpts] through to the underlying dsig verifier. See
 // [SignWithOpts] for the rationale and the migration story.
 func VerifyWithOpts(key any, alg string, payload, signature []byte, opts crypto.SignerOpts) error {
-	dsigAlg, ok := getDsigAlgorithm(alg)
+	dsigAlg, ok := GetDsigAlgorithm(alg)
 	if !ok {
 		// For custom algorithms registered with dsig, JWS name = dsig name
 		dsigAlg = alg

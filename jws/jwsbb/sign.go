@@ -45,7 +45,7 @@ func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
 // canonical shape of [Sign]. Code that uses SignWithOpts today will
 // need a mechanical rename to Sign (and nothing else) when v5 ships.
 func SignWithOpts(key any, alg string, payload []byte, opts crypto.SignerOpts, rr io.Reader) ([]byte, error) {
-	dsigAlg, ok := getDsigAlgorithm(alg)
+	dsigAlg, ok := GetDsigAlgorithm(alg)
 	if !ok {
 		// For custom algorithms registered with dsig, JWS name = dsig name
 		dsigAlg = alg

@@ -2,6 +2,7 @@ package jws
 
 import (
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/lestrrat-go/option/v3"
@@ -12,13 +13,14 @@ import (
 )
 
 type signContext struct {
-	format      int
-	detached    bool
-	validateKey bool
-	payload     []byte
-	encoder     Base64Encoder
-	none        *signatureBuilder // special signature builder
-	sigbuilders []*signatureBuilder
+	format        int
+	detached      bool
+	validateKey   bool
+	payload       []byte
+	payloadReader io.Reader
+	encoder       Base64Encoder
+	none          *signatureBuilder // special signature builder
+	sigbuilders   []*signatureBuilder
 }
 
 var signContextPool = pool.New[*signContext](allocSignContext, freeSignContext)
@@ -42,6 +44,7 @@ func freeSignContext(ctx *signContext) *signContext {
 	ctx.encoder = base64.DefaultEncoder()
 	ctx.none = nil
 	ctx.payload = nil
+	ctx.payloadReader = nil
 
 	return ctx
 }
@@ -96,10 +99,25 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 
 			sc.sigbuilders = append(sc.sigbuilders, sb)
 		case identDetachedPayload{}:
+			if sc.payloadReader != nil {
+				return makeSignError(prefixJwsSign, `jws.WithDetachedPayload() and jws.WithDetachedPayloadReader() are mutually exclusive`)
+			}
 			if sc.payload != nil {
 				return makeSignError(prefixJwsSign, `payload must be nil when jws.WithDetachedPayload() is specified`)
 			}
 			sc.payload = option.MustGet[[]byte](opt)
+			sc.detached = true
+		case identDetachedPayloadReader{}:
+			if sc.payloadReader != nil {
+				return makeSignError(prefixJwsSign, `jws.WithDetachedPayloadReader() specified more than once`)
+			}
+			if sc.detached {
+				return makeSignError(prefixJwsSign, `jws.WithDetachedPayload() and jws.WithDetachedPayloadReader() are mutually exclusive`)
+			}
+			if sc.payload != nil {
+				return makeSignError(prefixJwsSign, `payload must be nil when jws.WithDetachedPayloadReader() is specified`)
+			}
+			sc.payloadReader = option.MustGet[io.Reader](opt)
 			sc.detached = true
 		case identValidateKey{}:
 			sc.validateKey = option.MustGet[bool](opt)
@@ -114,6 +132,7 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 
 func (sc *signContext) PopulateMessage(m *Message) error {
 	m.payload = sc.payload
+	m.detached = sc.detached
 	m.signatures = make([]*Signature, 0, len(sc.sigbuilders))
 
 	for i, sb := range sc.sigbuilders {

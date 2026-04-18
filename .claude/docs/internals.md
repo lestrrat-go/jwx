@@ -116,6 +116,7 @@ Internal `internal/json` package provides the abstraction. Custom field registry
 Pluggable at runtime via `jwx.Settings(jwx.WithBase64Encoder(...), jwx.WithBase64Decoder(...))`:
 - Default encoder: `encoding/base64.RawURLEncoding`
 - Default decoder: encoding-variant-detecting decoder in `internal/base64`
+- Streaming detached JWS via `jws.WithDetachedPayloadReader()` honors `jws.WithBase64Encoder()` only when the encoder implements `jws.Base64StreamEncoder` (`internal/base64.StreamEncoder` — extends `Encoder` with `NewEncoder(io.Writer) io.WriteCloser`). The stdlib `encoding/base64.RawURLEncoding` default satisfies this. An encoder that satisfies only the basic `Encoder` interface is rejected with an error at sign/verify time rather than silently mixing encodings across header, payload, and signature.
 
 Internal `internal/base64` package abstracts the choice; the encoder/decoder are held in `atomic.Value` slots and `jwx.Settings` dispatches to `base64.SetEncoder`/`base64.SetDecoder`.
 
