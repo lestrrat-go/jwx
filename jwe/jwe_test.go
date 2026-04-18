@@ -1756,7 +1756,6 @@ func TestGH1470(t *testing.T) {
 	})
 }
 
-
 func TestMaxRecipients(t *testing.T) {
 	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err, `rsa.GenerateKey should succeed`)
