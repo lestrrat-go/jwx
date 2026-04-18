@@ -39,15 +39,6 @@ const examplePayload = `{"iss":"joe",` + "\r\n" + ` "exp":1300819380,` + "\r\n" 
 const exampleCompactSerialization = `eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk`
 const badValue = "%badvalue%"
 
-type infiniteByteReader struct{ b byte }
-
-func (r *infiniteByteReader) Read(p []byte) (int, error) {
-	for i := range p {
-		p[i] = r.b
-	}
-	return len(p), nil
-}
-
 var hasES256K bool
 
 func TestSanity(t *testing.T) {
@@ -2011,110 +2002,6 @@ func BenchmarkSplitCompatString(b *testing.B) {
 			panic(err)
 		}
 	}
-}
-
-func TestMaxParseInputSize(t *testing.T) {
-	t.Run("default rejects oversized input", func(t *testing.T) {
-		data := make([]byte, 10*1024*1024+1)
-		_, err := jws.ParseReader(bytes.NewReader(data))
-		require.Error(t, err, `jws.ParseReader should reject input exceeding default max size`)
-		require.Contains(t, err.Error(), `exceeded max size`)
-	})
-	t.Run("per-call option overrides default", func(t *testing.T) {
-		data := make([]byte, 200)
-		_, err := jws.ParseReader(bytes.NewReader(data), jws.WithMaxParseInputSize(100))
-		require.Error(t, err, `jws.ParseReader should reject input exceeding per-call max size`)
-		require.Contains(t, err.Error(), `exceeded max size`)
-	})
-	t.Run("direct oversized limited reader is rejected", func(t *testing.T) {
-		rdr := &io.LimitedReader{R: &infiniteByteReader{b: 'x'}, N: 103}
-		_, err := jws.ParseReader(rdr, jws.WithMaxParseInputSize(100))
-		require.Error(t, err, `jws.ParseReader should reject oversized limited readers`)
-		require.ErrorIs(t, err, jws.ParseError())
-		require.Contains(t, err.Error(), `exceeded max size`)
-	})
-	t.Run("input within limit is accepted", func(t *testing.T) {
-		data := []byte(`not-valid-jws-but-small`)
-		_, err := jws.ParseReader(bytes.NewReader(data), jws.WithMaxParseInputSize(1024))
-		// The error (if any) should NOT be about size
-		if err != nil {
-			require.NotContains(t, err.Error(), `exceeded max size`)
-		}
-	})
-	t.Run("global setting changes default", func(t *testing.T) {
-		jws.Settings(jws.WithMaxParseInputSize(50))
-		defer jws.Settings(jws.WithMaxParseInputSize(10 * 1024 * 1024)) // restore
-
-		data := make([]byte, 100)
-		_, err := jws.ParseReader(bytes.NewReader(data))
-		require.Error(t, err, `jws.ParseReader should reject input exceeding global max size`)
-		require.Contains(t, err.Error(), `exceeded max size`)
-	})
-	t.Run("per-call option overrides global setting", func(t *testing.T) {
-		jws.Settings(jws.WithMaxParseInputSize(50))
-		defer jws.Settings(jws.WithMaxParseInputSize(10 * 1024 * 1024)) // restore
-
-		data := []byte(`not-valid-jws-but-small`)
-		_, err := jws.ParseReader(bytes.NewReader(data), jws.WithMaxParseInputSize(1024))
-		if err != nil {
-			require.NotContains(t, err.Error(), `exceeded max size`)
-		}
-	})
-	t.Run("negative value panics in Settings", func(t *testing.T) {
-		require.Panics(t, func() {
-			jws.Settings(jws.WithMaxParseInputSize(-1))
-		})
-	})
-	t.Run("zero value panics in Settings", func(t *testing.T) {
-		require.Panics(t, func() {
-			jws.Settings(jws.WithMaxParseInputSize(0))
-		})
-	})
-	t.Run("negative per-call value returns error", func(t *testing.T) {
-		data := []byte(`test`)
-		_, err := jws.ParseReader(bytes.NewReader(data), jws.WithMaxParseInputSize(-1))
-		require.Error(t, err)
-		require.Contains(t, err.Error(), `greater than zero`)
-	})
-	t.Run("Parse rejects oversized byte slice (global setting)", func(t *testing.T) {
-		jws.Settings(jws.WithMaxParseInputSize(50))
-		defer jws.Settings(jws.WithMaxParseInputSize(10 * 1024 * 1024))
-
-		_, err := jws.Parse(make([]byte, 100))
-		require.Error(t, err, `jws.Parse should reject oversized input`)
-		require.Contains(t, err.Error(), `exceeded max size`)
-	})
-	t.Run("ParseString inherits the cap", func(t *testing.T) {
-		jws.Settings(jws.WithMaxParseInputSize(50))
-		defer jws.Settings(jws.WithMaxParseInputSize(10 * 1024 * 1024))
-
-		_, err := jws.ParseString(strings.Repeat("a", 100))
-		require.Error(t, err, `jws.ParseString should inherit the size cap`)
-		require.Contains(t, err.Error(), `exceeded max size`)
-	})
-	t.Run("Parse honors per-call override", func(t *testing.T) {
-		_, err := jws.Parse(make([]byte, 200), jws.WithMaxParseInputSize(100))
-		require.Error(t, err, `jws.Parse should reject input exceeding per-call cap`)
-		require.Contains(t, err.Error(), `exceeded max size`)
-	})
-	t.Run("Parse per-call override can raise above global", func(t *testing.T) {
-		jws.Settings(jws.WithMaxParseInputSize(50))
-		defer jws.Settings(jws.WithMaxParseInputSize(10 * 1024 * 1024))
-
-		// Input exceeds the global cap but is within the per-call override;
-		// the size check must pass (payload is still invalid JWS, but the
-		// returned error must not be about the size cap).
-		data := make([]byte, 100)
-		_, err := jws.Parse(data, jws.WithMaxParseInputSize(1024))
-		if err != nil {
-			require.NotContains(t, err.Error(), `exceeded max size`)
-		}
-	})
-	t.Run("Parse negative per-call value returns error", func(t *testing.T) {
-		_, err := jws.Parse([]byte(`test`), jws.WithMaxParseInputSize(-1))
-		require.Error(t, err)
-		require.Contains(t, err.Error(), `greater than zero`)
-	})
 }
 
 func TestMaxSignatures(t *testing.T) {

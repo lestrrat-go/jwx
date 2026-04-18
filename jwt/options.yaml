@@ -292,14 +292,3 @@ options:
     comment: |
       WithBase64Encoder specifies the base64 encoder to use for signing
       tokens and verifying JWS signatures.
-  - ident: MaxParseInputSize
-    interface: GlobalParseOption
-    argument_type: int64
-    comment: |
-      WithMaxParseInputSize specifies the maximum number of bytes read from an
-      io.Reader in `jwt.ParseReader`. If the input exceeds this size,
-      `jwt.ParseReader` will return an error. The default value is 10MB.
-
-      This option can be passed to `jwt.Settings()` to change the default
-      globally, or to `jwt.ParseReader()` / `jwt.ReadFile()` for a per-call
-      override.

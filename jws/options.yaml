@@ -319,18 +319,6 @@ options:
     constant_value: true
     comment: |
       WithLegacySigners is a no-op option that exists only for backwards compatibility.
-  - ident: MaxParseInputSize
-    interface: GlobalParseOption
-    argument_type: int64
-    comment: |
-      WithMaxParseInputSize specifies the maximum byte length of input
-      accepted by every `jws.Parse*` entry point (`jws.Parse`,
-      `jws.ParseString`, and `jws.ParseReader`). Inputs exceeding this
-      size are rejected before decoding. The default value is 10MB.
-
-      This option can be passed to `jws.Settings()` to change the default
-      globally, or to any `jws.Parse*` call / `jws.ReadFile()` for a
-      per-call override.
   - ident: MaxSignatures
     interface: GlobalParseOption
     argument_type: int

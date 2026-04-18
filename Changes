@@ -57,10 +57,6 @@ v3.1.0 UNRELEASED
     to sync.RWMutex (value) so go vet -copylocks catches accidental copies,
     and convert affected value-receiver methods to pointer receivers.
 
-  * [jwt][jwe][jws] Add `WithMaxParseInputSize(int64)` to limit bytes read from
-    an `io.Reader` in `ParseReader` and `ReadFile`. Default is 10 MB. Can be set
-    globally via `Settings()` or per-call. (#1630, #1632)
-
   * [jwe] Add `WithMaxRecipients(int)` to reject JWE messages with more recipients
     than the configured limit. Default is 100. Can be set globally via
     `jwe.Settings()` or per-call in `jwe.Decrypt()` / `jwe.Parse()`. (#1633)

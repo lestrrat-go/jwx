@@ -215,7 +215,6 @@ type identKey struct{}
 type identKeyProvider struct{}
 type identKeyUsed struct{}
 type identLegacySigners struct{}
-type identMaxParseInputSize struct{}
 type identMaxSignatures struct{}
 type identMessage struct{}
 type identMultipleKeysPerKeyID struct{}
@@ -273,10 +272,6 @@ func (identKeyUsed) String() string {
 
 func (identLegacySigners) String() string {
 	return "WithLegacySigners"
-}
-
-func (identMaxParseInputSize) String() string {
-	return "WithMaxParseInputSize"
 }
 
 func (identMaxSignatures) String() string {
@@ -514,18 +509,6 @@ func WithKeyUsed(v any) VerifyOption {
 // WithLegacySigners is a no-op option that exists only for backwards compatibility.
 func WithLegacySigners() GlobalOption {
 	return &globalOption{option.New(identLegacySigners{}, true)}
-}
-
-// WithMaxParseInputSize specifies the maximum byte length of input
-// accepted by every `jws.Parse*` entry point (`jws.Parse`,
-// `jws.ParseString`, and `jws.ParseReader`). Inputs exceeding this
-// size are rejected before decoding. The default value is 10MB.
-//
-// This option can be passed to `jws.Settings()` to change the default
-// globally, or to any `jws.Parse*` call / `jws.ReadFile()` for a
-// per-call override.
-func WithMaxParseInputSize(v int64) GlobalParseOption {
-	return &globalParseOption{option.New(identMaxParseInputSize{}, v)}
 }
 
 // WithMaxSignatures specifies the maximum number of signatures allowed
