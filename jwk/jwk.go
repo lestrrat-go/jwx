@@ -17,6 +17,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
 var fieldRegistry = json.NewRegistry()
@@ -72,7 +73,16 @@ func Import(raw any) (Key, error) {
 		return nil, importerr(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}
 
-	return conv.Import(raw)
+	key, err := conv.Import(raw)
+	if err != nil {
+		return nil, err
+	}
+	if v, ok := key.(interface{ Validate() error }); ok {
+		if err := v.Validate(); err != nil {
+			return nil, importerr(`key validation failed: %w`, err)
+		}
+	}
+	return key, nil
 }
 
 // PublicSetOf returns a new jwk.Set consisting of
@@ -113,7 +123,7 @@ func PublicSetOf(v Set, options ...PublicSetOption) (Set, error) {
 		if !ok {
 			return nil, fmt.Errorf(`key not found`)
 		}
-		if _, isSymmetric := k.(SymmetricKey); isSymmetric && !allowSymmetric {
+		if k.KeyType() == jwa.OctetSeq() && !allowSymmetric {
 			kid, _ := k.KeyID()
 			return nil, fmt.Errorf(`jwk.PublicSetOf: input set contains a symmetric key (kid=%q, index=%d); symmetric keys have no public form and would leak secret material if published. Remove symmetric keys from the set before calling PublicSetOf, or pass jwk.WithAllowSymmetric(true) to opt into legacy pass-through behavior`, kid, i)
 		}
@@ -430,20 +440,30 @@ func ParseString(s string, options ...ParseOption) (Set, error) {
 
 // AssignKeyID is a convenience function to automatically assign the "kid"
 // section of the key, if it already doesn't have one. It uses Key.Thumbprint
-// method with crypto.SHA256 as the default hashing algorithm
+// method with crypto.SHA256 as the default hashing algorithm.
+//
+// By default, if the key already carries a `kid`, `AssignKeyID` leaves it
+// alone and returns nil. Pass `jwk.WithForceAssign(true)` to force
+// recomputation (for example, when upgrading to a stronger thumbprint hash
+// via `jwk.WithThumbprintHash`).
 func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
-	if key.Has(KeyIDKey) {
-		return nil
-	}
-
 	hash := crypto.SHA256
+	var force bool
 	for _, option := range options {
 		switch option.Ident() {
 		case identThumbprintHash{}:
 			if err := option.Value(&hash); err != nil {
 				return fmt.Errorf(`failed to retrieve thumbprint hash option value: %w`, err)
 			}
+		case identForceAssign{}:
+			if err := option.Value(&force); err != nil {
+				return fmt.Errorf(`failed to retrieve force assign option value: %w`, err)
+			}
 		}
+	}
+
+	if !force && key.Has(KeyIDKey) {
+		return nil
 	}
 
 	h, err := key.Thumbprint(hash)
@@ -675,6 +695,8 @@ func Configure(options ...GlobalOption) {
 	var strictKeyUsagePtr *bool
 	var maxFetchBodySizePtr *int64
 	var httpClientPtr *HTTPClient
+	var minRSAModulusBitsPtr *int64
+	var minRSAPublicExponentPtr *int64
 	for _, option := range options {
 		switch option.Ident() {
 		case identStrictKeyUsage{}:
@@ -698,6 +720,20 @@ func Configure(options ...GlobalOption) {
 				continue
 			}
 			httpClientPtr = &v
+		case identMinRSAModulusBits{}:
+			var v int
+			if err := option.Value(&v); err != nil {
+				continue
+			}
+			v64 := int64(v)
+			minRSAModulusBitsPtr = &v64
+		case identMinRSAPublicExponent{}:
+			var v int
+			if err := option.Value(&v); err != nil {
+				continue
+			}
+			v64 := int64(v)
+			minRSAPublicExponentPtr = &v64
 		}
 	}
 
@@ -711,6 +747,14 @@ func Configure(options ...GlobalOption) {
 
 	if httpClientPtr != nil {
 		setFetchHTTPClient(*httpClientPtr)
+	}
+
+	if minRSAModulusBitsPtr != nil {
+		rsaMinModulusBits.Store(*minRSAModulusBitsPtr)
+	}
+
+	if minRSAPublicExponentPtr != nil {
+		setMinRSAPublicExponent(int(*minRSAPublicExponentPtr))
 	}
 }
 

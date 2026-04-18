@@ -20,6 +20,7 @@ Algorithm identifiers per RFC 7518. Registry pattern with thread-safe lookup.
 - Algorithm types: `SignatureAlgorithm`, `KeyEncryptionAlgorithm`, `ContentEncryptionAlgorithm`, `EllipticCurveAlgorithm`, `KeyType`, `CompressionAlgorithm`
 - **KeyAlgorithmFrom(v any) (KeyAlgorithm, error)** — convert string/typed algorithm to union interface
 - Per-type API: `New{Type}()`, `Lookup{Type}(name) (T, bool)`, `Register{Type}()`, `Unregister{Type}()`, `{Type}s() []T`
+  `Register{Type}()` is process-global; attempts to replace builtin identifiers such as `RS256` are ignored.
 - Constructor functions: `ES256()`, `RS256()`, `A128GCM()`, `P256()`, `Ed25519()`, etc.
 - Files: `jwa.go`, `secp2561k.go` + generated `*_gen.go`
 - Imports: internal/tokens
@@ -28,6 +29,7 @@ Algorithm identifiers per RFC 7518. Registry pattern with thread-safe lookup.
 
 JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 
+- **Configure(options ...GlobalOption)** — configure global jwk behavior (`WithStrictKeyUsage`, fetch defaults, RSA validation floors)
 - **Parse(src []byte, ...ParseOption) (Set, error)** / **ParseKey(data []byte, ...ParseOption) (Key, error)** — parse JWK/JWKS
 - **Fetch(ctx, url, ...FetchOption) (Set, error)** — HTTP fetch with optional whitelist, body size limit (default 10 MB via `WithMaxFetchBodySize`)
 - **DefaultHTTPClient() \*http.Client** — returns a new http.Client with library defaults (30s timeout, redirect policy)
@@ -36,6 +38,7 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 - **NewCache(ctx, client) (*Cache, error)** — auto-refreshing JWKS cache
 - **AssignKeyID(key Key, ...AssignKeyIDOption) error** — compute and set kid via thumbprint
 - **Pem(v any) ([]byte, error)** — PEM encode
+- Global options: `WithStrictKeyUsage(bool)`, `WithHTTPClient(HTTPClient)`, `WithMaxFetchBodySize(int64)`, `WithMinRSAModulusBits(int)`, `WithMinRSAPublicExponent(int)`
 - Key interfaces: `Key`, `Set`, `RSAPublicKey`, `RSAPrivateKey`, `ECDSAPublicKey`, `ECDSAPrivateKey`, `OKPPublicKey`, `OKPPrivateKey`, `SymmetricKey`
 - Extension: `RegisterCustomField()`, `RegisterKeyParser()`, `RegisterKeyImporter()`, `RegisterKeyExporter()`
 - Error sentinels: `ImportError()`, `ParseError()`, `WhitelistError()`, `ContinueError()`
@@ -112,7 +115,7 @@ Generic filtering utilities using Go generics.
 
 - **Apply[T Filterable[T]](object T, logic FilterLogic) (T, error)** — include matching fields
 - **Reject[T Filterable[T]](object T, logic FilterLogic) (T, error)** — exclude matching fields
-- **AsMap(m Mappable, dst map[string]any) error** — convert to map (EXPERIMENTAL)
+- **AsMap(m Mappable, dst map[string]any) error** — convert to map; values are whatever `Get()` returns, so mutable values may be live aliases of source object (EXPERIMENTAL)
 - Key types: `FilterLogic`, `FilterLogicFunc`, `Filterable[T]`, `NameBasedFilter[T]`, `Mappable`
 - Files: `filter.go`, `map.go`
 - Imports: (external only: blackmagic)
@@ -121,11 +124,13 @@ Generic filtering utilities using Go generics.
 
 X.509 certificate chain support for `x5c` JWK fields.
 
+- **Settings(options ...GlobalOption)** — configure global certificate validation limits
 - **Create(rand, template, parent, pub, priv) ([]byte, error)** — create base64-encoded certificate
 - **Parse(src []byte) (*x509.Certificate, error)** — decode base64+DER certificate
 - **EncodeBase64(der []byte) ([]byte, error)** — encode DER to base64
-- Key types: `Chain` (Get, Len, Add, MarshalJSON, UnmarshalJSON)
-- Files: `cert.go`, `chain.go`
+- Global options: `WithMaxChainLength(int)`, `WithMaxCertificateSize(int64)`
+- Key types: `Chain` (Get, Len, Add, MarshalJSON, UnmarshalJSON), `GlobalOption`
+- Files: `cert.go`, `chain.go`, `options.go`, `settings.go`
 - Imports: internal/{base64, tokens}
 
 ## internal/
@@ -140,6 +145,6 @@ Shared utilities. Not public API.
 | `keyconv` | Key type conversions between jwk.Key and Go crypto types |
 | `jose` | Test helper for jose CLI integration |
 | `jwxtest` | Test key generation helpers (RSA, ECDSA, Ed25519, symmetric) |
-| `jwxio` | Safe IO: `ReadAllFromFiniteSource()` |
+| `jwxio` | Safe IO: `ReadAllFromFiniteSource(rdr, maxBytes)` |
 | `tokens` | String constants for algorithm names and separators |
 | `pool` | Generic object pool (`Pool[T]`, `SlicePool[T]`) |

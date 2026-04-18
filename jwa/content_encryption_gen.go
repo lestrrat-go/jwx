@@ -28,6 +28,9 @@ func init() {
 	algorithms[5] = NewContentEncryptionAlgorithm(tokens.A256GCM)
 
 	RegisterContentEncryptionAlgorithm(algorithms...)
+	for _, alg := range algorithms {
+		builtinContentEncryptionAlgorithm[alg.String()] = struct{}{}
+	}
 }
 
 // A128CBC_HS256 returns an object representing A128CBC-HS256. Using this value specifies that the content should be encrypted using AES-CBC + HMAC-SHA256 (128).
@@ -114,36 +117,44 @@ func LookupContentEncryptionAlgorithm(name string) (ContentEncryptionAlgorithm, 
 
 // RegisterContentEncryptionAlgorithm registers a new ContentEncryptionAlgorithm. The signature value must be immutable
 // and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.
+//
+// Registration is process-global. Built-in identifiers such as RS256 are
+// reserved and cannot be replaced by callers after init has completed; use a
+// distinct name for third-party algorithms.
 func RegisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm) {
 	muAllContentEncryptionAlgorithm.Lock()
+	defer muAllContentEncryptionAlgorithm.Unlock()
 	for _, alg := range algorithms {
+		if _, ok := builtinContentEncryptionAlgorithm[alg.String()]; ok {
+			if existing, ok := allContentEncryptionAlgorithm[alg.String()]; ok && existing != alg {
+				continue
+			}
+			continue
+		}
 		allContentEncryptionAlgorithm[alg.String()] = alg
 	}
-	muAllContentEncryptionAlgorithm.Unlock()
-	rebuildContentEncryptionAlgorithm()
+	rebuildContentEncryptionAlgorithmLocked()
 }
 
 // UnregisterContentEncryptionAlgorithm unregisters a ContentEncryptionAlgorithm from its known database.
 // Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterContentEncryptionAlgorithm(algorithms ...ContentEncryptionAlgorithm) {
 	muAllContentEncryptionAlgorithm.Lock()
+	defer muAllContentEncryptionAlgorithm.Unlock()
 	for _, alg := range algorithms {
 		if _, ok := builtinContentEncryptionAlgorithm[alg.String()]; ok {
 			continue
 		}
 		delete(allContentEncryptionAlgorithm, alg.String())
 	}
-	muAllContentEncryptionAlgorithm.Unlock()
-	rebuildContentEncryptionAlgorithm()
+	rebuildContentEncryptionAlgorithmLocked()
 }
 
-func rebuildContentEncryptionAlgorithm() {
+func rebuildContentEncryptionAlgorithmLocked() {
 	list := make([]ContentEncryptionAlgorithm, 0, len(allContentEncryptionAlgorithm))
-	muAllContentEncryptionAlgorithm.RLock()
 	for _, v := range allContentEncryptionAlgorithm {
 		list = append(list, v)
 	}
-	muAllContentEncryptionAlgorithm.RUnlock()
 	sort.Slice(list, func(i, j int) bool {
 		return list[i].String() < list[j].String()
 	})

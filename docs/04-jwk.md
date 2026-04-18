@@ -528,6 +528,8 @@ func Example_jwk_import() {
 source: [examples/jwk_import_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_import_example_test.go)
 <!-- END INCLUDE -->
 
+> Warning: `jwk.Import([]byte(...))` only requires a non-empty octet string. When the key is used with a specific algorithm, size it yourself: use at least 32/48/64 bytes for `HS256`/`HS384`/`HS512`; 16/24/32 bytes for `A128KW`/`A192KW`/`A256KW`, `A128GCM`/`A192GCM`/`A256GCM`, and `A128GCMKW`/`A192GCMKW`/`A256GCMKW`; and 32/48/64 bytes for `A128CBC-HS256`/`A192CBC-HS384`/`A256CBC-HS512`.
+
 # Fetching JWK Sets
 
 ## Parse a key from a remote resource

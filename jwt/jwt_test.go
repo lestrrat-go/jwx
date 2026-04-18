@@ -762,6 +762,88 @@ func TestParseRequest(t *testing.T) {
 			},
 		},
 		{
+			Name: "Authorization header: Bearer scheme is case-insensitive (lowercase)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "bearer "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+			},
+		},
+		{
+			Name: "Authorization header: Bearer scheme is case-insensitive (uppercase)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "BEARER "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+			},
+		},
+		{
+			Name: "Authorization header: Bearer scheme is case-insensitive (mixed case)",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "BeArEr "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+			},
+		},
+		{
+			Name: "Authorization header: Bearer with tab separator",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "Bearer\t"+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+			},
+		},
+		{
+			Name: "Authorization header: Bearer with multiple spaces",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "Bearer  "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+			},
+		},
+		{
+			// Regression: RFC 6750 ABNF requires 1*SP between scheme and
+			// credentials. Old code stripped "Bearer" without a separator and
+			// silently accepted concatenated forms like "Bearer<token>".
+			Name: "Authorization header: Bearer without separator is rejected",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "Bearer"+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+			},
+			Error: true,
+		},
+		{
+			Name: "Authorization header: non-Bearer scheme is rejected",
+			Request: func() *http.Request {
+				req := httptest.NewRequest(http.MethodGet, u, nil)
+				req.Header.Add("Authorization", "Basic "+string(signed))
+				return req
+			},
+			Parse: func(req *http.Request) (jwt.Token, error) {
+				return jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+			},
+			Error: true,
+		},
+		{
 			Name: "Token in Authorization header (w/o extra options, using jwk.Set)",
 			Request: func() *http.Request {
 				req := httptest.NewRequest(http.MethodGet, u, nil)
@@ -1567,22 +1649,25 @@ func TestGH1007(t *testing.T) {
 	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256(), key))
 	require.NoError(t, err, `jwt.Sign should succeed`)
 
-	// This was the intended usage (no WithKey). This worked from the beginning
+	// The intended usage of ParseInsecure is without any verification
+	// material. This worked from the beginning.
 	_, err = jwt.ParseInsecure(signed)
 	require.NoError(t, err, `jwt.ParseInsecure should succeed`)
 
-	// This is the problematic behavior reporded in #1007.
-	// The fact that we're specifying a wrong key caused Parse() to check for
-	// verification and yet fail :/
+	// #1007 originally asked for ParseInsecure to silently accept a stray
+	// WithKey. That was reversed: ParseInsecure now rejects key-bearing
+	// options outright so that typos like jwt.ParseInsecure(..., jwt.WithKey(...))
+	// cannot silently skip verification. Callers who want the key to be
+	// honored must use jwt.Parse.
 	wrongPubKey, err := jwxtest.GenerateRsaPublicJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaPublicJwk should succeed`)
-	require.NoError(t, err, `jwk.PublicKeyOf should succeed`)
 
 	_, err = jwt.ParseInsecure(signed, jwt.WithKey(jwa.RS256(), wrongPubKey))
-	require.NoError(t, err, `jwt.ParseInsecure with jwt.WithKey() should succeed`)
+	require.Error(t, err, `jwt.ParseInsecure with jwt.WithKey() should error`)
+	require.ErrorContains(t, err, `jwt.ParseInsecure`)
 }
 
-func TestParseInsecureStripsKeyOptions(t *testing.T) {
+func TestParseInsecureRejectsKeyOptions(t *testing.T) {
 	key, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 
@@ -1595,36 +1680,28 @@ func TestParseInsecureStripsKeyOptions(t *testing.T) {
 	wrongKey, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 
-	// WithKeySet: a set that contains no matching key must not cause a
-	// verification error, because ParseInsecure strips the option.
 	wrongSet := jwk.NewSet()
 	require.NoError(t, wrongSet.AddKey(wrongKey), `set.AddKey should succeed`)
 
-	got, err := jwt.ParseInsecure(signed, jwt.WithKeySet(wrongSet))
-	require.NoError(t, err, `jwt.ParseInsecure with jwt.WithKeySet() should succeed`)
-	iss, ok := got.Issuer()
-	require.True(t, ok)
-	require.Equal(t, `me`, iss)
-
-	// WithKeyProvider: a provider that always errors must not be invoked.
-	failProvider := jws.KeyProviderFunc(func(_ context.Context, _ jws.KeySink, _ *jws.Signature, _ *jws.Message) error {
-		return fmt.Errorf(`should not be called`)
+	noopProvider := jws.KeyProviderFunc(func(_ context.Context, _ jws.KeySink, _ *jws.Signature, _ *jws.Message) error {
+		return nil
 	})
-	got, err = jwt.ParseInsecure(signed, jwt.WithKeyProvider(failProvider))
-	require.NoError(t, err, `jwt.ParseInsecure with jwt.WithKeyProvider() should succeed`)
-	iss, ok = got.Issuer()
-	require.True(t, ok)
-	require.Equal(t, `me`, iss)
 
-	// WithVerifyAuto: a fetcher that always fails must not be invoked.
-	failFetcher := jwk.FetchFunc(func(_ context.Context, _ string, _ ...jwk.FetchOption) (jwk.Set, error) {
-		return nil, fmt.Errorf(`should not be called`)
-	})
-	got, err = jwt.ParseInsecure(signed, jwt.WithVerifyAuto(failFetcher))
-	require.NoError(t, err, `jwt.ParseInsecure with jwt.WithVerifyAuto() should succeed`)
-	iss, ok = got.Issuer()
-	require.True(t, ok)
-	require.Equal(t, `me`, iss)
+	for _, tc := range []struct {
+		name string
+		opt  jwt.ParseOption
+	}{
+		{`WithKey`, jwt.WithKey(jwa.RS256(), wrongKey)},
+		{`WithKeySet`, jwt.WithKeySet(wrongSet)},
+		{`WithKeyProvider`, jwt.WithKeyProvider(noopProvider)},
+		{`WithVerifyAuto`, jwt.WithVerifyAuto(nil)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := jwt.ParseInsecure(signed, tc.opt)
+			require.Error(t, err, `jwt.ParseInsecure with jwt.%s() should error`, tc.name)
+			require.ErrorContains(t, err, `jwt.ParseInsecure`)
+		})
+	}
 }
 
 func TestParseJSON(t *testing.T) {

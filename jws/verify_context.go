@@ -203,7 +203,8 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 		for i, kp := range vc.keyProviders {
 			var sink algKeySink
 			if err := kp.FetchKeys(vc.ctx, &sink, sig, msg); err != nil {
-				return nil, makeVerifyError(`key provider %d failed: %w`, i, err)
+				errs = append(errs, makeVerifyError(`signature #%d: key provider %d failed: %w`, idx+1, i, err))
+				continue
 			}
 
 			for _, pair := range sink.list {

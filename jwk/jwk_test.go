@@ -725,26 +725,72 @@ func TestAccept(t *testing.T) {
 
 func TestAssignKeyID(t *testing.T) {
 	t.Parallel()
-	generators := []func() (jwk.Key, error){
-		jwxtest.GenerateRsaJwk,
-		jwxtest.GenerateRsaPublicJwk,
-		jwxtest.GenerateEcdsaJwk,
-		jwxtest.GenerateEcdsaPublicJwk,
-		jwxtest.GenerateSymmetricJwk,
-		jwxtest.GenerateEd25519Jwk,
-	}
 
-	for _, generator := range generators {
-		k, err := generator()
+	t.Run("assigns kid when missing", func(t *testing.T) {
+		t.Parallel()
+		generators := []func() (jwk.Key, error){
+			jwxtest.GenerateRsaJwk,
+			jwxtest.GenerateRsaPublicJwk,
+			jwxtest.GenerateEcdsaJwk,
+			jwxtest.GenerateEcdsaPublicJwk,
+			jwxtest.GenerateSymmetricJwk,
+			jwxtest.GenerateEd25519Jwk,
+		}
+
+		for _, generator := range generators {
+			k, err := generator()
+			require.NoError(t, err, `jwk generation should be successful`)
+			kid, ok := k.KeyID()
+			require.False(t, ok, `k.KeyID should be empty`)
+			require.Empty(t, kid, `k.KeyID should be non-empty`)
+			require.NoError(t, jwk.AssignKeyID(k), `AssignKeyID shuld be successful`)
+			kid, ok = k.KeyID()
+			require.True(t, ok, `k.KeyID should be non-empty`)
+			require.NotEmpty(t, kid, `k.KeyID should be non-empty`)
+		}
+	})
+
+	t.Run("preserves existing kid without force", func(t *testing.T) {
+		t.Parallel()
+		k, err := jwxtest.GenerateRsaJwk()
 		require.NoError(t, err, `jwk generation should be successful`)
+		require.NoError(t, k.Set(jwk.KeyIDKey, "preset"), `pre-setting kid should succeed`)
+		require.NoError(t, jwk.AssignKeyID(k, jwk.WithThumbprintHash(crypto.SHA512)), `AssignKeyID should succeed`)
 		kid, ok := k.KeyID()
-		require.False(t, ok, `k.KeyID should be empty`)
-		require.Empty(t, kid, `k.KeyID should be non-empty`)
-		require.NoError(t, jwk.AssignKeyID(k), `AssignKeyID shuld be successful`)
-		kid, ok = k.KeyID()
-		require.True(t, ok, `k.KeyID should be non-empty`)
-		require.NotEmpty(t, kid, `k.KeyID should be non-empty`)
-	}
+		require.True(t, ok, `kid should still be set`)
+		require.Equal(t, "preset", kid, `kid should be preserved when not forced`)
+	})
+
+	t.Run("overwrites existing kid with force", func(t *testing.T) {
+		t.Parallel()
+		k, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwk generation should be successful`)
+		require.NoError(t, k.Set(jwk.KeyIDKey, "preset"), `pre-setting kid should succeed`)
+		require.NoError(t, jwk.AssignKeyID(k, jwk.WithForceAssign(true)), `AssignKeyID with force should succeed`)
+		kid, ok := k.KeyID()
+		require.True(t, ok, `kid should be set`)
+		require.NotEqual(t, "preset", kid, `kid should be recomputed`)
+
+		tp, err := k.Thumbprint(crypto.SHA256)
+		require.NoError(t, err, `thumbprint should compute`)
+		require.Equal(t, base64.EncodeToString(tp), kid, `kid should equal base64(sha256 thumbprint)`)
+	})
+
+	t.Run("force honors WithThumbprintHash", func(t *testing.T) {
+		t.Parallel()
+		k, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err, `jwk generation should be successful`)
+		require.NoError(t, k.Set(jwk.KeyIDKey, "preset"), `pre-setting kid should succeed`)
+		require.NoError(t,
+			jwk.AssignKeyID(k, jwk.WithForceAssign(true), jwk.WithThumbprintHash(crypto.SHA512)),
+			`AssignKeyID with force+sha512 should succeed`)
+		kid, ok := k.KeyID()
+		require.True(t, ok, `kid should be set`)
+
+		tp, err := k.Thumbprint(crypto.SHA512)
+		require.NoError(t, err, `thumbprint should compute`)
+		require.Equal(t, base64.EncodeToString(tp), kid, `kid should equal base64(sha512 thumbprint)`)
+	})
 }
 
 func TestPublicKeyOf(t *testing.T) {
@@ -887,6 +933,18 @@ func TestPublicKeyOf(t *testing.T) {
 	})
 }
 
+type octetSeqBypassKey struct {
+	jwk.Key
+
+	kid string
+}
+
+func (k octetSeqBypassKey) KeyType() jwa.KeyType { return jwa.OctetSeq() }
+
+func (k octetSeqBypassKey) KeyID() (string, bool) { return k.kid, true }
+
+func (k octetSeqBypassKey) PublicKey() (jwk.Key, error) { return k, nil }
+
 func TestPublicSetOfSymmetricRejection(t *testing.T) {
 	t.Parallel()
 
@@ -943,6 +1001,30 @@ func TestPublicSetOfSymmetricRejection(t *testing.T) {
 		_, err := jwk.PublicSetOf(set)
 		require.Error(t, err, `PublicSetOf should reject a purely symmetric set`)
 		require.ErrorContains(t, err, `"hmac-only"`)
+	})
+
+	t.Run("custom oct key rejected by kty even without SymmetricKey interface", func(t *testing.T) {
+		t.Parallel()
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(octetSeqBypassKey{kid: "oct-bypass"}))
+
+		_, err := jwk.PublicSetOf(set)
+		require.Error(t, err, `PublicSetOf should reject oct keys by kty, not only by SymmetricKey interface`)
+		require.ErrorContains(t, err, `symmetric key`)
+		require.ErrorContains(t, err, `"oct-bypass"`)
+	})
+
+	t.Run("custom oct key still passes through with WithAllowSymmetric(true)", func(t *testing.T) {
+		t.Parallel()
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(octetSeqBypassKey{kid: "oct-bypass"}))
+
+		pub, err := jwk.PublicSetOf(set, jwk.WithAllowSymmetric(true))
+		require.NoError(t, err, `PublicSetOf with WithAllowSymmetric(true) should preserve legacy opt-in behavior for oct keys`)
+		require.Equal(t, 1, pub.Len(), `resulting set should still contain the custom oct key`)
+		got, ok := pub.Key(0)
+		require.True(t, ok, `first key should exist`)
+		require.Equal(t, jwa.OctetSeq(), got.KeyType())
 	})
 
 	t.Run("empty set succeeds", func(t *testing.T) {
@@ -2282,12 +2364,14 @@ func TestECDSAPEM(t *testing.T) {
 }
 
 func TestGH947(t *testing.T) {
-	// AS OP described it. Below case will panic if the problem exists,
+	// GH947: parsing an OKP key with empty "x"/"d" strings used to panic
+	// inside the downstream Export path. The regression being guarded is
+	// that this input does not panic. Since defaultParseKey now calls
+	// Validate() on the freshly-unmarshaled key, the zero-length coordinate
+	// is rejected cleanly at parse time — no bad key is ever handed back.
 	raw := []byte(`{"crv":"Ed25519","d":"","x":"","kty":"OKP"}`)
-	k, err := jwk.ParseKey(raw)
-	require.NoError(t, err, `jwk.ParseKey should succeed`)
-	var exported []byte
-	require.Error(t, jwk.Export(k, &exported), `(okpkey).Raw with 0-length OKP key should fail`)
+	_, err := jwk.ParseKey(raw)
+	require.Error(t, err, `jwk.ParseKey must reject an OKP key with empty coordinates`)
 }
 
 func TestValidation(t *testing.T) {

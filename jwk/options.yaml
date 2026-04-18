@@ -97,6 +97,16 @@ options:
   - ident: ThumbprintHash
     interface: AssignKeyIDOption
     argument_type: crypto.Hash
+  - ident: ForceAssign
+    interface: AssignKeyIDOption
+    argument_type: bool
+    comment: |
+      WithForceAssign forces `jwk.AssignKeyID` to recompute and overwrite
+      the `kid` header even when the key already has one. The default
+      behavior preserves any existing `kid`; use this option to upgrade
+      the thumbprint hash (e.g. with `jwk.WithThumbprintHash`) or to
+      refresh a `kid` after mutating a key field that invalidates the
+      cached thumbprint.
   - ident: LocalRegistry
     option_name: withLocalRegistry
     interface: ParseOption
@@ -199,6 +209,25 @@ options:
       value. If this options is set to true, then the "use" field must
       be one of the registered values, and otherwise an error will be
       reported during parsing / assignment to `jwk.KeyUsageType`
+  - ident: MinRSAModulusBits
+    interface: GlobalOption
+    argument_type: int
+    comment: |
+      WithMinRSAModulusBits specifies the minimum RSA modulus size, in bits,
+      accepted by JWK validation and raw/PEM/X.509 import.
+
+      The default is 2048. Lower this only for legacy interoperability with
+      older key material. A value of 0 disables the modulus-size floor.
+  - ident: MinRSAPublicExponent
+    interface: GlobalOption
+    argument_type: int
+    comment: |
+      WithMinRSAPublicExponent specifies the minimum RSA public exponent
+      accepted by JWK validation and raw/PEM/X.509 import.
+
+      The default is 3. The exponent must still be odd and fit in a Go `int`.
+      Lower this only for legacy interoperability. A value of 0 disables the
+      minimum-exponent floor.
   - ident: AllowSymmetric
     interface: PublicSetOption
     argument_type: bool

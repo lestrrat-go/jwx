@@ -45,13 +45,16 @@ func rebuildCurves() {
 	}
 }
 
-// Algorithms returns the list of registered jwa.EllipticCurveAlgorithms
-// that ca be used for ECDSA keys.
+// Algorithms returns a snapshot of the registered
+// jwa.EllipticCurveAlgorithms that can be used for ECDSA keys.
+//
+// The returned slice is caller-owned. Modifying it does not affect the
+// package registry, and ordering is unspecified.
 func Algorithms() []jwa.EllipticCurveAlgorithm {
 	muCurves.RLock()
 	defer muCurves.RUnlock()
 
-	return algList
+	return append([]jwa.EllipticCurveAlgorithm(nil), algList...)
 }
 
 func AlgorithmFromCurve(crv elliptic.Curve) (jwa.EllipticCurveAlgorithm, error) {

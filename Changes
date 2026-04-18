@@ -159,6 +159,12 @@ v3.1.0 UNRELEASED
   * [jwk] `jwk.Parse()` now limits PEM input to 1,000 blocks maximum to prevent
     resource exhaustion from inputs containing thousands of small PEM blocks. (#1626)
 
+  * [jwk] RSA JWK validation is now enforced consistently across JSON parse,
+    JWKS parse, PEM/X.509 parse, and `jwk.Import()`. Keys with moduli smaller
+    than 2048 bits or unsafe public exponents are now rejected by default.
+    Compatibility knobs were added to `jwk.Configure()` via
+    `jwk.WithMinRSAModulusBits(...)` and `jwk.WithMinRSAPublicExponent(...)`.
+
   * [jwt] `jwt.Validate()` now rejects negative durations passed to
     `jwt.WithAcceptableSkew()`. (#1627)
 

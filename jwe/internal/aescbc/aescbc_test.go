@@ -1,6 +1,7 @@
 package aescbc
 
 import (
+	"bytes"
 	"crypto/aes"
 	"testing"
 
@@ -45,6 +46,93 @@ func TestVectorsAESCBC128(t *testing.T) {
 	out, err = enc.Open(nil, nonce, out, aad)
 	require.NoError(t, err, "Open should succeed")
 	require.Equal(t, plaintext, out, "Open should get us original text")
+}
+
+// TestOpenOpaqueErrors locks in the guarantee that Hmac.Open returns a
+// single opaque error value for every failure mode: malformed nonce,
+// ciphertext shorter than the tag, ciphertext whose tag offset is not
+// block-aligned, and post-MAC tag mismatch. Distinguishable error
+// strings on these paths would create a structural-vs-cryptographic
+// oracle on any decrypt endpoint that forwards the error text.
+func TestOpenOpaqueErrors(t *testing.T) {
+	key := make([]byte, 32) // A128CBC-HS256 uses 32-byte key (16 mac + 16 enc)
+	enc, err := New(key, aes.NewCipher)
+	require.NoError(t, err, "aescbc.New")
+
+	aad := []byte("aad")
+	plaintext := []byte("hello world")
+	nonce := make([]byte, enc.blockCipher.BlockSize())
+	sealed := enc.Seal(nil, nonce, plaintext, aad)
+
+	t.Run("nonce wrong length", func(t *testing.T) {
+		_, err := enc.Open(nil, make([]byte, enc.blockCipher.BlockSize()-1), sealed, aad)
+		require.EqualError(t, err, "invalid ciphertext")
+	})
+
+	t.Run("ciphertext shorter than tag", func(t *testing.T) {
+		_, err := enc.Open(nil, nonce, make([]byte, enc.keysize-1), aad)
+		require.EqualError(t, err, "invalid ciphertext")
+	})
+
+	t.Run("ciphertext length not block-aligned", func(t *testing.T) {
+		bad := make([]byte, enc.keysize+7)
+		_, err := enc.Open(nil, nonce, bad, aad)
+		require.EqualError(t, err, "invalid ciphertext")
+	})
+
+	t.Run("mac mismatch", func(t *testing.T) {
+		tampered := make([]byte, len(sealed))
+		copy(tampered, sealed)
+		tampered[len(tampered)-1] ^= 0xFF
+		_, err := enc.Open(nil, nonce, tampered, aad)
+		require.EqualError(t, err, "invalid ciphertext")
+	})
+}
+
+func TestSealAndOpenAppendToDst(t *testing.T) {
+	key := make([]byte, 32)
+	enc, err := New(key, aes.NewCipher)
+	require.NoError(t, err, "aescbc.New")
+
+	aad := []byte("aad")
+	plaintext := []byte("hello world")
+	nonce := make([]byte, enc.blockCipher.BlockSize())
+	sealed := enc.Seal(nil, nonce, plaintext, aad)
+
+	t.Run("Seal appends after dst prefix", func(t *testing.T) {
+		prefix := []byte("dst")
+		got := enc.Seal(prefix, nonce, plaintext, aad)
+
+		expected := append(append([]byte(nil), prefix...), sealed...)
+		require.Equal(t, expected, got)
+	})
+
+	t.Run("Open appends after short dst prefix", func(t *testing.T) {
+		prefix := []byte("dst")
+		got, err := enc.Open(prefix, nonce, sealed, aad)
+		require.NoError(t, err, "Open should succeed")
+
+		expected := append(append([]byte(nil), prefix...), plaintext...)
+		require.Equal(t, expected, got)
+	})
+
+	t.Run("Open appends after long dst prefix", func(t *testing.T) {
+		prefix := bytes.Repeat([]byte{'x'}, len(plaintext)+3)
+		got, err := enc.Open(prefix, nonce, sealed, aad)
+		require.NoError(t, err, "Open should succeed")
+
+		expected := append(append([]byte(nil), prefix...), plaintext...)
+		require.Equal(t, expected, got)
+	})
+}
+
+func TestEnsureSizeRejectsOverflow(t *testing.T) {
+	dst := []byte("x")
+	maxInt := int(^uint(0) >> 1)
+
+	require.PanicsWithError(t, "failed to allocate buffer", func() {
+		_ = ensureSize(dst, maxInt)
+	})
 }
 
 func TestPad(t *testing.T) {

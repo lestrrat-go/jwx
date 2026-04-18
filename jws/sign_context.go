@@ -49,12 +49,12 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 		switch option.Ident() {
 		case identSerialization{}:
 			if err := option.Value(&sc.format); err != nil {
-				return makeSignError(`failed to retrieve serialization option value: %w`, err)
+				return makeSignError(prefixJwsSign, `failed to retrieve serialization option value: %w`, err)
 			}
 		case identInsecureNoSignature{}:
 			var data withInsecureNoSignature
 			if err := option.Value(&data); err != nil {
-				return makeSignError(`failed to retrieve insecure-no-signature option value: %w`, err)
+				return makeSignError(prefixJwsSign, `failed to retrieve insecure-no-signature option value: %w`, err)
 			}
 			sb := signatureBuilderPool.Get()
 			sb.alg = jwa.NoSignature()
@@ -65,21 +65,21 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 		case identKey{}:
 			var data *withKey
 			if err := option.Value(&data); err != nil {
-				return makeSignError(`jws.Sign: invalid value for WithKey option: %w`, err)
+				return makeSignError(prefixJwsSign, `invalid value for WithKey option: %w`, err)
 			}
 
 			alg, ok := data.alg.(jwa.SignatureAlgorithm)
 			if !ok {
-				return makeSignError(`expected algorithm to be of type jwa.SignatureAlgorithm but got (%[1]q, %[1]T)`, data.alg)
+				return makeSignError(prefixJwsSign, `expected algorithm to be of type jwa.SignatureAlgorithm but got (%[1]q, %[1]T)`, data.alg)
 			}
 
 			// No, we don't accept "none" here.
 			if alg == jwa.NoSignature() {
-				return makeSignError(`"none" (jwa.NoSignature) cannot be used with jws.WithKey`)
+				return makeSignError(prefixJwsSign, `"none" (jwa.NoSignature) cannot be used with jws.WithKey`)
 			}
 
 			if err := validateAlgorithmForKey(alg, data.key); err != nil {
-				return makeSignError(`%w`, err)
+				return makeSignError(prefixJwsSign, `%w`, err)
 			}
 
 			sb := signatureBuilderPool.Get()
@@ -103,22 +103,22 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			sc.sigbuilders = append(sc.sigbuilders, sb)
 		case identDetachedPayload{}:
 			if sc.payload != nil {
-				return makeSignError(`the first argument to jws.Sign() must be nil when jws.WithDetachedPayload() is used`)
+				return makeSignError(prefixJwsSign, `the first argument to jws.Sign() must be nil when jws.WithDetachedPayload() is used`)
 			}
 			if err := option.Value(&sc.payload); err != nil {
-				return makeSignError(`failed to retrieve detached payload option value: %w`, err)
+				return makeSignError(prefixJwsSign, `failed to retrieve detached payload option value: %w`, err)
 			}
 			sc.detached = true
 		case identValidateKey{}:
 			if err := option.Value(&sc.validateKey); err != nil {
-				return makeSignError(`failed to retrieve validate-key option value: %w`, err)
+				return makeSignError(prefixJwsSign, `failed to retrieve validate-key option value: %w`, err)
 			}
 		case identBase64Encoder{}:
 			if err := option.Value(&sc.encoder); err != nil {
-				return makeSignError(`failed to retrieve base64-encoder option value: %w`, err)
+				return makeSignError(prefixJwsSign, `failed to retrieve base64-encoder option value: %w`, err)
 			}
 		default:
-			return makeSignError(`invalid jws.SignOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
+			return makeSignError(prefixJwsSign, `invalid jws.SignOption %q passed`, `With`+strings.TrimPrefix(fmt.Sprintf(`%T`, option.Ident()), `jws.ident`))
 		}
 	}
 	return nil

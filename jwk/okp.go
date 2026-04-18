@@ -50,12 +50,19 @@ func (k *okpPublicKey) Import(rawKeyIf any) error {
 	var crv jwa.EllipticCurveAlgorithm
 	switch rawKey := rawKeyIf.(type) {
 	case ed25519.PublicKey:
-		k.x = rawKey
 		crv = jwa.Ed25519()
+		if err := validateOKPPublicKeySize(crv, rawKey); err != nil {
+			return err
+		}
+		k.x = rawKey
 		k.crv = &crv
 	case *ecdh.PublicKey:
-		k.x = rawKey.Bytes()
 		crv = jwa.X25519()
+		xbuf := rawKey.Bytes()
+		if err := validateOKPPublicKeySize(crv, xbuf); err != nil {
+			return err
+		}
+		k.x = xbuf
 		k.crv = &crv
 	default:
 		muOKPRawKeyImporters.RLock()
@@ -82,15 +89,25 @@ func (k *okpPrivateKey) Import(rawKeyIf any) error {
 	var crv jwa.EllipticCurveAlgorithm
 	switch rawKey := rawKeyIf.(type) {
 	case ed25519.PrivateKey:
+		crv = jwa.Ed25519()
+		if len(rawKey) != ed25519.PrivateKeySize {
+			return fmt.Errorf(`ed25519: wrong private key size`)
+		}
 		k.d = rawKey.Seed()
 		k.x = rawKey.Public().(ed25519.PublicKey) //nolint:forcetypeassert
-		crv = jwa.Ed25519()
 		k.crv = &crv
 	case *ecdh.PrivateKey:
-		// k.d = rawKey.Seed()
-		k.d = rawKey.Bytes()
-		k.x = rawKey.PublicKey().Bytes()
 		crv = jwa.X25519()
+		dbuf := rawKey.Bytes()
+		if err := validateOKPPrivateKeySize(crv, dbuf); err != nil {
+			return err
+		}
+		xbuf := rawKey.PublicKey().Bytes()
+		if err := validateOKPPublicKeySize(crv, xbuf); err != nil {
+			return err
+		}
+		k.d = dbuf
+		k.x = xbuf
 		k.crv = &crv
 	default:
 		muOKPRawKeyImporters.RLock()
@@ -125,7 +142,39 @@ func RegisterOKPRawKeyImporter(fn OKPRawKeyImporter) {
 	okpRawKeyImporters = append(okpRawKeyImporters, fn)
 }
 
+func validateOKPPublicKeySize(alg jwa.EllipticCurveAlgorithm, xbuf []byte) error {
+	switch alg {
+	case jwa.Ed25519():
+		if len(xbuf) != ed25519.PublicKeySize {
+			return fmt.Errorf(`ed25519: wrong public key size`)
+		}
+	case jwa.X25519():
+		if len(xbuf) != 32 {
+			return fmt.Errorf(`x25519: wrong public key size`)
+		}
+	}
+	return nil
+}
+
+func validateOKPPrivateKeySize(alg jwa.EllipticCurveAlgorithm, dbuf []byte) error {
+	switch alg {
+	case jwa.Ed25519():
+		if len(dbuf) != ed25519.SeedSize {
+			return fmt.Errorf(`ed25519: wrong private key size`)
+		}
+	case jwa.X25519():
+		if len(dbuf) != 32 {
+			return fmt.Errorf(`x25519: wrong private key size`)
+		}
+	}
+	return nil
+}
+
 func buildOKPPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte) (any, error) {
+	if err := validateOKPPublicKeySize(alg, xbuf); err != nil {
+		return nil, err
+	}
+
 	switch alg {
 	case jwa.Ed25519():
 		return ed25519.PublicKey(xbuf), nil
@@ -144,11 +193,15 @@ func buildOKPPrivateKey(alg jwa.EllipticCurveAlgorithm, xbuf []byte, dbuf []byte
 	if len(dbuf) == 0 {
 		return nil, fmt.Errorf(`cannot use empty seed`)
 	}
+	if err := validateOKPPublicKeySize(alg, xbuf); err != nil {
+		return nil, err
+	}
+	if err := validateOKPPrivateKeySize(alg, dbuf); err != nil {
+		return nil, err
+	}
+
 	switch alg {
 	case jwa.Ed25519():
-		if len(dbuf) != ed25519.SeedSize {
-			return nil, fmt.Errorf(`ed25519: wrong private key size`)
-		}
 		ret := ed25519.NewKeyFromSeed(dbuf)
 		//nolint:forcetypeassert
 		if !bytes.Equal(xbuf, ret.Public().(ed25519.PublicKey)) {
@@ -350,17 +403,26 @@ func validateOKPKey(key interface {
 	Crv() (jwa.EllipticCurveAlgorithm, bool)
 	X() ([]byte, bool)
 }) error {
-	if v, ok := key.Crv(); !ok || v == jwa.InvalidEllipticCurve() {
+	crv, ok := key.Crv()
+	if !ok || crv == jwa.InvalidEllipticCurve() {
 		return fmt.Errorf(`invalid curve algorithm`)
 	}
 
-	if v, ok := key.X(); !ok || len(v) == 0 {
+	x, ok := key.X()
+	if !ok || len(x) == 0 {
 		return fmt.Errorf(`missing "x" field`)
+	}
+	if err := validateOKPPublicKeySize(crv, x); err != nil {
+		return err
 	}
 
 	if priv, ok := key.(keyWithD); ok {
-		if d, ok := priv.D(); !ok || len(d) == 0 {
+		d, ok := priv.D()
+		if !ok || len(d) == 0 {
 			return fmt.Errorf(`missing "d" field`)
+		}
+		if err := validateOKPPrivateKeySize(crv, d); err != nil {
+			return err
 		}
 	}
 	return nil

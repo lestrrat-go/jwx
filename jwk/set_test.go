@@ -52,6 +52,30 @@ func TestSet(t *testing.T) {
 	require.Equal(t, set.Len(), 0, `set.Len should be 0`)
 }
 
+// fakeStructKey embeds jwk.Key to satisfy the interface without implementing
+// any methods. AddKey never calls methods on its argument, so a nil-embedded
+// stub is enough to exercise the reflect-guard code path for struct-valued
+// Key implementations.
+type fakeStructKey struct {
+	jwk.Key
+}
+
+func TestSetAddKeyNil(t *testing.T) {
+	t.Run("typed-nil interface", func(t *testing.T) {
+		var k jwk.Key
+		require.Error(t, jwk.NewSet().AddKey(k), `AddKey should return an error for nil Key, not panic`)
+	})
+	t.Run("nil concrete pointer", func(t *testing.T) {
+		var k *fakeStructKey
+		require.Error(t, jwk.NewSet().AddKey(k), `AddKey should return an error for nil pointer Key, not panic`)
+	})
+	t.Run("struct-value Key", func(t *testing.T) {
+		require.NotPanics(t, func() {
+			_ = jwk.NewSet().AddKey(fakeStructKey{})
+		}, `AddKey must not panic when Key's dynamic type is a struct`)
+	})
+}
+
 func TestSetKeys(t *testing.T) {
 	set := jwk.NewSet()
 	require.NoError(t, set.Set("a", "foo"), `Set should succeed`)

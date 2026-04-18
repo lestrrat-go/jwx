@@ -215,6 +215,14 @@ func Example_jws_sign() {
 source: [examples/jws_sign_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jws_sign_example_test.go)
 <!-- END INCLUDE -->
 
+> Warning: the symmetric literals in the examples are deliberately short for readability. Production `HS*` keys should be random secrets that meet the minimum sizes described in [the JWK docs](04-jwk.md).
+
+For normal JWS code, prefer passing a concrete `jwa.SignatureAlgorithm` constant such as
+`jwa.HS256()` or `jwa.RS256()` to `jws.WithKey()`. The option accepts `jwa.KeyAlgorithm`
+so it can forward `(jwk.Key).Algorithm()`, but that metadata is still operation-specific:
+passing a JWE key-encryption algorithm such as `jwa.A128KW()` to `jws.WithKey()` compiles
+and then fails at runtime because JWS only accepts signature algorithms.
+
 ## Generating a JWS message in JSON serialization format
 
 Generally the only time you need to use a JSON serialization format is when you have to generate multiple signatures for a given payload using multiple signing algorithms and keys.
@@ -368,6 +376,11 @@ To verify a JWS message using a single key, use `jws.Verify()` with the `jws.Wit
 It will automatically do the right thing whether it's serialized in compact form or JSON form.
 
 The `alg` must be explicitly specified. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
+
+As with signing, prefer a concrete `jwa.SignatureAlgorithm` constant when you already know
+you are verifying a JWS. Passing `(jwk.Key).Algorithm()` through `jws.WithKey()` only works
+when that JWK is already marked with a signature algorithm; JWE algorithms are rejected at
+runtime.
 
 <!-- INCLUDE(examples/jws_verify_with_key_example_test.go) -->
 ```go

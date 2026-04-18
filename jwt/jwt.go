@@ -1,7 +1,6 @@
 //go:generate ../tools/cmd/genjwt.sh
 //go:generate stringer -type=TokenOption -output=token_options_gen.go
 
-// Package jwt implements JSON Web Tokens as described in https://tools.ietf.org/html/rfc7519
 package jwt
 
 import (
@@ -130,27 +129,33 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // The token must be encoded in JWS compact format, or a raw JSON form of JWT
 // without any signatures.
 //
-// If you need JWE support on top of JWS, you will need to rollout your
-// own workaround.
+// Signed input is verified by default. Pass `jwt.WithKey()`,
+// `jwt.WithKeySet()`, `jwt.WithKeyProvider()`, or
+// `jwt.WithVerifyAuto(fetcher, fetchOptions...)` when verification is
+// required. A bare `jwt.Parse()` call returns an error; to intentionally
+// skip verification, pass `jwt.WithVerify(false)` or use
+// `jwt.ParseInsecure()`.
 //
-// If the token is signed, and you want to verify the payload matches the signature,
-// you must pass the jwt.WithKey(alg, key) or jwt.WithKeySet(jwk.Set) option.
-// If you do not specify these parameters, no verification will be performed.
+// `Parse()` also accepts `ValidateOption` values. Validation runs by default
+// after parsing, so `jwt.WithValidate(true)` is only needed to override a
+// prior `jwt.WithValidate(false)` in the same option set. Pass
+// `jwt.WithValidate(false)` if you need to defer validation and call
+// `Validate()` yourself later.
+//
+// To produce nested JWTs, use
+// `jwt.NewSerializer().Sign(...).Encrypt(...).Serialize(...)`. `Parse()` does
+// not decrypt JWE envelopes; decrypt the outer JWE before calling it.
 //
 // During verification, if the JWS headers specify a key ID (`kid`), the
 // key used for verification must match the specified ID. If you are somehow
 // using a key without a `kid` (which is highly unlikely if you are working
-// with a JWT from a well-know provider), you can work around this by modifying
-// the `jwk.Key` and setting the `kid` header.
-//
-// If you also want to assert the validity of the JWT itself (i.e. expiration
-// and such), use the `Validate()` function on the returned token, or pass the
-// `WithValidate(true)` option. Validate options can also be passed to
-// `Parse`
+// with a JWT from a well-known provider), you can work around this by
+// modifying the `jwk.Key` and setting its `kid` field.
 //
 // This function takes both ParseOption and ValidateOption types:
-// ParseOptions control the parsing behavior, and ValidateOptions are
-// passed to `Validate()` when `jwt.WithValidate` is specified.
+// ParseOptions control parsing and verification behavior, and
+// ValidateOptions are passed to `Validate()` when automatic validation is
+// enabled.
 func Parse(s []byte, options ...ParseOption) (Token, error) {
 	tok, err := parseBytes(s, options...)
 	if err != nil {
@@ -162,29 +167,24 @@ func Parse(s []byte, options ...ParseOption) (Token, error) {
 // ParseInsecure is exactly the same as Parse(), but it disables
 // signature verification and token validation.
 //
-// You cannot override `jwt.WithVerify()` or `jwt.WithValidate()`
-// using this function. Providing these options would result in
-// an error.
-//
-// Key-related options (`jwt.WithKey`, `jwt.WithKeySet`,
-// `jwt.WithKeyProvider`, `jwt.WithVerifyAuto`) are silently ignored,
-// so callers may reuse an option slice across `Parse` and
-// `ParseInsecure` call sites without worrying about leaking a stray
-// verification step.
+// `jwt.WithVerify()` and `jwt.WithValidate()` may not be specified
+// because they would conflict with the function's purpose. Likewise,
+// the key-bearing options `jwt.WithKey()`, `jwt.WithKeySet()`,
+// `jwt.WithKeyProvider()`, and `jwt.WithVerifyAuto()` are rejected so
+// that typos like `jwt.ParseInsecure(data, jwt.WithKey(...))` cannot
+// silently skip verification. Use `jwt.Parse` when a key is available.
 func ParseInsecure(s []byte, options ...ParseOption) (Token, error) {
-	filtered := make([]ParseOption, 0, len(options)+2)
 	for _, option := range options {
 		switch option.Ident() {
 		case identVerify{}, identValidate{}:
 			return nil, jwterrs.ParseErrorf(`jwt.ParseInsecure`, `jwt.WithVerify() and jwt.WithValidate() may not be specified`)
 		case identKey{}, identKeySet{}, identKeyProvider{}, identVerifyAuto{}:
-			continue
+			return nil, jwterrs.ParseErrorf(`jwt.ParseInsecure`, `key-bearing options (jwt.WithKey, jwt.WithKeySet, jwt.WithKeyProvider, jwt.WithVerifyAuto) may not be specified; use jwt.Parse to verify with a key`)
 		}
-		filtered = append(filtered, option)
 	}
 
-	filtered = append(filtered, WithVerify(false), WithValidate(false))
-	tok, err := Parse(s, filtered...)
+	options = append(options, WithVerify(false), WithValidate(false))
+	tok, err := Parse(s, options...)
 	if err != nil {
 		return nil, jwterrs.ParseErrorf(`jwt.ParseInsecure`, `failed to parse token: %w`, err)
 	}

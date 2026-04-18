@@ -181,10 +181,13 @@ func (*resourceOption) resourceOption() {}
 type identAllowSymmetric struct{}
 type identFS struct{}
 type identFetchWhitelist struct{}
+type identForceAssign struct{}
 type identHTTPClient struct{}
 type identIgnoreParseError struct{}
 type identLocalRegistry struct{}
 type identMaxFetchBodySize struct{}
+type identMinRSAModulusBits struct{}
+type identMinRSAPublicExponent struct{}
 type identPEM struct{}
 type identPEMDecoder struct{}
 type identStrictKeyUsage struct{}
@@ -204,6 +207,10 @@ func (identFetchWhitelist) String() string {
 	return "WithFetchWhitelist"
 }
 
+func (identForceAssign) String() string {
+	return "WithForceAssign"
+}
+
 func (identHTTPClient) String() string {
 	return "WithHTTPClient"
 }
@@ -218,6 +225,14 @@ func (identLocalRegistry) String() string {
 
 func (identMaxFetchBodySize) String() string {
 	return "WithMaxFetchBodySize"
+}
+
+func (identMinRSAModulusBits) String() string {
+	return "WithMinRSAModulusBits"
+}
+
+func (identMinRSAPublicExponent) String() string {
+	return "WithMinRSAPublicExponent"
 }
 
 func (identPEM) String() string {
@@ -288,6 +303,16 @@ func WithFetchWhitelist(v Whitelist) FetchOption {
 	return &fetchOption{option.New(identFetchWhitelist{}, v)}
 }
 
+// WithForceAssign forces `jwk.AssignKeyID` to recompute and overwrite
+// the `kid` header even when the key already has one. The default
+// behavior preserves any existing `kid`; use this option to upgrade
+// the thumbprint hash (e.g. with `jwk.WithThumbprintHash`) or to
+// refresh a `kid` after mutating a key field that invalidates the
+// cached thumbprint.
+func WithForceAssign(v bool) AssignKeyIDOption {
+	return &assignKeyIDOption{option.New(identForceAssign{}, v)}
+}
+
 // WithHTTPClient allows users to specify the "net/http".Client object that
 // is used when fetching jwk.Set objects.
 //
@@ -350,6 +375,25 @@ func withLocalRegistry(v *json.Registry) ParseOption {
 // override.
 func WithMaxFetchBodySize(v int64) GlobalFetchOption {
 	return &globalFetchOption{option.New(identMaxFetchBodySize{}, v)}
+}
+
+// WithMinRSAModulusBits specifies the minimum RSA modulus size, in bits,
+// accepted by JWK validation and raw/PEM/X.509 import.
+//
+// The default is 2048. Lower this only for legacy interoperability with
+// older key material. A value of 0 disables the modulus-size floor.
+func WithMinRSAModulusBits(v int) GlobalOption {
+	return &globalOption{option.New(identMinRSAModulusBits{}, v)}
+}
+
+// WithMinRSAPublicExponent specifies the minimum RSA public exponent
+// accepted by JWK validation and raw/PEM/X.509 import.
+//
+// The default is 3. The exponent must still be odd and fit in a Go `int`.
+// Lower this only for legacy interoperability. A value of 0 disables the
+// minimum-exponent floor.
+func WithMinRSAPublicExponent(v int) GlobalOption {
+	return &globalOption{option.New(identMinRSAPublicExponent{}, v)}
 }
 
 // WithPEM specifies that the input to `Parse()` is a PEM encoded key.
