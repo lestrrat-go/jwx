@@ -91,18 +91,6 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 * `jwk.AKPPublicKey` and `jwk.AKPPrivateKey` key types have been added.
   Also see the JWA section.
 
-* `jwk.PublicSetOf` now returns an error if the input set contains a
-  symmetric (`oct`) key, because the "public" form of a symmetric key
-  would be the secret itself — publishing the result (e.g. as
-  `/.well-known/jwks.json`) would leak the HMAC secret. Callers who
-  genuinely want the legacy pass-through can opt in with
-  `jwk.PublicSetOf(set, jwk.WithAllowSymmetric(true))`. The signature
-  is now variadic (`PublicSetOf(v Set, options ...PublicSetOption)`),
-  so existing call sites compile unchanged.
-
-  `jwk.PublicKeyOf` on a single symmetric key is unchanged — it still
-  returns the key as-is, matching its documented behavior.
-
 * `jwk.Import()` is now generic: `jwk.Import[T Key](raw any) (T, error)`.
   This replaces the previous `jwk.Import()` which returned an untyped `jwk.Key`.
 
@@ -187,25 +175,11 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   jwk.RegisterProbeField[string]("MyHint", "my_hint")
   ```
 
-* RSA JWK validation is now enforced consistently across JSON parse, JWKS parse,
-  PEM/X.509 parse, and `jwk.Import()`. Keys with moduli smaller than 2048 bits
-  or unsafe public exponents are now rejected by default. Compatibility knobs are available via
-  `jwk.Settings(jwk.WithMinRSAModulusBits(...), jwk.WithMinRSAPublicExponent(...))`.
-
 * `jwk.Settings()` now returns `error` for symmetry with `jwt.Settings`,
   `jws.Settings`, `jwe.Settings`, `cert.Settings`, and `jwx.Settings`. The
   current implementation always returns `nil` — the return is reserved for
   future validation. Callers should check the error to stay
   forward-compatible.
-
-* `jwk.WithMaxKeys()` has been added to cap the number of keys accepted from
-  both the JSON `"keys"` array and the PEM block stream. This is a
-  structural/amplification cap, not a raw-byte cap. See `docs/13-input-size.md`.
-
-* `jwk.WithRejectDuplicateKID()` has been added as a parse option. When
-  enabled, `jwk.Parse()` and friends reject a JWKS that contains more than
-  one key sharing the same non-empty `kid`. The default behavior of accepting
-  the first match is unchanged.
 
 * `jwk.RegisterKeyImporter()` now returns an error on a second registration
   for the same Go type, instead of silently overwriting the previous importer.
@@ -285,26 +259,6 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 * `jws.VerifyCompactFast()` now uses strict base64url decoding instead of
   auto-detecting the encoding variant.
-
-* `jws.Sign()` with `jws.WithDetachedPayload()` and `jws.WithJSON()` used to
-  emit the encoded payload anyway, which produced output that was
-  indistinguishable from a non-detached JWS. The `"payload"` member is now
-  omitted from the output, and detached-ness is preserved through
-  `Message.UnmarshalJSON` / `MarshalJSON` so parse/remarshal round-trips no
-  longer reintroduce it.
-
-* `jws.WithDetachedPayloadReader()` has been added as a streaming variant of
-  `jws.WithDetachedPayload()` that accepts an `io.Reader` so the payload is
-  never materialized in memory. Only HMAC, RSA, and ECDSA algorithms are
-  supported; other algorithms are rejected with an error directing you to
-  `jws.WithDetachedPayload()`. On verify, only single-signature JWS input is
-  accepted, and `jws.WithKeySet`, `jws.WithKeyProvider`, and
-  `jws.WithVerifyAuto` are not supported.
-
-* `jws.Base64StreamEncoder` has been added as the stream-capable extension
-  of `jws.Base64Encoder`. The default encoder is auto-wrapped, so typical
-  callers see no change. If you want a custom encoder to be usable with
-  `jws.WithDetachedPayloadReader()`, implement this additional interface.
 
 * `jws.Sign()` now returns an error when `jws.WithKey` and
   `jws.WithProtectedHeaders` carry different non-empty `kid` values.
