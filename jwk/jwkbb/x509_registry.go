@@ -8,24 +8,28 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"iter"
 	"reflect"
 	"sync"
 )
 
-// X509Decoder decodes a single PEM block into a raw key. Register a
-// custom implementation via [RegisterX509Decoder] to extend
-// `jwk.ParseKey` with `jwk.WithX509(true)` to additional PEM block
-// types such as PQC key formats.
-type X509Decoder interface {
-	DecodeX509(block *pem.Block) (any, error)
+// X509Decoder parses a PEM block's DER payload into a value of type T.
+// Register a custom implementation via [RegisterX509Decoder] to teach
+// [DecodeX509] (and by extension `jwk.ParseKey` with `jwk.WithX509(true)`)
+// about additional PEM block types such as PQC key formats.
+//
+// The type parameter T is the decoder's concrete return type. It gives
+// registration sites a compile-time guarantee that the function body
+// returns what it claims to return; [DecodeX509] internally erases T to
+// `any` for heterogeneous dispatch.
+type X509Decoder[T any] interface {
+	DecodeX509(block *pem.Block) (T, error)
 }
 
 // X509DecodeFunc is a function adapter that implements [X509Decoder].
-type X509DecodeFunc func(block *pem.Block) (any, error)
+type X509DecodeFunc[T any] func(block *pem.Block) (T, error)
 
 // DecodeX509 calls the underlying function.
-func (f X509DecodeFunc) DecodeX509(block *pem.Block) (any, error) {
+func (f X509DecodeFunc[T]) DecodeX509(block *pem.Block) (T, error) {
 	return f(block)
 }
 
@@ -49,9 +53,23 @@ func (f X509EncodeFunc[T]) EncodeX509(v T) (string, []byte, error) {
 	return f(v)
 }
 
-// x509Encoder is the registry-internal erased shape. Each registration
-// stores a [x509EncoderAdapter] that unboxes the `any` back to the
-// parameterized T and forwards to the user-supplied encoder.
+// Registry-internal erased shapes. Each Register call boxes the typed
+// decoder/encoder into one of these adapters, so the heterogeneous
+// map can hold entries for arbitrary T without chain-iteration
+// ceremony.
+
+type x509Decoder interface {
+	decode(block *pem.Block) (any, error)
+}
+
+type x509DecoderAdapter[T any] struct {
+	dec X509Decoder[T]
+}
+
+func (a *x509DecoderAdapter[T]) decode(block *pem.Block) (any, error) {
+	return a.dec.DecodeX509(block)
+}
+
 type x509Encoder interface {
 	encode(v any) (blockType string, der []byte, err error)
 }
@@ -68,36 +86,30 @@ func (a *x509EncoderAdapter[T]) encode(v any) (string, []byte, error) {
 	return a.enc.EncodeX509(typed)
 }
 
-// muX509 protects both registries. Decoder readers take an RLock,
-// capture the current slice header, and release before iterating —
-// writers replace the variable with a freshly allocated slice so
-// in-flight readers keep walking their immutable copy. Encoder reads
-// are direct map lookups under RLock with no user code called while
-// the lock is held.
+// muX509 protects both registries. Readers take an RLock, look up
+// their entry, and release before calling user code, so a misbehaving
+// decoder/encoder cannot block writers.
 var muX509 sync.RWMutex
 
 var (
-	x509Decoders      = map[any]X509Decoder{}
-	x509DecoderIdents = []any{}
-	x509DecoderList   = []X509Decoder{}
+	x509Decoders = map[string]x509Decoder{}
+	x509Encoders = map[reflect.Type]x509Encoder{}
 )
 
-var x509Encoders = map[reflect.Type]x509Encoder{}
-
-type identDefaultX509Decoder struct{}
-
 func init() {
-	if err := RegisterX509Decoder(identDefaultX509Decoder{}, X509DecodeFunc(func(block *pem.Block) (any, error) {
-		return DecodeX509(block)
-	})); err != nil {
-		panic(fmt.Sprintf("jwkbb: failed to register default X509 decoder: %s", err))
-	}
+	// Default decoders — one per stdlib PEM block type. Splitting the
+	// historical block-type switch into discrete registrations is what
+	// lets extension modules add new PEM formats (ML-DSA, ML-KEM, …)
+	// just by calling RegisterX509Decoder[T] with their block type.
+	panicIfRegisterDefaultDecoderFailed(RegisterX509Decoder[*rsa.PrivateKey](RSAPrivateKeyBlockType, X509DecodeFunc[*rsa.PrivateKey](decodeRSAPrivateKey)))
+	panicIfRegisterDefaultDecoderFailed(RegisterX509Decoder[*rsa.PublicKey](RSAPublicKeyBlockType, X509DecodeFunc[*rsa.PublicKey](decodeRSAPublicKey)))
+	panicIfRegisterDefaultDecoderFailed(RegisterX509Decoder[*ecdsa.PrivateKey](ECPrivateKeyBlockType, X509DecodeFunc[*ecdsa.PrivateKey](decodeECPrivateKey)))
+	panicIfRegisterDefaultDecoderFailed(RegisterX509Decoder[any](PrivateKeyBlockType, X509DecodeFunc[any](decodePKCS8PrivateKey)))
+	panicIfRegisterDefaultDecoderFailed(RegisterX509Decoder[any](PublicKeyBlockType, X509DecodeFunc[any](decodePKIXPublicKey)))
+	panicIfRegisterDefaultDecoderFailed(RegisterX509Decoder[any](CertificateBlockType, X509DecodeFunc[any](decodeCertificate)))
 
-	// Default encoders, one per stdlib crypto type. Splitting the
-	// old type-switch across discrete registrations is what lets
-	// extension modules slot in a new key family (ML-DSA, ML-KEM, …)
-	// just by calling RegisterX509Encoder[T] — no central dispatch to
-	// edit.
+	// Default encoders — same story on the encode side, keyed by
+	// runtime Go type instead of block type.
 	panicIfRegisterDefaultEncoderFailed(RegisterX509Encoder[*rsa.PrivateKey](X509EncodeFunc[*rsa.PrivateKey](rsaPrivateKeyEncoder)))
 	panicIfRegisterDefaultEncoderFailed(RegisterX509Encoder[*ecdsa.PrivateKey](X509EncodeFunc[*ecdsa.PrivateKey](ecdsaPrivateKeyEncoder)))
 	panicIfRegisterDefaultEncoderFailed(RegisterX509Encoder[ed25519.PrivateKey](X509EncodeFunc[ed25519.PrivateKey](ed25519PrivateKeyEncoder)))
@@ -106,11 +118,57 @@ func init() {
 	panicIfRegisterDefaultEncoderFailed(RegisterX509Encoder[ed25519.PublicKey](X509EncodeFunc[ed25519.PublicKey](ed25519PublicKeyEncoder)))
 }
 
+func panicIfRegisterDefaultDecoderFailed(err error) {
+	if err != nil {
+		panic(fmt.Sprintf("jwkbb: failed to register default X509 decoder: %s", err))
+	}
+}
+
 func panicIfRegisterDefaultEncoderFailed(err error) {
 	if err != nil {
 		panic(fmt.Sprintf("jwkbb: failed to register default X509 encoder: %s", err))
 	}
 }
+
+// Default decoder implementations. Each handles exactly one PEM block
+// type and returns the concrete Go value stdlib produces for that
+// format.
+
+func decodeRSAPrivateKey(block *pem.Block) (*rsa.PrivateKey, error) {
+	return x509.ParsePKCS1PrivateKey(block.Bytes)
+}
+
+func decodeRSAPublicKey(block *pem.Block) (*rsa.PublicKey, error) {
+	return x509.ParsePKCS1PublicKey(block.Bytes)
+}
+
+func decodeECPrivateKey(block *pem.Block) (*ecdsa.PrivateKey, error) {
+	return x509.ParseECPrivateKey(block.Bytes)
+}
+
+// PKCS#8 wraps any of RSA/ECDSA/Ed25519 private keys; stdlib sniffs
+// the OID internally, so the return type here is legitimately `any`.
+func decodePKCS8PrivateKey(block *pem.Block) (any, error) {
+	return x509.ParsePKCS8PrivateKey(block.Bytes)
+}
+
+// PKIX/SPKI similarly wraps any public key type; return shape is `any`.
+func decodePKIXPublicKey(block *pem.Block) (any, error) {
+	return x509.ParsePKIXPublicKey(block.Bytes)
+}
+
+// decodeCertificate extracts the embedded public key. Chain validation,
+// expiration, CN/SAN, EKU, etc. are intentionally not performed here —
+// they are an application-level concern.
+func decodeCertificate(block *pem.Block) (any, error) {
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return nil, fmt.Errorf(`failed to parse certificate: %w`, err)
+	}
+	return cert.PublicKey, nil
+}
+
+// Default encoder implementations — one per stdlib crypto type.
 
 func rsaPrivateKeyEncoder(v *rsa.PrivateKey) (string, []byte, error) {
 	der, err := x509.MarshalPKCS8PrivateKey(v)
@@ -160,79 +218,48 @@ func ed25519PublicKeyEncoder(v ed25519.PublicKey) (string, []byte, error) {
 	return PublicKeyBlockType, der, nil
 }
 
-// RegisterX509Decoder adds decoder to the registry keyed by ident.
-// ident must be comparable and non-nil; decoder must be non-nil. A
-// duplicate ident is a no-op (returns nil) to preserve idempotent
-// extension-module init() behavior.
+// RegisterX509Decoder installs decoder as the handler for PEM blocks
+// of the given blockType. [DecodeX509] dispatches by block.Type, so
+// exactly one decoder owns a given string. A later Register for the
+// same blockType overwrites the previous registration — the library
+// uses this to install its stdlib defaults at init(); callers that
+// want to scope an override should call [UnregisterX509Decoder] at
+// teardown to restore the default (or re-register it).
 //
-// Decoders are tried in registration order. The built-in stdlib
-// decoder is registered first during package init, so custom decoders
-// effectively extend the set of recognized PEM block types rather
-// than override stdlib handling — a custom decoder for a standard
-// block type (e.g. `RSA PRIVATE KEY`) will never be reached because
-// the default decoder claims it first. This is deliberate: it keeps
-// stdlib parsing stable regardless of which extension modules are
-// loaded.
-func RegisterX509Decoder(ident any, decoder X509Decoder) error {
-	if ident == nil {
-		return errors.New(`jwkbb.RegisterX509Decoder: ident must not be nil`)
+// blockType must be non-empty; decoder must be non-nil.
+func RegisterX509Decoder[T any](blockType string, decoder X509Decoder[T]) error {
+	if blockType == "" {
+		return errors.New(`jwkbb.RegisterX509Decoder: blockType must not be empty`)
 	}
 	if decoder == nil {
 		return errors.New(`jwkbb.RegisterX509Decoder: decoder must not be nil`)
 	}
-
 	muX509.Lock()
 	defer muX509.Unlock()
-	if _, ok := x509Decoders[ident]; ok {
-		return nil
-	}
-	x509Decoders[ident] = decoder
-	x509DecoderIdents = append(x509DecoderIdents, ident)
-	next := make([]X509Decoder, len(x509DecoderList)+1)
-	copy(next, x509DecoderList)
-	next[len(x509DecoderList)] = decoder
-	x509DecoderList = next
+	x509Decoders[blockType] = &x509DecoderAdapter[T]{dec: decoder}
 	return nil
 }
 
-// UnregisterX509Decoder removes the decoder registered under ident. A
-// no-op if no decoder is registered for ident.
-func UnregisterX509Decoder(ident any) {
+// UnregisterX509Decoder removes the decoder registered for blockType.
+// A no-op if no decoder is registered for blockType.
+func UnregisterX509Decoder(blockType string) {
 	muX509.Lock()
 	defer muX509.Unlock()
-	if _, ok := x509Decoders[ident]; !ok {
-		return
-	}
-	delete(x509Decoders, ident)
-
-	nextIdents := make([]any, 0, len(x509DecoderIdents)-1)
-	nextList := make([]X509Decoder, 0, len(x509DecoderList)-1)
-	for _, id := range x509DecoderIdents {
-		if id == ident {
-			continue
-		}
-		nextIdents = append(nextIdents, id)
-		nextList = append(nextList, x509Decoders[id])
-	}
-	x509DecoderIdents = nextIdents
-	x509DecoderList = nextList
+	delete(x509Decoders, blockType)
 }
 
-// X509Decoders returns an iterator over every registered [X509Decoder]
-// in registration order. The iterator is backed by a snapshot taken at
-// call time, so concurrent Register/Unregister activity during
-// iteration does not mutate the sequence the caller is walking.
-func X509Decoders() iter.Seq[X509Decoder] {
+// DecodeX509 dispatches block to the decoder registered for
+// block.Type and returns its raw key (the type produced by the
+// decoder, erased to `any`). Returns an error if no decoder is
+// registered for block.Type.
+func DecodeX509(block *pem.Block) (any, error) {
 	muX509.RLock()
-	snapshot := x509DecoderList
+	dec, ok := x509Decoders[block.Type]
 	muX509.RUnlock()
-	return func(yield func(X509Decoder) bool) {
-		for _, d := range snapshot {
-			if !yield(d) {
-				return
-			}
-		}
+	if !ok {
+		return nil, fmt.Errorf(`jwkbb.DecodeX509: no decoder registered for block type %q`, block.Type)
 	}
+	return dec.decode(block)
 }
 
 // RegisterX509Encoder installs encoder as the handler for values of

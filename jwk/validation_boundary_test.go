@@ -84,16 +84,13 @@ func TestRejectsInvalidKeyFromCustomImporter(t *testing.T) {
 	})
 
 	t.Run("ParseKey via X509 decoder", func(t *testing.T) {
-		ident := "test-invalid-x509-import-boundary"
-		err := jwkbb.RegisterX509Decoder(ident, jwkbb.X509DecodeFunc(func(block *pem.Block) (any, error) {
-			if block.Type != "INVALID ECDSA" {
-				return nil, fmt.Errorf("unsupported type")
-			}
+		const blockType = "INVALID ECDSA"
+		err := jwkbb.RegisterX509Decoder[invalidImportRaw](blockType, jwkbb.X509DecodeFunc[invalidImportRaw](func(*pem.Block) (invalidImportRaw, error) {
 			return invalidImportRaw{}, nil
 		}))
 		require.NoError(t, err)
 		t.Cleanup(func() {
-			jwkbb.UnregisterX509Decoder(ident)
+			jwkbb.UnregisterX509Decoder(blockType)
 		})
 
 		src := []byte(`-----BEGIN INVALID ECDSA-----

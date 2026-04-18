@@ -99,11 +99,16 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   shape used by `jwk.Import[T]`. `jwk.ParseKey()` itself is unchanged from
   v3 and still returns `jwk.Key`.
 
-* The custom X509 PEM decoder extension points moved from `jwk` to `jwk/jwkbb`:
-  `jwk.RegisterX509Decoder` / `jwk.UnregisterX509Decoder` / `jwk.X509Decoder` /
-  `jwk.X509DecodeFunc` are now `jwkbb.RegisterX509Decoder` /
-  `jwkbb.UnregisterX509Decoder` / `jwkbb.X509Decoder` / `jwkbb.X509DecodeFunc`.
-  `RegisterX509Decoder` returns an error on nil input rather than panicking.
+* The custom X509 PEM decoder extension points moved from `jwk` to
+  `jwk/jwkbb` and were reshaped into a block-type-keyed registry:
+  `jwkbb.RegisterX509Decoder[T](blockType string, d X509Decoder[T]) error`
+  / `jwkbb.UnregisterX509Decoder(blockType string)`. The interface and
+  its func adapter are now generic: `X509Decoder[T]` /
+  `X509DecodeFunc[T]`, with `T` being the decoder's concrete return
+  type. `jwkbb.DecodeX509(block *pem.Block) (any, error)` is the
+  single public dispatch entry point — it looks up the decoder for
+  `block.Type` and calls it. There is no iterator API: registration
+  is direct O(1) dispatch rather than an ordered chain.
 
 * `jwk/jwkbb` also gains an X509 **encoder** registry keyed by Go
   type: `jwkbb.RegisterX509Encoder[T](X509Encoder[T]) error` /
@@ -111,10 +116,7 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   `X509Encoder[T]` and func adapter `X509EncodeFunc[T]`. The variadic
   `jwkbb.EncodePEM(keys ...any) ([]byte, error)` dispatches each key
   to the encoder registered for its runtime type and concatenates the
-  resulting PEM blocks in order. `jwkbb.X509Decoders()` returns an
-  `iter.Seq` snapshot of the decoder chain for callers that need to
-  drive their own dispatch loop; there is no matching iterator on the
-  encoder side because dispatch is direct rather than chained.
+  resulting PEM blocks in order.
 
 * `jwk.PEMDecoder`, `jwk.PEMDecodeFunc`, `jwk.PEMEncoder`,
   `jwk.PEMEncodeFunc`, `jwk.NewPEMDecoder`, and the

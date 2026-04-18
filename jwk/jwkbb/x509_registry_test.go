@@ -61,27 +61,71 @@ func TestEncodePEM_FailsFastOnUnsupportedMidway(t *testing.T) {
 	require.Contains(t, err.Error(), "key #1")
 }
 
-func TestRegisterX509Decoder_NilError(t *testing.T) {
+func TestRegisterX509Decoder_NilDecoder(t *testing.T) {
 	require.NotPanics(t, func() {
-		err := jwkbb.RegisterX509Decoder("test-nil-decoder", nil)
+		err := jwkbb.RegisterX509Decoder[any]("TEST NIL DECODER", nil)
 		require.Error(t, err)
 	})
 }
 
-func TestRegisterX509Decoder_NilIdent(t *testing.T) {
+func TestRegisterX509Decoder_EmptyBlockType(t *testing.T) {
 	require.NotPanics(t, func() {
-		err := jwkbb.RegisterX509Decoder(nil, jwkbb.X509DecodeFunc(func(*pem.Block) (any, error) {
+		err := jwkbb.RegisterX509Decoder[any]("", jwkbb.X509DecodeFunc[any](func(*pem.Block) (any, error) {
 			return nil, errors.New("unused")
 		}))
 		require.Error(t, err)
 	})
 }
 
-// Unregister of an unknown decoder ident is silent; no panic.
-func TestUnregisterX509Decoder_UnknownIdent(t *testing.T) {
+// Unregistering an unknown block type is silent; no panic.
+func TestUnregisterX509Decoder_UnknownBlockType(t *testing.T) {
 	require.NotPanics(t, func() {
-		jwkbb.UnregisterX509Decoder("never-registered")
+		jwkbb.UnregisterX509Decoder("NEVER REGISTERED")
 	})
+}
+
+// A registered custom decoder owns its block type and is reachable
+// via DecodeX509, which dispatches by block.Type.
+func TestRegisterX509Decoder_CustomReachable(t *testing.T) {
+	const blockType = "CUSTOM TEST BLOCK"
+	type customPayload struct{ tag string }
+
+	require.NoError(t, jwkbb.RegisterX509Decoder[*customPayload](blockType, jwkbb.X509DecodeFunc[*customPayload](func(b *pem.Block) (*customPayload, error) {
+		return &customPayload{tag: string(b.Bytes)}, nil
+	})))
+	t.Cleanup(func() { jwkbb.UnregisterX509Decoder(blockType) })
+
+	got, err := jwkbb.DecodeX509(&pem.Block{Type: blockType, Bytes: []byte("abc")})
+	require.NoError(t, err)
+	require.IsType(t, &customPayload{}, got, "decoder should produce its declared return type")
+	require.Equal(t, "abc", got.(*customPayload).tag)
+}
+
+// Re-registering the same block type overwrites the previous
+// decoder. Direct string→decoder dispatch, "last registration wins."
+func TestRegisterX509Decoder_OverwritesSameBlockType(t *testing.T) {
+	const blockType = "CUSTOM OVERWRITE BLOCK"
+
+	require.NoError(t, jwkbb.RegisterX509Decoder[string](blockType, jwkbb.X509DecodeFunc[string](func(*pem.Block) (string, error) {
+		return "first", nil
+	})))
+	t.Cleanup(func() { jwkbb.UnregisterX509Decoder(blockType) })
+
+	require.NoError(t, jwkbb.RegisterX509Decoder[string](blockType, jwkbb.X509DecodeFunc[string](func(*pem.Block) (string, error) {
+		return "second", nil
+	})))
+
+	got, err := jwkbb.DecodeX509(&pem.Block{Type: blockType})
+	require.NoError(t, err)
+	require.Equal(t, "second", got, "the later registration should own the block type")
+}
+
+// DecodeX509 with no matching registration surfaces a clear error
+// rather than silently returning zero values.
+func TestDecodeX509_UnknownBlockType(t *testing.T) {
+	_, err := jwkbb.DecodeX509(&pem.Block{Type: "NEVER REGISTERED BLOCK"})
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "NEVER REGISTERED BLOCK")
 }
 
 // fakeKey is declared at package scope so its type identity is stable

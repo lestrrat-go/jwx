@@ -2,7 +2,6 @@ package jwk
 
 import (
 	"encoding/pem"
-	"errors"
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
@@ -13,23 +12,16 @@ import (
 // error. Callers iterate by calling this repeatedly with the returned
 // rest until empty.
 //
-// decodeX509 iterates every [jwkbb.X509Decoder] registered via
-// [jwkbb.RegisterX509Decoder] in registration order; the first
-// decoder that succeeds wins.
+// Dispatch is delegated to [jwkbb.DecodeX509], which routes by
+// block.Type to a decoder registered via [jwkbb.RegisterX509Decoder].
 func decodeX509(src []byte) (any, []byte, error) {
 	block, rest := pem.Decode(src)
 	if block == nil {
 		return nil, rest, fmt.Errorf(`failed to decode PEM data`)
 	}
-
-	var errs []error
-	for d := range jwkbb.X509Decoders() {
-		ret, err := d.DecodeX509(block)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		return ret, rest, nil
+	ret, err := jwkbb.DecodeX509(block)
+	if err != nil {
+		return nil, rest, err
 	}
-	return nil, rest, fmt.Errorf(`failed to decode X509 data using any of the decoders: %w`, errors.Join(errs...))
+	return ret, rest, nil
 }
