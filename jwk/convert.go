@@ -57,22 +57,55 @@ var keyExporters = make(map[KeyKind][]KeyExporter)
 var muKeyImporters sync.RWMutex
 var muKeyExporters sync.RWMutex
 
-// RegisterKeyImporter registers a typed import function for converting raw keys of
-// type T to jwk.Key. The type is derived from the type parameter, eliminating the
-// need to pass a zero value.
+// RegisterKeyImporter registers a typed import function for converting
+// raw keys of type T to jwk.Key. The type is derived from the type
+// parameter, eliminating the need to pass a zero value.
 //
-// When `jwk.Import()` is called, the library will look up the appropriate importer
-// for the given raw key type (via `reflect`) and execute it.
+// When `jwk.Import()` is called, the library looks up the appropriate
+// importer for the given raw key type (via `reflect`) and executes it.
 //
-// The error return is reserved for future validation. The current
-// implementation always returns nil, but callers — especially extension
-// modules calling this from init() — must check the return value and panic
-// on failure to stay forward-compatible.
+// Importer dispatch is single-valued per Go type T: there is exactly
+// one importer per reflect.Type. Subsequent registrations for the same
+// T return an error ("already registered") and do not replace the
+// previous entry. Callers (e.g. tests) that need to swap an existing
+// importer must first call [UnregisterKeyImporter] for the same T.
+// This intentionally differs from the stacking behavior of
+// [RegisterKeyExporter] and [RegisterKeyParser], which dispatch by
+// [KeyKind] / untyped JSON and therefore have a meaningful fallback
+// chain; importer dispatch is a single-value map keyed by Go type,
+// with no equivalent dimension to try next.
+//
+// Extension modules calling this from init() must check the returned
+// error and panic on failure.
 func RegisterKeyImporter[T any](fn func(T) (Key, error)) error {
 	muKeyImporters.Lock()
 	defer muKeyImporters.Unlock()
-	keyImporters[reflect.TypeFor[T]()] = &keyImportAdapter[T]{fn: fn}
+	t := reflect.TypeFor[T]()
+	if _, exists := keyImporters[t]; exists {
+		return fmt.Errorf(`jwk.RegisterKeyImporter: an importer for %s is already registered; call jwk.UnregisterKeyImporter[%s]() first if you need to replace it`, t, t)
+	}
+	keyImporters[t] = &keyImportAdapter[T]{fn: fn}
 	return nil
+}
+
+// UnregisterKeyImporter removes the importer previously registered
+// for type T. Returns true if an importer was removed, false if none
+// was registered for T.
+//
+// This is primarily useful for tests or for extension modules that
+// need to replace a previously installed importer. In steady-state
+// code, prefer letting [RegisterKeyImporter] fail with the
+// already-registered error; that loud failure catches accidental
+// collisions between unrelated extension modules at import time.
+func UnregisterKeyImporter[T any]() bool {
+	muKeyImporters.Lock()
+	defer muKeyImporters.Unlock()
+	t := reflect.TypeFor[T]()
+	if _, ok := keyImporters[t]; !ok {
+		return false
+	}
+	delete(keyImporters, t)
+	return true
 }
 
 // RegisterKeyExporter registers a [KeyExporter] for the given [KeyKind] identity.

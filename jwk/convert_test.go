@@ -75,3 +75,41 @@ func TestMigrationRecipe10KeyImporterSyntax(t *testing.T) {
 	require.True(t, ok, "imported key should carry the KID set by the importer")
 	require.Equal(t, "recipe10", kid, "KID should match the value set by the importer")
 }
+
+// dupImporterKey is a fake raw key type used by TestRegisterKeyImporterRejectsDuplicate.
+// It is intentionally package-local so it does not collide with any
+// built-in importer.
+type dupImporterKey struct{ body string }
+
+func TestRegisterKeyImporterRejectsDuplicate(t *testing.T) {
+	fn := func(dupImporterKey) (jwk.Key, error) { return nil, nil }
+
+	t.Run("first registration succeeds", func(t *testing.T) {
+		require.NoError(t, jwk.RegisterKeyImporter(fn))
+		defer jwk.UnregisterKeyImporter[dupImporterKey]()
+	})
+
+	t.Run("duplicate registration is rejected", func(t *testing.T) {
+		require.NoError(t, jwk.RegisterKeyImporter(fn))
+		defer jwk.UnregisterKeyImporter[dupImporterKey]()
+
+		err := jwk.RegisterKeyImporter(fn)
+		require.Error(t, err, `second RegisterKeyImporter should error`)
+		require.Contains(t, err.Error(), `already registered`,
+			`error should say the type is already registered`)
+	})
+
+	t.Run("Unregister + Register allows replacement", func(t *testing.T) {
+		require.NoError(t, jwk.RegisterKeyImporter(fn))
+		require.True(t, jwk.UnregisterKeyImporter[dupImporterKey](),
+			`UnregisterKeyImporter should report removal`)
+		require.NoError(t, jwk.RegisterKeyImporter(fn),
+			`RegisterKeyImporter should succeed after Unregister`)
+		defer jwk.UnregisterKeyImporter[dupImporterKey]()
+	})
+
+	t.Run("Unregister on unknown type returns false", func(t *testing.T) {
+		require.False(t, jwk.UnregisterKeyImporter[dupImporterKey](),
+			`Unregister should return false when no importer was registered`)
+	})
+}
