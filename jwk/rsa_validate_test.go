@@ -72,9 +72,9 @@ func TestRSAInvalidParametersRejectedOnParse(t *testing.T) {
 
 func TestRSAConfigureCompatibilityKnobs(t *testing.T) {
 	t.Run("allow legacy 1024-bit modulus", func(t *testing.T) {
-		jwk.Settings(jwk.WithMinRSAModulusBits(1024))
+		require.NoError(t, jwk.Settings(jwk.WithMinRSAModulusBits(1024)))
 		t.Cleanup(func() {
-			jwk.Settings(jwk.WithMinRSAModulusBits(2048))
+			require.NoError(t, jwk.Settings(jwk.WithMinRSAModulusBits(2048)))
 		})
 
 		raw, err := rsa.GenerateKey(rand.Reader, 1024)
@@ -87,9 +87,9 @@ func TestRSAConfigureCompatibilityKnobs(t *testing.T) {
 	})
 
 	t.Run("allow exponent 1 explicitly", func(t *testing.T) {
-		jwk.Settings(jwk.WithMinRSAPublicExponent(1))
+		require.NoError(t, jwk.Settings(jwk.WithMinRSAPublicExponent(1)))
 		t.Cleanup(func() {
-			jwk.Settings(jwk.WithMinRSAPublicExponent(3))
+			require.NoError(t, jwk.Settings(jwk.WithMinRSAPublicExponent(3)))
 		})
 
 		payload := rsaPublicJWK(rfc7638RSAModulus, "AQ")

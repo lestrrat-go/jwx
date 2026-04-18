@@ -172,6 +172,12 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
   or unsafe public exponents are now rejected by default. Compatibility knobs are available via
   `jwk.Settings(jwk.WithMinRSAModulusBits(...), jwk.WithMinRSAPublicExponent(...))`.
 
+* `jwk.Settings()` now returns `error` for symmetry with `jwt.Settings`,
+  `jws.Settings`, `jwe.Settings`, `cert.Settings`, and `jwx.Settings`. The
+  current implementation always returns `nil` — the return is reserved for
+  future validation. Callers should check the error to stay
+  forward-compatible.
+
 * The `AKP` key type (Algorithm Key Pair, RFC 9802) has been added, exposed as
   `jwa.AKP()` with `jwk.AKPPublicKey` / `jwk.AKPPrivateKey`. This is a generic
   key type for post-quantum algorithms and is used by both ML-DSA (signature)
