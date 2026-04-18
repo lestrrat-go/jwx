@@ -1,6 +1,7 @@
 package jws
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/hmac"
 	"crypto/rsa"
@@ -18,6 +19,33 @@ import (
 	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/lestrrat-go/jwx/v4/jws/jwsbb"
 )
+
+// ctxReader wraps an io.Reader so that ctx.Err() is checked between
+// reads. Any cancellation or deadline expiry propagates out of Read
+// as the ctx.Err() value, short-circuiting the outer io.Copy loop.
+// A zero-length Read is still delivered to the underlying reader so
+// that an empty-payload verify completes normally.
+type ctxReader struct {
+	ctx context.Context
+	r   io.Reader
+}
+
+func (c *ctxReader) Read(p []byte) (int, error) {
+	if err := c.ctx.Err(); err != nil {
+		return 0, err
+	}
+	return c.r.Read(p)
+}
+
+// wrapReaderWithContext returns a Reader that surfaces ctx.Err()
+// between underlying Reads. If ctx is nil or context.Background(),
+// r is returned unchanged to avoid the indirection.
+func wrapReaderWithContext(ctx context.Context, r io.Reader) io.Reader {
+	if ctx == nil || ctx == context.Background() {
+		return r
+	}
+	return &ctxReader{ctx: ctx, r: r}
+}
 
 // This file implements the streaming detached-payload variant of jws.Sign()
 // and jws.Verify(), reached via the jws.WithDetachedPayloadReader() option.
@@ -270,7 +298,13 @@ func (vc *verifyContext) verifyStreaming(buf []byte) ([]byte, error) {
 	if _, err := hasher.Write([]byte{tokens.Period}); err != nil {
 		return nil, makeVerifyError(`failed to write signing prefix: %w`, err)
 	}
-	if err := streamPayloadIntoHashers([]hash.Hash{hasher}, vc.payloadReader, msg.b64, streamEncoder); err != nil {
+	// When the caller supplied a context via WithContext, surface
+	// cancellation and deadline expiry between Reads on the payload
+	// reader. Without this the streaming verify path would ignore ctx
+	// entirely and keep draining an attacker-controlled reader long
+	// after the caller cancelled.
+	payloadReader := wrapReaderWithContext(vc.ctx, vc.payloadReader)
+	if err := streamPayloadIntoHashers([]hash.Hash{hasher}, payloadReader, msg.b64, streamEncoder); err != nil {
 		return nil, makeVerifyError(`failed to stream payload: %w`, err)
 	}
 

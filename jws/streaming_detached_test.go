@@ -2,11 +2,13 @@ package jws_test
 
 import (
 	"bytes"
+	"context"
 	"crypto/rand"
 	stdbase64 "encoding/base64"
 	stdjson "encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"testing"
 
@@ -454,6 +456,58 @@ func TestStreamingDetachedIOErrorMidStream(t *testing.T) {
 		)
 		require.Error(t, err)
 	})
+}
+
+func TestStreamingDetachedVerifyContextCancel(t *testing.T) {
+	t.Parallel()
+
+	payload := make([]byte, 4096)
+	for i := range payload {
+		payload[i] = byte(i)
+	}
+	privkey, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+
+	signed, err := jws.Sign(nil,
+		jws.WithKey(jwa.RS256(), privkey),
+		jws.WithDetachedPayload(payload),
+	)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel() // cancel immediately
+
+	// A reader that yields one byte per call; without context
+	// plumbing the verifier would drain it to EOF regardless.
+	r := &slowReader{data: payload}
+
+	_, err = jws.Verify(signed,
+		jws.WithKey(jwa.RS256(), &privkey.PublicKey),
+		jws.WithDetachedPayloadReader(r),
+		jws.WithContext(ctx),
+	)
+	require.Error(t, err, `Verify should surface ctx.Err()`)
+	require.ErrorIs(t, err, context.Canceled,
+		`cancellation should propagate as context.Canceled`)
+}
+
+// slowReader returns one byte per Read until data is exhausted, then
+// io.EOF. Forces the streaming verify loop to issue many small Reads.
+type slowReader struct {
+	data []byte
+	i    int
+}
+
+func (s *slowReader) Read(p []byte) (int, error) {
+	if s.i >= len(s.data) {
+		return 0, io.EOF
+	}
+	if len(p) == 0 {
+		return 0, nil
+	}
+	p[0] = s.data[s.i]
+	s.i++
+	return 1, nil
 }
 
 func TestStreamingDetachedWrongKey(t *testing.T) {
