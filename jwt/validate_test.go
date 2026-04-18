@@ -914,3 +914,21 @@ func TestClaimValueIsNonComparable(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateNilToken(t *testing.T) {
+	t.Parallel()
+
+	t.Run("no options", func(t *testing.T) {
+		err := jwt.Validate(nil)
+		require.Error(t, err, `jwt.Validate(nil) should return an error, not panic`)
+		require.ErrorIs(t, err, jwt.ValidateError(),
+			`nil-token error should be a ValidateError`)
+	})
+
+	t.Run("with options", func(t *testing.T) {
+		err := jwt.Validate(nil, jwt.WithAcceptableSkew(time.Second))
+		require.Error(t, err, `jwt.Validate(nil, ...) should return an error, not panic`)
+		require.ErrorIs(t, err, jwt.ValidateError(),
+			`nil-token error should be a ValidateError`)
+	})
+}
