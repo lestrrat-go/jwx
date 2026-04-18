@@ -226,7 +226,8 @@ func TestStreamingDetachedRejectsNonStreamEncoder(t *testing.T) {
 		jws.WithBase64Encoder(encoder),
 	)
 	require.Error(t, err)
-	require.ErrorContains(t, err, `does not support streaming`)
+	require.ErrorContains(t, err, `jws.WithBase64Encoder`)
+	require.ErrorContains(t, err, `Install a stream-capable encoder`)
 
 	// Sign a compact JWS normally so we have something to feed Verify.
 	signed, err := jws.Sign(payload, jws.WithKey(jwa.HS256(), key))
@@ -238,7 +239,8 @@ func TestStreamingDetachedRejectsNonStreamEncoder(t *testing.T) {
 		jws.WithBase64Encoder(encoder),
 	)
 	require.Error(t, err)
-	require.ErrorContains(t, err, `does not support streaming`)
+	require.ErrorContains(t, err, `jws.WithBase64Encoder`)
+	require.ErrorContains(t, err, `Install a stream-capable encoder`)
 }
 
 func TestStreamingDetachedRejectsConflictingOptions(t *testing.T) {
