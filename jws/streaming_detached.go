@@ -56,7 +56,7 @@ func (sc *signContext) signStreaming() ([]byte, error) {
 
 	streamEncoder, ok := base64.AsStreamEncoder(sc.encoder)
 	if !ok {
-		return nil, makeSignError(prefixJwsSign, `the configured base64 encoder (%T) does not support streaming; jws.WithDetachedPayloadReader() requires an encoder that implements jws.Base64StreamEncoder (the default encoder does)`, sc.encoder)
+		return nil, makeSignError(prefixJwsSign, `jws.WithDetachedPayloadReader() requires a base64 encoder with a NewEncoder(io.Writer) io.WriteCloser method (interface jws.Base64StreamEncoder). The configured encoder %T does not provide one. Install a stream-capable encoder via jwx.Settings(jwx.WithBase64Encoder(...)) or jws.WithBase64Encoder(...); the default encoding/base64.RawURLEncoding satisfies this automatically.`, sc.encoder)
 	}
 
 	signers := make([]streamingSigner, 0, len(sc.sigbuilders))
@@ -214,7 +214,7 @@ func (vc *verifyContext) verifyStreaming(buf []byte) ([]byte, error) {
 
 	streamEncoder, ok := base64.AsStreamEncoder(vc.encoder)
 	if !ok {
-		return nil, makeVerifyError(`the configured base64 encoder (%T) does not support streaming; jws.WithDetachedPayloadReader() requires an encoder that implements jws.Base64StreamEncoder (the default encoder does)`, vc.encoder)
+		return nil, makeVerifyError(`jws.WithDetachedPayloadReader() requires a base64 encoder with a NewEncoder(io.Writer) io.WriteCloser method (interface jws.Base64StreamEncoder). The configured encoder %T does not provide one. Install a stream-capable encoder via jwx.Settings(jwx.WithBase64Encoder(...)) or jws.WithBase64Encoder(...); the default encoding/base64.RawURLEncoding satisfies this automatically.`, vc.encoder)
 	}
 
 	msg, err := Parse(buf, vc.parseOptions...)
