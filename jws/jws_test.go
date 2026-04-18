@@ -2230,3 +2230,39 @@ func TestVerifyCompactFastHeaderAlgCrossCheck(t *testing.T) {
 		require.Contains(t, err.Error(), `"alg"`)
 	})
 }
+
+func TestSignKidConflict(t *testing.T) {
+	t.Parallel()
+
+	key, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err)
+	require.NoError(t, key.Set(jwk.KeyIDKey, "key-kid"), `set kid on key`)
+
+	hdr := jws.NewHeaders()
+	require.NoError(t, hdr.Set(jws.KeyIDKey, "header-kid"))
+
+	_, err = jws.Sign([]byte("payload"),
+		jws.WithKey(jwa.RS256(), key, jws.WithProtectedHeaders(hdr)))
+	require.Error(t, err, `Sign should fail on kid mismatch`)
+	require.Contains(t, err.Error(), `header-kid`, `error should name both kids`)
+	require.Contains(t, err.Error(), `key-kid`, `error should name both kids`)
+	require.Contains(t, err.Error(), `conflicting "kid" values`)
+}
+
+func TestSignKidMatch(t *testing.T) {
+	// Sign still succeeds when the caller-supplied kid agrees with the
+	// key's kid — this is a legitimate pattern (e.g. echoing the kid
+	// through a template Headers) and must stay working.
+	t.Parallel()
+
+	key, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err)
+	require.NoError(t, key.Set(jwk.KeyIDKey, "same-kid"))
+
+	hdr := jws.NewHeaders()
+	require.NoError(t, hdr.Set(jws.KeyIDKey, "same-kid"))
+
+	_, err = jws.Sign([]byte("payload"),
+		jws.WithKey(jwa.RS256(), key, jws.WithProtectedHeaders(hdr)))
+	require.NoError(t, err, `matching kids should sign cleanly`)
+}
