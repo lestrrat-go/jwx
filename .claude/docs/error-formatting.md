@@ -43,6 +43,15 @@ Only `jwt.UnknownPayloadTypeError()` remains a sentinel function (no struct type
 | Type | Structured Fields | Meaning |
 |------|------------------|---------|
 | `KeyTypeMismatchError` | `Got`, `Want` (both `reflect.Type`) | Generic type parameter on `Import[T]` / `ParseKeyAs[T]` does not match the resolved key type |
+| `FieldNotFoundError` | `Name` | Field not present (`jwk.Get` miss) |
+| `FieldTypeMismatchError` | `Name`, `Got`, `Want` | Field present but wrong type (`jwk.Get` type assertion failed) |
+
+## Exported Error Types (jws)
+
+| Type | Structured Fields | Meaning |
+|------|------------------|---------|
+| `FieldNotFoundError` | `Name` | Header field not present (`jws.Get` miss) |
+| `FieldTypeMismatchError` | `Name`, `Got`, `Want` | Header field present but wrong type (`jws.Get` type assertion failed) |
 
 ## Exported Error Types (jwe)
 
@@ -50,6 +59,8 @@ Only `jwt.UnknownPayloadTypeError()` remains a sentinel function (no struct type
 |------|------------------|---------|
 | `MissingContentEncryptionError` | *(none)* | `enc` missing from protected headers during `Decrypt` |
 | `AlgorithmMismatchError` | `Expected`, `Got` (both `jwa.KeyEncryptionAlgorithm`) | Per-recipient/protected `alg` does not match the key's algorithm |
+| `FieldNotFoundError` | `Name` | Header field not present (`jwe.Get` miss) |
+| `FieldTypeMismatchError` | `Name`, `Got`, `Want` | Header field present but wrong type (`jwe.Get` type assertion failed) |
 
 ## Sentinel Function Registry
 

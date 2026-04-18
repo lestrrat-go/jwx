@@ -195,3 +195,54 @@ func (AlgorithmMismatchError) Is(target error) bool {
 	_, ok := target.(AlgorithmMismatchError)
 	return ok
 }
+
+//-------------------------------------------------------------------
+// FieldNotFoundError
+//-------------------------------------------------------------------
+
+// FieldNotFoundError is returned when jwe.Get fails to find the
+// requested field on a jwe.Headers.
+type FieldNotFoundError struct {
+	// Name is the name of the field that was not found.
+	Name string
+}
+
+func (e FieldNotFoundError) Error() string {
+	return fmt.Sprintf(`field %q not found`, e.Name)
+}
+
+func (e FieldNotFoundError) Is(target error) bool {
+	_, ok := target.(FieldNotFoundError)
+	return ok
+}
+
+//-------------------------------------------------------------------
+// FieldTypeMismatchError
+//-------------------------------------------------------------------
+
+// FieldTypeMismatchError is returned when jwe.Get finds the requested
+// field but the stored value cannot be converted to the requested type.
+//
+// Callers that need to distinguish "field missing" from "field present
+// but wrong type" should use errors.Is with FieldNotFoundError{} /
+// FieldTypeMismatchError{}, or errors.AsType to recover Name, Got, and
+// Want fields.
+type FieldTypeMismatchError struct {
+	// Name is the name of the field whose value could not be converted.
+	Name string
+	// Got is the value currently stored under the field. Use %T to
+	// inspect its concrete type.
+	Got any
+	// Want is a zero value of the requested type T. Use %T to inspect
+	// its concrete type.
+	Want any
+}
+
+func (e FieldTypeMismatchError) Error() string {
+	return fmt.Sprintf(`field %q is %T, not %T`, e.Name, e.Got, e.Want)
+}
+
+func (e FieldTypeMismatchError) Is(target error) bool {
+	_, ok := target.(FieldTypeMismatchError)
+	return ok
+}
