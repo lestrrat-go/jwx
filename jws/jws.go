@@ -239,6 +239,13 @@ var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
 // when the verification process itself fails (e.g. invalid signature, wrong key),
 // while the former is returned when any other part of the `jws.Verify()`
 // function fails.
+//
+// When `jws.WithDetachedPayloadReader()` is used, the payload is streamed
+// from the caller's `io.Reader` and is not extracted from the JWS envelope.
+// In that case, the returned `[]byte` is a non-nil zero-length slice on
+// success; the verified bytes are whatever the caller read from the Reader.
+// Do not treat the returned slice as "the payload is empty" — callers that
+// need the payload bytes must retain their own copy.
 func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	vc := verifyContextPool.Get()
 	defer verifyContextPool.Put(vc)

@@ -95,6 +95,35 @@ func TestStreamingDetachedJSONRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// TestStreamingDetachedVerifyReturnsNonNilEmptyPayload locks in the
+// sentinel contract that jws.Verify with WithDetachedPayloadReader returns
+// a non-nil, zero-length []byte on success. The payload was streamed from
+// the caller, not extracted from the envelope — so there are no bytes to
+// return — but returning a nil slice would be indistinguishable from
+// "ignored return value" and set up silent-logic bugs in callers that
+// check len(payload)==0.
+func TestStreamingDetachedVerifyReturnsNonNilEmptyPayload(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`sentinel-return-payload`)
+	key, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err)
+
+	signed, err := jws.Sign(nil,
+		jws.WithKey(jwa.HS256(), key),
+		jws.WithDetachedPayloadReader(bytes.NewReader(payload)),
+	)
+	require.NoError(t, err)
+
+	got, err := jws.Verify(signed,
+		jws.WithKey(jwa.HS256(), key),
+		jws.WithDetachedPayloadReader(bytes.NewReader(payload)),
+	)
+	require.NoError(t, err)
+	require.NotNil(t, got, "streaming Verify must return a non-nil []byte on success so callers can distinguish it from an ignored return value")
+	require.Empty(t, got, "streaming Verify has no payload bytes to hand back")
+}
+
 func TestStreamingDetachedKeyUsed(t *testing.T) {
 	t.Parallel()
 

@@ -288,7 +288,11 @@ func (vc *verifyContext) verifyStreaming(buf []byte) ([]byte, error) {
 	if vc.dst != nil {
 		*vc.dst = *msg
 	}
-	return nil, nil
+	// Non-nil zero-length slice is the sentinel: the payload was streamed
+	// from the caller so there are no bytes to hand back, but returning
+	// nil would be indistinguishable from "ignored return" and invite
+	// `len(payload) == 0` silent-logic bugs in callers.
+	return []byte{}, nil
 }
 
 // streamingAlgorithmInfo carries the resolved dsig metadata plus the dsig
