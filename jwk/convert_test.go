@@ -1,6 +1,7 @@
 package jwk_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v4/jwa"
@@ -79,10 +80,16 @@ func TestMigrationRecipe10KeyImporterSyntax(t *testing.T) {
 // dupImporterKey is a fake raw key type used by TestRegisterKeyImporterRejectsDuplicate.
 // It is intentionally package-local so it does not collide with any
 // built-in importer.
-type dupImporterKey struct{ body string }
+type dupImporterKey struct{}
 
 func TestRegisterKeyImporterRejectsDuplicate(t *testing.T) {
-	fn := func(dupImporterKey) (jwk.Key, error) { return nil, nil }
+	// Importer body isn't exercised — the test only asserts that the
+	// Register/Unregister bookkeeping is correct. Return a non-nil
+	// error so the function doesn't look like a (nil, nil) sentinel
+	// that nilnil flags.
+	fn := func(dupImporterKey) (jwk.Key, error) {
+		return nil, errors.New("dupImporterKey: importer body not exercised by this test")
+	}
 
 	t.Run("first registration succeeds", func(t *testing.T) {
 		require.NoError(t, jwk.RegisterKeyImporter(fn))
