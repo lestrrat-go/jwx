@@ -303,9 +303,13 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 
 	hdrAlg, ok := sig.ProtectedHeaders().Algorithm()
 	if !ok {
-		// No algorithm in the JWS header. The jku provider requires both
-		// kid and alg to match, so we don't send any keys without alg.
-		return nil
+		// The jku provider routes a key by matching both "kid" and
+		// "alg" against the JWS protected header. With no alg in the
+		// header there's nothing to pin the signature algorithm to,
+		// so reject explicitly rather than returning no keys and
+		// letting the outer verify loop surface a generic "could not
+		// be verified with any of the keys" message.
+		return fmt.Errorf(`use of "jku" requires that the protected header contain an "alg" field`)
 	}
 
 	for _, alg := range algs {
