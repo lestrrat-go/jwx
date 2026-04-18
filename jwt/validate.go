@@ -52,6 +52,10 @@ func timeClaim(t Token, clock Clock, c string) time.Time {
 // See the various `WithXXX` functions for optional parameters
 // that can control the behavior of this method.
 func Validate(t Token, options ...ValidateOption) error {
+	if t == nil {
+		return validateErrorf(`jwt.Validate: token is nil`)
+	}
+
 	// Fast path: no options means default validation (iat, exp, nbf)
 	// with no skew, default truncation, and time.Now as clock.
 	// This avoids context allocation, validator struct creation, and option iteration.
