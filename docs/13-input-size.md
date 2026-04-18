@@ -90,6 +90,19 @@ A JSON-serialized JWS can carry multiple signatures. `jws.Parse`
 rejects messages with more than `jws.WithMaxSignatures` entries
 (default **100**).
 
+### JWK: number of keys in a set
+
+A JWKS can carry many keys; each entry triggers a probe + unmarshal
++ validation when parsed. `jwk.Parse` rejects inputs with more than
+`jwk.WithMaxKeys` entries (default **1000**). The cap applies to
+both the JSON `"keys"` array and the PEM block stream accepted via
+`jwk.WithX509(true)`.
+
+```go
+jwk.Settings(jwk.WithMaxKeys(500))                    // globally
+jwk.Parse(buf, jwk.WithMaxKeys(100))                  // per call
+```
+
 ## What this means for reviewers
 
 If an audit or review flags "unbounded `io.ReadAll`", "no max input

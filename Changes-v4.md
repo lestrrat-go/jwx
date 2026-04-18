@@ -8,6 +8,14 @@ For a step-by-step migration guide with before/after code examples, see [MIGRATI
 
 ## Unreleased
 
+* [jwk] Added `jwk.WithMaxKeys(int)` — caps the number of keys accepted
+  by `jwk.Parse` / `jwk.ParseReader` / `jwk.ParseString` in both the
+  JSON `"keys"` array and the PEM block stream (default **1000**).
+  Usable as a `jwk.Settings()` global or a per-call override.
+  Replaces the hardcoded internal PEM cap of the same value, so the
+  default behavior is unchanged. This is a structural/amplification
+  cap, not a raw-byte cap; see `docs/13-input-size.md`.
+
 * [jws] **Bug fix (RFC compliance, interop):** `jws.Sign()` with
   `jws.WithDetachedPayload()` + `jws.WithJSON()` now correctly omits the
   `"payload"` member from the output, per RFC 7515 Appendix F. Previous
