@@ -1118,6 +1118,31 @@ func TestParseRequest(t *testing.T) {
 		require.ErrorIs(t, err, jwt.TokenExpiredError{}, `error should report token expiration, not missing cookie`)
 		require.NotErrorIs(t, err, http.ErrNoCookie, `error must not masquerade as missing cookie`)
 	})
+
+	t.Run("Key names containing %-verbs do not corrupt the error", func(t *testing.T) {
+		// Regression test: ParseRequest used to build a dynamic format
+		// string (b.String() + "%w" placeholders) fed to fmt.Errorf.
+		// strconv.Quote escapes control bytes but not '%', so a header
+		// key such as "X-With-%s-Verb" would turn into a format verb
+		// and mangle the output with "%!s(MISSING)".
+		privkey, _ := jwxtest.GenerateEcdsaJwk()
+		require.NoError(t, privkey.Set(jwk.AlgorithmKey, jwa.ES256()))
+		pub, err := jwk.PublicKeyOf(privkey)
+		require.NoError(t, err)
+
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, u, nil)
+		req.Header.Set("X-With-%s-Verb", "not-a-jwt")
+		_, err = jwt.ParseRequest(req,
+			jwt.WithHeaderKey("X-With-%s-Verb"),
+			jwt.WithKey(jwa.ES256(), pub))
+		require.Error(t, err)
+		require.NotContains(t, err.Error(), `%!s(MISSING)`,
+			`error must not run percent verbs from caller-supplied keys`)
+		require.NotContains(t, err.Error(), `%!(EXTRA `,
+			`error must not carry an extra-args banner`)
+		require.Contains(t, err.Error(), `X-With-%s-Verb`,
+			`error should still include the offending header key verbatim`)
+	})
 }
 
 func TestGHIssue368(t *testing.T) {
