@@ -373,6 +373,12 @@ func WithDetachedPayload(v []byte) SignVerifyOption {
 // calls unless the Reader is itself goroutine-safe and positioned
 // independently for each call.
 //
+// On verify, cancellation and deadline expiry from a context
+// supplied via `jws.WithContext()` propagate between Reads on the
+// supplied Reader, so a long-running payload stream from an
+// untrusted source can be interrupted. Supplying a context is
+// recommended whenever the Reader's cost is not strictly bounded.
+//
 // Only the HMAC, RSA (PKCS#1 v1.5 and PSS), and ECDSA algorithm
 // families are supported by this option; EdDSA and custom-family
 // algorithms require the full payload in memory and will be rejected
