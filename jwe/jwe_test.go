@@ -1842,6 +1842,69 @@ func TestMaxParseInputSize(t *testing.T) {
 	})
 }
 
+func TestDecryptMaxParseInputSize(t *testing.T) {
+	// A valid key provider is required for jwe.Decrypt to reach the
+	// size check; use a symmetric direct key throughout. The concrete
+	// alg does not matter — we never exercise a full decrypt on the
+	// rejection path.
+	key := make([]byte, 32)
+
+	// Produce a small valid JWE so the "per-call override can raise
+	// above global" subtest can pass the size gate and surface a
+	// non-size error.
+	validJWE, err := jwe.Encrypt(
+		[]byte("hello"),
+		jwe.WithKey(jwa.DIRECT(), key),
+		jwe.WithContentEncryption(jwa.A256GCM()),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	t.Run("default rejects oversized input", func(t *testing.T) {
+		data := make([]byte, 10*1024*1024+1)
+		_, err := jwe.Decrypt(data, jwe.WithKey(jwa.DIRECT(), key))
+		require.Error(t, err, `jwe.Decrypt should reject input exceeding default max size`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("per-call option overrides default", func(t *testing.T) {
+		data := make([]byte, 200)
+		_, err := jwe.Decrypt(data, jwe.WithKey(jwa.DIRECT(), key), jwe.WithMaxParseInputSize(100))
+		require.Error(t, err, `jwe.Decrypt should reject input exceeding per-call max size`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("global setting changes default", func(t *testing.T) {
+		require.NoError(t, jwe.Settings(jwe.WithMaxParseInputSize(50)))
+		defer jwe.Settings(jwe.WithMaxParseInputSize(10 * 1024 * 1024)) // restore
+
+		data := make([]byte, 100)
+		_, err := jwe.Decrypt(data, jwe.WithKey(jwa.DIRECT(), key))
+		require.Error(t, err, `jwe.Decrypt should reject input exceeding global max size`)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+	t.Run("per-call option overrides global setting", func(t *testing.T) {
+		require.NoError(t, jwe.Settings(jwe.WithMaxParseInputSize(50)))
+		defer jwe.Settings(jwe.WithMaxParseInputSize(10 * 1024 * 1024)) // restore
+
+		_, err := jwe.Decrypt(validJWE, jwe.WithKey(jwa.DIRECT(), key), jwe.WithMaxParseInputSize(int64(len(validJWE)+1024)))
+		require.NoError(t, err, `jwe.Decrypt should succeed when per-call cap is above input size`)
+	})
+	t.Run("negative per-call value returns error", func(t *testing.T) {
+		_, err := jwe.Decrypt([]byte(`test`), jwe.WithKey(jwa.DIRECT(), key), jwe.WithMaxParseInputSize(-1))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `greater than zero`)
+	})
+	t.Run("size gate fires before JSON unmarshal", func(t *testing.T) {
+		// Construct a payload that would blow up inside json.Unmarshal
+		// if it were allowed through. `{` is the JSON-flavor marker;
+		// without the gate parseJSONOrCompact would attempt to parse
+		// this as JSON and fail with a parse error rather than a
+		// size error.
+		data := append([]byte(`{`), make([]byte, 10*1024*1024)...)
+		_, err := jwe.Decrypt(data, jwe.WithKey(jwa.DIRECT(), key))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `exceeded max size`)
+	})
+}
+
 func TestMaxRecipients(t *testing.T) {
 	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err, `rsa.GenerateKey should succeed`)

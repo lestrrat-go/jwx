@@ -104,6 +104,25 @@ type globalOption struct {
 
 func (*globalOption) globalOption() {}
 
+// GlobalParseDecryptOption describes an Option that can be passed to
+// `jwe.Settings()`, `jwe.Parse*()`, and `jwe.Decrypt()`.
+type GlobalParseDecryptOption interface {
+	Option
+	globalOption()
+	parseOption()
+	decryptOption()
+}
+
+type globalParseDecryptOption struct {
+	Option
+}
+
+func (*globalParseDecryptOption) globalOption() {}
+
+func (*globalParseDecryptOption) parseOption() {}
+
+func (*globalParseDecryptOption) decryptOption() {}
+
 // GlobalParseOption describes an Option that can be passed to `jwe.Settings()`
 // and `jwe.Parse()`.
 type GlobalParseOption interface {
@@ -404,14 +423,15 @@ func WithMaxPBES2Count(v int) GlobalDecryptOption {
 
 // WithMaxParseInputSize specifies the maximum byte length of input
 // accepted by every `jwe.Parse*` entry point (`jwe.Parse`,
-// `jwe.ParseString`, and `jwe.ParseReader`). Inputs exceeding this
-// size are rejected before decoding. The default value is 10MB.
+// `jwe.ParseString`, `jwe.ParseReader`) and by `jwe.Decrypt`.
+// Inputs exceeding this size are rejected before any JSON/compact
+// decoding or cryptographic work. The default value is 10MB.
 //
 // This option can be passed to `jwe.Settings()` to change the default
-// globally, or to any `jwe.Parse*` call / `jwe.ParseFS()` for a
+// globally, or to any `jwe.Parse*` / `jwe.Decrypt` call for a
 // per-call override.
-func WithMaxParseInputSize(v int64) GlobalParseOption {
-	return &globalParseOption{option.New(identMaxParseInputSize{}, v)}
+func WithMaxParseInputSize(v int64) GlobalParseDecryptOption {
+	return &globalParseDecryptOption{option.New(identMaxParseInputSize{}, v)}
 }
 
 // WithMaxRecipients specifies the maximum number of recipients allowed
