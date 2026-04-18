@@ -2,6 +2,7 @@ package jws
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"slices"
@@ -203,6 +204,7 @@ func (kp *keySetProvider) fetchKeysByKid(sink KeySink, sig *Signature, msg *Mess
 
 	// multipleKeysPerKeyID: attempt all keys whose key ID matches
 	found := false
+	var errs []error
 	for i := range kp.set.Len() {
 		key, _ := kp.set.Key(i)
 		if kid, ok := key.KeyID(); !ok || kid != wantedKid {
@@ -211,6 +213,7 @@ func (kp *keySetProvider) fetchKeysByKid(sink KeySink, sig *Signature, msg *Mess
 
 		added, err := kp.selectKey(sink, key, sig, msg)
 		if err != nil {
+			errs = append(errs, fmt.Errorf(`key #%d: %w`, i, err))
 			continue
 		}
 		if added {
@@ -218,6 +221,9 @@ func (kp *keySetProvider) fetchKeysByKid(sink KeySink, sig *Signature, msg *Mess
 		}
 	}
 	if !found {
+		if len(errs) > 0 {
+			return fmt.Errorf(`failed to select any key with key ID %q: %w`, wantedKid, errors.Join(errs...))
+		}
 		return fmt.Errorf(`failed to find key with key ID %q in key set`, wantedKid)
 	}
 	return nil
@@ -243,6 +249,8 @@ func (kp *keySetProvider) fetchAllKeys(sink KeySink, sig *Signature, msg *Messag
 	if hdrAlg, ok := sig.ProtectedHeaders().Algorithm(); ok {
 		allowedKtys = keyTypesForAlgorithm(hdrAlg)
 	}
+	found := false
+	var errs []error
 	for i := range kp.set.Len() {
 		key, ok := kp.set.Key(i)
 		if !ok {
@@ -251,9 +259,17 @@ func (kp *keySetProvider) fetchAllKeys(sink KeySink, sig *Signature, msg *Messag
 		if allowedKtys != nil && !slices.Contains(allowedKtys, key.KeyType()) {
 			continue
 		}
-		if _, err := kp.selectKey(sink, key, sig, msg); err != nil {
+		added, err := kp.selectKey(sink, key, sig, msg)
+		if err != nil {
+			errs = append(errs, fmt.Errorf(`key #%d: %w`, i, err))
 			continue
 		}
+		if added {
+			found = true
+		}
+	}
+	if !found && len(errs) > 0 {
+		return fmt.Errorf(`no key in the key set was usable: %w`, errors.Join(errs...))
 	}
 	return nil
 }
