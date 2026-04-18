@@ -417,6 +417,32 @@ func WithDetachedPayload(v []byte) SignVerifyOption {
 //
 // When this option is used with `jws.Sign()`, the first parameter
 // (normally the payload) must be set to `nil`.
+//
+// Example:
+//
+//	// Sign the contents of a large file as a detached JWS without
+//	// reading the whole file into memory.
+//	f, _ := os.Open("payload.bin")
+//	defer f.Close()
+//	signed, err := jws.Sign(nil,
+//					jws.WithDetachedPayloadReader(f),
+//					jws.WithKey(jwa.RS256(), privkey),
+//	)
+//
+//	// Verify the same payload against the returned JWS. The
+//	// reader must yield the same bytes that were signed. On
+//	// success, Verify returns a non-nil zero-length []byte —
+//	// the verified payload came from the Reader.
+//	f2, _ := os.Open("payload.bin")
+//	defer f2.Close()
+//	_, err = jws.Verify(signed,
+//					jws.WithDetachedPayloadReader(f2),
+//					jws.WithKey(jwa.RS256(), pubkey),
+//	)
+//
+// For a runnable pair, see the jws_sign_detached_reader and
+// jws_verify_detached_reader examples in the
+// github.com/jwx-go/examples companion repository.
 func WithDetachedPayloadReader(v io.Reader) SignVerifyOption {
 	return &signVerifyOption{option.New(identDetachedPayloadReader{}, v)}
 }
