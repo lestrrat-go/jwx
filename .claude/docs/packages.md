@@ -39,14 +39,14 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 - **Import[T Key](raw any) (T, error)** / **Export[T any](key Key) (T, error)** / **ExportAll[T any](set Set) ([]T, error)** — convert between Go crypto types and JWK (generic). `ExportAll` exports every key in a `Set`, preserving order; `T = any` handles heterogeneous sets.
 - **PublicKeyOf(v any) (Key, error)** / **PublicSetOf(v Set, ...PublicSetOption) (Set, error)** — extract public keys. `PublicSetOf` rejects sets containing symmetric (oct) keys by default; pass `WithAllowSymmetric(true)` for legacy pass-through.
 - **AssignKeyID(key Key, ...AssignKeyIDOption) error** — compute and set kid via thumbprint
-- **Pem(v any) ([]byte, error)** — PEM encode
+- PEM output moved to `jwkbb.EncodePEM(keys ...any)`; unwrap via `jwk.Export[any]` / `jwk.ExportAll[any]` first
 - Global options: `WithStrictKeyUsage(bool)`, `WithMinRSAModulusBits(int)`, `WithMinRSAPublicExponent(int)`
 - JWKS caching moved to `github.com/jwx-go/jwkcache` — see [Extension Modules](../../docs/10-extensions.md)
 - Key interfaces: `Key`, `Set`, `RSAPublicKey`, `RSAPrivateKey`, `ECDSAPublicKey`, `ECDSAPrivateKey`, `OKPPublicKey`, `OKPPrivateKey`, `SymmetricKey`, `AKPPublicKey`, `AKPPrivateKey` (post-quantum, used by mldsa/mlkem extensions)
 - Extension: `RegisterCustomField[T]()`, `RegisterCustomDecoder[T]()`, `RegisterKeyParser()`, `RegisterKeyImporter()`, `RegisterKeyExporter()`
 - Error sentinels: `ImportError()`, `ParseError()`, `WhitelistError()`, `ContinueError()`
 - Files: `jwk.go`, `set.go`, `parser.go`, `convert.go`, `fetch.go`, `interface.go`, `errors.go`, `x509.go`, `filter.go`, `rsa.go`, `ecdsa.go`, `okp.go`, `symmetric.go`, `akp.go`, `accessors.go`, `io.go`
-- Sub-packages: `jwk/ecdsa` — elliptic curve registration (`RegisterCurve(alg, curve, PointValidator)`, `CurveFromAlgorithm`, `AlgorithmFromCurve`, `ValidatorFromCurve`, `PointValidator` interface, `PointValidatorFunc` adapter); `jwk/jwkbb` — X.509/PEM encoding building blocks (`EncodeX509`, `DecodeX509`); `jwk/jwkunsafe` — low-level key constructors (`NewKey`, `NewPublicKey`) for extension modules
+- Sub-packages: `jwk/ecdsa` — elliptic curve registration (`RegisterCurve(alg, curve, PointValidator)`, `CurveFromAlgorithm`, `AlgorithmFromCurve`, `ValidatorFromCurve`, `PointValidator` interface, `PointValidatorFunc` adapter); `jwk/jwkbb` — X.509/PEM encoding building blocks. Block-type-keyed decoder registry (`X509Decoder[T]` / `X509DecodeFunc[T]` / `RegisterX509Decoder[T](blockType, d) error` / `UnregisterX509Decoder(blockType)`) with `DecodeX509(block *pem.Block) (any, error)` as the dispatch entry point. Type-keyed encoder registry (`X509Encoder[T]` / `X509EncodeFunc[T]` / `RegisterX509Encoder[T](e) error` / `UnregisterX509Encoder[T]()`) with `EncodePEM(keys ...any) ([]byte, error)` as the dispatch entry point — dispatches each key by its runtime Go type and concatenates PEM blocks. Block type constants: `PrivateKeyBlockType`, `PublicKeyBlockType`, `ECPrivateKeyBlockType`, `RSAPublicKeyBlockType`, `RSAPrivateKeyBlockType`, `CertificateBlockType`. Decode from `jwk.ParseKey` with `jwk.WithX509(true)`. `jwk/jwkunsafe` — low-level key constructors (`NewKey`, `NewPublicKey`) for extension modules
 - Imports: jwa, cert, transform, internal/{base64,json,ecutil}
 
 ## jws/

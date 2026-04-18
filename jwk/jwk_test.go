@@ -36,6 +36,7 @@ import (
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwk"
 	ourecdsa "github.com/lestrrat-go/jwx/v4/jwk/ecdsa"
+	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
 	"github.com/stretchr/testify/require"
 )
 
@@ -238,8 +239,10 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 			t.Run(fmt.Sprintf("WithPEM(%t)", usePEM), func(t *testing.T) {
 				var buf []byte
 				if usePEM {
-					pem, err := jwk.EncodePEM(key)
-					require.NoError(t, err, `jwk.EncodePEM should succeed`)
+					raw, err := jwk.Export[any](key)
+					require.NoError(t, err, `jwk.Export should succeed`)
+					pem, err := jwkbb.EncodePEM(raw)
+					require.NoError(t, err, `jwkbb.EncodePEM should succeed`)
 					buf = pem
 				} else {
 					jsonbuf, err := json.Marshal(key)
@@ -248,7 +251,7 @@ func VerifyKey(t *testing.T, def map[string]keyDef) {
 					t.Logf("%s", buf)
 				}
 
-				newkey, err := jwk.ParseKey(buf, jwk.WithPEM(usePEM))
+				newkey, err := jwk.ParseKey(buf, jwk.WithX509(usePEM))
 				require.NoError(t, err, `jwk.ParseKey should succeed`)
 			LOOP:
 				for _, k := range key.Keys() {
@@ -503,7 +506,7 @@ func TestParseKeyAs(t *testing.T) {
 			Type:  "EC PRIVATE KEY",
 			Bytes: derBytes,
 		})
-		key, err := jwk.ParseKeyAs[jwk.ECDSAPrivateKey](pemData, jwk.WithPEM(true))
+		key, err := jwk.ParseKeyAs[jwk.ECDSAPrivateKey](pemData, jwk.WithX509(true))
 		require.NoError(t, err)
 		require.NotNil(t, key)
 		require.Equal(t, jwa.EC(), key.KeyType())
@@ -1756,7 +1759,7 @@ ox0RaBsMD70mvTwKKmlCSD5HgZZTC0CfGWk4dQp/Mct5Z0x0HJMEJCJzpgTn3CRX
 z8CjezfckLs7UKJOlhu3OU9TFsiGDzSDBZdDWO1/uciJ/AAWeSmsBt8cKL0MirIr
 c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 -----END CERTIFICATE-----`
-	key, err := jwk.ParseKey([]byte(src), jwk.WithPEM(true))
+	key, err := jwk.ParseKey([]byte(src), jwk.WithX509(true))
 	require.NoError(t, err, `jwk.ParseKey should succeed`)
 	require.Equal(t, jwa.RSA(), key.KeyType(), `key type should be RSA`)
 
@@ -2207,11 +2210,15 @@ func TestECDSAPEM(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	pem, err := jwk.EncodePEM(key)
+	raw, err := jwk.Export[any](key)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = jwk.ParseKey(pem, jwk.WithPEM(true))
+	pem, err := jwkbb.EncodePEM(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = jwk.ParseKey(pem, jwk.WithX509(true))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -2417,25 +2424,6 @@ func TestExportEmbeddedKey(t *testing.T) {
 	})
 }
 
-func TestPEMDecodeFunc(t *testing.T) {
-	// PEMDecodeFunc should adapt a plain function to PEMDecoder and
-	// forward the call verbatim.
-	wantRaw := []byte("raw")
-	wantRest := []byte("rest")
-	wantErr := errors.New("boom")
-	var got []byte
-	var dec jwk.PEMDecoder = jwk.PEMDecodeFunc(func(src []byte) (any, []byte, error) {
-		got = src
-		return wantRaw, wantRest, wantErr
-	})
-
-	raw, rest, err := dec.Decode([]byte("src"))
-	require.Equal(t, []byte("src"), got, "adapter should forward the input")
-	require.Equal(t, any(wantRaw), raw)
-	require.Equal(t, wantRest, rest)
-	require.ErrorIs(t, err, wantErr)
-}
-
 func TestOKPRawKeyImporterFunc(t *testing.T) {
 	// OKPRawKeyImporterFunc should adapt a plain function to the
 	// OKPRawKeyImporter interface and forward the call verbatim.
@@ -2455,267 +2443,60 @@ func TestOKPRawKeyImporterFunc(t *testing.T) {
 	require.Equal(t, wantD, d)
 }
 
-func TestWithPEMDecoder(t *testing.T) {
-	// Generate a valid RSA private key
-	privateKey, err := jwxtest.GenerateRsaKey()
-	require.NoError(t, err)
-
-	// Encode it to PEM format
-	pemData, err := jwk.EncodePEM(privateKey)
-	require.NoError(t, err)
-
-	// Create a PEM decoder
-	decoder := jwk.NewPEMDecoder()
-
-	// Test that Parse with WithPEMDecoder works correctly
-	parsedKey, err := jwk.Parse(pemData, jwk.WithPEM(true), jwk.WithPEMDecoder(decoder))
-	require.NoError(t, err, "Parse should succeed with valid PEM data and custom decoder")
-	require.NotNil(t, parsedKey, "Parsed key should not be nil")
-}
-
 func TestRegisterX509Decoder(t *testing.T) {
-	// Generate a real RSA key for testing
 	testKey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err)
 
-	// Create a custom decoder that handles a custom PEM type and returns the test key
-	customIdent := "test-custom-decoder"
-	customDecoder := jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
-		if block.Type == "TEST CUSTOM KEY" {
-			return testKey, nil
-		}
-		return nil, fmt.Errorf("unsupported type or block")
-	})
+	const blockType = "TEST CUSTOM KEY"
+	require.NoError(t, jwkbb.RegisterX509Decoder[*rsa.PrivateKey](blockType, jwkbb.X509DecodeFunc[*rsa.PrivateKey](func(*pem.Block) (*rsa.PrivateKey, error) {
+		return testKey, nil
+	})))
+	t.Cleanup(func() { jwkbb.UnregisterX509Decoder(blockType) })
 
-	// Register the custom decoder
-	jwk.RegisterX509Decoder(customIdent, customDecoder)
-
-	// Create test PEM data with our custom type
 	testPEMData := `-----BEGIN TEST CUSTOM KEY-----
 dGVzdCBkYXRh
 -----END TEST CUSTOM KEY-----`
 
-	// Test that our custom decoder can handle this via ParseKey
-	parsedKey, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	parsedKey, err := jwk.ParseKey([]byte(testPEMData), jwk.WithX509(true))
 	require.NoError(t, err)
 	require.NotNil(t, parsedKey)
-
-	// Verify we get back a valid RSA key
 	require.Equal(t, "RSA", parsedKey.KeyType().String())
-
-	// Clean up: unregister the decoder
-	jwk.UnregisterX509Decoder(customIdent)
 }
 
 func TestUnregisterX509Decoder(t *testing.T) {
-	// Generate a real RSA key for testing
 	testKey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err)
 
-	// Create a custom decoder
-	customIdent := "test-unregister-decoder"
-	customDecoder := jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
-		if block.Type == "TEST UNREGISTER" {
-			return testKey, nil
-		}
-		return nil, fmt.Errorf("unsupported type or block")
-	})
+	const blockType = "TEST UNREGISTER"
+	require.NoError(t, jwkbb.RegisterX509Decoder[*rsa.PrivateKey](blockType, jwkbb.X509DecodeFunc[*rsa.PrivateKey](func(*pem.Block) (*rsa.PrivateKey, error) {
+		return testKey, nil
+	})))
 
-	// Register the decoder
-	jwk.RegisterX509Decoder(customIdent, customDecoder)
-
-	// Create test PEM data
-	testPEMData := `-----BEGIN TEST UNREGISTER-----
+	testPEMData := []byte(`-----BEGIN TEST UNREGISTER-----
 dGVzdCBkYXRh
------END TEST UNREGISTER-----`
+-----END TEST UNREGISTER-----`)
 
-	// Verify it works when registered
-	parsedKey1, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	parsedKey1, err := jwk.ParseKey(testPEMData, jwk.WithX509(true))
 	require.NoError(t, err)
 	require.NotNil(t, parsedKey1)
 
-	// Now unregister the decoder
-	jwk.UnregisterX509Decoder(customIdent)
+	jwkbb.UnregisterX509Decoder(blockType)
 
-	// Verify it no longer works
-	parsedKey2, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
+	parsedKey2, err := jwk.ParseKey(testPEMData, jwk.WithX509(true))
 	require.Error(t, err)
 	require.Nil(t, parsedKey2)
 }
 
-func TestRegisterX509Decoder_NilPanic(t *testing.T) {
-	// Test that registering nil decoder panics
-	require.Panics(t, func() {
-		jwk.RegisterX509Decoder("test", nil)
-	})
-}
-
-func TestRegisterX509Decoder_DuplicateRegistration(t *testing.T) {
-	// Generate a test key for verification
-	testKey, err := jwxtest.GenerateRsaKey()
-	require.NoError(t, err)
-
-	// Create a custom decoder that handles a specific PEM type
-	customIdent := "test-duplicate-decoder"
-	callCount := 0
-	decoder := jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
-		callCount++
-		if block.Type == "TEST DUPLICATE" {
-			return testKey, nil
-		}
-		return nil, fmt.Errorf("unsupported type")
-	})
-
-	// Register the decoder
-	jwk.RegisterX509Decoder(customIdent, decoder)
-
-	// Create test PEM data
-	testPEMData := `-----BEGIN TEST DUPLICATE-----
-dGVzdCBkYXRh
------END TEST DUPLICATE-----`
-
-	// Verify it works after first registration
-	parsedKey1, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
-	require.NoError(t, err)
-	require.NotNil(t, parsedKey1)
-	require.Equal(t, 1, callCount, "Decoder should be called once")
-
-	// Register it again (duplicate) - should be idempotent
-	jwk.RegisterX509Decoder(customIdent, decoder)
-
-	// Verify it still works after duplicate registration and decoder wasn't added twice
-	parsedKey2, err := jwk.ParseKey([]byte(testPEMData), jwk.WithPEM(true))
-	require.NoError(t, err)
-	require.NotNil(t, parsedKey2)
-	require.Equal(t, 2, callCount, "Decoder should be called once more, not duplicated")
-
-	// Clean up
-	jwk.UnregisterX509Decoder(customIdent)
-}
-
-func TestUnregisterX509Decoder_NotRegistered(t *testing.T) {
-	// Unregistering a non-existent decoder should be safe (no-op)
-	require.NotPanics(t, func() {
-		jwk.UnregisterX509Decoder("non-existent-decoder")
-	})
-}
-
-// registerTrioDecoders registers three decoders that each recognize a
-// distinct PEM block type. Callers receive the idents and a function
-// that builds a PEM body for one of the types. Cleanup is registered
-// via t.Cleanup so leftover decoders never leak across tests.
-func registerTrioDecoders(t *testing.T) (identA, identB, identC string, pemFor func(string) []byte) {
-	t.Helper()
-	testKey, err := jwxtest.GenerateRsaKey()
-	require.NoError(t, err)
-
-	mk := func(wantType string) jwk.X509Decoder {
-		return jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
-			if block.Type == wantType {
-				return testKey, nil
-			}
-			return nil, fmt.Errorf("unsupported type")
-		})
-	}
-
-	identA = "test-trio-A"
-	identB = "test-trio-B"
-	identC = "test-trio-C"
-	require.NoError(t, jwk.RegisterX509Decoder(identA, mk("TRIO A")))
-	require.NoError(t, jwk.RegisterX509Decoder(identB, mk("TRIO B")))
-	require.NoError(t, jwk.RegisterX509Decoder(identC, mk("TRIO C")))
-
-	t.Cleanup(func() {
-		jwk.UnregisterX509Decoder(identA)
-		jwk.UnregisterX509Decoder(identB)
-		jwk.UnregisterX509Decoder(identC)
-	})
-
-	pemFor = func(typ string) []byte {
-		return []byte("-----BEGIN " + typ + "-----\ndGVzdCBkYXRh\n-----END " + typ + "-----")
-	}
-	return identA, identB, identC, pemFor
-}
-
-// TestUnregisterX509Decoder_StaleIndexMiddle exercises JWK-003: after
-// removing a decoder from the middle of the list, a subsequent
-// unregister of a later-registered ident must not panic and must
-// remove the correct decoder.
-func TestUnregisterX509Decoder_StaleIndexMiddle(t *testing.T) {
-	identA, identB, identC, pemFor := registerTrioDecoders(t)
-
-	// Remove the middle decoder. Prior to the fix, the surviving
-	// entry for identC kept its original index, which pointed past
-	// the end of the shrunken slice.
-	jwk.UnregisterX509Decoder(identB)
-
-	// B must no longer decode.
-	_, err := jwk.ParseKey(pemFor("TRIO B"), jwk.WithPEM(true))
-	require.Error(t, err, "TRIO B should fail after unregister")
-
-	// A and C must still decode.
-	_, err = jwk.ParseKey(pemFor("TRIO A"), jwk.WithPEM(true))
-	require.NoError(t, err, "TRIO A should still decode")
-	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
-	require.NoError(t, err, "TRIO C should still decode")
-
-	// Now unregister C by ident. Before the fix this would panic
-	// with an out-of-range slice index.
-	require.NotPanics(t, func() {
-		jwk.UnregisterX509Decoder(identC)
-	})
-
-	// C must no longer decode; A must still decode.
-	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
-	require.Error(t, err, "TRIO C should fail after second unregister")
-	_, err = jwk.ParseKey(pemFor("TRIO A"), jwk.WithPEM(true))
-	require.NoError(t, err, "TRIO A must survive unrelated unregister")
-
-	// Keep identA alive until cleanup fires.
-	_ = identA
-}
-
-// TestUnregisterX509Decoder_StaleIndexFirst exercises the case where
-// the removed element is at index 0 of the user-registered portion of
-// the list. A later unregister for a surviving ident must still hit
-// the correct decoder.
-func TestUnregisterX509Decoder_StaleIndexFirst(t *testing.T) {
-	identA, identB, identC, pemFor := registerTrioDecoders(t)
-
-	jwk.UnregisterX509Decoder(identA)
-
-	_, err := jwk.ParseKey(pemFor("TRIO A"), jwk.WithPEM(true))
-	require.Error(t, err)
-	_, err = jwk.ParseKey(pemFor("TRIO B"), jwk.WithPEM(true))
-	require.NoError(t, err)
-	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
-	require.NoError(t, err)
-
-	require.NotPanics(t, func() {
-		jwk.UnregisterX509Decoder(identC)
-	})
-
-	_, err = jwk.ParseKey(pemFor("TRIO C"), jwk.WithPEM(true))
-	require.Error(t, err)
-	_, err = jwk.ParseKey(pemFor("TRIO B"), jwk.WithPEM(true))
-	require.NoError(t, err, "TRIO B must survive unrelated unregister")
-
-	_ = identB
-}
-
 // TestX509DecoderConcurrent runs parsers and register/unregister
-// concurrently. Under -race this catches the in-place slice mutation
-// that was racing with snapshot-then-iterate readers in decodeX509.
+// concurrently. Under -race this catches any missing synchronization
+// between readers and writers of the decoder map.
 func TestX509DecoderConcurrent(t *testing.T) {
 	testKey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err)
 
 	pemData := []byte("-----BEGIN TRIO CONCURRENT-----\ndGVzdCBkYXRh\n-----END TRIO CONCURRENT-----")
-	decoder := jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
-		if block.Type == "TRIO CONCURRENT" {
-			return testKey, nil
-		}
-		return nil, fmt.Errorf("unsupported type")
+	decoder := jwkbb.X509DecodeFunc[*rsa.PrivateKey](func(*pem.Block) (*rsa.PrivateKey, error) {
+		return testKey, nil
 	})
 
 	stop := make(chan struct{})
@@ -2731,16 +2512,15 @@ func TestX509DecoderConcurrent(t *testing.T) {
 				}
 				// Best-effort parse; error is fine (decoder may be
 				// unregistered at this moment). The point is that
-				// the read path must not race on the decoder slice.
-				_, _ = jwk.ParseKey(pemData, jwk.WithPEM(true))
+				// the read path must not race on the decoder map.
+				_, _ = jwk.ParseKey(pemData, jwk.WithX509(true))
 			}
 		})
 	}
 
-	for i := range 200 {
-		ident := fmt.Sprintf("test-concurrent-%d", i)
-		require.NoError(t, jwk.RegisterX509Decoder(ident, decoder))
-		jwk.UnregisterX509Decoder(ident)
+	for range 200 {
+		require.NoError(t, jwkbb.RegisterX509Decoder[*rsa.PrivateKey]("TRIO CONCURRENT", decoder))
+		jwkbb.UnregisterX509Decoder("TRIO CONCURRENT")
 	}
 
 	close(stop)

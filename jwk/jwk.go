@@ -9,8 +9,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
@@ -331,8 +329,8 @@ func (ctx *setDecodeCtx) IgnoreParseError() bool {
 // [Parse] this method reports failure if the input is a JWK set. Only
 // use this function when you know that the data is a single JWK.
 //
-// Given a WithPEM(true) option, this function assumes that the given input
-// is PEM encoded ASN.1 DER format key.
+// Given a WithX509(true) option, this function assumes that the given input
+// is a PEM-framed X.509-encoded key.
 //
 // Note that a successful parsing of any type of key does NOT necessarily
 // guarantee a valid key. For example, no checks against expiration dates
@@ -368,15 +366,12 @@ func ParseKeyAs[T Key](data []byte, options ...ParseOption) (T, error) {
 }
 
 func doParseKey(data []byte, options ...ParseOption) (Key, error) {
-	var parsePEM bool
+	var parseX509 bool
 	var localReg *json.Registry
-	var pemDecoder PEMDecoder
 	for _, opt := range options {
 		switch opt.Ident() {
-		case identPEM{}:
-			parsePEM = option.MustGet[bool](opt)
-		case identPEMDecoder{}:
-			pemDecoder = option.MustGet[PEMDecoder](opt)
+		case identX509{}:
+			parseX509 = option.MustGet[bool](opt)
 		case identLocalRegistry{}:
 			localReg = option.MustGet[*json.Registry](opt)
 		case identTypedField{}:
@@ -390,18 +385,8 @@ func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 		}
 	}
 
-	if parsePEM {
-		var raw any
-		var err error
-
-		// PEMDecoder should probably be deprecated, because of being a misnomer.
-		if pemDecoder != nil {
-			raw, err = decodeX509WithPEMDEcoder(data, pemDecoder)
-		} else {
-			// This version takes into account the various X509 decoders that are
-			// pre-registered.
-			raw, err = decodeX509(data)
-		}
+	if parseX509 {
+		raw, _, err := decodeX509(data)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to decode PEM/X.509 encoded key: %w`, err)
 		}
@@ -461,19 +446,13 @@ func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 // you know for sure that you have a single key, please see the documentation
 // for `jwk.ParseKey()`.
 func Parse(src []byte, options ...ParseOption) (Set, error) {
-	var parsePEM bool
 	var parseX509 bool
 	var localReg *json.Registry
 	var ignoreParseError bool
-	var pemDecoder PEMDecoder
 	for _, opt := range options {
 		switch opt.Ident() {
-		case identPEM{}:
-			parsePEM = option.MustGet[bool](opt)
 		case identX509{}:
 			parseX509 = option.MustGet[bool](opt)
-		case identPEMDecoder{}:
-			pemDecoder = option.MustGet[PEMDecoder](opt)
 		case identIgnoreParseError{}:
 			ignoreParseError = option.MustGet[bool](opt)
 		case identTypedField{}:
@@ -487,14 +466,11 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 
 	s := NewSet()
 
-	if parsePEM || parseX509 {
-		if pemDecoder == nil {
-			pemDecoder = NewPEMDecoder()
-		}
+	if parseX509 {
 		src = bytes.TrimSpace(src)
 		var keyCount int
 		for len(src) > 0 {
-			raw, rest, err := pemDecoder.Decode(src)
+			raw, rest, err := decodeX509(src)
 			if err != nil {
 				return nil, parseerr(`failed to parse PEM encoded key: %w`, err)
 			}
@@ -596,81 +572,6 @@ func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
 	}
 
 	return nil
-}
-
-// Pem serializes the given jwk.Key in PEM encoded ASN.1 DER format,
-// using either PKCS8 for private keys and PKIX for public keys.
-// If you need to encode using PKCS1 or SEC1, you must do it yourself.
-//
-// # Argument must be of type jwk.Key or jwk.Set
-//
-// Currently only EC (including Ed25519) and RSA keys (and jwk.Set
-// comprised of these key types) are supported.
-func Pem(v any) ([]byte, error) {
-	var set Set
-	switch v := v.(type) {
-	case Key:
-		set = NewSet()
-		if err := set.AddKey(v); err != nil {
-			return nil, fmt.Errorf(`failed to add key to set: %w`, err)
-		}
-	case Set:
-		set = v
-	default:
-		return nil, fmt.Errorf(`argument to Pem must be either jwk.Key or jwk.Set: %T`, v)
-	}
-
-	var ret []byte
-	for i := range set.Len() {
-		key, _ := set.Key(i)
-		typ, buf, err := asnEncode(key)
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode content for key #%d: %w`, i, err)
-		}
-
-		var block pem.Block
-		block.Type = typ
-		block.Bytes = buf
-		ret = append(ret, pem.EncodeToMemory(&block)...)
-	}
-	return ret, nil
-}
-
-func asnEncode(key Key) (string, []byte, error) {
-	switch key := key.(type) {
-	case ECDSAPrivateKey:
-		rawkey, err := Export[*ecdsa.PrivateKey](key)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
-		}
-		buf, err := x509.MarshalECPrivateKey(rawkey)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
-		}
-		return pmECPrivateKey, buf, nil
-	case RSAPrivateKey, OKPPrivateKey:
-		rawkey, err := Export[any](key)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
-		}
-		buf, err := x509.MarshalPKCS8PrivateKey(rawkey)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to marshal PKCS8: %w`, err)
-		}
-		return pmPrivateKey, buf, nil
-	case RSAPublicKey, ECDSAPublicKey, OKPPublicKey:
-		rawkey, err := Export[any](key)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to get raw key from jwk.Key: %w`, err)
-		}
-		buf, err := x509.MarshalPKIXPublicKey(rawkey)
-		if err != nil {
-			return "", nil, fmt.Errorf(`failed to marshal PKIX: %w`, err)
-		}
-		return pmPublicKey, buf, nil
-	default:
-		return "", nil, fmt.Errorf(`unsupported key type %T`, key)
-	}
 }
 
 // CustomDecoder is a generic interface for custom field decoders.

@@ -11,16 +11,11 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v4/jwk"
+	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
 	"github.com/stretchr/testify/require"
 )
 
 type invalidImportRaw struct{}
-
-type invalidPEMDecoder struct{}
-
-func (invalidPEMDecoder) Decode([]byte) (any, []byte, error) {
-	return invalidImportRaw{}, nil, nil
-}
 
 type invalidReturningParser struct{}
 
@@ -71,41 +66,40 @@ func registerInvalidParser(t *testing.T) {
 	})
 }
 
-func TestImportRejectsInvalidKeyFromCustomImporter(t *testing.T) {
+// Both the direct Import path and the ParseKey-with-X509 path funnel
+// raw keys through the same importer registry, so an invalid key
+// produced by a custom importer must be rejected the same way no
+// matter which path reached it. The x509 subtest depends on the
+// custom importer registered by registerInvalidImporter — running it
+// as a sibling top-level test made the outcome depend on Go's test
+// ordering, which is why they live together here.
+func TestRejectsInvalidKeyFromCustomImporter(t *testing.T) {
 	registerInvalidImporter(t)
 
-	_, err := jwk.Import[jwk.Key](invalidImportRaw{})
-	require.Error(t, err)
-	require.ErrorIs(t, err, jwk.ImportError())
-	require.True(t, jwk.IsKeyValidationError(err), `Import should preserve key-validation identity`)
-}
-
-func TestParseWithPEMDecoderRejectsInvalidImportedKey(t *testing.T) {
-	_, err := jwk.Parse([]byte("dummy"), jwk.WithPEM(true), jwk.WithPEMDecoder(invalidPEMDecoder{}))
-	require.Error(t, err)
-	require.ErrorIs(t, err, jwk.ParseError())
-	require.True(t, jwk.IsKeyValidationError(err), `Parse should preserve key-validation identity`)
-}
-
-func TestParseKeyWithX509DecoderRejectsInvalidImportedKey(t *testing.T) {
-	ident := "test-invalid-x509-import-boundary"
-	err := jwk.RegisterX509Decoder(ident, jwk.X509DecodeFunc(func(block *pem.Block) (any, error) {
-		if block.Type != "INVALID ECDSA" {
-			return nil, fmt.Errorf("unsupported type")
-		}
-		return invalidImportRaw{}, nil
-	}))
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		jwk.UnregisterX509Decoder(ident)
+	t.Run("direct Import", func(t *testing.T) {
+		_, err := jwk.Import[jwk.Key](invalidImportRaw{})
+		require.Error(t, err)
+		require.ErrorIs(t, err, jwk.ImportError())
+		require.True(t, jwk.IsKeyValidationError(err), `Import should preserve key-validation identity`)
 	})
 
-	src := []byte(`-----BEGIN INVALID ECDSA-----
+	t.Run("ParseKey via X509 decoder", func(t *testing.T) {
+		const blockType = "INVALID ECDSA"
+		err := jwkbb.RegisterX509Decoder[invalidImportRaw](blockType, jwkbb.X509DecodeFunc[invalidImportRaw](func(*pem.Block) (invalidImportRaw, error) {
+			return invalidImportRaw{}, nil
+		}))
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			jwkbb.UnregisterX509Decoder(blockType)
+		})
+
+		src := []byte(`-----BEGIN INVALID ECDSA-----
 ZHVtbXk=
 -----END INVALID ECDSA-----`)
-	_, err = jwk.ParseKey(src, jwk.WithPEM(true))
-	require.Error(t, err)
-	require.True(t, jwk.IsKeyValidationError(err), `ParseKey should preserve key-validation identity`)
+		_, err = jwk.ParseKey(src, jwk.WithX509(true))
+		require.Error(t, err)
+		require.True(t, jwk.IsKeyValidationError(err), `ParseKey should preserve key-validation identity`)
+	})
 }
 
 func TestParseKeyRejectsInvalidKeyFromCustomParser(t *testing.T) {

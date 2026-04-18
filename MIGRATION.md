@@ -46,6 +46,15 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 | `jwk.RegisterProbeField(reflect.StructField{...})` | `jwk.RegisterProbeField[T](name, jsonKey)` | No `reflect` import needed |
 | `jwk.Import(raw)` | `jwk.Import[T](raw)` | Generic return type |
 | `jwk.ParseKey(data)` | `jwk.ParseKey(data)` *(unchanged — returns `jwk.Key`)* / `jwk.ParseKeyAs[T](data)` | Typed subtype moved to `ParseKeyAs[T]` |
+| `jwk.RegisterX509Decoder(ident, d)` | `jwkbb.RegisterX509Decoder[T](blockType, d)` | Moved to `jwk/jwkbb` and keyed by the PEM block type string. `T` is the decoder's concrete return type. Returns error on empty blockType or nil decoder instead of panicking; registering the same blockType twice overwrites. |
+| `jwk.UnregisterX509Decoder(ident)` | `jwkbb.UnregisterX509Decoder(blockType)` | Takes the PEM block type rather than an opaque ident |
+| `jwk.X509Decoder` / `jwk.X509DecodeFunc` | `jwkbb.X509Decoder[T]` / `jwkbb.X509DecodeFunc[T]` | Moved to `jwk/jwkbb` and made generic; `T` is the decoder's return type |
+| *(not available)* | `jwkbb.RegisterX509Encoder[T](e)` / `jwkbb.UnregisterX509Encoder[T]()` / `jwkbb.X509Encoder[T]` / `jwkbb.X509EncodeFunc[T]` | New in v4: custom PEM encoders for `jwkbb.EncodePEM`, keyed by Go type (e.g. PQC key formats) |
+| `jwk.PEMDecoder` / `jwk.PEMDecodeFunc` / `jwk.PEMEncoder` / `jwk.PEMEncodeFunc` / `jwk.NewPEMDecoder()` | *(removed)* | Plumbing types removed; register a custom decoder through `jwkbb.RegisterX509Decoder` instead |
+| `jwk.WithPEMDecoder(d)` | *(removed)* | Use `jwkbb.RegisterX509Decoder(ident, d)` to install a custom PEM block decoder globally |
+| `jwk.WithPEM(true)` | `jwk.WithX509(true)` | Single option for "input is PEM-framed X.509"; `WithPEM` was a pre-release alias scheduled for removal |
+| `jwk.EncodePEM(v)` | `jwkbb.EncodePEM(raw)` | Unwrap `jwk.Key` with `jwk.Export[any]` first; accepts one or more raw keys |
+| `jwk.Pem(keyOrSet)` | `jwkbb.EncodePEM(jwk.ExportAll[any](set)...)` | Iterate a `jwk.Set` into raw keys via `jwk.ExportAll[any]`, then pass variadically |
 | `jwk.NewCache(ctx, client)` | `jwkfetch.NewCache(ctx, client)` | Extension module (see Recipe 6) |
 | `jwk.Fetch(ctx, url, opts...)` | `jwkfetch.NewClient(opts...).Fetch(ctx, url)` | Extension module (see Recipe 6) |
 | `jwk.WithHTTPClient(c)` | `jwkfetch.WithHTTPClient(c)` | Extension module |

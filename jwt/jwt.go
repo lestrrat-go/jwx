@@ -1,5 +1,5 @@
 //go:generate ../scripts/jwxcodegen.sh generate-jwt -objects=objects.yml
-//go:generate stringer -type=TokenOption -output=token_options_gen.go
+//go:generate go tool stringer -type=TokenOption -output=token_options_gen.go
 
 package jwt
 

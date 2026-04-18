@@ -1,6 +1,6 @@
 //go:generate ./scripts/jwxcodegen.sh generate-readfile
 //go:generate ./scripts/jwxcodegen.sh generate-all-options
-//go:generate stringer -type=FormatKind
+//go:generate go tool stringer -type=FormatKind
 //go:generate mv formatkind_string.go formatkind_string_gen.go
 
 // Package jwx contains tools that deal with the various JWx (JOSE)
