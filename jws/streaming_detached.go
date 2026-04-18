@@ -337,7 +337,13 @@ func newStreamingHasher(info streamingAlgorithmInfo, key any) (hash.Hash, error)
 		}
 		keyBytes, ok := key.([]byte)
 		if !ok {
-			return nil, fmt.Errorf(`HMAC key must be []byte, got %T`, key)
+			// Route through keyconv so the error matches the non-streaming
+			// HMAC path (e.g., passing a string secret surfaces
+			// `keyconv: expected []byte, got string`) instead of the
+			// terser type-assertion failure.
+			if err := keyconv.ByteSliceKey(&keyBytes, key); err != nil {
+				return nil, fmt.Errorf(`failed to convert HMAC key to []byte (streaming path): %w`, err)
+			}
 		}
 		return hmac.New(meta.HashFunc, keyBytes), nil
 	case dsig.RSA:
