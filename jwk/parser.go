@@ -162,7 +162,17 @@ func (kp *keyProber) addField(name string, def probeFieldDef) error {
 
 	def.index = len(kp.fields)
 	kp.fields = append(kp.fields, def)
-	kp.names[name] = def.index
+
+	// Replace kp.names with a fresh map. KeyProbe instances created by
+	// earlier Probe calls keep their reference to the old map, which is
+	// never mutated again — so KeyProbe.Field reads stay safe even while
+	// a concurrent RegisterProbeField runs.
+	names := make(map[string]int, len(kp.fields))
+	for k, v := range kp.names {
+		names[k] = v
+	}
+	names[name] = def.index
+	kp.names = names
 
 	// Rebuild jsonKeys lookup
 	kp.jsonKeys = make(map[string]*probeFieldDef, len(kp.fields))
