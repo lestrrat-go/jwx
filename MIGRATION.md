@@ -492,11 +492,11 @@ These changes cannot be mechanically transformed and need human judgment:
 
 3. **jku whitelist configuration**: Audit every `jws.WithVerifyAuto` / `jwt.WithVerifyAuto` call site. In v3 these accepted fetch options and prepended an implicit deny-all whitelist, so a caller who didn't pass `jwk.WithFetchWhitelist(...)` got rejected URLs. In v4, `WithVerifyAuto` takes only a `jwk.Fetcher` and jwx does not wrap it with any default-deny — the whitelist has to be configured on the fetcher itself at construction time. If your v3 code was of the form `jws.WithVerifyAuto(nil, jwk.WithFetchWhitelist(wl), jwk.WithHTTPClient(c))`, you must rewrite it as `jws.WithVerifyAuto(jwkfetch.NewClient(jwkfetch.WithWhitelist(wl), jwkfetch.WithHTTPClient(c)))` or the `jku` URL will be fetched with no policy. A `jwkfetch.Client` built with no `WithWhitelist` permits every URL, so a bare `jwkfetch.NewClient()` is dangerous for jku verification.
 
-3. **`json.Number` usage**: If you relied on `json.Number` type preservation via `jwx.WithUseNumber(true)`, use `jwx.Settings(jwx.WithUseNumber(true))` instead. The API was renamed from `DecoderSettings` to `Settings` to match the sub-package convention.
+4. **`json.Number` usage**: If you relied on `json.Number` type preservation via `jwx.WithUseNumber(true)`, use `jwx.Settings(jwx.WithUseNumber(true))` instead. The API was renamed from `DecoderSettings` to `Settings` to match the sub-package convention.
 
-4. **Code that catches specific error messages**: If you matched on error message strings from the crypto layer (e.g., during JWS signing), those errors may now occur earlier (at `WithKey()` time) due to algorithm-key validation.
+5. **Code that catches specific error messages**: If you matched on error message strings from the crypto layer (e.g., during JWS signing), those errors may now occur earlier (at `WithKey()` time) due to algorithm-key validation.
 
-5. **`Settings()` calls**: `jwt.Settings`, `jws.Settings`, `jwe.Settings`, `cert.Settings`, and `jwx.Settings` now return `error` instead of panicking (or silently accepting invalid state) on bad inputs. Call sites need to either check the returned error or explicitly discard it:
+6. **`Settings()` calls**: `jwt.Settings`, `jws.Settings`, `jwe.Settings`, `cert.Settings`, and `jwx.Settings` now return `error` instead of panicking (or silently accepting invalid state) on bad inputs. Call sites need to either check the returned error or explicitly discard it:
 
    ```go
    // Before (v3): invalid value panicked (or silently accepted)
@@ -516,7 +516,7 @@ These changes cannot be mechanically transformed and need human judgment:
 
    `jwk.Settings` remains void; its options have no validatable state today.
 
-6. **Filter + transform usage**: All filter types/constructors and the `transform` package moved out of core into `github.com/jwx-go/jwxfilter/v4`. If your code references `jwt.TokenFilter`, `jws.HeaderFilter`, `jwe.HeaderFilter`, `jwk.KeyFilter`, any `New*Filter` / `*StandardFilter()` / `openid.StandardClaimsFilter`, or anything in `transform`, add a dependency on the new companion and update imports:
+7. **Filter + transform usage**: All filter types/constructors and the `transform` package moved out of core into `github.com/jwx-go/jwxfilter/v4`. If your code references `jwt.TokenFilter`, `jws.HeaderFilter`, `jwe.HeaderFilter`, `jwk.KeyFilter`, any `New*Filter` / `*StandardFilter()` / `openid.StandardClaimsFilter`, or anything in `transform`, add a dependency on the new companion and update imports:
 
    ```sh
    go get github.com/jwx-go/jwxfilter/v4
