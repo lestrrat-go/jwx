@@ -4,6 +4,7 @@ import (
 	"encoding/json/jsontext"
 	jsonv2 "encoding/json/v2"
 	"fmt"
+	"maps"
 	"sync"
 
 	"github.com/lestrrat-go/jwx/v4/internal/json"
@@ -168,9 +169,7 @@ func (kp *keyProber) addField(name string, def probeFieldDef) error {
 	// never mutated again — so KeyProbe.Field reads stay safe even while
 	// a concurrent RegisterProbeField runs.
 	names := make(map[string]int, len(kp.fields))
-	for k, v := range kp.names {
-		names[k] = v
-	}
+	maps.Copy(names, kp.names)
 	names[name] = def.index
 	kp.names = names
 

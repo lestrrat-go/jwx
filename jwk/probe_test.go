@@ -20,9 +20,7 @@ func TestProbeFieldRegistrationConcurrent(t *testing.T) {
 
 	// Reader: hammer KeyProbe.Field on the captured probe.
 	for range 4 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for {
 				select {
 				case <-stop:
@@ -32,7 +30,7 @@ func TestProbeFieldRegistrationConcurrent(t *testing.T) {
 					_, _ = probe.Field("D")
 				}
 			}
-		}()
+		})
 	}
 
 	// Writer: register a batch of fresh fields. Each Register call
