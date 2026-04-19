@@ -26,6 +26,7 @@ In v4, optional features are provided as standalone modules under [`github.com/j
 | Module | Capability |
 |:-------|:-----------|
 | [`github.com/jwx-go/jwkfetch/v4`](https://github.com/jwx-go/jwkfetch) | HTTP JWK Set retrieval — one-shot `Client` and background-refreshed `Cache` (backed by [`httprc`](https://github.com/lestrrat-go/httprc)). Holds the HTTP fetch surface so the core jwx module doesn't depend on `net/http` or `httprc`. |
+| [`github.com/jwx-go/jwxfilter/v4`](https://github.com/jwx-go/jwxfilter) | Filter and introspection helpers for `jwt.Token`, `jws.Headers`, `jwe.Headers`, `jwk.Key`, and `openid.Token`. Extracted from core in v4 — the JOSE operations (sign/verify/encrypt/decrypt/parse) do not depend on it. |
 | [`github.com/jwx-go/asmbase64/v4`](https://github.com/jwx-go/asmbase64) | Assembly-optimized base64 backend via [`segmentio/asm`](https://github.com/segmentio/asm) |
 
 * [ML-DSA (Post-Quantum Signatures)](#ml-dsa-post-quantum-signatures)
@@ -41,6 +42,7 @@ In v4, optional features are provided as standalone modules under [`github.com/j
 * [ML-KEM](#ml-kem)
 * [Hybrid PQ HPKE (reddy-pqchpke)](#hybrid-pq-hpke-reddy-pqchpke)
 * [HTTP JWK Set Retrieval (jwkfetch)](#http-jwk-set-retrieval-jwkfetch)
+* [Filters and Introspection (jwxfilter)](#filters-and-introspection-jwxfilter)
 * [Assembly base64 (asmbase64)](#assembly-base64-asmbase64)
 
 ---
@@ -805,6 +807,28 @@ A `Client` built with no `WithWhitelist` permits every URL, which is the right d
 Policy options (`WithHTTPClient`, `WithMaxBodySize`, `WithParseOptions`) work for both `NewClient` and `NewCache`. `WithWhitelist` is `Client`-only — `Cache` has no `Whitelist` concept because the URLs it will ever contact are exactly the ones you passed to `Register`. Passing `WithWhitelist` to `NewCache` is a compile-time error. Per-URL knobs passed to `Cache.Register` cover refresh interval (`WithConstantInterval` / `WithMinInterval` / `WithMaxInterval`) and `WithWaitReady`.
 
 See the [module README](https://github.com/jwx-go/jwkfetch) for the full API reference and whitelist types (`InsecureWhitelist`, `BlockAllWhitelist`, `MapWhitelist`, `RegexpWhitelist`, `WhitelistFunc`).
+
+---
+
+# Filters and Introspection (jwxfilter)
+
+`jwxfilter` provides filter and introspection helpers for the jwx object types. It was extracted from the core modules in v4 so the main jwx module can stay focused on JOSE operations (sign, verify, encrypt, decrypt, parse). If you need to project a `jwt.Token` down to its RFC 7519 claims, pluck a single field out of a `jws.Headers`, or snapshot a `jwk.Key` as a plain `map[string]any`, this is where those helpers live.
+
+To use it, import the sub-package for the object you want to operate on.
+
+| Package | Operates on |
+|:--------|:------------|
+| [`github.com/jwx-go/jwxfilter/v4`](https://github.com/jwx-go/jwxfilter) | `Filter[T any]` interface, `Mappable` interface, `AsMap` helper |
+| [`github.com/jwx-go/jwxfilter/v4/jwtfilter`](https://github.com/jwx-go/jwxfilter/tree/develop/v4/jwtfilter) | `jwt.Token` (RFC 7519 claims) |
+| [`github.com/jwx-go/jwxfilter/v4/jwsfilter`](https://github.com/jwx-go/jwxfilter/tree/develop/v4/jwsfilter) | `jws.Headers` (RFC 7515 header parameters) |
+| [`github.com/jwx-go/jwxfilter/v4/jwefilter`](https://github.com/jwx-go/jwxfilter/tree/develop/v4/jwefilter) | `jwe.Headers` (RFC 7516 header parameters) |
+| [`github.com/jwx-go/jwxfilter/v4/jwkfilter`](https://github.com/jwx-go/jwxfilter/tree/develop/v4/jwkfilter) | `jwk.Key` (RFC 7517 key parameters) |
+| [`github.com/jwx-go/jwxfilter/v4/openidfilter`](https://github.com/jwx-go/jwxfilter/tree/develop/v4/openidfilter) | `openid.Token` (OpenID Connect Core 1.0 claims) |
+
+<!-- INCLUDE(examples/jwt_filter_basic_example_test.go) -->
+<!-- END INCLUDE -->
+
+See the [module README](https://github.com/jwx-go/jwxfilter) for the full list of filter constructors and the `AsMap` helper, and [`examples/`](https://github.com/jwx-go/examples) for `jws` / `jwe` / `jwk` counterparts (`jws_filter_basic_example_test.go`, `jwe_filter_basic_example_test.go`, `jwk_filter_basic_example_test.go`).
 
 ---
 
