@@ -3,3 +3,10 @@ Changes
 
 v4 has many incompatibilities with v3. To see the full list of differences between
 v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MICRATION-v4.md)
+
+v4.0.0 - 19 Apr 2026
+  * Initial v4 release. Major features:
+    * Lighter: Core / Companion module separation. Less dependencies in core.
+    * Faster: Use of generics and other optimizations make v4 2x~3x faster than before.
+    * Quantum-Ready: ML-KEM and ML-DSA, HPKE (+Hybrid) are supported through companion modules.
+  * See Changes-v4.md for a full set of Changes since v3.
