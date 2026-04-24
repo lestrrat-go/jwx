@@ -2,7 +2,7 @@
 
 These are changes that are incompatible with the v3.x.x version.
 
-For a step-by-step migration guide with before/after code examples, see [MIGRATION.md](MIGRATION.md). A machine-readable migration map for AI coding agents and automated tooling is available at [migrate/v3-to-v4.yaml](migrate/v3-to-v4.yaml).
+For a step-by-step migration guide with before/after code examples, see [MIGRATION.md](MIGRATION.md). A machine-readable migration map for AI coding agents and automated tooling is available at [`v3-to-v4.yaml`](https://github.com/jwx-go/jwxmigrate/blob/develop/v4/v3-to-v4.yaml) in the [`jwxmigrate`](https://github.com/jwx-go/jwxmigrate) companion module.
 
 # Detailed list of changes
 
