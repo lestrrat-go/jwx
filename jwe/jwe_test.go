@@ -1669,3 +1669,52 @@ func TestDecryptIgnoresUnprotectedHeader(t *testing.T) {
 	require.NoError(t, err, `jwe.Decrypt must ignore unprotected-header overrides`)
 	require.Equal(t, []byte(payload), decrypted, `plaintext should still round-trip through the tampered JWE`)
 }
+
+// TestDecryptRejectsAlgConflictBetweenProtectedAndPerRecipient pins
+// RFC 7516 §7.2.1's header-disjointness requirement for the
+// algorithm-confusion case: when the integrity-protected `alg` and
+// the per-recipient (unprotected) `alg` declare DIFFERENT values, the
+// recipient's alg-match loop would silently break on whichever it sees
+// first. An on-path attacker who rewrites the per-recipient header
+// can therefore steer dispatch even though the integrity-protected
+// header says something else. Decrypt must reject the message rather
+// than pick a winner.
+//
+// Compact JWE legitimately carries the same alg in both locations
+// (parseCompact synthesizes the per-recipient header by cloning
+// protected), so the check is "values must agree if both are present"
+// rather than strict disjointness.
+func TestDecryptRejectsAlgConflictBetweenProtectedAndPerRecipient(t *testing.T) {
+	privkey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, `rsa.GenerateKey should succeed`)
+
+	const payload = `lorem ipsum dolor sit amet`
+	encrypted, err := jwe.Encrypt(
+		[]byte(payload),
+		jwe.WithKey(jwa.RSA_OAEP(), &privkey.PublicKey),
+		jwe.WithContentEncryption(jwa.A128GCM()),
+		jwe.WithJSON(),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), privkey))
+	require.NoError(t, err, `baseline jwe.Decrypt should succeed`)
+	require.Equal(t, []byte(payload), decrypted, `baseline plaintext should round-trip`)
+
+	var parsed map[string]any
+	require.NoError(t, json.Unmarshal(encrypted, &parsed))
+
+	// Inject a conflicting per-recipient `alg`. Protected still claims
+	// RSA-OAEP; per-recipient now says RSA1_5.
+	parsed["header"] = map[string]any{
+		"alg": jwa.RSA1_5().String(),
+	}
+
+	tampered, err := json.Marshal(parsed)
+	require.NoError(t, err)
+
+	_, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.RSA_OAEP(), privkey))
+	require.Error(t, err, `Decrypt must reject a JWE whose alg differs between protected and per-recipient headers`)
+	require.ErrorIs(t, err, jwe.DecryptError())
+	require.Contains(t, err.Error(), "differs between protected", `error should name the conflict`)
+}
