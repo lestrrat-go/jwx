@@ -173,6 +173,22 @@ func validateECDSAPoint(crv elliptic.Curve, x, y *big.Int) error {
 		return fmt.Errorf(`invalid ECDSA public key: identity point is not a valid public key`)
 	}
 
+	// Coordinates must fit in the curve's field. PointValidator
+	// implementations commonly write x and y into a fixed-size buffer
+	// (jwk's own ecdhPointValidator uses big.Int.FillBytes; third-party
+	// validators registered via jwk/ecdsa.RegisterCurve, e.g. secp256k1
+	// in jwx-go/es256k, follow the same pattern). FillBytes panics on
+	// oversized input. Bounding here makes the PointValidator contract
+	// safe by construction for every registered curve, including any
+	// custom curve a downstream extension may add.
+	bits := crv.Params().BitSize
+	if x.BitLen() > bits {
+		return fmt.Errorf(`invalid ECDSA public key: x coordinate is %d bits, exceeds curve %q field size of %d bits`, x.BitLen(), crv.Params().Name, bits)
+	}
+	if y.BitLen() > bits {
+		return fmt.Errorf(`invalid ECDSA public key: y coordinate is %d bits, exceeds curve %q field size of %d bits`, y.BitLen(), crv.Params().Name, bits)
+	}
+
 	alg, err := ourecdsa.AlgorithmFromCurve(crv)
 	if err != nil {
 		return fmt.Errorf(`invalid ECDSA public key: %w`, err)

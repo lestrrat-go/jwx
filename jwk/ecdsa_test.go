@@ -75,6 +75,60 @@ func TestECDSAInvalidPointsRejectedOnParse(t *testing.T) {
 	})
 }
 
+// TestECDSAImportRejectsOversizedCoordinates covers the panic-prevention
+// guarantee on the validateECDSAPoint trust boundary: any caller-supplied
+// (X, Y) whose minimal byte representation exceeds the curve's field size
+// must be rejected with a typed error rather than reaching the registered
+// PointValidator. The stdlib NIST validators use big.Int.FillBytes into a
+// fixed-size buffer (jwk/ecdsa.go ecdhPointValidator) and would panic on
+// oversized input; third-party PointValidators registered via
+// jwk/ecdsa.RegisterCurve (e.g. secp256k1 in jwx-go/es256k) use the same
+// pattern. Bounding inside validateECDSAPoint makes the PointValidator
+// contract safe by construction for every registered curve.
+func TestECDSAImportRejectsOversizedCoordinates(t *testing.T) {
+	// 33 bytes with a non-zero leading byte → BitLen() > 256, larger than
+	// the P-256 field. FillBytes(buf[1:33]) would panic.
+	oversize := make([]byte, 33)
+	oversize[0] = 0xff
+	bigVal := new(big.Int).SetBytes(oversize)
+
+	t.Run("oversized X on public key", func(t *testing.T) {
+		bad := &ecdsa.PublicKey{
+			Curve: elliptic.P256(),
+			X:     bigVal,
+			Y:     big.NewInt(1),
+		}
+		_, err := jwk.Import[jwk.Key](bad)
+		require.Error(t, err, `jwk.Import must reject an oversized X without panicking`)
+		require.ErrorIs(t, err, jwk.ImportError(), `Import error should be classified as jwk.ImportError`)
+	})
+
+	t.Run("oversized Y on public key", func(t *testing.T) {
+		bad := &ecdsa.PublicKey{
+			Curve: elliptic.P256(),
+			X:     big.NewInt(1),
+			Y:     bigVal,
+		}
+		_, err := jwk.Import[jwk.Key](bad)
+		require.Error(t, err, `jwk.Import must reject an oversized Y without panicking`)
+		require.ErrorIs(t, err, jwk.ImportError(), `Import error should be classified as jwk.ImportError`)
+	})
+
+	t.Run("oversized public coordinate on private key", func(t *testing.T) {
+		bad := &ecdsa.PrivateKey{
+			PublicKey: ecdsa.PublicKey{
+				Curve: elliptic.P256(),
+				X:     bigVal,
+				Y:     big.NewInt(1),
+			},
+			D: big.NewInt(2),
+		}
+		_, err := jwk.Import[jwk.Key](bad)
+		require.Error(t, err, `jwk.Import must reject an oversized X on a private key without panicking`)
+		require.ErrorIs(t, err, jwk.ImportError(), `Import error should be classified as jwk.ImportError`)
+	})
+}
+
 // TestECDSAImportRejectsInvalidPoints covers the Import(*ecdsa.PublicKey)
 // entry point, which previously accepted any non-nil X/Y without curve
 // membership checks.
