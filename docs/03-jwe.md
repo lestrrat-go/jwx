@@ -39,7 +39,10 @@ import (
 )
 
 func Example_jwe_parse() {
-  const src = `eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA.bK7z7Z3gEzFDgDQvNen0Ww.2hngnAVrmucUpJKLgIzYcg.CHs3ZP7JtG430Dl9YAKLMAl`
+  // A sample compact-serialized JWE produced with alg=RSA-OAEP and
+  // enc=A256GCM. The five dot-separated segments are
+  // protected-header / encrypted-key / iv / ciphertext / tag.
+  const src = `eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.QoQNICnJzzytxWd9FOy6PgP2Qyh6HAPXWBXSdaWCX7upX_mzXBdR2r6zJgb-8HgAMJ9dXJvTaaoNq6J5JOOZMUprnPy08rwACkKK_lR363C380_LHlYmqDQGPoqUt97m2ZDUgfGDKv7ilw6SAQpGZ7e3eOY4g_qINmJ8HxOUBovV_D335SFGOiPeogYGobzGhnqFdQ3wTAdy_aLFXiN8SYpCwIx_GugrI1x2JzCZ6INV_VVvp6gzYIr6nUNooQt0EwnlrsNlaFHIemFMmNoOHSTKvgXI49ZCVpBSZ3fQEtQPMlq2RB099VCLDTofBTOJvlYo4VPA5uxbs5pHa3ULGg.YWtQIqXd8VYpjBGZ.KmJpIgDVk-c0Ei4.94UMzAd_b8yQJq6e3R2a-g`
 
   msg, err := jwe.Parse([]byte(src))
   if err != nil {
@@ -49,7 +52,7 @@ func Example_jwe_parse() {
 
   json.NewEncoder(os.Stdout).Encode(msg)
   // OUTPUT:
-  // {"ciphertext":"2hngnAVrmucUpJKLgIzYcg","encrypted_key":"KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA","header":{"alg":"RSA1_5"},"iv":"bK7z7Z3gEzFDgDQvNen0Ww","protected":"eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0","tag":"CHs3ZP7JtG430Dl9YAKLMAk"}
+  // {"ciphertext":"KmJpIgDVk-c0Ei4","encrypted_key":"QoQNICnJzzytxWd9FOy6PgP2Qyh6HAPXWBXSdaWCX7upX_mzXBdR2r6zJgb-8HgAMJ9dXJvTaaoNq6J5JOOZMUprnPy08rwACkKK_lR363C380_LHlYmqDQGPoqUt97m2ZDUgfGDKv7ilw6SAQpGZ7e3eOY4g_qINmJ8HxOUBovV_D335SFGOiPeogYGobzGhnqFdQ3wTAdy_aLFXiN8SYpCwIx_GugrI1x2JzCZ6INV_VVvp6gzYIr6nUNooQt0EwnlrsNlaFHIemFMmNoOHSTKvgXI49ZCVpBSZ3fQEtQPMlq2RB099VCLDTofBTOJvlYo4VPA5uxbs5pHa3ULGg","header":{"alg":"RSA-OAEP"},"iv":"YWtQIqXd8VYpjBGZ","protected":"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ","tag":"94UMzAd_b8yQJq6e3R2a-g"}
 }
 ```
 source: [examples/jwe_parse_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_parse_example_test.go)
@@ -73,7 +76,9 @@ import (
 )
 
 func Example_jwe_ParseFS() {
-  const src = `eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0.KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA.bK7z7Z3gEzFDgDQvNen0Ww.2hngnAVrmucUpJKLgIzYcg.CHs3ZP7JtG430Dl9YAKLMAl`
+  // Same canonical sample JWE as Example_jwe_parse, written out to a
+  // file and parsed back via jwe.ParseFS. alg=RSA-OAEP, enc=A256GCM.
+  const src = `eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ.QoQNICnJzzytxWd9FOy6PgP2Qyh6HAPXWBXSdaWCX7upX_mzXBdR2r6zJgb-8HgAMJ9dXJvTaaoNq6J5JOOZMUprnPy08rwACkKK_lR363C380_LHlYmqDQGPoqUt97m2ZDUgfGDKv7ilw6SAQpGZ7e3eOY4g_qINmJ8HxOUBovV_D335SFGOiPeogYGobzGhnqFdQ3wTAdy_aLFXiN8SYpCwIx_GugrI1x2JzCZ6INV_VVvp6gzYIr6nUNooQt0EwnlrsNlaFHIemFMmNoOHSTKvgXI49ZCVpBSZ3fQEtQPMlq2RB099VCLDTofBTOJvlYo4VPA5uxbs5pHa3ULGg.YWtQIqXd8VYpjBGZ.KmJpIgDVk-c0Ei4.94UMzAd_b8yQJq6e3R2a-g`
 
   f, err := os.CreateTemp(``, `jwe_parsefs_example-*.jwe`)
   if err != nil {
@@ -93,7 +98,7 @@ func Example_jwe_ParseFS() {
 
   json.NewEncoder(os.Stdout).Encode(msg)
   // OUTPUT:
-  // {"ciphertext":"2hngnAVrmucUpJKLgIzYcg","encrypted_key":"KrFTaMKVY_iUKYYk905QjbUf_fpBXvXCzIAfbPoPMGViDzxtgz5qnch8waV7wraVDfzpW7JfPOw6Nz_-XRwN3Vbud48bRYFw92GkC0M6kpKFpl_xgZxGN47ggNk9hzgqd7mFCuyufeYdn5c2fPoRZAV4UxvakLozEYcQo-eZaFmoYS4pyoC-IKKRikobW8n__LksMzXc_Vps1axn5kdpxsKQ4k1oayvUrgWX2PMxKn_TcLEKHtCN7qRlJ5hkKbZAXAdd34zGWcFV5gc1tcLs6HFhnebo8GUgItTYWBKSKzF6MyLJNRSUPFVq9q-Jxi1juXIlDrv_7rHVsdokQmBfvA","header":{"alg":"RSA1_5"},"iv":"bK7z7Z3gEzFDgDQvNen0Ww","protected":"eyJhbGciOiJSU0ExXzUiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0","tag":"CHs3ZP7JtG430Dl9YAKLMAk"}
+  // {"ciphertext":"KmJpIgDVk-c0Ei4","encrypted_key":"QoQNICnJzzytxWd9FOy6PgP2Qyh6HAPXWBXSdaWCX7upX_mzXBdR2r6zJgb-8HgAMJ9dXJvTaaoNq6J5JOOZMUprnPy08rwACkKK_lR363C380_LHlYmqDQGPoqUt97m2ZDUgfGDKv7ilw6SAQpGZ7e3eOY4g_qINmJ8HxOUBovV_D335SFGOiPeogYGobzGhnqFdQ3wTAdy_aLFXiN8SYpCwIx_GugrI1x2JzCZ6INV_VVvp6gzYIr6nUNooQt0EwnlrsNlaFHIemFMmNoOHSTKvgXI49ZCVpBSZ3fQEtQPMlq2RB099VCLDTofBTOJvlYo4VPA5uxbs5pHa3ULGg","header":{"alg":"RSA-OAEP"},"iv":"YWtQIqXd8VYpjBGZ","protected":"eyJhbGciOiJSU0EtT0FFUCIsImVuYyI6IkEyNTZHQ00ifQ","tag":"94UMzAd_b8yQJq6e3R2a-g"}
 }
 ```
 source: [examples/jwe_parsefs_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_parsefs_example_test.go)
