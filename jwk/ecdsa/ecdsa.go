@@ -24,6 +24,11 @@ import (
 // protects downstream crypto/ecdsa and crypto/ecdh consumers from
 // invalid-curve attacks.
 //
+// jwk guarantees that x and y fit in the curve's field (BitLen() is at
+// most crv.Params().BitSize) before invoking ValidatePoint. Validators
+// that write coordinates into a fixed-size buffer via big.Int.FillBytes
+// can rely on this precondition.
+//
 // Extension modules that register a non-stdlib curve (for example
 // secp256k1 via jwx-go/es256k) MUST provide a correct PointValidator;
 // it is the mechanism that replaces the deprecated
