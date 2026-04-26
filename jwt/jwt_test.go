@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -983,6 +984,52 @@ func TestParseRequest(t *testing.T) {
 		_, err := jwt.ParseRequest(req, jwt.WithCookieKey("cookie"), jwt.WithCookie(&dst), jwt.WithKey(jwa.ES256(), pubkey))
 		require.NoError(t, err, `jwt.ParseRequest should succeed`)
 		require.NotNil(t, dst, `cookie should be extracted`)
+	})
+
+	// Regression: ParseRequest used to call req.ParseForm() whenever the
+	// request had a non-zero ContentLength, even when the caller never
+	// passed WithFormKey. The bug is reachable when the header/cookie
+	// lookup falls through without returning a token: ParseRequest then
+	// tries the form path, but with no form keys the call is pure waste.
+	// The body must only be touched when at least one WithFormKey was
+	// supplied.
+	//
+	// JSON-body case: stdlib ParseForm bails on non-form Content-Types
+	// without reading the body, so the body survives either way; what
+	// we can observe is that req.Form is left nil because the guarded
+	// code path never runs ParseForm at all.
+	t.Run("ParseForm is not called when no WithFormKey is supplied (json body)", func(t *testing.T) {
+		body := `{"hello":"world"}`
+		req := httptest.NewRequest(http.MethodPost, u, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/json")
+		// No Authorization header on purpose: forces ParseRequest past
+		// the header path so the form-handling code is reached.
+
+		_, err := jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+		require.Error(t, err, `jwt.ParseRequest should fail (no token in request)`)
+
+		require.Nil(t, req.Form, `req.Form must remain nil when no WithFormKey is supplied`)
+
+		got, err := io.ReadAll(req.Body)
+		require.NoError(t, err, `req.Body should still be readable after ParseRequest`)
+		require.Equal(t, body, string(got), `req.Body must be intact`)
+	})
+
+	// Companion case: form-encoded body. stdlib ParseForm DOES drain
+	// the body on form Content-Types, so without the guard the handler
+	// downstream of ParseRequest would see an empty body.
+	t.Run("body is not consumed when no WithFormKey is supplied (form body)", func(t *testing.T) {
+		body := `payload=hello&other=world`
+		req := httptest.NewRequest(http.MethodPost, u, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		// No Authorization header: see note above.
+
+		_, err := jwt.ParseRequest(req, jwt.WithKey(jwa.ES256(), pubkey))
+		require.Error(t, err, `jwt.ParseRequest should fail (no token in request)`)
+
+		got, err := io.ReadAll(req.Body)
+		require.NoError(t, err, `req.Body should still be readable after ParseRequest`)
+		require.Equal(t, body, string(got), `req.Body must be intact when no WithFormKey is supplied`)
 	})
 }
 
