@@ -349,6 +349,17 @@ func (t *stdToken) Subject() (string, bool) {
 	return "", false
 }
 
+// PrivateClaims returns the underlying map of non-standard claims held by
+// the token. The returned map is the live map used by the token, not a copy:
+// callers must not mutate it, and must not read from it concurrently with
+// Set/Remove or with unmarshaling on the same token. If you need a stable
+// snapshot for concurrent use, copy the map (for example via maps.Clone)
+// before iterating.
+//
+// To obtain a fresh token containing only the non-standard claims, use the
+// jwxfilter companion module: jwtfilter.Standard().Reject(token) from
+// github.com/jwx-go/jwxfilter/v4/jwtfilter (or openidfilter.Standard().Reject
+// for openid.Token).
 func (t *stdToken) PrivateClaims() map[string]any {
 	t.mu.RLock()
 	defer t.mu.RUnlock()
