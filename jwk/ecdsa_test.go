@@ -74,6 +74,54 @@ func TestECDSAInvalidPointsRejectedOnParse(t *testing.T) {
 	})
 }
 
+// TestECDSAImportRejectsOversizedCoordinates asserts that
+// validateECDSAPoint rejects (X, Y) whose minimal byte representation
+// exceeds the curve's field size, instead of letting the call panic
+// inside math/big.Int.FillBytes. The NIST P-curve branch in
+// validateECDSAPoint pads X and Y into a fixed-size SEC1 buffer via
+// FillBytes; an oversized BigInt previously triggered
+// "math/big: buffer too small to fit value" deep inside math/big.
+func TestECDSAImportRejectsOversizedCoordinates(t *testing.T) {
+	// 33 bytes with a non-zero leading byte → BitLen() > 256, larger
+	// than the P-256 field. FillBytes(buf[1:33]) would panic.
+	oversize := make([]byte, 33)
+	oversize[0] = 0xff
+	bigVal := new(big.Int).SetBytes(oversize)
+
+	t.Run("oversized X on public key", func(t *testing.T) {
+		bad := &ecdsa.PublicKey{
+			Curve: elliptic.P256(),
+			X:     bigVal,
+			Y:     big.NewInt(1),
+		}
+		_, err := jwk.Import(bad)
+		require.Error(t, err, `jwk.Import must reject an oversized X without panicking`)
+	})
+
+	t.Run("oversized Y on public key", func(t *testing.T) {
+		bad := &ecdsa.PublicKey{
+			Curve: elliptic.P256(),
+			X:     big.NewInt(1),
+			Y:     bigVal,
+		}
+		_, err := jwk.Import(bad)
+		require.Error(t, err, `jwk.Import must reject an oversized Y without panicking`)
+	})
+
+	t.Run("oversized public coordinate on private key", func(t *testing.T) {
+		bad := &ecdsa.PrivateKey{
+			PublicKey: ecdsa.PublicKey{
+				Curve: elliptic.P256(),
+				X:     bigVal,
+				Y:     big.NewInt(1),
+			},
+			D: big.NewInt(2),
+		}
+		_, err := jwk.Import(bad)
+		require.Error(t, err, `jwk.Import must reject an oversized X on a private key without panicking`)
+	})
+}
+
 // TestECDSAImportRejectsInvalidPoints covers the Import(*ecdsa.PublicKey)
 // entry point, which previously accepted any non-nil X/Y without curve
 // membership checks.
