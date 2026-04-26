@@ -86,6 +86,61 @@ func testStockAddressClaim(t *testing.T, x *openid.AddressClaim) {
 	}
 }
 
+// TestAddressClaimRoundTripsAwkwardStrings pins that AddressClaim
+// MarshalJSON produces output that the same package's UnmarshalJSON
+// accepts, even when the field values contain bytes that JSON requires
+// to be escaped as \u00NN (control bytes 0x00–0x1F, 0x7F) or invalid
+// UTF-8.
+//
+// Regression for: AddressClaim.MarshalJSON used strconv.Quote, which
+// is Go-source-form escaping (emits \xNN for control bytes and invalid
+// UTF-8). \xNN is illegal in JSON — RFC 8259 §7 only permits the
+// two-character \" \\ \/ \b \f \n \r \t escapes plus the six-character
+// \uXXXX form. The strconv.Quote output therefore parsed in some
+// permissive consumers and was rejected by strict ones; either way it
+// failed to round-trip through the same package's own UnmarshalJSON.
+func TestAddressClaimRoundTripsAwkwardStrings(t *testing.T) {
+	// Each entry exercises a different path:
+	//  * control bytes (\x01) that strconv.Quote emits as \xNN
+	//  * DEL (\x7F) which Go-source escaping treats as printable but
+	//    JSON requires escaped
+	//  * a literal Unicode line separator (U+2028) which Go encodes
+	//    happily but some JSON consumers also escape
+	cases := map[string]string{
+		"control_byte":    "line1\x01line2",
+		"delete_byte":     "before\x7fafter",
+		"line_separator":  "first second",
+		"interior_quote":  `key "value" pair`,
+		"backslash":       `path\to\file`,
+		"normal_japanese": "東京都港区芝公園",
+	}
+
+	for name, value := range cases {
+		t.Run(name, func(t *testing.T) {
+			var src openid.AddressClaim
+			require.NoError(t, src.Set(openid.AddressFormattedKey, value),
+				`Set should succeed for any well-formed string value`)
+
+			buf, err := json.Marshal(&src)
+			require.NoError(t, err, `MarshalJSON should succeed`)
+
+			// The output must be syntactically valid JSON.
+			var parseProbe map[string]any
+			require.NoError(t, json.Unmarshal(buf, &parseProbe),
+				`MarshalJSON output must be valid JSON; got %s`, buf)
+
+			// And the package's own UnmarshalJSON must accept it.
+			var dst openid.AddressClaim
+			require.NoError(t, json.Unmarshal(buf, &dst),
+				`AddressClaim.UnmarshalJSON must accept its own MarshalJSON output; got %s`, buf)
+
+			got, ok := dst.Get(openid.AddressFormattedKey)
+			require.True(t, ok, `formatted field must round-trip`)
+			require.Equal(t, value, got, `value must survive the round-trip byte-for-byte`)
+		})
+	}
+}
+
 func TestAdressClaim(t *testing.T) {
 	const src = `{
     "formatted": "〒105-0011 東京都港区芝公園４丁目２−８",
