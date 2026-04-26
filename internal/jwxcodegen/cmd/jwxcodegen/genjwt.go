@@ -332,7 +332,18 @@ func generateTokenGetters(o *codegen.Output, obj *codegen.Object) {
 }
 
 func generateTokenPrivateClaims(o *codegen.Output, obj *codegen.Object) {
-	o.LL("func (t *%s) PrivateClaims() map[string]any {", obj.Name(false))
+	o.LL("// PrivateClaims returns the underlying map of non-standard claims held by")
+	o.L("// the token. The returned map is the live map used by the token, not a copy:")
+	o.L("// callers must not mutate it, and must not read from it concurrently with")
+	o.L("// Set/Remove or with unmarshaling on the same token. If you need a stable")
+	o.L("// snapshot for concurrent use, copy the map (for example via maps.Clone)")
+	o.L("// before iterating.")
+	o.L("//")
+	o.L("// To obtain a fresh token containing only the non-standard claims, use the")
+	o.L("// jwxfilter companion module: jwtfilter.Standard().Reject(token) from")
+	o.L("// github.com/jwx-go/jwxfilter/v4/jwtfilter (or openidfilter.Standard().Reject")
+	o.L("// for openid.Token).")
+	o.L("func (t *%s) PrivateClaims() map[string]any {", obj.Name(false))
 	o.L("t.mu.RLock()")
 	o.L("defer t.mu.RUnlock()")
 	o.L("return t.privateClaims")
