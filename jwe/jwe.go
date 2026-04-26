@@ -600,9 +600,36 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: %w`, MissingContentEncryptionError{})}
 	}
 
-	// The "alg" header can be in either protected/unprotected headers.
-	// prefer per-recipient headers (as it might be the case that the algorithm differs
-	// by each recipient), then look at protected headers.
+	// RFC 7516 §7.2.1 requires header parameter names to be disjoint
+	// across the protected, shared-unprotected, and per-recipient
+	// header locations. For "alg" specifically, allowing protected
+	// and per-recipient headers to declare conflicting values is an
+	// algorithm-confusion vector: an attacker who can rewrite the
+	// per-recipient (unprotected) location can claim a different alg
+	// than the integrity-protected one, and the alg-match loop below
+	// would silently break on whichever it sees first.
+	//
+	// Compact-form JWE legitimately has the same alg value in both
+	// places — parseCompact synthesizes a per-recipient header by
+	// cloning the protected header (minus enc), so a strict-disjoint
+	// check would reject every compact JWE. We therefore allow the
+	// duplication when the values agree, and reject only when they
+	// disagree. The shared unprotected header is ignored elsewhere
+	// in this function (see comment at the top) and so does not
+	// participate here either.
+	if rh := recipient.Headers(); rh != nil {
+		if recipAlg, recipHas := rh.Algorithm(); recipHas {
+			if protectedAlg, protectedHas := protectedHeaders.Algorithm(); protectedHas && protectedAlg != recipAlg {
+				return nil, decryptError{fmt.Errorf(`jwe.Decrypt: malformed JWE — "alg" header value differs between protected (%q) and per-recipient (%q) headers (RFC 7516 §7.2.1)`, protectedAlg, recipAlg)}
+			}
+		}
+	}
+
+	// The "alg" header can be in either protected or per-recipient
+	// headers. With disjointness enforced above, only one location can
+	// have it, so iteration order does not affect security; we keep
+	// per-recipient first to match the historical preference for
+	// recipient-specific algs in multi-recipient JWE.
 	var algMatched bool
 	for _, hdr := range []Headers{recipient.Headers(), protectedHeaders} {
 		v, ok := hdr.Algorithm()
