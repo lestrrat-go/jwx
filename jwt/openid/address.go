@@ -2,7 +2,6 @@ package openid
 
 import (
 	"fmt"
-	"strconv"
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
@@ -208,53 +207,49 @@ func (t AddressClaim) MarshalJSON() ([]byte, error) {
 
 	buf.WriteByte(tokens.OpenCurlyBracket)
 	prev := buf.Len()
-	if v := t.country; v != nil {
-		buf.WriteString(`"country":`)
-		buf.WriteString(strconv.Quote(*v))
-	}
-
-	if v := t.formatted; v != nil {
+	// String values go through json.Marshal, not strconv.Quote.
+	// strconv.Quote produces Go source-form escaping (\xNN, invalid
+	// for JSON; control bytes 0x00–0x1F and 0x7F must be \u00NN).
+	// Routing through json.Marshal also handles invalid UTF-8 the
+	// way the rest of the package's encoders do.
+	writeStringField := func(name string, v *string) error {
+		if v == nil {
+			return nil
+		}
 		if buf.Len() > prev {
 			buf.WriteByte(tokens.Comma)
 		}
 		prev = buf.Len()
-		buf.WriteString(`"formatted":`)
-		buf.WriteString(strconv.Quote(*v))
+		buf.WriteByte('"')
+		buf.WriteString(name)
+		buf.WriteString(`":`)
+		encoded, err := json.Marshal(*v)
+		if err != nil {
+			return fmt.Errorf(`failed to marshal %q field: %w`, name, err)
+		}
+		buf.Write(encoded)
+		return nil
 	}
 
-	if v := t.locality; v != nil {
-		if buf.Len() > prev {
-			buf.WriteByte(tokens.Comma)
-		}
-		prev = buf.Len()
-		buf.WriteString(`"locality":`)
-		buf.WriteString(strconv.Quote(*v))
+	// Field order preserved from the historical implementation so the
+	// MarshalJSON output is byte-stable for callers that compare it.
+	if err := writeStringField("country", t.country); err != nil {
+		return nil, err
 	}
-
-	if v := t.postalCode; v != nil {
-		if buf.Len() > prev {
-			buf.WriteByte(tokens.Comma)
-		}
-		prev = buf.Len()
-		buf.WriteString(`"postal_code":`)
-		buf.WriteString(strconv.Quote(*v))
+	if err := writeStringField("formatted", t.formatted); err != nil {
+		return nil, err
 	}
-
-	if v := t.region; v != nil {
-		if buf.Len() > prev {
-			buf.WriteByte(tokens.Comma)
-		}
-		prev = buf.Len()
-		buf.WriteString(`"region":`)
-		buf.WriteString(strconv.Quote(*v))
+	if err := writeStringField("locality", t.locality); err != nil {
+		return nil, err
 	}
-
-	if v := t.streetAddress; v != nil {
-		if buf.Len() > prev {
-			buf.WriteByte(tokens.Comma)
-		}
-		buf.WriteString(`"street_address":`)
-		buf.WriteString(strconv.Quote(*v))
+	if err := writeStringField("postal_code", t.postalCode); err != nil {
+		return nil, err
+	}
+	if err := writeStringField("region", t.region); err != nil {
+		return nil, err
+	}
+	if err := writeStringField("street_address", t.streetAddress); err != nil {
+		return nil, err
 	}
 
 	buf.WriteByte(tokens.CloseCurlyBracket)
