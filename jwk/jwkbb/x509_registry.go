@@ -227,6 +227,32 @@ func ed25519PublicKeyEncoder(v ed25519.PublicKey) (string, []byte, error) {
 // teardown to restore the default (or re-register it).
 //
 // blockType must be non-empty; decoder must be non-nil.
+//
+// # Privileged extension point
+//
+// This registry is an extension point on purpose: extensions need to
+// override the built-in decoders to teach the PEM path about key
+// material the stdlib cannot parse. The canonical example is the
+// ES256K extension (github.com/jwx-go/es256k), which takes ownership
+// of "EC PRIVATE KEY", "PRIVATE KEY", and "PUBLIC KEY" so PEM blocks
+// carrying the secp256k1 OID — which Go's crypto/x509 rejects with
+// "x509: unknown elliptic curve" — can be parsed via the dcred
+// backend. Non-secp256k1 blocks are delegated back to stdlib. Any
+// future curve or key-format extension follows the same pattern.
+//
+// Because override is the design, this function does NOT refuse
+// re-registration of built-in block types and does NOT verify the
+// caller's intent. Anything that is in your import graph at init()
+// can replace any decoder. The supply-chain risk this implies lives
+// one layer up: audit your transitive dependencies, pin your
+// go.mod, and treat extensions that touch this registry the same way
+// you would treat any other init()-time hook into your crypto path.
+// jwx itself cannot programmatically distinguish a legitimate
+// ES256K-style override from an attacker's substitution, so a
+// programmatic check would either break legitimate extensions or be
+// trivially bypassable. (Contrast with [github.com/lestrrat-go/jwx/v4/jwk/ecdsa.RegisterCurve],
+// which DOES refuse to re-register built-ins because no legitimate
+// extension wants to swap a built-in NIST curve.)
 func RegisterX509Decoder[T any](blockType string, decoder X509Decoder[T]) error {
 	if blockType == "" {
 		return errors.New(`jwkbb.RegisterX509Decoder: blockType must not be empty`)
@@ -280,6 +306,14 @@ func DecodeX509(block *pem.Block) (any, error) {
 //
 // encoder must be non-nil. The error return is reserved for future
 // validation; today it only surfaces a nil-encoder programming error.
+//
+// Same privileged-extension-point semantics as [RegisterX509Decoder]
+// — overriding built-in encoders is supported by design (the
+// canonical example is an extension teaching the PEM path how to
+// emit a curve stdlib doesn't know about), so the registry does not
+// refuse re-registration. Supply-chain trust in callers of this
+// function is the caller's responsibility; see the
+// [RegisterX509Decoder] godoc for the full statement.
 func RegisterX509Encoder[T any](encoder X509Encoder[T]) error {
 	if encoder == nil {
 		return errors.New(`jwkbb.RegisterX509Encoder: encoder must not be nil`)
