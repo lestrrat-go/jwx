@@ -129,9 +129,16 @@ func Example_jwt_ParseFS() {
   fmt.Fprint(f, exampleJWTSignedHMAC)
   f.Close()
 
-  // Note: this JWT has NOT been verified because we have not passed jwt.WithKey() and used
-  // jwt.WithVerify(false). You need to pass jwt.WithKey() if you want the token to be parsed and
-  // verified in one go.
+  // This example calls ParseFS with both jwt.WithVerify(false) and
+  // jwt.WithValidate(false) only because there is no key context
+  // here — it demonstrates the FS-loading mechanics, nothing more.
+  // Production code reading a JWT from any source MUST pass
+  // jwt.WithKey() / jwt.WithKeySet() and MUST NOT disable
+  // jwt.WithValidate. The library exposes jwt.ParseInsecure for the
+  // inspect-without-verifying path when consuming raw bytes
+  // directly; ParseFS has no corresponding ParseFSInsecure today,
+  // so the two-option chant is the explicit way to express the
+  // same intent here.
   tok, err := jwt.ParseFS(os.DirFS(filepath.Dir(f.Name())), filepath.Base(f.Name()), jwt.WithVerify(false), jwt.WithValidate(false))
   if err != nil {
     fmt.Printf("failed to read file %q: %s\n", f.Name(), err)
@@ -201,6 +208,13 @@ func Example_jwt_parse_request_authorization() {
   }
 
   for _, tc := range testcases {
+    // jwt.WithVerify(false) + jwt.WithValidate(false) below is only
+    // because this example has no key context — it demonstrates
+    // where ParseRequest looks for a token, nothing more.
+    // Production code MUST pass jwt.WithKey() / jwt.WithKeySet()
+    // and MUST NOT disable jwt.WithValidate. (ParseRequest has no
+    // ParseRequestInsecure variant; jwt.ParseInsecure exists for
+    // the raw-bytes path when you genuinely just want to inspect.)
     options := append(tc.options, []jwt.ParseOption{jwt.WithVerify(false), jwt.WithValidate(false)}...)
     tok, err := jwt.ParseRequest(req, options...)
     if err != nil {
@@ -610,6 +624,18 @@ func Example_jwt_parse_with_key_provider_use_token() {
     }
 
     _, err = jws.Verify(signed, jws.WithKeyProvider(jws.KeyProviderFunc(func(_ context.Context, sink jws.KeySink, sig *jws.Signature, msg *jws.Message) error {
+      // `iss` came from `parsed`, which was produced by
+      // jwt.Parse(... jwt.WithVerify(false)). It is
+      // UNVERIFIED, caller-controlled input. The only safe
+      // way to use it here is as a lookup key against a
+      // closed allowlist of trusted issuers — exactly the
+      // switch below. Never use `iss` as a filesystem path,
+      // URL, cache key, or any other unbounded input: a
+      // malicious sender controls the string and will gladly
+      // inject `..`, NUL bytes, control characters, or
+      // anything else. The jws.Verify call this provider
+      // feeds into is what gates trust; before that, claims
+      // from `parsed` are just bytes off the wire.
       iss, ok := parsed.Issuer()
       if !ok {
         return fmt.Errorf("no issuer found")
