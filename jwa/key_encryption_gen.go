@@ -3,21 +3,12 @@
 package jwa
 
 import (
-	"cmp"
 	"encoding/json"
 	"fmt"
-	"slices"
-	"sync"
 
 	"github.com/lestrrat-go/jwx/v4/internal/tokens"
 	"github.com/lestrrat-go/option/v3"
 )
-
-var muAllKeyEncryptionAlgorithm sync.RWMutex
-var allKeyEncryptionAlgorithm = map[string]KeyEncryptionAlgorithm{}
-var muListKeyEncryptionAlgorithm sync.RWMutex
-var listKeyEncryptionAlgorithm []KeyEncryptionAlgorithm
-var builtinKeyEncryptionAlgorithm = map[string]struct{}{}
 
 func init() {
 	// builtin values for KeyEncryptionAlgorithm
@@ -52,7 +43,7 @@ func init() {
 		panic(fmt.Sprintf("jwa: failed to register builtin KeyEncryptionAlgorithm: %s", err))
 	}
 	for _, alg := range algorithms {
-		builtinKeyEncryptionAlgorithm[alg.String()] = struct{}{}
+		markBuiltin(alg.String())
 	}
 }
 
@@ -182,13 +173,11 @@ func RSA_OAEP_512() KeyEncryptionAlgorithm {
 }
 
 func lookupBuiltinKeyEncryptionAlgorithm(name string) KeyEncryptionAlgorithm {
-	muAllKeyEncryptionAlgorithm.RLock()
-	v, ok := allKeyEncryptionAlgorithm[name]
-	muAllKeyEncryptionAlgorithm.RUnlock()
+	v, ok := lookupAlgorithm(algKindKeyEncryption, name)
 	if !ok {
 		panic(fmt.Sprintf(`jwa: KeyEncryptionAlgorithm %q not registered`, name))
 	}
-	return v
+	return v.(KeyEncryptionAlgorithm)
 }
 
 // KeyEncryptionAlgorithm represents the various encryption algorithms as described in https://tools.ietf.org/html/rfc7518#section-4.1
@@ -234,10 +223,11 @@ func NewKeyEncryptionAlgorithm(name string, options ...NewKeyEncryptionAlgorithm
 
 // LookupKeyEncryptionAlgorithm returns the KeyEncryptionAlgorithm object for the given name.
 func LookupKeyEncryptionAlgorithm(name string) (KeyEncryptionAlgorithm, bool) {
-	muAllKeyEncryptionAlgorithm.RLock()
-	v, ok := allKeyEncryptionAlgorithm[name]
-	muAllKeyEncryptionAlgorithm.RUnlock()
-	return v, ok
+	if v, ok := lookupAlgorithm(algKindKeyEncryption, name); ok {
+		return v.(KeyEncryptionAlgorithm), true
+	}
+	var zero KeyEncryptionAlgorithm
+	return zero, false
 }
 
 // RegisterKeyEncryptionAlgorithm registers a new KeyEncryptionAlgorithm. The signature value must be immutable
@@ -246,58 +236,37 @@ func LookupKeyEncryptionAlgorithm(name string) (KeyEncryptionAlgorithm, bool) {
 // Registration is process-global. Built-in identifiers such as RS256 are
 // reserved and cannot be replaced by callers after init has completed; use a
 // distinct name for third-party algorithms.
+//
+// SignatureAlgorithm, KeyEncryptionAlgorithm, and ContentEncryptionAlgorithm
+// share a single algorithm-name namespace so that KeyAlgorithmFrom can
+// resolve unambiguously. Registering a name that is already registered as a
+// different kind returns an error naming both the existing and the requested
+// kind.
 func RegisterKeyEncryptionAlgorithm(algorithms ...KeyEncryptionAlgorithm) error {
-	muAllKeyEncryptionAlgorithm.Lock()
-	defer muAllKeyEncryptionAlgorithm.Unlock()
 	for _, alg := range algorithms {
-		if _, ok := builtinKeyEncryptionAlgorithm[alg.String()]; ok {
-			if existing, ok := allKeyEncryptionAlgorithm[alg.String()]; ok && existing != alg {
-				return fmt.Errorf(`jwa: KeyEncryptionAlgorithm %q is reserved for a built-in value`, alg.String())
-			}
+		if err := registerAlgorithm(algKindKeyEncryption, alg); err != nil {
+			return err
 		}
 	}
-	for _, alg := range algorithms {
-		if _, ok := builtinKeyEncryptionAlgorithm[alg.String()]; ok {
-			continue
-		}
-		allKeyEncryptionAlgorithm[alg.String()] = alg
-	}
-	rebuildKeyEncryptionAlgorithmLocked()
 	return nil
 }
 
 // UnregisterKeyEncryptionAlgorithm unregisters a KeyEncryptionAlgorithm from its known database.
 // Non-existent entries, as well as built-in algorithms will silently be ignored.
 func UnregisterKeyEncryptionAlgorithm(algorithms ...KeyEncryptionAlgorithm) {
-	muAllKeyEncryptionAlgorithm.Lock()
-	defer muAllKeyEncryptionAlgorithm.Unlock()
 	for _, alg := range algorithms {
-		if _, ok := builtinKeyEncryptionAlgorithm[alg.String()]; ok {
-			continue
-		}
-		delete(allKeyEncryptionAlgorithm, alg.String())
+		unregisterAlgorithm(algKindKeyEncryption, alg.String())
 	}
-	rebuildKeyEncryptionAlgorithmLocked()
-}
-
-func rebuildKeyEncryptionAlgorithmLocked() {
-	list := make([]KeyEncryptionAlgorithm, 0, len(allKeyEncryptionAlgorithm))
-	for _, v := range allKeyEncryptionAlgorithm {
-		list = append(list, v)
-	}
-	slices.SortFunc(list, func(a, b KeyEncryptionAlgorithm) int {
-		return cmp.Compare(a.String(), b.String())
-	})
-	muListKeyEncryptionAlgorithm.Lock()
-	listKeyEncryptionAlgorithm = list
-	muListKeyEncryptionAlgorithm.Unlock()
 }
 
 // KeyEncryptionAlgorithms returns a list of all available values for KeyEncryptionAlgorithm.
 func KeyEncryptionAlgorithms() []KeyEncryptionAlgorithm {
-	muListKeyEncryptionAlgorithm.RLock()
-	defer muListKeyEncryptionAlgorithm.RUnlock()
-	return listKeyEncryptionAlgorithm
+	raw := listAlgorithmsByKind(algKindKeyEncryption)
+	out := make([]KeyEncryptionAlgorithm, len(raw))
+	for i, alg := range raw {
+		out[i] = alg.(KeyEncryptionAlgorithm)
+	}
+	return out
 }
 
 // MarshalJSON serializes the KeyEncryptionAlgorithm object to a JSON string.
