@@ -88,12 +88,45 @@ func _main() error {
 	return nil
 }
 
+// isKeyAlgorithmKind reports whether the given algorithm type
+// implements jwa.KeyAlgorithm and therefore lives in the shared
+// algRegistry hand-written in jwa.go. The three KeyAlgorithm kinds
+// share one namespace so KeyAlgorithmFrom can resolve a string to
+// exactly one typed value; everything else (KeyType,
+// EllipticCurveAlgorithm, CompressionAlgorithm) keeps its own
+// per-kind storage emitted by this generator.
+func isKeyAlgorithmKind(name string) bool {
+	switch name {
+	case "SignatureAlgorithm", "KeyEncryptionAlgorithm", "ContentEncryptionAlgorithm":
+		return true
+	}
+	return false
+}
+
+// algKindEnumSuffix maps an algorithm type name to the suffix used in
+// its algorithmKind constant in jwa.go (e.g. "SignatureAlgorithm" ->
+// "Signature", which combines into algKindSignature).
+func algKindEnumSuffix(name string) string {
+	switch name {
+	case "SignatureAlgorithm":
+		return "Signature"
+	case "KeyEncryptionAlgorithm":
+		return "KeyEncryption"
+	case "ContentEncryptionAlgorithm":
+		return "ContentEncryption"
+	}
+	return ""
+}
+
 func Generate(t Algorithm) error {
 	var buf bytes.Buffer
 
 	if t.Filename == "" {
 		return fmt.Errorf("filename is empty for type %q", t.Name)
 	}
+
+	keyAlg := isKeyAlgorithmKind(t.Name)
+	algKindSuffix := algKindEnumSuffix(t.Name)
 
 	o := codegen.NewOutput(&buf)
 
@@ -126,11 +159,13 @@ func Generate(t Algorithm) error {
 	}
 	o.L(")")
 
-	o.LL("var muAll%s sync.RWMutex", t.Name)
-	o.L("var all%[1]s = map[string]%[1]s{}", t.Name)
-	o.L("var muList%s sync.RWMutex", t.Name)
-	o.L("var list%s []%s", t.Name, t.Name)
-	o.L("var builtin%s = map[string]struct{}{}", t.Name)
+	if !keyAlg {
+		o.LL("var muAll%s sync.RWMutex", t.Name)
+		o.L("var all%[1]s = map[string]%[1]s{}", t.Name)
+		o.L("var muList%s sync.RWMutex", t.Name)
+		o.L("var list%s []%s", t.Name, t.Name)
+		o.L("var builtin%s = map[string]struct{}{}", t.Name)
+	}
 
 	o.LL("func init() {")
 	o.L("// builtin values for %s", t.Name)
@@ -166,7 +201,11 @@ func Generate(t Algorithm) error {
 
 	o.LL("Register%s(algorithms...)", t.Name)
 	o.L("for _, alg := range algorithms {")
-	o.L("builtin%s[alg.String()] = struct{}{}", t.Name)
+	if keyAlg {
+		o.L("markBuiltin(alg.String())")
+	} else {
+		o.L("builtin%s[alg.String()] = struct{}{}", t.Name)
+	}
 	o.L("}")
 	o.L("}") // end init
 
@@ -201,13 +240,21 @@ func Generate(t Algorithm) error {
 	}
 
 	o.LL("func lookupBuiltin%s(name string) %s {", t.Name, t.Name)
-	o.L("muAll%s.RLock()", t.Name)
-	o.L("v, ok := all%s[name]", t.Name)
-	o.L("muAll%s.RUnlock()", t.Name)
-	o.L("if !ok {")
-	o.L("panic(fmt.Sprintf(`jwa: %s %%q not registered`, name))", t.Name)
-	o.L("}")
-	o.L("return v")
+	if keyAlg {
+		o.L("v, ok := lookupAlgorithm(algKind%s, name)", algKindSuffix)
+		o.L("if !ok {")
+		o.L("panic(fmt.Sprintf(`jwa: %s %%q not registered`, name))", t.Name)
+		o.L("}")
+		o.L("return v.(%s)", t.Name)
+	} else {
+		o.L("muAll%s.RLock()", t.Name)
+		o.L("v, ok := all%s[name]", t.Name)
+		o.L("muAll%s.RUnlock()", t.Name)
+		o.L("if !ok {")
+		o.L("panic(fmt.Sprintf(`jwa: %s %%q not registered`, name))", t.Name)
+		o.L("}")
+		o.L("return v")
+	}
 	o.L("}")
 
 	o.LL("// %s", t.Comment)
@@ -274,68 +321,114 @@ func Generate(t Algorithm) error {
 	o.R("}")
 	o.L("}")
 
-	o.LL("// Lookup%[1]s returns the %[1]s object for the given name.", t.Name)
-	o.L("func Lookup%[1]s(name string) (%[1]s, bool) {", t.Name)
-	o.L("muAll%[1]s.RLock()", t.Name)
-	o.L("v, ok := all%[1]s[name]", t.Name)
-	o.L("muAll%[1]s.RUnlock()", t.Name)
-	o.L("return v, ok")
-	o.L("}")
+	if keyAlg {
+		o.LL("// Lookup%[1]s returns the %[1]s object for the given name.", t.Name)
+		o.L("func Lookup%[1]s(name string) (%[1]s, bool) {", t.Name)
+		o.L("if v, ok := lookupAlgorithm(algKind%s, name); ok {", algKindSuffix)
+		o.L("return v.(%s), true", t.Name)
+		o.L("}")
+		o.L("var zero %s", t.Name)
+		o.L("return zero, false")
+		o.L("}")
 
-	o.LL("// Register%[1]s registers a new %[1]s. The signature value must be immutable", t.Name)
-	o.L("// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.")
-	o.L("//")
-	o.L("// Registration is process-global. Built-in identifiers such as RS256 are")
-	o.L("// reserved and cannot be replaced by callers after init has completed; use a")
-	o.L("// distinct name for third-party algorithms.")
-	o.L("func Register%[1]s(algorithms ...%[1]s) {", t.Name)
-	o.L("muAll%[1]s.Lock()", t.Name)
-	o.L("defer muAll%[1]s.Unlock()", t.Name)
-	o.L("for _, alg := range algorithms {")
-	o.L("if _, ok := builtin%[1]s[alg.String()]; ok {", t.Name)
-	o.L("if existing, ok := all%[1]s[alg.String()]; ok && existing != alg {", t.Name)
-	o.L("continue")
-	o.L("}")
-	o.L("continue")
-	o.L("}")
-	o.L("all%[1]s[alg.String()] = alg", t.Name)
-	o.L("}")
-	o.L("rebuild%[1]sLocked()", t.Name)
-	o.L("}")
+		o.LL("// Register%[1]s registers a new %[1]s. The signature value must be immutable", t.Name)
+		o.L("// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.")
+		o.L("//")
+		o.L("// Registration is process-global. Built-in identifiers such as RS256 are")
+		o.L("// reserved and cannot be replaced by callers after init has completed; use a")
+		o.L("// distinct name for third-party algorithms.")
+		o.L("//")
+		o.L("// SignatureAlgorithm, KeyEncryptionAlgorithm, and ContentEncryptionAlgorithm")
+		o.L("// share a single algorithm-name namespace so that KeyAlgorithmFrom can")
+		o.L("// resolve unambiguously. Registering a name that is already registered as a")
+		o.L("// different kind is a silent no-op (the first Register* call wins).")
+		o.L("func Register%[1]s(algorithms ...%[1]s) {", t.Name)
+		o.L("for _, alg := range algorithms {")
+		o.L("registerAlgorithm(algKind%s, alg)", algKindSuffix)
+		o.L("}")
+		o.L("}")
 
-	o.LL("// Unregister%[1]s unregisters a %[1]s from its known database.", t.Name)
-	o.L("// Non-existent entries, as well as built-in algorithms will silently be ignored.")
-	o.L("func Unregister%[1]s(algorithms ...%[1]s) {", t.Name)
-	o.L("muAll%[1]s.Lock()", t.Name)
-	o.L("defer muAll%[1]s.Unlock()", t.Name)
-	o.L("for _, alg := range algorithms {")
-	o.L("if _, ok := builtin%[1]s[alg.String()]; ok {", t.Name)
-	o.L("continue")
-	o.L("}")
-	o.L("delete(all%[1]s, alg.String())", t.Name)
-	o.L("}")
-	o.L("rebuild%[1]sLocked()", t.Name)
-	o.L("}")
+		o.LL("// Unregister%[1]s unregisters a %[1]s from its known database.", t.Name)
+		o.L("// Non-existent entries, as well as built-in algorithms will silently be ignored.")
+		o.L("func Unregister%[1]s(algorithms ...%[1]s) {", t.Name)
+		o.L("for _, alg := range algorithms {")
+		o.L("unregisterAlgorithm(algKind%s, alg.String())", algKindSuffix)
+		o.L("}")
+		o.L("}")
 
-	o.LL("func rebuild%[1]sLocked() {", t.Name)
-	o.L("list := make([]%[1]s, 0, len(all%[1]s))", t.Name)
-	o.L("for _, v := range all%[1]s {", t.Name)
-	o.L("list = append(list, v)")
-	o.L("}")
-	o.L("sort.Slice(list, func(i, j int) bool {")
-	o.L("return list[i].String() < list[j].String()")
-	o.L("})")
-	o.L("muList%[1]s.Lock()", t.Name)
-	o.L("list%[1]s = list", t.Name)
-	o.L("muList%[1]s.Unlock()", t.Name)
-	o.L("}")
+		o.LL("// %[1]ss returns a list of all available values for %[1]s.", t.Name)
+		o.L("func %[1]ss() []%[1]s {", t.Name)
+		o.L("raw := listAlgorithmsByKind(algKind%s)", algKindSuffix)
+		o.L("out := make([]%s, len(raw))", t.Name)
+		o.L("for i, alg := range raw {")
+		o.L("out[i] = alg.(%s)", t.Name)
+		o.L("}")
+		o.L("return out")
+		o.L("}")
+	} else {
+		o.LL("// Lookup%[1]s returns the %[1]s object for the given name.", t.Name)
+		o.L("func Lookup%[1]s(name string) (%[1]s, bool) {", t.Name)
+		o.L("muAll%[1]s.RLock()", t.Name)
+		o.L("v, ok := all%[1]s[name]", t.Name)
+		o.L("muAll%[1]s.RUnlock()", t.Name)
+		o.L("return v, ok")
+		o.L("}")
 
-	o.LL("// %[1]ss returns a list of all available values for %[1]s.", t.Name)
-	o.L("func %[1]ss() []%[1]s {", t.Name)
-	o.L("muList%[1]s.RLock()", t.Name)
-	o.L("defer muList%[1]s.RUnlock()", t.Name)
-	o.L("return list%[1]s", t.Name)
-	o.L("}")
+		o.LL("// Register%[1]s registers a new %[1]s. The signature value must be immutable", t.Name)
+		o.L("// and safe to be used by multiple goroutines, as it is going to be shared with all other users of this library.")
+		o.L("//")
+		o.L("// Registration is process-global. Built-in identifiers such as RS256 are")
+		o.L("// reserved and cannot be replaced by callers after init has completed; use a")
+		o.L("// distinct name for third-party algorithms.")
+		o.L("func Register%[1]s(algorithms ...%[1]s) {", t.Name)
+		o.L("muAll%[1]s.Lock()", t.Name)
+		o.L("defer muAll%[1]s.Unlock()", t.Name)
+		o.L("for _, alg := range algorithms {")
+		o.L("if _, ok := builtin%[1]s[alg.String()]; ok {", t.Name)
+		o.L("if existing, ok := all%[1]s[alg.String()]; ok && existing != alg {", t.Name)
+		o.L("continue")
+		o.L("}")
+		o.L("continue")
+		o.L("}")
+		o.L("all%[1]s[alg.String()] = alg", t.Name)
+		o.L("}")
+		o.L("rebuild%[1]sLocked()", t.Name)
+		o.L("}")
+
+		o.LL("// Unregister%[1]s unregisters a %[1]s from its known database.", t.Name)
+		o.L("// Non-existent entries, as well as built-in algorithms will silently be ignored.")
+		o.L("func Unregister%[1]s(algorithms ...%[1]s) {", t.Name)
+		o.L("muAll%[1]s.Lock()", t.Name)
+		o.L("defer muAll%[1]s.Unlock()", t.Name)
+		o.L("for _, alg := range algorithms {")
+		o.L("if _, ok := builtin%[1]s[alg.String()]; ok {", t.Name)
+		o.L("continue")
+		o.L("}")
+		o.L("delete(all%[1]s, alg.String())", t.Name)
+		o.L("}")
+		o.L("rebuild%[1]sLocked()", t.Name)
+		o.L("}")
+
+		o.LL("func rebuild%[1]sLocked() {", t.Name)
+		o.L("list := make([]%[1]s, 0, len(all%[1]s))", t.Name)
+		o.L("for _, v := range all%[1]s {", t.Name)
+		o.L("list = append(list, v)")
+		o.L("}")
+		o.L("sort.Slice(list, func(i, j int) bool {")
+		o.L("return list[i].String() < list[j].String()")
+		o.L("})")
+		o.L("muList%[1]s.Lock()", t.Name)
+		o.L("list%[1]s = list", t.Name)
+		o.L("muList%[1]s.Unlock()", t.Name)
+		o.L("}")
+
+		o.LL("// %[1]ss returns a list of all available values for %[1]s.", t.Name)
+		o.L("func %[1]ss() []%[1]s {", t.Name)
+		o.L("muList%[1]s.RLock()", t.Name)
+		o.L("defer muList%[1]s.RUnlock()", t.Name)
+		o.L("return list%[1]s", t.Name)
+		o.L("}")
+	}
 
 	o.LL("// MarshalJSON serializes the %[1]s object to a JSON string.", t.Name)
 	o.L("func (s %[1]s) MarshalJSON() ([]byte, error) {", t.Name)
