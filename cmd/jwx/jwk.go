@@ -9,12 +9,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/crypto/ed25519"
+	"golang.org/x/term"
 )
 
 func init() {
@@ -119,7 +121,7 @@ func makeJwkGenerateCmd() *cli.Command {
 		&cli.IntFlag{
 			Name:    "keysize",
 			Aliases: []string{"s"},
-			Usage:   "Integer `SIZE` for RSA and oct key sizes",
+			Usage:   "Integer `SIZE`: bits for RSA (default 2048), bytes for oct. Ignored for EC and OKP keys.",
 			Value:   2048,
 		},
 		publicKeyFlag(),
@@ -163,7 +165,11 @@ func makeJwkGenerateCmd() *cli.Command {
 			}
 			rawkey = v
 		case jwa.OctetSeq():
-			octets := make([]byte, c.Int("keysize"))
+			size := c.Int("keysize")
+			if size <= 0 {
+				return fmt.Errorf(`invalid --keysize %d for oct: must be greater than zero (units for oct are bytes; for RSA they are bits)`, size)
+			}
+			octets := make([]byte, size)
 			if _, err := io.ReadFull(rand.Reader, octets); err != nil {
 				return fmt.Errorf(`failed to generate octet seq key: %w`, err)
 			}
@@ -224,6 +230,19 @@ func makeJwkGenerateCmd() *cli.Command {
 				return fmt.Errorf(`failed to generate public keys: %w`, err)
 			}
 			keyset = pubks
+		}
+
+		// If the caller is about to dump private key material to a
+		// terminal — the default when -o is omitted and --public-key
+		// is not set — emit a stderr warning. The key still goes to
+		// stdout, so pipes (`| jq`, `| tee key.json`) and shell
+		// redirections continue to work; only the interactive
+		// "dump-to-scrollback" footgun gets a signal.
+		if c.String("output") == "-" && !c.Bool("public-key") && term.IsTerminal(int(os.Stdout.Fd())) {
+			fmt.Fprintln(os.Stderr,
+				"warning: writing private key material to a terminal — leaks into scrollback, "+
+					"shell history, and any session recording. Re-run with -o FILE to write to a "+
+					"0600-mode file, or pipe to another command to suppress this warning.")
 		}
 
 		output, err := getOutput(c.String("output"))

@@ -26,7 +26,7 @@ func outputFlag() cli.Flag {
 	return &cli.StringFlag{
 		Name:    "output",
 		Aliases: []string{"o"},
-		Usage:   "Write output to `FILE`",
+		Usage:   "Write output to `FILE` (default \"-\" for stdout). For commands that emit private key material, prefer an explicit -o FILE: file output is created with mode 0600 and truncated on each run, while stdout has no such protection.",
 		Value:   "-",
 	}
 }
