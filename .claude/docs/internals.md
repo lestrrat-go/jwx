@@ -120,6 +120,16 @@ Pluggable at runtime via `jwx.Settings(jwx.WithBase64Encoder(...), jwx.WithBase6
 
 Internal `internal/base64` package abstracts the choice; the encoder/decoder are held in `atomic.Value` slots and `jwx.Settings` dispatches to `base64.SetEncoder`/`base64.SetDecoder`.
 
+### `Settings` unknown-option handling
+
+Both `jwx.Settings` and `cert.Settings` switch on `opt.Ident()` with no `default:` arm. Unknown idents are silently skipped — the call returns `nil` and the option is dropped without any signal. This is intentional and not a defect:
+
+- The motivating cross-package mix-up scenario (`cert.Settings(jwx.WithUseNumber(true))` or vice versa) is a **compile error** today. `jwx.GlobalOption` and `cert.GlobalOption` each define their own unexported `globalOption()` marker on their own `*globalOption` struct (`jwx/options.go:8-17`, `cert/options.go:6-15`). Because the marker method is unexported, the two `GlobalOption` interfaces are not compiler-interchangeable — the loops can never receive a foreign-package option in practice.
+- The remaining failure modes are internal-only: a contributor adds a new option to `options.yaml`, regenerates the constructor, and forgets to wire the apply switch. That kind of drift is caught by ordinary test discipline (any test that exercises the new option's side effect catches the missing case).
+- Adding `default: return error` would convert future drift into a louder failure but address no user-facing risk. v3 backport is also impossible — v3's `Settings` returns no error.
+
+Do not re-flag this as a UX or security finding (adversarial review JWA-20260426194121-003 is recorded WONTFIX with this rationale).
+
 ## Multi-Module Layout
 
 | Module | Path | Purpose |
