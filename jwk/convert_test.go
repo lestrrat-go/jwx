@@ -1,6 +1,12 @@
 package jwk_test
 
 import (
+	"crypto/ecdh"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/rsa"
 	"errors"
 	"testing"
 
@@ -118,5 +124,107 @@ func TestRegisterKeyImporterRejectsDuplicate(t *testing.T) {
 	t.Run("Unregister on unknown type returns false", func(t *testing.T) {
 		require.False(t, jwk.UnregisterKeyImporter[dupImporterKey](),
 			`Unregister should return false when no importer was registered`)
+	})
+}
+
+// TestRegisterKeyImporterRejectsBuiltinTypes pins that the public
+// Register/Unregister APIs refuse to touch the importers jwk owns for
+// stdlib raw key types. Allowing a caller to swap the *rsa.PrivateKey
+// (etc.) importer would let an extension silently change how every
+// downstream caller's RSA private key parses — exactly the kind of
+// "registered = effective" footgun the report (JWK-001) flagged.
+//
+// The stub importer returns a non-nil error so the test does not
+// resemble a (nil, nil) sentinel.
+func TestRegisterKeyImporterRejectsBuiltinTypes(t *testing.T) {
+	stubErr := errors.New("stub importer must not be invoked: built-in types are reserved")
+
+	t.Run("RegisterKeyImporter[*rsa.PrivateKey]", func(t *testing.T) {
+		err := jwk.RegisterKeyImporter(func(*rsa.PrivateKey) (jwk.Key, error) {
+			return nil, stubErr
+		})
+		require.Error(t, err, `RegisterKeyImporter should refuse a built-in raw key type`)
+		require.Contains(t, err.Error(), `built-in`,
+			`error should explain that built-in importers cannot be overridden`)
+		require.Contains(t, err.Error(), `*rsa.PrivateKey`,
+			`error should name the rejected type`)
+	})
+
+	builtins := []struct {
+		name string
+		fn   func() error
+	}{
+		{"rsa.PrivateKey", func() error {
+			return jwk.RegisterKeyImporter(func(rsa.PrivateKey) (jwk.Key, error) { return nil, stubErr })
+		}},
+		{"*rsa.PublicKey", func() error {
+			return jwk.RegisterKeyImporter(func(*rsa.PublicKey) (jwk.Key, error) { return nil, stubErr })
+		}},
+		{"rsa.PublicKey", func() error {
+			return jwk.RegisterKeyImporter(func(rsa.PublicKey) (jwk.Key, error) { return nil, stubErr })
+		}},
+		{"*ecdsa.PrivateKey", func() error {
+			return jwk.RegisterKeyImporter(func(*ecdsa.PrivateKey) (jwk.Key, error) { return nil, stubErr })
+		}},
+		{"ecdsa.PrivateKey", func() error {
+			return jwk.RegisterKeyImporter(func(ecdsa.PrivateKey) (jwk.Key, error) { return nil, stubErr })
+		}},
+		{"*ecdsa.PublicKey", func() error {
+			return jwk.RegisterKeyImporter(func(*ecdsa.PublicKey) (jwk.Key, error) { return nil, stubErr })
+		}},
+		{"ecdsa.PublicKey", func() error {
+			return jwk.RegisterKeyImporter(func(ecdsa.PublicKey) (jwk.Key, error) { return nil, stubErr })
+		}},
+		{"ed25519.PrivateKey", func() error {
+			return jwk.RegisterKeyImporter(func(ed25519.PrivateKey) (jwk.Key, error) { return nil, stubErr })
+		}},
+		{"ed25519.PublicKey", func() error {
+			return jwk.RegisterKeyImporter(func(ed25519.PublicKey) (jwk.Key, error) { return nil, stubErr })
+		}},
+		{"*ecdh.PrivateKey", func() error {
+			return jwk.RegisterKeyImporter(func(*ecdh.PrivateKey) (jwk.Key, error) { return nil, stubErr })
+		}},
+		{"ecdh.PrivateKey", func() error {
+			return jwk.RegisterKeyImporter(func(ecdh.PrivateKey) (jwk.Key, error) { return nil, stubErr })
+		}},
+		{"*ecdh.PublicKey", func() error {
+			return jwk.RegisterKeyImporter(func(*ecdh.PublicKey) (jwk.Key, error) { return nil, stubErr })
+		}},
+		{"ecdh.PublicKey", func() error {
+			return jwk.RegisterKeyImporter(func(ecdh.PublicKey) (jwk.Key, error) { return nil, stubErr })
+		}},
+		{"[]byte", func() error {
+			return jwk.RegisterKeyImporter(func([]byte) (jwk.Key, error) { return nil, stubErr })
+		}},
+	}
+	for _, tc := range builtins {
+		t.Run("RegisterKeyImporter["+tc.name+"]", func(t *testing.T) {
+			err := tc.fn()
+			require.Error(t, err, `RegisterKeyImporter for %s should be refused`, tc.name)
+			require.Contains(t, err.Error(), `built-in`,
+				`error should explain that built-in importers cannot be overridden`)
+		})
+	}
+
+	t.Run("UnregisterKeyImporter[*rsa.PrivateKey] is a silent no-op", func(t *testing.T) {
+		require.False(t, jwk.UnregisterKeyImporter[*rsa.PrivateKey](),
+			`UnregisterKeyImporter for a built-in must report no removal`)
+
+		// Built-in importer must still be functional after the
+		// attempted unregister: importing a real *rsa.PrivateKey should
+		// continue to succeed.
+		raw, err := rsa.GenerateKey(rand.Reader, 2048)
+		require.NoError(t, err, `rsa.GenerateKey should succeed`)
+		_, err = jwk.Import[jwk.Key](raw)
+		require.NoError(t, err, `built-in *rsa.PrivateKey importer must remain functional`)
+	})
+
+	t.Run("UnregisterKeyImporter[*ecdsa.PrivateKey] is a silent no-op", func(t *testing.T) {
+		require.False(t, jwk.UnregisterKeyImporter[*ecdsa.PrivateKey]())
+
+		raw, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err)
+		_, err = jwk.Import[jwk.Key](raw)
+		require.NoError(t, err, `built-in *ecdsa.PrivateKey importer must remain functional`)
 	})
 }

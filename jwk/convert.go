@@ -24,6 +24,13 @@ import (
 
 var keyImporters = make(map[reflect.Type]KeyImporter)
 
+// builtinImporterTypes is the set of raw key types whose importers
+// are owned by the jwk package and cannot be overridden by callers.
+// [RegisterKeyImporter] for these types returns an error;
+// [UnregisterKeyImporter] for them is a silent no-op. Populated by
+// init() via [registerBuiltinImporter].
+var builtinImporterTypes = make(map[reflect.Type]struct{})
+
 // KeyKind identifies a key for exporter dispatch. Built-in key types
 // use the key type string (e.g. "RSA", "EC", "OKP", "oct"). Keys that
 // implement [KeyKinder] can return a more specific identity
@@ -75,12 +82,24 @@ var muKeyExporters sync.RWMutex
 // chain; importer dispatch is a single-value map keyed by Go type,
 // with no equivalent dimension to try next.
 //
+// The importers for stdlib raw key types — both value and pointer
+// forms of rsa.PrivateKey / rsa.PublicKey / ecdsa.PrivateKey /
+// ecdsa.PublicKey / ecdh.PrivateKey / ecdh.PublicKey, plus
+// ed25519.PrivateKey, ed25519.PublicKey, and []byte — are owned by
+// jwk and cannot be overridden. RegisterKeyImporter for any of these
+// types returns an error; [UnregisterKeyImporter] for them is a
+// silent no-op. Use a wrapper type if you need to apply additional
+// validation.
+//
 // Extension modules calling this from init() must check the returned
 // error and panic on failure.
 func RegisterKeyImporter[T any](fn func(T) (Key, error)) error {
 	muKeyImporters.Lock()
 	defer muKeyImporters.Unlock()
 	t := reflect.TypeFor[T]()
+	if _, ok := builtinImporterTypes[t]; ok {
+		return fmt.Errorf(`jwk.RegisterKeyImporter: %s is a built-in raw key type; built-in importers cannot be overridden`, t)
+	}
 	if _, exists := keyImporters[t]; exists {
 		return fmt.Errorf(`jwk.RegisterKeyImporter: an importer for %s is already registered; call jwk.UnregisterKeyImporter[%s]() first if you need to replace it`, t, t)
 	}
@@ -90,7 +109,9 @@ func RegisterKeyImporter[T any](fn func(T) (Key, error)) error {
 
 // UnregisterKeyImporter removes the importer previously registered
 // for type T. Returns true if an importer was removed, false if none
-// was registered for T.
+// was registered for T or if T is one of the built-in raw key types
+// (see [RegisterKeyImporter] for the list); built-in importers cannot
+// be unregistered.
 //
 // This is primarily useful for tests or for extension modules that
 // need to replace a previously installed importer. In steady-state
@@ -101,6 +122,9 @@ func UnregisterKeyImporter[T any]() bool {
 	muKeyImporters.Lock()
 	defer muKeyImporters.Unlock()
 	t := reflect.TypeFor[T]()
+	if _, ok := builtinImporterTypes[t]; ok {
+		return false
+	}
 	if _, ok := keyImporters[t]; !ok {
 		return false
 	}
@@ -220,21 +244,32 @@ func init() {
 	normalizedOKP = KeyKind(jwa.OKP().String()).normalize()
 	normalizedOCT = KeyKind(jwa.OctetSeq().String()).normalize()
 
-	panicOnRegistrationError(RegisterKeyImporter(importRSAPrivateKey))
-	panicOnRegistrationError(RegisterKeyImporter(importRSAPrivateKeyPtr))
-	panicOnRegistrationError(RegisterKeyImporter(importRSAPublicKey))
-	panicOnRegistrationError(RegisterKeyImporter(importRSAPublicKeyPtr))
-	panicOnRegistrationError(RegisterKeyImporter(importECDSAPrivateKey))
-	panicOnRegistrationError(RegisterKeyImporter(importECDSAPrivateKeyPtr))
-	panicOnRegistrationError(RegisterKeyImporter(importECDSAPublicKey))
-	panicOnRegistrationError(RegisterKeyImporter(importECDSAPublicKeyPtr))
-	panicOnRegistrationError(RegisterKeyImporter(importEd25519PrivateKey))
-	panicOnRegistrationError(RegisterKeyImporter(importECDHPrivateKey))
-	panicOnRegistrationError(RegisterKeyImporter(importECDHPrivateKeyPtr))
-	panicOnRegistrationError(RegisterKeyImporter(importEd25519PublicKey))
-	panicOnRegistrationError(RegisterKeyImporter(importECDHPublicKey))
-	panicOnRegistrationError(RegisterKeyImporter(importECDHPublicKeyPtr))
-	panicOnRegistrationError(RegisterKeyImporter(importSymmetricKey))
+	registerBuiltinKeyImporter(importRSAPrivateKey)
+	registerBuiltinKeyImporter(importRSAPrivateKeyPtr)
+	registerBuiltinKeyImporter(importRSAPublicKey)
+	registerBuiltinKeyImporter(importRSAPublicKeyPtr)
+	registerBuiltinKeyImporter(importECDSAPrivateKey)
+	registerBuiltinKeyImporter(importECDSAPrivateKeyPtr)
+	registerBuiltinKeyImporter(importECDSAPublicKey)
+	registerBuiltinKeyImporter(importECDSAPublicKeyPtr)
+	registerBuiltinKeyImporter(importEd25519PrivateKey)
+	registerBuiltinKeyImporter(importECDHPrivateKey)
+	registerBuiltinKeyImporter(importECDHPrivateKeyPtr)
+	registerBuiltinKeyImporter(importEd25519PublicKey)
+	registerBuiltinKeyImporter(importECDHPublicKey)
+	registerBuiltinKeyImporter(importECDHPublicKeyPtr)
+	registerBuiltinKeyImporter(importSymmetricKey)
+}
+
+// registerBuiltinKeyImporter installs an importer that the public
+// [RegisterKeyImporter] / [UnregisterKeyImporter] APIs are not allowed
+// to touch. Intended for jwk's own init() — runs single-threaded
+// before any goroutine could observe partially-populated state, so
+// the muKeyImporters lock is not taken.
+func registerBuiltinKeyImporter[T any](fn func(T) (Key, error)) {
+	t := reflect.TypeFor[T]()
+	builtinImporterTypes[t] = struct{}{}
+	keyImporters[t] = &keyImportAdapter[T]{fn: fn}
 }
 
 // panicOnRegistrationError converts a non-nil error returned by a Register*
