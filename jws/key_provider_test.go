@@ -125,3 +125,46 @@ func TestKeySetProviderUseEncSurfacesError(t *testing.T) {
 	require.Contains(t, err.Error(), `not usable for signature verification`,
 		`error should explain the mismatch`)
 }
+
+// fixedFetcher is a jwk.Fetcher that returns the same JWK Set for any URL.
+type fixedFetcher struct {
+	set jwk.Set
+}
+
+func (f fixedFetcher) Fetch(_ context.Context, _ string) (jwk.Set, error) {
+	return f.set, nil
+}
+
+// TestJKUProviderUseEncSurfacesError pins that jkuProvider mirrors the
+// keySetProvider use-check: a JWKS entry with use="enc" that matches
+// the JWS "kid" is rejected with a structured error rather than
+// silently passed through to AlgorithmsForKey.
+func TestJKUProviderUseEncSurfacesError(t *testing.T) {
+	t.Parallel()
+
+	rsaRaw, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	pub, err := jwk.Import[jwk.Key](&rsaRaw.PublicKey)
+	require.NoError(t, err)
+	require.NoError(t, pub.Set(jwk.KeyIDKey, "signer-kid"))
+	require.NoError(t, pub.Set(jwk.KeyUsageKey, "enc"))
+
+	set := jwk.NewSet()
+	require.NoError(t, set.AddKey(pub))
+
+	kp := jkuProvider{fetcher: fixedFetcher{set: set}}
+
+	sig := NewSignature()
+	hdr := NewHeaders()
+	require.NoError(t, hdr.Set(AlgorithmKey, jwa.RS256()))
+	require.NoError(t, hdr.Set(KeyIDKey, "signer-kid"))
+	require.NoError(t, hdr.Set(JWKSetURLKey, "https://example.test/jwks"))
+	sig.SetProtectedHeaders(hdr)
+
+	err = kp.FetchKeys(context.Background(), &countingKeySink{}, sig, &Message{})
+	require.Error(t, err, `jkuProvider.FetchKeys should error on use=enc`)
+	require.Contains(t, err.Error(), `signer-kid`, `error should name the kid`)
+	require.Contains(t, err.Error(), `use="enc"`, `error should quote the usage`)
+	require.Contains(t, err.Error(), `not usable for signature verification`,
+		`error should explain the mismatch`)
+}
