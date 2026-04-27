@@ -4,7 +4,7 @@ This guide covers all breaking changes between `github.com/lestrrat-go/jwx/v3` a
 
 The [`jwxmigrate`](https://github.com/jwx-go/jwxmigrate) tool can apply mechanical fixes automatically and report issues that require manual review:
 
-    go install github.com/jwx-go/jwxmigrate@latest
+    go install github.com/jwx-go/jwxmigrate/v4@latest
 
     # Apply all mechanical fixes in-place (import rewrites, renames, etc.)
     jwxmigrate --fix ./...
