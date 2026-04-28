@@ -4,6 +4,10 @@ on:
     branches:
       - v*
       - develop/*
+  push:
+    branches:
+      - v*
+      - develop/*
 
 jobs:
   build:
