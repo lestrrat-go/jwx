@@ -39,12 +39,14 @@ jobs:
         if: always()
         run: |
           if [ -f coverage.out ]; then
+            go work init . ./cmd/jwx
             {
               echo "## Coverage"
               echo '```'
               go tool cover -func=coverage.out
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
+            rm -f go.work go.work.sum
           fi
       - name: Check difference between generation code and commit code
         run: make check_diffs
