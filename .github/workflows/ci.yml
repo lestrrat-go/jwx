@@ -47,17 +47,28 @@ jobs:
               awk '
                 NR == 1 { next }
                 {
-                  n = index($1, ".go:")
-                  pkg = substr($1, 1, n + 1)
-                  sub(/\/[^\/]+$/, "", pkg)
-                  sub(/^github\.com\/lestrrat-go\/jwx\/v[0-9]+\/?/, "", pkg)
-                  if (pkg == "") pkg = "(root)"
-                  total[pkg] += $2
-                  if ($3 > 0) covered[pkg] += $2
-                  gt += $2
-                  if ($3 > 0) gc += $2
+                  key = $1
+                  if (!(key in stmts)) {
+                    stmts[key] = $2
+                    n = index($1, ".go:")
+                    pkg = substr($1, 1, n + 1)
+                    sub(/\/[^\/]+$/, "", pkg)
+                    sub(/^github\.com\/lestrrat-go\/jwx\/v[0-9]+\/?/, "", pkg)
+                    if (pkg == "") pkg = "(root)"
+                    pkgof[key] = pkg
+                  }
+                  if ($3 > 0) hit[key] = 1
                 }
                 END {
+                  for (k in stmts) {
+                    p = pkgof[k]
+                    total[p] += stmts[k]
+                    gt += stmts[k]
+                    if (k in hit) {
+                      covered[p] += stmts[k]
+                      gc += stmts[k]
+                    }
+                  }
                   n = 0
                   for (p in total) keys[++n] = p
                   for (i = 1; i <= n; i++)
