@@ -39,14 +39,38 @@ jobs:
         if: always()
         run: |
           if [ -f coverage.out ]; then
-            go work init . ./cmd/jwx
             {
               echo "## Coverage"
-              echo '```'
-              go tool cover -func=coverage.out
-              echo '```'
+              echo
+              echo '| Package | Coverage | Covered/Total |'
+              echo '|---------|---------:|--------------:|'
+              awk '
+                NR == 1 { next }
+                {
+                  n = index($1, ".go:")
+                  pkg = substr($1, 1, n + 1)
+                  sub(/\/[^\/]+$/, "", pkg)
+                  sub(/^github\.com\/lestrrat-go\/jwx\/v[0-9]+\/?/, "", pkg)
+                  if (pkg == "") pkg = "(root)"
+                  total[pkg] += $2
+                  if ($3 > 0) covered[pkg] += $2
+                  gt += $2
+                  if ($3 > 0) gc += $2
+                }
+                END {
+                  n = 0
+                  for (p in total) keys[++n] = p
+                  for (i = 1; i <= n; i++)
+                    for (j = i + 1; j <= n; j++)
+                      if (keys[j] < keys[i]) { t = keys[i]; keys[i] = keys[j]; keys[j] = t }
+                  for (i = 1; i <= n; i++) {
+                    p = keys[i]
+                    printf "| %s | %.1f%% | %d/%d |\n", p, 100 * covered[p] / total[p], covered[p], total[p]
+                  }
+                  if (gt > 0) printf "| **TOTAL** | **%.1f%%** | **%d/%d** |\n", 100 * gc / gt, gc, gt
+                }
+              ' coverage.out
             } >> "$GITHUB_STEP_SUMMARY"
-            rm -f go.work go.work.sum
           fi
       - name: Check difference between generation code and commit code
         run: make check_diffs
