@@ -4,6 +4,38 @@ Changes
 v4 has many incompatibilities with v3. To see the full list of differences between
 v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MICRATION-v4.md)
 
+v4.0.1 28 Apr 2026
+  * [jwt] `jwt.Parse` / `jwt.ParseRequest` only call `ParseForm` when
+    `WithFormKey` is supplied. Previously the form body could be
+    consumed even when the caller did not opt in to form-source
+    extraction. (#2057)
+
+  * [jws] Keys fetched via the `jku` header are no longer accepted
+    for signature verification when the JWK declares `use=enc`. (#2059)
+
+  * [jwe] Reject messages whose protected-header `alg` conflicts with
+    a per-recipient `alg`. The previous behavior silently preferred
+    the protected-header value. (#2051)
+
+  * [jwk] `jwk.RegisterKeyImporter` refuses to register an importer
+    for the built-in raw key types so user registrations cannot
+    shadow stdlib types. (#2061)
+
+  * [jwk] ECDSA public keys whose X / Y coordinates exceed the
+    curve's byte length are rejected with a typed error instead of
+    reaching curve arithmetic with an out-of-range big.Int. (#2049)
+
+  * [jwa] Unify the signature, key-encryption, and
+    content-encryption algorithm tables behind a single
+    registration entry point. Extension algorithms register once
+    rather than via three parallel APIs. (#2062)
+
+  * [jwt] Fix `AddressClaim.MarshalJSON` to handle non-printable
+    bytes correctly. (#2054)
+
+  * [cmd/jwx] Warn before writing a private key to a TTY; reject
+    `keysize <= 0` for `oct` key generation. (#2070)
+
 v4.0.0 - 19 Apr 2026
   * Initial v4 release. Major features:
     * Lighter: Core / Companion module separation. Less dependencies in core.
