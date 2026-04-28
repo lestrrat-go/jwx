@@ -35,5 +35,16 @@ jobs:
         run: make tidy
       - name: Test with coverage
         run: make cover
+      - name: Coverage report
+        if: always()
+        run: |
+          if [ -f coverage.out ]; then
+            {
+              echo "## Coverage"
+              echo '```'
+              go tool cover -func=coverage.out
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
       - name: Check difference between generation code and commit code
         run: make check_diffs
