@@ -21,6 +21,27 @@ func ErrCritPresent() error {
 	return errCritPresent
 }
 
+// errB64Present is returned by VerifyCompactFast when the protected
+// header carries a "b64" entry (typically b64=false per RFC 7797). The
+// fast path assumes the default b64=true encoding for both the
+// signing-input reconstruction and the post-verify payload decode; a
+// b64=false message signed under non-conformant rules (b64 not declared
+// in "crit") would otherwise verify cryptographically while returning
+// a decoded payload that differs from the producer's intent. Refusing
+// here defers such messages to jws.Verify, which has the
+// WithDetachedPayload and WithCritExtension machinery to handle b64=false
+// correctly. Callers that wrap VerifyCompactFast can detect this via
+// errors.Is(err, jws.ErrB64Present()).
+var errB64Present = errors.New("VerifyCompactFast: protected header contains \"b64\"; use jws.Verify")
+
+// ErrB64Present returns the sentinel error returned by VerifyCompactFast
+// when the protected header contains a "b64" entry. Callers that front
+// VerifyCompactFast with an auto-fallback to jws.Verify can detect it
+// via errors.Is.
+func ErrB64Present() error {
+	return errB64Present
+}
+
 type signError struct {
 	error
 }
