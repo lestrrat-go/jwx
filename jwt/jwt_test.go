@@ -1875,3 +1875,58 @@ func TestGH1484(t *testing.T) {
 		}
 	})
 }
+
+// TestParsePedanticEnforcesCtyJWTNesting documents that with WithPedantic(true)
+// on the verify path, jwt.Parse enforces RFC 7519 §5.2 nested-JWT structural
+// expectations: when the outer JWS protected header carries cty=JWT, the
+// inner payload must itself be enveloped (another JWS or JWE wrapping a JWT),
+// not a raw JWT JSON object. The producer side already sets cty=JWT in
+// jwt/serialize.go for nested signing; the verify-side enforcement was
+// asymmetric — _JwsVerifyExpectNested and the rejection branch existed in
+// jwt.go but verifyJWS never returned the ExpectNested state, so the check
+// could not fire on any input.
+//
+// Pedantic mode applies to the verify path only (ParseInsecure is incompatible
+// with structural strictness by design).
+func TestParsePedanticEnforcesCtyJWTNesting(t *testing.T) {
+	privkey, err := jwxtest.GenerateEcdsaJwk()
+	require.NoError(t, err)
+	require.NoError(t, privkey.Set(jwk.AlgorithmKey, jwa.ES256()))
+	pubkey, err := jwk.PublicKeyOf(privkey)
+	require.NoError(t, err)
+	require.NoError(t, pubkey.Set(jwk.AlgorithmKey, jwa.ES256()))
+
+	// Build a raw JWT (just JSON, no signature) and wrap it in a single
+	// JWS layer whose protected header carries cty=JWT. RFC 7519 §5.2
+	// reserves cty=JWT for nested signing/encryption; the inner here is
+	// raw JWT, which under pedantic rules should be rejected with
+	// "expected nested encrypted/signed payload, got raw JWT".
+	innerToken := jwt.New()
+	require.NoError(t, innerToken.Set(jwt.IssuerKey, "test-issuer"))
+	innerToken.Set(jwt.IssuedAtKey, time.Now().Round(0))
+	innerJSON, err := json.Marshal(innerToken)
+	require.NoError(t, err)
+
+	hdrs := jws.NewHeaders()
+	require.NoError(t, hdrs.Set("cty", "JWT"))
+	outerJWS, err := jws.Sign(innerJSON,
+		jws.WithKey(jwa.ES256(), privkey, jws.WithProtectedHeaders(hdrs)))
+	require.NoError(t, err)
+
+	t.Run("lenient parse accepts cty=JWT envelope around raw JWT", func(t *testing.T) {
+		// Without pedantic mode, the parser is lenient and unwraps to
+		// the inner JWT.
+		got, err := jwt.Parse(outerJWS, jwt.WithKey(jwa.ES256(), pubkey))
+		require.NoError(t, err, `lenient parse should accept the envelope`)
+		iss, ok := got.Issuer()
+		require.True(t, ok)
+		require.Equal(t, "test-issuer", iss)
+	})
+
+	t.Run("pedantic parse rejects cty=JWT enveloping raw JWT", func(t *testing.T) {
+		_, err := jwt.Parse(outerJWS,
+			jwt.WithKey(jwa.ES256(), pubkey),
+			jwt.WithPedantic(true))
+		require.Error(t, err, `pedantic mode must enforce cty=JWT signals a further nested envelope`)
+	})
+}
