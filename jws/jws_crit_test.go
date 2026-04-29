@@ -13,6 +13,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// nonConformantB64FalseHdrJSON is the protected header for a non-conformant
+// b64=false JWS — i.e. a producer that set "b64":false without including
+// "b64" in "crit" (RFC 7797 §3 violation). Used by multiple b64-related
+// tests to construct hand-rolled compact JWSes that exercise the slow-path
+// and fast-path refusals symmetrically.
+const nonConformantB64FalseHdrJSON = `{"alg":"HS256","b64":false}`
+
 // signWith returns a JWS-compact serialization of payload signed with key
 // using HS256 and the given protected headers.
 func signWith(t *testing.T, key any, payload []byte, hdrs jws.Headers) []byte {
@@ -358,7 +365,7 @@ func TestVerifyCompactFastRefusesB64False(t *testing.T) {
 	// base64url so the current pre-fix path would silently return wrong
 	// decoded bytes rather than a base64-decode error — the worst-case
 	// behavior the fix prevents.
-	hdrJSON := `{"alg":"HS256","b64":false}`
+	hdrJSON := nonConformantB64FalseHdrJSON
 	hdrB64 := base64.RawURLEncoding.EncodeToString([]byte(hdrJSON))
 
 	rawPayload := []byte("aGVsbG8") // valid base64url for "hello"
@@ -393,7 +400,7 @@ func TestVerifyRejectsB64FalseWithoutCrit(t *testing.T) {
 	// protected header but NO "crit" array at all. A conformant producer
 	// would have set crit=["b64"]; a defective one (or an attacker
 	// reaching for cross-impl interop confusion) emits this shape.
-	hdrJSON := `{"alg":"HS256","b64":false}`
+	hdrJSON := nonConformantB64FalseHdrJSON
 	hdrB64 := base64.RawURLEncoding.EncodeToString([]byte(hdrJSON))
 
 	rawPayload := []byte("hello world")
@@ -439,7 +446,7 @@ func TestVerifyCompactFastRefusalsMatchVerifyError(t *testing.T) {
 	t.Run("b64 refusal", func(t *testing.T) {
 		rawKey := jwxtest.GenerateSymmetricKey()
 
-		hdrJSON := `{"alg":"HS256","b64":false}`
+		hdrJSON := nonConformantB64FalseHdrJSON
 		hdrB64 := base64.RawURLEncoding.EncodeToString([]byte(hdrJSON))
 		rawPayload := []byte("aGVsbG8")
 		signingInput := hdrB64 + "." + string(rawPayload)
