@@ -42,16 +42,16 @@ func Settings(options ...GlobalOption) error {
 			parsePedantic = option.MustGet[bool](opt)
 		case identNumericDateParsePrecision{}:
 			v := option.MustGet[int](opt)
-			// only accept this value if it's in our desired range
-			if v >= 0 && v <= int(types.MaxPrecision) {
-				parsePrecision = uint32(v)
+			if v < 0 || v > int(types.MaxPrecision) {
+				return fmt.Errorf(`jwt.Settings: WithNumericDateParsePrecision(%d) is out of range; must be between 0 and %d (inclusive)`, v, types.MaxPrecision)
 			}
+			parsePrecision = uint32(v)
 		case identNumericDateFormatPrecision{}:
 			v := option.MustGet[int](opt)
-			// only accept this value if it's in our desired range
-			if v >= 0 && v <= int(types.MaxPrecision) {
-				formatPrecision = uint32(v)
+			if v < 0 || v > int(types.MaxPrecision) {
+				return fmt.Errorf(`jwt.Settings: WithNumericDateFormatPrecision(%d) is out of range; must be between 0 and %d (inclusive)`, v, types.MaxPrecision)
 			}
+			formatPrecision = uint32(v)
 		}
 	}
 

@@ -1777,6 +1777,40 @@ func TestFractional(t *testing.T) {
 	})
 }
 
+// TestSettingsRejectsOutOfRangePrecision documents that out-of-range
+// values for WithNumericDate{Parse,Format}Precision (negative or above
+// types.MaxPrecision) cause Settings() to return an error rather than
+// silently swallowing the value. The previous behavior was to ignore
+// out-of-range values and always return nil — a caller mis-typing the
+// precision would get no signal, and the global state would silently
+// stay at its previous value.
+func TestSettingsRejectsOutOfRangePrecision(t *testing.T) {
+	t.Run("parse precision above MaxPrecision", func(t *testing.T) {
+		err := jwt.Settings(jwt.WithNumericDateParsePrecision(int(types.MaxPrecision) + 1))
+		require.Error(t, err, `Settings must reject parse-precision > MaxPrecision`)
+	})
+
+	t.Run("parse precision negative", func(t *testing.T) {
+		err := jwt.Settings(jwt.WithNumericDateParsePrecision(-1))
+		require.Error(t, err, `Settings must reject negative parse-precision`)
+	})
+
+	t.Run("format precision above MaxPrecision", func(t *testing.T) {
+		err := jwt.Settings(jwt.WithNumericDateFormatPrecision(int(types.MaxPrecision) + 1))
+		require.Error(t, err, `Settings must reject format-precision > MaxPrecision`)
+	})
+
+	t.Run("format precision negative", func(t *testing.T) {
+		err := jwt.Settings(jwt.WithNumericDateFormatPrecision(-1))
+		require.Error(t, err, `Settings must reject negative format-precision`)
+	})
+
+	t.Run("valid precision still succeeds", func(t *testing.T) {
+		require.NoError(t, jwt.Settings(jwt.WithNumericDateParsePrecision(0)))
+		require.NoError(t, jwt.Settings(jwt.WithNumericDateParsePrecision(int(types.MaxPrecision))))
+	})
+}
+
 func TestGH836(t *testing.T) {
 	// tests on TokenOptionSet are found elsewhere.
 
