@@ -1021,8 +1021,8 @@ func TestRFC7797(t *testing.T) {
 		for _, tc := range testcases {
 			t.Run(tc.Name, func(t *testing.T) {
 				hdrs := jws.NewHeaders()
-				hdrs.Set("b64", false)
-				hdrs.Set("crit", "b64")
+				require.NoError(t, hdrs.Set("b64", false))
+				require.NoError(t, hdrs.Set("crit", []string{"b64"}))
 
 				payload := tc.Payload
 				signOptions := []jws.SignOption{jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs))}

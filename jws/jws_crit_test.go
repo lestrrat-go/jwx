@@ -375,6 +375,43 @@ func TestVerifyCompactFastRefusesB64False(t *testing.T) {
 	require.ErrorIs(t, err, jws.ErrB64Present(), `error should match jws.ErrB64Present sentinel`)
 }
 
+// TestVerifyRejectsB64FalseWithoutCrit documents the slow-path mirror of
+// TestVerifyCompactFastRefusesB64False. RFC 7797 §3 requires producers that
+// set b64=false to also include "b64" in "crit"; §6 ties this to RFC 7515's
+// critical-header-parameter rule. A defective producer can still emit a
+// b64=false JWS without "b64" in crit. VerifyCompactFast rejects any b64
+// header outright; jws.Verify must symmetrically reject the non-conformant
+// shape (b64=false without "b64" listed in crit) so the two entry points
+// agree on what they accept. Without this check, jws.Verify silently honors
+// b64=false in the wire and computes its signing input differently from a
+// strictly conformant verifier — exactly the cross-implementation
+// disagreement RFC 7797 §6 was designed to prevent.
+func TestVerifyRejectsB64FalseWithoutCrit(t *testing.T) {
+	rawKey := jwxtest.GenerateSymmetricKey()
+
+	// Construct a non-conformant compact JWS with b64=false in the
+	// protected header but NO "crit" array at all. A conformant producer
+	// would have set crit=["b64"]; a defective one (or an attacker
+	// reaching for cross-impl interop confusion) emits this shape.
+	hdrJSON := `{"alg":"HS256","b64":false}`
+	hdrB64 := base64.RawURLEncoding.EncodeToString([]byte(hdrJSON))
+
+	rawPayload := []byte("hello world")
+	signingInput := hdrB64 + "." + string(rawPayload)
+
+	mac := hmac.New(sha256.New, rawKey)
+	mac.Write([]byte(signingInput))
+	sigB64 := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+
+	compact := []byte(signingInput + "." + sigB64)
+
+	_, err := jws.Verify(compact, jws.WithKey(jwa.HS256(), rawKey))
+	require.Error(t, err, `jws.Verify must reject b64=false without "b64" in crit (RFC 7797 §3)`)
+	require.ErrorIs(t, err, jws.VerifyError(), `b64-without-crit refusal must match jws.VerifyError() class`)
+	require.ErrorContains(t, err, `b64`, `error should mention b64`)
+	require.ErrorContains(t, err, `crit`, `error should mention crit`)
+}
+
 // TestVerifyCompactFastRefusalsMatchVerifyError documents that the fast-path
 // refusal sentinels (ErrCritPresent, ErrB64Present) participate in the
 // general jws.VerifyError() taxonomy as well as their own specific
