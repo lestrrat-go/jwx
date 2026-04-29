@@ -1198,6 +1198,30 @@ func TestParseRequest(t *testing.T) {
 		require.NoError(t, err, `req.Body should still be readable after ParseRequest`)
 		require.Equal(t, body, string(got), `req.Body must be intact when no WithFormKey is supplied`)
 	})
+
+	// Regression: ParseRequest used to gate ParseForm on
+	// `req.ContentLength > 0`, which silently skipped chunked-transfer
+	// requests (ContentLength == -1) and zero-length requests. RFC 6750
+	// §2.2 allows form-borne bearer tokens, including under chunked
+	// encoding. The guard belongs only on `len(formkeys) > 0` (the
+	// caller opted in to body parsing); ContentLength shouldn't gate
+	// it. Verifies a token in a chunked POST is found.
+	t.Run("token in chunked-transfer form body is found", func(t *testing.T) {
+		body := `access_token=` + string(signed)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, u, strings.NewReader(body))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		// Force chunked transfer: clear ContentLength and add the
+		// transfer encoding. This mirrors a streaming client that
+		// doesn't know the body size in advance.
+		req.ContentLength = -1
+		req.TransferEncoding = []string{"chunked"}
+
+		got, err := jwt.ParseRequest(req,
+			jwt.WithFormKey("access_token"),
+			jwt.WithKey(jwa.ES256(), pubkey))
+		require.NoError(t, err, `jwt.ParseRequest must accept chunked-transfer form bodies (RFC 6750 §2.2)`)
+		require.NotNil(t, got)
+	})
 }
 
 func TestGHIssue368(t *testing.T) {
