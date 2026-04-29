@@ -1526,6 +1526,36 @@ func TestAlgorithmsForKeyECDHRejects(t *testing.T) {
 	}
 }
 
+// TestAlgorithmsForKeyUnclassifiableSentinel locks the typed-sentinel
+// contract for AlgorithmsForKey: every "we can't classify this key"
+// failure path wraps jws.ErrUnclassifiableKey() so callers can branch
+// with errors.Is rather than pattern-matching three different error
+// messages (Import-failed, kty-not-registered, ecdh-rejected). The
+// concrete %T or %q diagnostic stays in the wrapping error's message
+// so the human-readable error remains specific.
+func TestAlgorithmsForKeyUnclassifiableSentinel(t *testing.T) {
+	t.Run("unknown Go struct (Import fails)", func(t *testing.T) {
+		type bogusKey struct{}
+		_, err := jws.AlgorithmsForKey(bogusKey{})
+		require.Error(t, err)
+		require.ErrorIs(t, err, jws.ErrUnclassifiableKey(),
+			`Import-failed path must wrap ErrUnclassifiableKey`)
+		require.Contains(t, err.Error(), `bogusKey`,
+			`error message must keep the concrete type for diagnostics`)
+	})
+
+	t.Run("ecdh key (rejected at API boundary)", func(t *testing.T) {
+		x25519priv, err := ecdh.X25519().GenerateKey(rand.Reader)
+		require.NoError(t, err)
+		_, err = jws.AlgorithmsForKey(x25519priv)
+		require.Error(t, err)
+		require.ErrorIs(t, err, jws.ErrUnclassifiableKey(),
+			`ecdh-rejected path must wrap ErrUnclassifiableKey`)
+		require.Contains(t, err.Error(), `ecdh`,
+			`error message must keep the diagnostic phrase`)
+	})
+}
+
 // unclassifiableSigner is a crypto.Signer whose Public() is itself a
 // crypto.Signer, so AlgorithmsForKey cannot classify it — the documented
 // "opaque KMS-backed signer" escape hatch in validateAlgorithmForKey.
