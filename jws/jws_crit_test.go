@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
@@ -417,4 +418,48 @@ func TestVerifyCompactFastRefusalsMatchVerifyError(t *testing.T) {
 		require.ErrorIs(t, err, jws.ErrB64Present(), `specific sentinel match must remain`)
 		require.ErrorIs(t, err, jws.VerifyError(), `b64 refusal must also match jws.VerifyError() class`)
 	})
+}
+
+// TestMessageMarshalJSONHonorsB64False documents that Message.MarshalJSON
+// must NOT re-base64-encode the payload when the protected header carries
+// b64=false. The parser path (UnmarshalJSON) stores raw bytes in m.payload
+// for b64=false; the matching serialization in Compact() honors that flag,
+// but marshalFlattened/marshalFull historically did not — a Parse →
+// MarshalJSON round-trip silently produced JSON whose "payload" field
+// was the raw bytes RE-base64-encoded, mismatching the protected header.
+func TestMessageMarshalJSONHonorsB64False(t *testing.T) {
+	rawPayload := []byte("hello world")
+	key, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`)
+
+	hdrs := jws.NewHeaders()
+	require.NoError(t, hdrs.Set("b64", false))
+	require.NoError(t, hdrs.Set(jws.CriticalKey, []string{"b64"}))
+	signed, err := jws.Sign(rawPayload,
+		jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs)))
+	require.NoError(t, err, `jws.Sign with b64=false should succeed`)
+
+	msg, err := jws.Parse(signed)
+	require.NoError(t, err, `jws.Parse should succeed`)
+
+	// Flattened form: one signature → marshalFlattened
+	flatJSON, err := json.Marshal(msg)
+	require.NoError(t, err, `json.Marshal of Message should succeed (flattened)`)
+
+	var flatParsed struct {
+		Payload string `json:"payload"`
+	}
+	require.NoError(t, json.Unmarshal(flatJSON, &flatParsed))
+	require.Equal(t, string(rawPayload), flatParsed.Payload,
+		`flattened-form b64=false JSON serialization must NOT re-base64-encode the payload`)
+
+	// Round-trip: re-parsing the JSON output should produce a Message
+	// whose payload bytes match the original. Without the fix, the
+	// re-parsed message would store base64(rawPayload) as raw bytes
+	// (because the protected header still says b64=false), corrupting
+	// the producer's signing input.
+	msg2, err := jws.Parse(flatJSON)
+	require.NoError(t, err, `re-Parse of MarshalJSON output should succeed`)
+	require.Equal(t, msg.Payload(), msg2.Payload(),
+		`Parse → MarshalJSON → Parse round-trip must preserve b64=false payload bytes`)
 }
