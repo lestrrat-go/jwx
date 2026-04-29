@@ -243,6 +243,15 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 		}
 		if keysAttempted == 0 {
 			errs = append(errs, makeVerifyError(`signature #%d: no matching keys were provided by any key provider`, idx+1))
+		} else if looseOpts := vc.namedLooseKeySetOptions(); len(looseOpts) > 0 && keysAttempted > 1 {
+			// When a loose keySet config widened the candidate set, name
+			// the option(s) so the operator can see why a single Verify
+			// call paid N× the cost — the un-attributed message gets
+			// mis-diagnosed by adding more keys instead of fixing the
+			// JWS or tightening the config.
+			errs = append(errs, makeVerifyError(
+				`signature #%d: tried %d (alg,key) pair(s) but none verified successfully; %s widened the candidate set`,
+				idx+1, keysAttempted, strings.Join(looseOpts, " and ")))
 		} else {
 			errs = append(errs, makeVerifyError(`signature #%d: tried %d key(s) but none verified successfully`, idx+1, keysAttempted))
 		}
@@ -337,4 +346,36 @@ func validateCritical(protected Headers, allowedExtensions []string) error {
 	}
 
 	return nil
+}
+
+// namedLooseKeySetOptions inspects the registered key providers and
+// returns the human-readable names of the loose-config keySet options
+// in effect for this verify call: jws.WithRequireKid(false) and/or
+// jws.WithInferAlgorithmFromKey(true). These are the options whose
+// presence widens the per-signature (alg,key) candidate set beyond
+// the default "kid + alg pin" of one. The names are used in the final
+// "could not verify" error so an operator sees which options produced
+// the fan-out without grep'ing the source.
+func (vc *verifyContext) namedLooseKeySetOptions() []string {
+	var requireKidFalse, inferAlgorithm bool
+	for _, kp := range vc.keyProviders {
+		ksp, ok := kp.(*keySetProvider)
+		if !ok {
+			continue
+		}
+		if !ksp.requireKid {
+			requireKidFalse = true
+		}
+		if ksp.inferAlgorithm {
+			inferAlgorithm = true
+		}
+	}
+	var names []string
+	if requireKidFalse {
+		names = append(names, "jws.WithRequireKid(false)")
+	}
+	if inferAlgorithm {
+		names = append(names, "jws.WithInferAlgorithmFromKey(true)")
+	}
+	return names
 }

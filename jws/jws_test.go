@@ -2339,3 +2339,42 @@ func TestVerifyCompactFastHeaderAlgCrossCheck(t *testing.T) {
 		require.Contains(t, err.Error(), `"alg"`)
 	})
 }
+
+// TestVerifyFanoutErrorNamesLooseOptions documents that when verification
+// fails after a keySet-driven fan-out widened the candidate set (because
+// the caller opted into WithRequireKid(false) or WithInferAlgorithmFromKey
+// (true)), the resulting error names the option(s) that fired and reports
+// the (alg,key) attempt count. Without this attribution, an operator
+// staring at "tried N key(s) but none verified successfully" mis-diagnoses
+// by adding more keys instead of fixing the JWS or tightening the config.
+func TestVerifyFanoutErrorNamesLooseOptions(t *testing.T) {
+	payload := []byte("hello world")
+
+	// Sign with a key that is NOT in the verifying JWKS so all attempts fail.
+	signKey, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`)
+	signed, err := jws.Sign(payload, jws.WithKey(jwa.HS256(), signKey))
+	require.NoError(t, err, `jws.Sign should succeed`)
+
+	// JWKS contains three different symmetric keys, none of which match
+	// the signer above. Each carries an explicit alg=HS256 so the
+	// keySetProvider sinks (HS256, key) for each under
+	// WithRequireKid(false); the verifier then runs an HS256 verify
+	// against each; all fail.
+	set := jwk.NewSet()
+	for range 3 {
+		k, err := jwxtest.GenerateSymmetricJwk()
+		require.NoError(t, err)
+		require.NoError(t, k.Set(jwk.AlgorithmKey, jwa.HS256()))
+		require.NoError(t, set.AddKey(k))
+	}
+
+	_, err = jws.Verify(signed, jws.WithKeySet(set, jws.WithRequireKid(false)))
+	require.Error(t, err, `verify must fail when no key in the JWKS matches the signer`)
+
+	msg := err.Error()
+	require.Contains(t, msg, `(alg,key) pair`,
+		`error must report the count of attempted (alg,key) pairs when fan-out occurred`)
+	require.Contains(t, msg, `WithRequireKid(false)`,
+		`error must name WithRequireKid(false) so the operator knows which option widened the candidate set`)
+}
