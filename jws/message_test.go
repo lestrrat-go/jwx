@@ -134,3 +134,39 @@ func TestMessageUnmarshalJSONRejectsLiteralJSONProtected(t *testing.T) {
 	require.Error(t, err,
 		`general-form JWS with literal-JSON "protected" must be rejected (RFC 7515 §3 requires base64url)`)
 }
+
+// TestMessageUnmarshalJSONRejectsTopLevelHeaderInGeneralForm documents that
+// a general-form JWS (one with "signatures": [...]) must not carry a top-
+// level "header" sibling. RFC 7515 §7.2.1 defines top-level "header" only
+// for the flattened form (where it is the unprotected header for the
+// single signature). The general form puts the unprotected header inside
+// each signature entry.
+//
+// The previous parser silently dropped the top-level "header" when in
+// general-form mode — the field was unmarshaled into the probe but never
+// read. That was both a UX surprise (typos were ignored) and a structural
+// hazard: RegisterCustomDecoder side effects fired on the dropped
+// contents, giving an attacker a controlled trigger surface that the
+// in-tree verify path didn't honor.
+func TestMessageUnmarshalJSONRejectsTopLevelHeaderInGeneralForm(t *testing.T) {
+	// General form (note "signatures" array) with an extra top-level
+	// "header" field carrying an unprotected header. RFC 7515 §7.2.1
+	// places the unprotected header inside each signature entry, not
+	// at the message root.
+	const malformed = `{
+  "payload": "aGVsbG8",
+  "header": {"kid": "attacker-controlled"},
+  "signatures": [
+    {
+      "protected": "eyJhbGciOiJIUzI1NiJ9",
+      "signature": "AAAA"
+    }
+  ]
+}`
+	var msg jws.Message
+	err := json.Unmarshal([]byte(malformed), &msg)
+	require.Error(t, err,
+		`general-form JWS with top-level "header" must be rejected (RFC 7515 §7.2.1 puts unprotected headers inside each signature entry)`)
+	require.ErrorContains(t, err, `header`,
+		`error should name the offending field`)
+}
