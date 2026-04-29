@@ -253,16 +253,14 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	return vc.VerifyMessage(buf)
 }
 
-// get the value of b64 header field.
-// If the field does not exist, returns true (default)
-// Otherwise return the value specified by the header field.
+// getB64Value reads the typed "b64" header field and returns its value,
+// or RFC 7797's default of true when the field is unset.
 func getB64Value(hdr Headers) bool {
-	var b64 bool
-	if err := hdr.Get("b64", &b64); err != nil {
-		return true // default
+	v, ok := hdr.B64()
+	if !ok {
+		return true // RFC 7797 default
 	}
-
-	return b64
+	return v
 }
 
 func detectParseFormat(src []byte) int {
