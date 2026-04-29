@@ -595,7 +595,7 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 		// ecdh keys are for key agreement (X25519/X448), not signing.
 		// Reject at the API boundary instead of returning a misleading
 		// algorithm list that would fail deeper in the signing stack.
-		return nil, fmt.Errorf(`key type %T cannot be used for signing (ecdh keys are key-agreement only)`, key)
+		return nil, fmt.Errorf(`%w: key type %T cannot be used for signing (ecdh keys are key-agreement only)`, errUnclassifiableKey, key)
 	case []byte:
 		kty = jwa.OctetSeq()
 	default:
@@ -615,7 +615,7 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 		}
 		imported, err := jwk.Import[jwk.Key](key)
 		if err != nil {
-			return nil, fmt.Errorf(`unknown key type %T`, key)
+			return nil, fmt.Errorf(`%w: unknown key type %T`, errUnclassifiableKey, key)
 		}
 		kty = imported.KeyType()
 		type curver interface {
@@ -631,7 +631,7 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 
 	ktyAlgs, ok := keyTypeToAlgorithms[kty]
 	if !ok {
-		return nil, fmt.Errorf(`unregistered key type %q`, kty)
+		return nil, fmt.Errorf(`%w: unregistered key type %q`, errUnclassifiableKey, kty)
 	}
 
 	// If we know the curve and there are curve-specific registrations,
