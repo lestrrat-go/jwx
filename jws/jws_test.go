@@ -3,6 +3,7 @@ package jws_test
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto"
 	"crypto/ecdh"
 	"crypto/ecdsa"
@@ -2377,4 +2378,38 @@ func TestVerifyFanoutErrorNamesLooseOptions(t *testing.T) {
 		`error must report the count of attempted (alg,key) pairs when fan-out occurred`)
 	require.Contains(t, msg, `WithRequireKid(false)`,
 		`error must name WithRequireKid(false) so the operator knows which option widened the candidate set`)
+}
+
+// TestVerifyHonorsContextCancellation locks the contract that
+// jws.Verify observes ctx cancellation between iterations of its outer
+// loops. Previously vc.ctx was passed into kp.FetchKeys but never read
+// directly by VerifyMessage; under fan-out a hostile JWS could keep the
+// verifier crunching through hundreds of crypto operations after the
+// caller's deadline had fired.
+func TestVerifyHonorsContextCancellation(t *testing.T) {
+	payload := []byte("hello world")
+
+	signKey, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err)
+	signed, err := jws.Sign(payload, jws.WithKey(jwa.HS256(), signKey))
+	require.NoError(t, err)
+
+	set := jwk.NewSet()
+	for range 10 {
+		k, err := jwxtest.GenerateSymmetricJwk()
+		require.NoError(t, err)
+		require.NoError(t, k.Set(jwk.AlgorithmKey, jwa.HS256()))
+		require.NoError(t, set.AddKey(k))
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel() // pre-cancel: the very first iteration must observe it
+
+	_, err = jws.Verify(signed,
+		jws.WithContext(ctx),
+		jws.WithKeySet(set, jws.WithRequireKid(false)),
+	)
+	require.Error(t, err, `Verify must observe a pre-cancelled ctx`)
+	require.ErrorIs(t, err, context.Canceled,
+		`cancellation must propagate as context.Canceled`)
 }
