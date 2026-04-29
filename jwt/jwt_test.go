@@ -1930,3 +1930,38 @@ func TestParsePedanticEnforcesCtyJWTNesting(t *testing.T) {
 		require.Error(t, err, `pedantic mode must enforce cty=JWT signals a further nested envelope`)
 	})
 }
+
+// TestParseInsecureUnwrapsNestedJWS documents that ParseInsecure correctly
+// unwraps a 2-layer nested compact JWS (JWS-around-JWS-around-JWT) and
+// returns the innermost JWT's claims. The skip-verify branch in parse()
+// previously called jws.Parse(data, ...) against the full original input
+// rather than the loop-local payload — iter 1 produced the inner JWS bytes
+// in `payload` but iter 2 re-parsed the outer envelope, leaving the loop
+// stuck on the inner JWS bytes. Fail-closed (no claim-substitution
+// primitive), but a real correctness divergence between Parse and
+// ParseInsecure.
+func TestParseInsecureUnwrapsNestedJWS(t *testing.T) {
+	innerKey, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err)
+	require.NoError(t, innerKey.Set(jwk.AlgorithmKey, jwa.RS256()))
+	outerKey, err := jwxtest.GenerateEcdsaJwk()
+	require.NoError(t, err)
+	require.NoError(t, outerKey.Set(jwk.AlgorithmKey, jwa.ES256()))
+
+	tok := jwt.New()
+	require.NoError(t, tok.Set(jwt.IssuerKey, "nested-test"))
+	require.NoError(t, tok.Set(jwt.IssuedAtKey, time.Now().Round(0)))
+
+	innerSigned, err := jwt.Sign(tok, jwt.WithKey(jwa.RS256(), innerKey))
+	require.NoError(t, err)
+
+	outerSigned, err := jws.Sign(innerSigned,
+		jws.WithKey(jwa.ES256(), outerKey))
+	require.NoError(t, err)
+
+	got, err := jwt.ParseInsecure(outerSigned)
+	require.NoError(t, err, `ParseInsecure should successfully unwrap a 2-layer nested JWS`)
+	iss, ok := got.Issuer()
+	require.True(t, ok, `inner issuer claim should be present after unwrap`)
+	require.Equal(t, "nested-test", iss)
+}
