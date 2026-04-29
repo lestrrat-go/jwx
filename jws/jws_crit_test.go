@@ -400,3 +400,48 @@ func TestVerifyCompactFastRefusesB64False(t *testing.T) {
 	require.Error(t, err, `VerifyCompactFast must refuse b64-bearing messages`)
 	require.ErrorIs(t, err, jws.ErrB64Present(), `error should match jws.ErrB64Present sentinel`)
 }
+
+// TestVerifyCompactFastRefusalsMatchVerifyError documents that the fast-path
+// refusal sentinels (ErrCritPresent, ErrB64Present) participate in the
+// general jws.VerifyError() taxonomy as well as their own specific
+// classifications. Code that uses errors.Is(err, jws.VerifyError()) to
+// classify "is this a verify error" must succeed on these refusals — the
+// refusals are returned by VerifyCompactFast and any caller that fronts the
+// function with a single VerifyError() branch should not have to special-
+// case them. Both classifications hold simultaneously: ErrCritPresent /
+// ErrB64Present continue to identify the specific reason for the refusal.
+func TestVerifyCompactFastRefusalsMatchVerifyError(t *testing.T) {
+	t.Run("crit refusal", func(t *testing.T) {
+		key, err := jwxtest.GenerateSymmetricJwk()
+		require.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`)
+
+		hdrs := jws.NewHeaders()
+		require.NoError(t, hdrs.Set(jws.CriticalKey, []string{"x-test"}))
+		signed := signWith(t, key, []byte("hello world"), hdrs)
+
+		_, err = jws.VerifyCompactFast(key, signed, jwa.HS256())
+		require.Error(t, err)
+		require.ErrorIs(t, err, jws.ErrCritPresent(), `specific sentinel match must remain`)
+		require.ErrorIs(t, err, jws.VerifyError(), `crit refusal must also match jws.VerifyError() class`)
+	})
+
+	t.Run("b64 refusal", func(t *testing.T) {
+		rawKey := jwxtest.GenerateSymmetricKey()
+
+		hdrJSON := `{"alg":"HS256","b64":false}`
+		hdrB64 := base64.RawURLEncoding.EncodeToString([]byte(hdrJSON))
+		rawPayload := []byte("aGVsbG8")
+		signingInput := hdrB64 + "." + string(rawPayload)
+
+		mac := hmac.New(sha256.New, rawKey)
+		mac.Write([]byte(signingInput))
+		sigB64 := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+
+		compact := []byte(signingInput + "." + sigB64)
+
+		_, err := jws.VerifyCompactFast(rawKey, compact, jwa.HS256())
+		require.Error(t, err)
+		require.ErrorIs(t, err, jws.ErrB64Present(), `specific sentinel match must remain`)
+		require.ErrorIs(t, err, jws.VerifyError(), `b64 refusal must also match jws.VerifyError() class`)
+	})
+}

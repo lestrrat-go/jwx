@@ -8,15 +8,17 @@ import (
 // errCritPresent is returned by VerifyCompactFast when the protected
 // header carries a "crit" list. The fast path cannot enforce RFC 7515
 // §4.1.11 (it has no WithCritExtension allowlist), so it refuses rather
-// than silently accepting. Callers that wrap VerifyCompactFast and want
-// the full validateCritical rule set applied should detect this via
-// errors.Is(err, jws.ErrCritPresent()) and retry through jws.Verify.
+// than silently accepting. The sentinel is wrapped in verifyError at the
+// return site so the resulting error matches BOTH errors.Is(err,
+// jws.ErrCritPresent()) (the specific reason) AND errors.Is(err,
+// jws.VerifyError()) (the general class), letting callers choose the
+// classification granularity that fits their code path.
 var errCritPresent = errors.New("VerifyCompactFast: protected header contains \"crit\"; use jws.Verify")
 
 // ErrCritPresent returns the sentinel error returned by VerifyCompactFast
-// when the protected header contains a "crit" list. Callers that front
-// VerifyCompactFast with an auto-fallback to jws.Verify can detect it
-// via errors.Is.
+// when the protected header contains a "crit" list. The error returned
+// from VerifyCompactFast also matches jws.VerifyError(), so callers that
+// only branch on the general class still classify the refusal correctly.
 func ErrCritPresent() error {
 	return errCritPresent
 }
@@ -30,14 +32,15 @@ func ErrCritPresent() error {
 // a decoded payload that differs from the producer's intent. Refusing
 // here defers such messages to jws.Verify, which has the
 // WithDetachedPayload and WithCritExtension machinery to handle b64=false
-// correctly. Callers that wrap VerifyCompactFast can detect this via
-// errors.Is(err, jws.ErrB64Present()).
+// correctly. As with errCritPresent, the sentinel is wrapped in
+// verifyError at the return site so the resulting error matches both
+// errors.Is(err, jws.ErrB64Present()) and errors.Is(err, jws.VerifyError()).
 var errB64Present = errors.New("VerifyCompactFast: protected header contains \"b64\"; use jws.Verify")
 
 // ErrB64Present returns the sentinel error returned by VerifyCompactFast
-// when the protected header contains a "b64" entry. Callers that front
-// VerifyCompactFast with an auto-fallback to jws.Verify can detect it
-// via errors.Is.
+// when the protected header contains a "b64" entry. The error returned
+// from VerifyCompactFast also matches jws.VerifyError(), so callers that
+// only branch on the general class still classify the refusal correctly.
 func ErrB64Present() error {
 	return errB64Present
 }

@@ -824,8 +824,11 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// allowlist, so accepting them would silently violate RFC 7515 §4.1.11.
 	// Callers that wrap VerifyCompactFast can detect this via
 	// errors.Is(err, jws.ErrCritPresent()) and fall through to jws.Verify.
+	// The sentinel is wrapped in verifyError so the same error also matches
+	// errors.Is(err, jws.VerifyError()) — fast-path refusals are a verify
+	// error, just one with a more specific classification available.
 	if jwsbb.HeaderHas(parsedHdr, CriticalKey) {
-		return nil, errCritPresent
+		return nil, verifyError{errCritPresent}
 	}
 
 	// Refuse "b64"-bearing messages, regardless of whether "crit" also
@@ -835,9 +838,11 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// post-verify base64 decode with a misleading error, or — worse —
 	// return base64-decoded garbage as the payload while the producer's
 	// raw bytes silently disagree. jws.Verify has the WithDetachedPayload
-	// / WithCritExtension machinery to handle b64=false correctly.
+	// / WithCritExtension machinery to handle b64=false correctly. As with
+	// the crit refusal above, the sentinel is wrapped in verifyError so the
+	// same error matches both jws.ErrB64Present() and jws.VerifyError().
 	if jwsbb.HeaderHas(parsedHdr, "b64") {
-		return nil, errB64Present
+		return nil, verifyError{errB64Present}
 	}
 
 	// Cross-check the protected header "alg" against the caller-supplied
