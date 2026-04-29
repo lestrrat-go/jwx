@@ -128,3 +128,28 @@ func TestMessageUnmarshalJSONRejectsLiteralJSONProtected(t *testing.T) {
 	require.Error(t, err,
 		`general-form JWS with literal-JSON "protected" must be rejected (RFC 7515 §3 requires base64url)`)
 }
+
+// TestMessageUnmarshalJSONRejectsTopLevelHeaderInGeneralForm documents that
+// a general-form JWS (one with "signatures": [...]) must not carry a top-
+// level "header" sibling. RFC 7515 §7.2.1 defines top-level "header" only
+// for the flattened form. The previous parser silently dropped it, both a
+// UX surprise and an attacker-controlled trigger surface for any
+// RegisterCustomDecoder side effects on the dropped contents.
+func TestMessageUnmarshalJSONRejectsTopLevelHeaderInGeneralForm(t *testing.T) {
+	const malformed = `{
+  "payload": "aGVsbG8",
+  "header": {"kid": "attacker-controlled"},
+  "signatures": [
+    {
+      "protected": "eyJhbGciOiJIUzI1NiJ9",
+      "signature": "AAAA"
+    }
+  ]
+}`
+	var msg jws.Message
+	err := json.Unmarshal([]byte(malformed), &msg)
+	require.Error(t, err,
+		`general-form JWS with top-level "header" must be rejected (RFC 7515 §7.2.1 puts unprotected headers inside each signature entry)`)
+	require.ErrorContains(t, err, `header`,
+		`error should name the offending field`)
+}

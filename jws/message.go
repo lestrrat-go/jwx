@@ -279,7 +279,7 @@ func (m Message) LookupSignature(kid string) []*Signature {
 type messageUnmarshalProbe struct {
 	Payload    *string           `json:"payload"`
 	Signatures []json.RawMessage `json:"signatures,omitempty"`
-	Header     Headers           `json:"header,omitempty"`
+	Header     json.RawMessage   `json:"header,omitempty"`
 	Protected  *string           `json:"protected,omitempty"`
 	Signature  *string           `json:"signature,omitempty"`
 }
@@ -291,7 +291,6 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	m.detached = false
 
 	var mup messageUnmarshalProbe
-	mup.Header = NewHeaders()
 	if err := json.Unmarshal(buf, &mup); err != nil {
 		return fmt.Errorf(`failed to unmarshal into temporary structure: %w`, err)
 	}
@@ -313,6 +312,16 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	if mup.Signature == nil { // flattened signature is NOT present
 		if len(mup.Signatures) == 0 {
 			return fmt.Errorf(`required field "signatures" not present`)
+		}
+
+		// RFC 7515 §7.2.1 places the unprotected JOSE header inside each
+		// signature entry for the general (multi-signature) form; a
+		// top-level "header" sibling of "signatures" is not defined.
+		// Reject rather than silently drop — silent drop hid both typos
+		// and an attacker-controlled trigger surface for any
+		// RegisterCustomDecoder side effects on the dropped contents.
+		if len(mup.Header) > 0 && !bytes.Equal(mup.Header, []byte("null")) {
+			return fmt.Errorf(`general-form JWS must not contain top-level "header" sibling of "signatures" (RFC 7515 §7.2.1 places the unprotected header inside each signature entry)`)
 		}
 
 		m.signatures = make([]*Signature, 0, len(mup.Signatures))
@@ -347,7 +356,13 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		}
 
 		var sig Signature
-		sig.headers = mup.Header
+		if len(mup.Header) > 0 && !bytes.Equal(mup.Header, []byte("null")) {
+			hdrs := NewHeaders()
+			if err := json.Unmarshal(mup.Header, hdrs); err != nil {
+				return fmt.Errorf(`failed to unmarshal flattened unprotected header: %w`, err)
+			}
+			sig.headers = hdrs
+		}
 		if src := mup.Protected; src != nil {
 			decoded, err := base64.DecodeString(*src)
 			if err != nil {
