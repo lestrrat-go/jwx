@@ -176,3 +176,40 @@ func TestHeader(t *testing.T) {
 		})
 	})
 }
+
+// TestHeaderB64Typed documents that "b64" is a typed bool field, so
+// Headers.Set("b64", value) rejects non-bool values at the API
+// boundary instead of silently coercing later. RFC 7797 §3 specifies
+// b64 as a JSON boolean; the previous untyped storage accepted any
+// type and produced a JWS where the wire bytes said one thing
+// (e.g. `"b64":"false"`) and the signing logic used another (the
+// type-assertion failed and getB64Value defaulted to true).
+func TestHeaderB64Typed(t *testing.T) {
+	t.Run("bool true accepted", func(t *testing.T) {
+		h := jws.NewHeaders()
+		require.NoError(t, h.Set("b64", true))
+	})
+
+	t.Run("bool false accepted", func(t *testing.T) {
+		h := jws.NewHeaders()
+		require.NoError(t, h.Set("b64", false))
+	})
+
+	t.Run("string false rejected", func(t *testing.T) {
+		h := jws.NewHeaders()
+		err := h.Set("b64", "false")
+		require.Error(t, err, `Set("b64", string) must reject — b64 is typed bool`)
+	})
+
+	t.Run("integer rejected", func(t *testing.T) {
+		h := jws.NewHeaders()
+		err := h.Set("b64", 0)
+		require.Error(t, err, `Set("b64", int) must reject — b64 is typed bool`)
+	})
+
+	t.Run("nil rejected", func(t *testing.T) {
+		h := jws.NewHeaders()
+		err := h.Set("b64", nil)
+		require.Error(t, err, `Set("b64", nil) must reject — b64 is typed bool`)
+	})
+}
