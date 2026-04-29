@@ -191,6 +191,26 @@ func TestStrictBase64Encoding(t *testing.T) {
 			`error should name the option that flips to lenient base64`)
 	})
 
+	// The error wording should be diagnosis-first: lead with the standards
+	// reference (RFC 7515 strict base64url), then offer the remedy as
+	// conditional ("if the issuer is known to ..."), and finish with the
+	// "otherwise treat as malformed" branch. The previous wording was
+	// imperative ("set WithStrictBase64Encoding(false)") and tilted users
+	// toward weakening strictness reflexively without considering whether
+	// the input might be tampered.
+	t.Run("error message is diagnosis-first, not imperative", func(t *testing.T) {
+		t.Parallel()
+		_, err := jwt.Parse(paddedCompact, jwt.WithKey(alg, key))
+		require.Error(t, err)
+		msg := err.Error()
+		require.Contains(t, msg, `RFC 7515`,
+			`error should anchor on the standard the input violated`)
+		require.Contains(t, msg, `if the issuer is known`,
+			`remedy should be presented as a conditional, not an imperative`)
+		require.Contains(t, msg, `otherwise treat the input as malformed`,
+			`error should explicitly mention the malformed-input branch`)
+	})
+
 	// Lenient mode with no verification: auto-detection handles padded base64.
 	t.Run("padded payload succeeds lenient no-verify", func(t *testing.T) {
 		t.Parallel()

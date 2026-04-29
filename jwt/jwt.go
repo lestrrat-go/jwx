@@ -323,15 +323,20 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 			// the full validateCritical rule set applies.
 			if !errors.Is(err, jws.ErrCritPresent()) {
 				// The fast path uses strict base64url (RFC 7515).
-				// A caller whose issuer emits padded/standard
-				// base64 can re-run with jwt.WithStrictBase64Encoding(false)
-				// to fall back to jws.Verify's lenient decoder.
-				// The error message itself doesn't point at that
-				// escape hatch, so surface the hint here.
+				// On a strict-decode failure, surface a diagnosis
+				// first ("input is not strict RFC 7515 base64url")
+				// and only then mention the conditional remedy —
+				// the failure shape can't distinguish a known-non-
+				// conforming issuer from genuinely malformed /
+				// tampered input, so the caller has to make that
+				// call deliberately. Without the diagnosis-first
+				// shape, the previous wording read as a fix-it
+				// instruction and tilted users toward weakening
+				// strictness reflexively.
 				var corrupt base64.CorruptInputError
 				if errors.As(err, &corrupt) {
 					return nil, _JwsVerifyDone, fmt.Errorf(
-						`jwt.Parse: base64 decode failed; if the issuer emits padded/standard base64, set jwt.WithStrictBase64Encoding(false): %w`,
+						`jwt.Parse: base64url decode failed under strict RFC 7515 rule; if the issuer is known to emit padded or standard-base64 alphabet, retry with jwt.WithStrictBase64Encoding(false), otherwise treat the input as malformed: %w`,
 						err,
 					)
 				}
