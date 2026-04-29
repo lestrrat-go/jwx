@@ -29,6 +29,71 @@ func signWith(t *testing.T, key any, payload []byte, hdrs jws.Headers) []byte {
 	return signed
 }
 
+// TestSignAutoDeclaresB64InCritWhenFalse documents that jws.Sign auto-adds
+// "b64" to the protected header's "crit" array whenever the caller sets
+// "b64":false. RFC 7797 §3 requires producers that set b64=false to also
+// list "b64" in "crit". Callers who set b64=false typically forget the
+// crit declaration; auto-adding it on the producer side keeps well-meaning
+// callers from emitting non-conformant streams that fail to interop with
+// strict verifiers.
+//
+// The auto-add is idempotent: if "b64" is already in crit, it stays once.
+// If the caller has crit set to other extensions, "b64" is appended. If
+// the caller has not set crit at all, crit is created with just "b64".
+func TestSignAutoDeclaresB64InCritWhenFalse(t *testing.T) {
+	payload := []byte(`hello`)
+	key, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`)
+
+	cases := []struct {
+		name       string
+		preCrit    []string // nil = unset
+		expectCrit []string
+	}{
+		{
+			name:       "no crit set",
+			preCrit:    nil,
+			expectCrit: []string{"b64"},
+		},
+		{
+			name:       "crit already lists b64",
+			preCrit:    []string{"b64"},
+			expectCrit: []string{"b64"},
+		},
+		{
+			name:       "crit lists other extensions but not b64",
+			preCrit:    []string{"x-other"},
+			expectCrit: []string{"x-other", "b64"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			hdrs := jws.NewHeaders()
+			require.NoError(t, hdrs.Set("b64", false))
+			if tc.preCrit != nil {
+				require.NoError(t, hdrs.Set(jws.CriticalKey, tc.preCrit))
+				if len(tc.preCrit) > 0 && tc.preCrit[0] != "b64" {
+					require.NoError(t, hdrs.Set(tc.preCrit[0], "v"))
+				}
+			}
+
+			signed, err := jws.Sign(payload,
+				jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs)),
+			)
+			require.NoError(t, err, `jws.Sign should succeed and auto-declare b64 in crit`)
+
+			msg, err := jws.Parse(signed)
+			require.NoError(t, err, `jws.Parse should succeed`)
+			require.Len(t, msg.Signatures(), 1)
+
+			gotCrit, ok := msg.Signatures()[0].ProtectedHeaders().Critical()
+			require.True(t, ok, `protected header should have "crit" set`)
+			require.Equal(t, tc.expectCrit, gotCrit, `crit array should match expected after auto-declare`)
+		})
+	}
+}
+
 // TestCritDefaultLax verifies that with no validation option, jws.Verify()
 // silently ignores the "crit" header (matching v3.0.13 behavior).
 func TestCritDefaultLax(t *testing.T) {

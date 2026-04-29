@@ -3,6 +3,7 @@ package jws
 import (
 	"bytes"
 	"fmt"
+	"slices"
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
@@ -74,6 +75,22 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, 
 		if kid, ok := key.KeyID(); ok && kid != "" {
 			if err := protected.Set(KeyIDKey, kid); err != nil {
 				return nil, makeSignError(prefixJwsSign, `failed to set "kid" header: %w`, err)
+			}
+		}
+	}
+
+	// RFC 7797 §3 requires producers that set "b64":false to also list
+	// "b64" in "crit". Auto-declare it in the protected header so a
+	// caller who set b64=false but forgot the crit declaration does not
+	// emit a non-conformant stream that strict verifiers refuse.
+	// Idempotent: if "b64" is already in crit, the list is unchanged.
+	// If crit is unset, it is created with just "b64".
+	if !getB64Value(protected) {
+		crit, _ := protected.Critical()
+		if !slices.Contains(crit, "b64") {
+			crit = append(crit, "b64")
+			if err := protected.Set(CriticalKey, crit); err != nil {
+				return nil, makeSignError(prefixJwsSign, `failed to set "crit" header: %w`, err)
 			}
 		}
 	}
