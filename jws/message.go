@@ -426,9 +426,22 @@ func (m Message) marshalFlattened() ([]byte, error) {
 		if wrote {
 			buf.WriteRune(tokens.Comma)
 		}
-		buf.WriteString(`"payload":"`)
-		buf.Write(base64.Encode(m.payload))
-		buf.WriteRune('"')
+		if !getB64Value(sig.protected) {
+			// RFC 7797 b64=false: emit the raw payload as a JSON string
+			// rather than re-base64-encoding it. json.Marshal handles
+			// any necessary escaping for byte sequences that aren't
+			// JSON-safe as-is.
+			payloadbuf, err := json.Marshal(string(m.payload))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal "payload" (flattened, b64=false): %w`, err)
+			}
+			buf.WriteString(`"payload":`)
+			buf.Write(payloadbuf)
+		} else {
+			buf.WriteString(`"payload":"`)
+			buf.Write(base64.Encode(m.payload))
+			buf.WriteRune('"')
+		}
 		wrote = true
 	}
 
@@ -467,9 +480,28 @@ func (m Message) marshalFull() ([]byte, error) {
 	if m.detached {
 		buf.WriteString(`{"signatures":[`)
 	} else {
-		buf.WriteString(`{"payload":"`)
-		buf.Write(base64.Encode(m.payload))
-		buf.WriteString(`","signatures":[`)
+		// RFC 7797 b64=false: emit the raw payload as a JSON string
+		// rather than re-base64-encoding it. The general JWS form has
+		// one shared payload across signatures; per RFC 7797, all
+		// signers must agree on the b64 flag, so we consult the first
+		// signature's protected header.
+		var b64 = true
+		if len(m.signatures) > 0 {
+			b64 = getB64Value(m.signatures[0].protected)
+		}
+		if !b64 {
+			payloadbuf, err := json.Marshal(string(m.payload))
+			if err != nil {
+				return nil, fmt.Errorf(`failed to marshal "payload" (full, b64=false): %w`, err)
+			}
+			buf.WriteString(`{"payload":`)
+			buf.Write(payloadbuf)
+			buf.WriteString(`,"signatures":[`)
+		} else {
+			buf.WriteString(`{"payload":"`)
+			buf.Write(base64.Encode(m.payload))
+			buf.WriteString(`","signatures":[`)
+		}
 	}
 	for i, sig := range m.signatures {
 		if i > 0 {
