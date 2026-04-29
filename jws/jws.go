@@ -794,12 +794,17 @@ func Settings(options ...GlobalOption) {
 // set. Applications that may legitimately receive "crit" headers should
 // call jws.Verify directly.
 //
-// VerifyCompactFast also assumes the JWS uses the default "b64":true
-// (base64url-encoded) payload encoding. A conforming RFC 7797 b64:false
-// JWS is required to list "b64" in "crit", so it is automatically routed
-// away from the fast path by the crit refusal above. Detached-payload
-// callers must use jws.Verify with jws.WithDetachedPayload regardless,
-// since VerifyCompactFast has no way to accept a detached payload.
+// VerifyCompactFast assumes the JWS uses the default "b64":true
+// (base64url-encoded) payload encoding. Any protected header carrying
+// a "b64" entry is refused with jws.ErrB64Present(), regardless of
+// whether "crit" also lists it: the fast path's signing-input
+// reconstruction and post-verify base64 decode both depend on the
+// default encoding, and a non-conformant b64=false producer (one that
+// omits "b64" from "crit") would otherwise verify cryptographically
+// while returning bytes that differ from the producer's intent.
+// Detached-payload callers must use jws.Verify with jws.WithDetachedPayload
+// regardless, since VerifyCompactFast has no way to accept a detached
+// payload.
 func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error) {
 	if err := validateAlgorithmForKey(alg, key); err != nil {
 		return nil, makeVerifyError(`%w`, err)
@@ -821,6 +826,18 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// errors.Is(err, jws.ErrCritPresent()) and fall through to jws.Verify.
 	if jwsbb.HeaderHas(parsedHdr, CriticalKey) {
 		return nil, errCritPresent
+	}
+
+	// Refuse "b64"-bearing messages, regardless of whether "crit" also
+	// lists it. The signing-input reconstruction and the post-verify
+	// base64 decode both assume the default b64=true encoding; a
+	// b64=false JWS that the fast path "verified" would either fail the
+	// post-verify base64 decode with a misleading error, or — worse —
+	// return base64-decoded garbage as the payload while the producer's
+	// raw bytes silently disagree. jws.Verify has the WithDetachedPayload
+	// / WithCritExtension machinery to handle b64=false correctly.
+	if jwsbb.HeaderHas(parsedHdr, "b64") {
+		return nil, errB64Present
 	}
 
 	// Cross-check the protected header "alg" against the caller-supplied

@@ -1,6 +1,9 @@
 package jws_test
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/base64"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
@@ -358,4 +361,42 @@ func TestVerifyCompactFastRefusesCrit(t *testing.T) {
 			require.ErrorIs(t, err, jws.ErrCritPresent(), `error should match jws.ErrCritPresent sentinel`)
 		})
 	}
+}
+
+// TestVerifyCompactFastRefusesB64False documents that the fast path refuses
+// any protected header carrying "b64" (typically b64=false), regardless of
+// whether "crit" is also present. Without this check, a non-RFC-7797-
+// conformant producer that sets b64=false but omits "b64" from "crit" would
+// slip past the crit refusal: the fast path's signing-input reconstruction
+// (`base64(hdr).rawPayload`) coincidentally matches what such a producer
+// signed, so the signature verifies, and the function would then base64-
+// decode the wire payload — silently returning bytes that differ from the
+// producer's intent. jws.Verify and VerifyCompactFast must agree on what
+// they accept; refusing b64-bearing messages on the fast path defers them
+// to jws.Verify, which has the WithDetachedPayload / WithCritExtension
+// machinery to handle b64=false correctly.
+func TestVerifyCompactFastRefusesB64False(t *testing.T) {
+	rawKey := jwxtest.GenerateSymmetricKey()
+
+	// Construct a non-conformant b64=false JWS WITHOUT declaring "b64" in
+	// "crit" (RFC 7797 §3 requires b64 ∈ crit; a defective producer can
+	// emit this anyway). Pick a payload whose raw bytes are also valid
+	// base64url so the current pre-fix path would silently return wrong
+	// decoded bytes rather than a base64-decode error — the worst-case
+	// behavior the fix prevents.
+	hdrJSON := `{"alg":"HS256","b64":false}`
+	hdrB64 := base64.RawURLEncoding.EncodeToString([]byte(hdrJSON))
+
+	rawPayload := []byte("aGVsbG8") // valid base64url for "hello"
+	signingInput := hdrB64 + "." + string(rawPayload)
+
+	mac := hmac.New(sha256.New, rawKey)
+	mac.Write([]byte(signingInput))
+	sigB64 := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+
+	compact := []byte(signingInput + "." + sigB64)
+
+	_, err := jws.VerifyCompactFast(rawKey, compact, jwa.HS256())
+	require.Error(t, err, `VerifyCompactFast must refuse b64-bearing messages`)
+	require.ErrorIs(t, err, jws.ErrB64Present(), `error should match jws.ErrB64Present sentinel`)
 }
