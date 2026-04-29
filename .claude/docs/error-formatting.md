@@ -29,6 +29,8 @@ if errors.Is(err, jwt.TokenExpiredError()) { ... }
 | `jws` | `VerifyError()` | Verification process error |
 | `jws` | `VerificationError()` | Signature mismatch |
 | `jws` | `ParseError()` | Parse failed |
+| `jws` | `ErrCritPresent()` | `VerifyCompactFast` refused a `crit`-bearing protected header (use `jws.Verify`) |
+| `jws` | `ErrB64Present()` | `VerifyCompactFast` refused a `b64`-bearing protected header (use `jws.Verify`) |
 | `jwe` | `EncryptError()` | Encryption failed |
 | `jwe` | `DecryptError()` | Decryption failed |
 | `jwe` | `RecipientError()` | Recipient processing error |
