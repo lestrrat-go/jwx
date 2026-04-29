@@ -13,6 +13,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// nonConformantB64FalseHdrJSON is the protected header for a non-conformant
+// b64=false JWS — i.e. a producer that set "b64":false without including
+// "b64" in "crit" (RFC 7797 §3 violation). Used by multiple b64-related
+// tests to construct hand-rolled compact JWSes that exercise the slow-path
+// and fast-path refusals symmetrically.
+const nonConformantB64FalseHdrJSON = `{"alg":"HS256","b64":false}`
+
 // signWith returns a JWS-compact serialization of payload signed with key
 // using HS256 and the given protected headers.
 func signWith(t *testing.T, key any, payload []byte, hdrs jws.Headers) []byte {
@@ -358,7 +365,7 @@ func TestVerifyCompactFastRefusesB64False(t *testing.T) {
 	// base64url so the current pre-fix path would silently return wrong
 	// decoded bytes rather than a base64-decode error — the worst-case
 	// behavior the fix prevents.
-	hdrJSON := `{"alg":"HS256","b64":false}`
+	hdrJSON := nonConformantB64FalseHdrJSON
 	hdrB64 := base64.RawURLEncoding.EncodeToString([]byte(hdrJSON))
 
 	rawPayload := []byte("aGVsbG8") // valid base64url for "hello"
@@ -373,6 +380,43 @@ func TestVerifyCompactFastRefusesB64False(t *testing.T) {
 	_, err := jws.VerifyCompactFast(rawKey, compact, jwa.HS256())
 	require.Error(t, err, `VerifyCompactFast must refuse b64-bearing messages`)
 	require.ErrorIs(t, err, jws.ErrB64Present(), `error should match jws.ErrB64Present sentinel`)
+}
+
+// TestVerifyRejectsB64FalseWithoutCrit documents the slow-path mirror of
+// TestVerifyCompactFastRefusesB64False. RFC 7797 §3 requires producers that
+// set b64=false to also include "b64" in "crit"; §6 ties this to RFC 7515's
+// critical-header-parameter rule. A defective producer can still emit a
+// b64=false JWS without "b64" in crit. VerifyCompactFast rejects any b64
+// header outright; jws.Verify must symmetrically reject the non-conformant
+// shape (b64=false without "b64" listed in crit) so the two entry points
+// agree on what they accept. Without this check, jws.Verify silently honors
+// b64=false in the wire and computes its signing input differently from a
+// strictly conformant verifier — exactly the cross-implementation
+// disagreement RFC 7797 §6 was designed to prevent.
+func TestVerifyRejectsB64FalseWithoutCrit(t *testing.T) {
+	rawKey := jwxtest.GenerateSymmetricKey()
+
+	// Construct a non-conformant compact JWS with b64=false in the
+	// protected header but NO "crit" array at all. A conformant producer
+	// would have set crit=["b64"]; a defective one (or an attacker
+	// reaching for cross-impl interop confusion) emits this shape.
+	hdrJSON := nonConformantB64FalseHdrJSON
+	hdrB64 := base64.RawURLEncoding.EncodeToString([]byte(hdrJSON))
+
+	rawPayload := []byte("hello world")
+	signingInput := hdrB64 + "." + string(rawPayload)
+
+	mac := hmac.New(sha256.New, rawKey)
+	mac.Write([]byte(signingInput))
+	sigB64 := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+
+	compact := []byte(signingInput + "." + sigB64)
+
+	_, err := jws.Verify(compact, jws.WithKey(jwa.HS256(), rawKey))
+	require.Error(t, err, `jws.Verify must reject b64=false without "b64" in crit (RFC 7797 §3)`)
+	require.ErrorIs(t, err, jws.VerifyError(), `b64-without-crit refusal must match jws.VerifyError() class`)
+	require.ErrorContains(t, err, `b64`, `error should mention b64`)
+	require.ErrorContains(t, err, `crit`, `error should mention crit`)
 }
 
 // TestVerifyCompactFastRefusalsMatchVerifyError documents that the fast-path
@@ -402,7 +446,7 @@ func TestVerifyCompactFastRefusalsMatchVerifyError(t *testing.T) {
 	t.Run("b64 refusal", func(t *testing.T) {
 		rawKey := jwxtest.GenerateSymmetricKey()
 
-		hdrJSON := `{"alg":"HS256","b64":false}`
+		hdrJSON := nonConformantB64FalseHdrJSON
 		hdrB64 := base64.RawURLEncoding.EncodeToString([]byte(hdrJSON))
 		rawPayload := []byte("aGVsbG8")
 		signingInput := hdrB64 + "." + string(rawPayload)
