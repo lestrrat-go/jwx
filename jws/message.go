@@ -65,14 +65,18 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 
 	s.headers = sup.Header
 	if buf := sup.Protected; buf != nil {
-		src := []byte(*buf)
-		if !bytes.HasPrefix(src, []byte{tokens.OpenCurlyBracket}) {
-			decoded, err := base64.Decode(src)
-			if err != nil {
-				return fmt.Errorf(`failed to base64 decode protected headers: %w`, err)
-			}
-			src = decoded
+		// RFC 7515 §3 mandates that "protected" be base64url-encoded.
+		// Earlier code carried a relaxed probe that accepted a literal-
+		// JSON form (a JSON string whose content begins with "{") and
+		// skipped base64 decoding — that was asymmetric with the
+		// flattened branch (which only base64-decodes) and gave callers
+		// a non-conforming wire form useful for evading byte-exact JWS
+		// dedup / replay caches.
+		decoded, err := base64.Decode([]byte(*buf))
+		if err != nil {
+			return fmt.Errorf(`failed to base64 decode protected headers: %w`, err)
 		}
+		src := decoded
 
 		prt := NewHeaders()
 		//nolint:forcetypeassert
