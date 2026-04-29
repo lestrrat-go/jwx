@@ -216,6 +216,7 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 
 		verifyBuf = verifyBuf[:0]
 		verifyBuf = jwsbb.SignBuffer(verifyBuf, rawHeaders, msg.payload, vc.encoder, msg.b64)
+		var attempts int
 		for i, kp := range vc.keyProviders {
 			var sink algKeySink
 			if err := kp.FetchKeys(vc.ctx, &sink, sig, msg); err != nil {
@@ -224,6 +225,7 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 			}
 
 			for _, pair := range sink.list {
+				attempts++
 				alg := pair.alg
 				key := pair.key
 
@@ -235,7 +237,19 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 				return msg.payload, nil
 			}
 		}
-		errs = append(errs, makeVerifyError(`signature #%d could not be verified with any of the keys`, idx+1))
+		// When loose keySet options widened the candidate set above the
+		// usual "kid + alg pin" of 1, name them so the operator can see
+		// why a single Verify call paid N× the cost. An option-blind
+		// "could not be verified with any of the keys" is the kind of
+		// thing operators mis-diagnose by adding more keys instead of
+		// fixing the JWS or tightening the config.
+		if looseOpts := vc.namedLooseKeySetOptions(); len(looseOpts) > 0 && attempts > 1 {
+			errs = append(errs, makeVerifyError(
+				`signature #%d could not be verified with any of %d (alg,key) pair(s); %s widened the candidate set`,
+				idx+1, attempts, strings.Join(looseOpts, " and ")))
+		} else {
+			errs = append(errs, makeVerifyError(`signature #%d could not be verified with any of the keys`, idx+1))
+		}
 	}
 	return nil, makeVerifyError(`could not verify message using any of the signatures or keys: %w`, errors.Join(errs...))
 }
@@ -325,4 +339,36 @@ func validateCritical(protected Headers, allowedExtensions []string) error {
 	}
 
 	return nil
+}
+
+// namedLooseKeySetOptions inspects the registered key providers and
+// returns the human-readable names of the loose-config keySet options
+// in effect for this verify call: jws.WithRequireKid(false) and/or
+// jws.WithInferAlgorithmFromKey(true). These are the options whose
+// presence widens the per-signature (alg,key) candidate set beyond
+// the default "kid + alg pin" of one. The names are used in the final
+// "could not be verified" error so an operator sees which options
+// produced the fan-out without grep'ing the source.
+func (vc *verifyContext) namedLooseKeySetOptions() []string {
+	var requireKidFalse, inferAlgorithm bool
+	for _, kp := range vc.keyProviders {
+		ksp, ok := kp.(*keySetProvider)
+		if !ok {
+			continue
+		}
+		if !ksp.requireKid {
+			requireKidFalse = true
+		}
+		if ksp.inferAlgorithm {
+			inferAlgorithm = true
+		}
+	}
+	var names []string
+	if requireKidFalse {
+		names = append(names, "jws.WithRequireKid(false)")
+	}
+	if inferAlgorithm {
+		names = append(names, "jws.WithInferAlgorithmFromKey(true)")
+	}
+	return names
 }
