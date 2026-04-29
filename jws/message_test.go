@@ -102,3 +102,35 @@ func TestMessage(t *testing.T) {
 		require.Equal(t, expected, string(buf), `output should match`)
 	})
 }
+
+// TestMessageUnmarshalJSONRejectsLiteralJSONProtected documents that the
+// "protected" member of a JSON-form JWS must be a base64url-encoded UTF-8
+// string per RFC 7515 §3. Earlier versions of Signature.UnmarshalJSON had
+// a relaxed-probe shortcut: if the string value of "protected" started
+// with `{`, the decoder treated the value as already-decoded JSON and
+// skipped base64 decoding. That gave callers a non-conforming wire form
+// for the same logically-equivalent message — useful for evading
+// byte-exact JWS deduplication / replay caches and asymmetric with the
+// flattened branch (which only base64-decodes). Removing the probe brings
+// general-form parsing in line with both RFC 7515 and the flattened path.
+func TestMessageUnmarshalJSONRejectsLiteralJSONProtected(t *testing.T) {
+	// General (multi-signature) form with "protected" carrying a
+	// JSON-string-of-literal-JSON instead of a base64url-encoded
+	// header. Per the parser's signatureUnmarshalProbe shape, the
+	// "protected" field is a *string; the value below is a JSON string
+	// whose content begins with `{`, which is what the relaxed probe
+	// used to short-circuit on.
+	const nonConforming = `{
+  "payload": "aGVsbG8",
+  "signatures": [
+    {
+      "protected": "{\"alg\":\"HS256\"}",
+      "signature": "AAAA"
+    }
+  ]
+}`
+	var msg jws.Message
+	err := json.Unmarshal([]byte(nonConforming), &msg)
+	require.Error(t, err,
+		`general-form JWS with literal-JSON "protected" must be rejected (RFC 7515 §3 requires base64url)`)
+}
