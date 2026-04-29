@@ -267,6 +267,80 @@ func TestCritDetachedB64AutoDeclared(t *testing.T) {
 	require.NoError(t, err, `jws.Verify should succeed; WithDetachedPayload auto-declares "b64"`)
 }
 
+// TestSignAutoDeclaresB64InCritWhenFalse documents that jws.Sign auto-adds
+// "b64" to the protected header's "crit" array whenever the caller sets
+// "b64":false. RFC 7797 §3 requires producers that set b64=false to also
+// list "b64" in "crit". Callers who set b64=false typically forget the
+// crit declaration; the slow-path verify side rejects (as of the b64-
+// without-crit conformance fix), and the fast path always rejects b64-
+// bearing inputs. Auto-adding the crit entry on the producer side keeps
+// well-meaning callers from emitting non-conformant streams that fail
+// to interop with strict verifiers.
+//
+// The auto-add is idempotent: if "b64" is already in crit, it stays
+// once. If the caller has crit set to other extensions, "b64" is
+// appended. If the caller has not set crit at all, crit is created with
+// just "b64".
+func TestSignAutoDeclaresB64InCritWhenFalse(t *testing.T) {
+	payload := []byte(`hello`)
+	key, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err, `jwxtest.GenerateSymmetricJwk should succeed`)
+
+	cases := []struct {
+		name        string
+		preCrit     []string // nil = unset
+		expectCrit  []string
+		signOptions []jws.SignOption
+	}{
+		{
+			name:       "no crit set",
+			preCrit:    nil,
+			expectCrit: []string{"b64"},
+		},
+		{
+			name:       "crit already lists b64",
+			preCrit:    []string{"b64"},
+			expectCrit: []string{"b64"},
+		},
+		{
+			name:       "crit lists other extensions but not b64",
+			preCrit:    []string{"x-other"},
+			expectCrit: []string{"x-other", "b64"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			hdrs := jws.NewHeaders()
+			require.NoError(t, hdrs.Set("b64", false))
+			if tc.preCrit != nil {
+				require.NoError(t, hdrs.Set(jws.CriticalKey, tc.preCrit))
+				if len(tc.preCrit) > 0 && tc.preCrit[0] != "b64" {
+					// Set a placeholder header so validateCritical
+					// does not later complain that the crit name is
+					// not present in the protected header.
+					require.NoError(t, hdrs.Set(tc.preCrit[0], "v"))
+				}
+			}
+
+			opts := append([]jws.SignOption{
+				jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs)),
+			}, tc.signOptions...)
+
+			signed, err := jws.Sign(payload, opts...)
+			require.NoError(t, err, `jws.Sign should succeed and auto-declare b64 in crit`)
+
+			msg, err := jws.Parse(signed)
+			require.NoError(t, err, `jws.Parse should succeed`)
+			require.Len(t, msg.Signatures(), 1)
+
+			gotCrit, ok := msg.Signatures()[0].ProtectedHeaders().Critical()
+			require.True(t, ok, `protected header should have "crit" set`)
+			require.Equal(t, tc.expectCrit, gotCrit, `crit array should match expected after auto-declare`)
+		})
+	}
+}
+
 // TestCritInBandB64RequiresExplicit locks the scoping rule for the b64
 // auto-declaration: the auto-declare only happens when
 // jws.WithDetachedPayload is passed. An in-band b64=false JWS with
