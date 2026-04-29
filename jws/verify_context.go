@@ -196,6 +196,15 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 		pool.ErrorSlice().Put(errs)
 	}()
 	for idx, sig := range msg.signatures {
+		// Honor caller's deadline between signatures. Without this
+		// check, a hostile JWS with many signatures keeps the loop
+		// running long after the deadline; only kp.FetchKeys had
+		// visibility into vc.ctx, and not every key provider observes
+		// it. Cheap (~1ns) on the success path.
+		if err := vc.ctx.Err(); err != nil {
+			return nil, makeVerifyError(`%w`, err)
+		}
+
 		var rawHeaders []byte
 		if rbp, ok := sig.protected.(interface{ rawBuffer() []byte }); ok {
 			if raw := rbp.rawBuffer(); raw != nil {
@@ -226,6 +235,11 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 		verifyBuf = jwsbb.SignBuffer(verifyBuf, rawHeaders, msg.payload, vc.encoder, msg.b64)
 		keysAttempted := 0
 		for i, kp := range vc.keyProviders {
+			// Honor caller's deadline between key providers.
+			if err := vc.ctx.Err(); err != nil {
+				return nil, makeVerifyError(`%w`, err)
+			}
+
 			var sink algKeySink
 			if err := kp.FetchKeys(vc.ctx, &sink, sig, msg); err != nil {
 				errs = append(errs, makeVerifyError(`signature #%d: key provider %d failed: %w`, idx+1, i, err))
@@ -233,6 +247,15 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 			}
 
 			for _, pair := range sink.list {
+				// Honor caller's deadline between (alg,key) pairs.
+				// Under WithRequireKid(false) + WithInferAlgorithmFromKey(true)
+				// + a large JWKS, this inner loop is the dominant
+				// cost — checking ctx between attempts caps the
+				// post-deadline crypto work at one operation.
+				if err := vc.ctx.Err(); err != nil {
+					return nil, makeVerifyError(`%w`, err)
+				}
+
 				alg := pair.alg
 				key := pair.key
 				keysAttempted++
