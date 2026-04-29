@@ -390,6 +390,13 @@ func validateCritical(protected Headers, allowedExtensions []string) error {
 
 		// The recipient must have declared support for the extension.
 		if !slices.Contains(allowedExtensions, name) {
+			if name == B64Key {
+				// b64=false is the canonical RFC 7797 case. The
+				// auto-declare only fires for WithDetachedPayload /
+				// WithDetachedPayloadReader; in-band b64=false still
+				// requires the caller to opt in explicitly.
+				return makeVerifyError(`"crit" header references extension "b64", but the recipient has not declared support for it; pass jws.WithCritExtension("b64") to accept in-band b64=false (auto-declare only fires for jws.WithDetachedPayload / jws.WithDetachedPayloadReader)`)
+			}
 			return makeVerifyError(`"crit" header references extension %q, but the recipient has not declared support for it (use jws.WithCritExtension(%q))`, name, name)
 		}
 	}
