@@ -1006,3 +1006,44 @@ func TestValidateTimeRangeRejectsMissingClaim(t *testing.T) {
 	require.Contains(t, err.Error(), jwt.ExpirationKey,
 		`error should name the missing claim (exp)`)
 }
+
+// TestValidateDefaultOrderMatchesSlowPath documents that the fast path
+// (Validate with no options, validateDefault) and the slow path (Validate
+// with any option, baseValidators loop) check claims in the SAME order.
+// Without the symmetry guarantee, the same token + zero options vs. the
+// same token + one trivial option produces different concrete error types
+// because whichever validator fires first determines the error returned.
+//
+// Pin the canonical order to match the slow path's `iat, exp, nbf`: that
+// order matches the typical RFC 7519 mental model (iat is set first, exp
+// is the upper bound of validity, nbf is the lower bound). The fast path
+// historically ran `exp, iat, nbf` — different from the slow path —
+// surfacing as a different concrete error type for code that branches on
+// errors.Is(err, jwt.TokenExpiredError{}).
+func TestValidateDefaultOrderMatchesSlowPath(t *testing.T) {
+	t.Parallel()
+
+	// Build a token whose iat AND exp both fail: iat in the future,
+	// exp in the past. Whichever validator fires first determines the
+	// error.
+	tok := jwt.New()
+	require.NoError(t, tok.Set(jwt.IssuedAtKey, time.Now().Add(time.Hour)))
+	require.NoError(t, tok.Set(jwt.ExpirationKey, time.Now().Add(-time.Hour)))
+
+	// Fast path: no options, runs validateDefault.
+	errFast := jwt.Validate(tok)
+	require.Error(t, errFast)
+
+	// Slow path: any option flips off the fast path. WithAcceptableSkew(0)
+	// is functionally a no-op but routes through baseValidators.
+	errSlow := jwt.Validate(tok, jwt.WithAcceptableSkew(0))
+	require.Error(t, errSlow)
+
+	// Slow path's baseValidators is `[iat, exp, nbf]` so it returns
+	// InvalidIssuedAtError. The fast path must agree to avoid quiet
+	// drift between the two code paths.
+	require.ErrorIs(t, errSlow, jwt.InvalidIssuedAtError{},
+		`slow path must report iat error first (canonical order)`)
+	require.ErrorIs(t, errFast, jwt.InvalidIssuedAtError{},
+		`fast path must report iat error first too (symmetry with slow path)`)
+}
