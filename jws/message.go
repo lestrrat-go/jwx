@@ -242,8 +242,8 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 					b64 = false
 				}
 			} else {
-				if b64 != getB64Value(sig.protected) {
-					return fmt.Errorf(`b64 value must be the same for all signatures`)
+				if got := getB64Value(sig.protected); b64 != got {
+					return fmt.Errorf(`b64 value must be the same for all signatures; signature #%d declared b64=%t but earlier signature(s) declared b64=%t`, i+1, got, b64)
 				}
 			}
 
@@ -507,7 +507,7 @@ func Compact(msg *Message, options ...CompactOption) ([]byte, error) {
 			buf.WriteString(encoded)
 		} else {
 			if bytes.Contains(msg.payload, []byte{tokens.Period}) {
-				return nil, makeSignError(prefixJwsCompact, `payload must not contain a "."`)
+				return nil, makeSignError(prefixJwsCompact, `compact serialization with b64=false requires payload to contain no "." characters per RFC 7797 §5.2; use jws.WithDetachedPayload to keep the payload out of the wire format`)
 			}
 			buf.Write(msg.payload)
 		}

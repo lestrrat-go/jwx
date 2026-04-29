@@ -2217,7 +2217,9 @@ func TestCompactErrorsUseSignError(t *testing.T) {
 		_, err := jws.Compact(msg)
 		require.Error(t, err)
 		require.True(t, errors.Is(err, jws.SignError()))
-		require.Contains(t, err.Error(), `jws.Compact: payload must not contain a "."`)
+		require.Contains(t, err.Error(), `jws.Compact:`)
+		require.Contains(t, err.Error(), `RFC 7797 §5.2`)
+		require.Contains(t, err.Error(), `jws.WithDetachedPayload`)
 		require.NotContains(t, err.Error(), "jws.Compress")
 	})
 }

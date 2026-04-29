@@ -183,7 +183,7 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (buildResult,
 	b64 := getB64Value(hdrs)
 	if !b64 && !sc.detached {
 		if bytes.IndexByte(payload, tokens.Period) != -1 {
-			return br, fmt.Errorf(`payload must not contain a "."`)
+			return br, fmt.Errorf(`compact serialization with b64=false requires payload to contain no "." characters per RFC 7797 §5.2; use jws.WithDetachedPayload to keep the payload out of the wire format`)
 		}
 	}
 
