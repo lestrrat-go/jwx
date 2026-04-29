@@ -212,6 +212,10 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 		}
 
 		if vc.critValidation {
+			if err := validateB64InCritIfFalse(sig.protected); err != nil {
+				errs = append(errs, makeVerifyError(`signature #%d: %w`, idx+1, err))
+				continue
+			}
 			if err := validateCritical(sig.protected, vc.criticalExtensions); err != nil {
 				errs = append(errs, makeVerifyError(`signature #%d has invalid "crit" header: %w`, idx+1, err))
 				continue
@@ -286,6 +290,32 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 		*(vc.dst) = *msg
 	}
 
+	return nil
+}
+
+// validateB64InCritIfFalse enforces RFC 7797 §3: producers that set
+// b64=false in the protected header MUST also list "b64" in the protected
+// header's "crit" array. The check runs alongside (and before)
+// validateCritical so a non-conformant b64=false JWS is rejected up front
+// regardless of whether the caller has supplied a crit allowlist via
+// jws.WithCritExtension. Without this check, jws.Verify silently honors
+// b64=false on the wire and computes its signing input differently from a
+// strictly conformant verifier — exactly the cross-implementation
+// disagreement RFC 7797 §6 was designed to prevent. VerifyCompactFast
+// rejects any b64-bearing message outright via jws.ErrB64Present(); this
+// helper is the slow-path mirror that targets only the non-conformant
+// shape rather than blanket-refusing b64=false.
+func validateB64InCritIfFalse(protected Headers) error {
+	if getB64Value(protected) {
+		return nil
+	}
+	if !protected.Has(CriticalKey) {
+		return makeVerifyError(`protected header has "b64":false but no "crit"; RFC 7797 §3 requires producers that set "b64":false to list "b64" in "crit"`)
+	}
+	crit, _ := protected.Critical()
+	if !slices.Contains(crit, "b64") {
+		return makeVerifyError(`protected header has "b64":false but "crit" does not list "b64"; RFC 7797 §3 requires producers that set "b64":false to list "b64" in "crit"`)
+	}
 	return nil
 }
 
