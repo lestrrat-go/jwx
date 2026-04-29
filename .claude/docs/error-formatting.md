@@ -71,6 +71,8 @@ Only `jwt.UnknownPayloadTypeError()` remains a sentinel function (no struct type
 | `jws` | `VerifyError()` | Verification process error |
 | `jws` | `VerificationError()` | Signature mismatch |
 | `jws` | `ParseError()` | Parse failed |
+| `jws` | `ErrCritPresent()` | `VerifyCompactFast` refused a `crit`-bearing protected header (use `jws.Verify`) |
+| `jws` | `ErrB64Present()` | `VerifyCompactFast` refused a `b64`-bearing protected header (use `jws.Verify`) |
 | `jwe` | `EncryptError()` | Encryption failed |
 | `jwe` | `DecryptError()` | Decryption failed |
 | `jwe` | `HPKEError()` | HPKE encrypt/decrypt operation failed |
