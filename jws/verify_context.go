@@ -359,8 +359,11 @@ func validateCritical(protected Headers, allowedExtensions []string) error {
 		seen[name] = struct{}{}
 
 		// RFC 7515 Section 4.1.11: "crit" MUST NOT include names defined
-		// by the JOSE Header specification itself.
-		if slices.Contains(stdHeaderNames, name) {
+		// by the JOSE Header specification itself. The "b64" parameter
+		// is RFC 7797, not RFC 7515 — listing it in "crit" is the
+		// canonical use of the field per RFC 7797 §3 — so exclude it
+		// from this check even though it is a typed field on stdHeaders.
+		if name != B64Key && slices.Contains(stdHeaderNames, name) {
 			return makeVerifyError(`"crit" header must not contain standard header parameter %q`, name)
 		}
 
