@@ -161,11 +161,13 @@ func ParseRequest(req *http.Request, options ...ParseOption) (Token, error) {
 
 	// Only touch the request body when the caller actually asked us
 	// to look at form fields. Without this guard ParseRequest would
-	// call req.ParseForm() on every request with a non-zero
-	// ContentLength — for form-encoded bodies that drains the body,
-	// leaving downstream handlers with an empty io.Reader; for other
-	// Content-Types it is still wasted work on the URL query.
-	if len(formkeys) > 0 && req.ContentLength > 0 {
+	// call req.ParseForm() on every request — for form-encoded bodies
+	// that drains the body, leaving downstream handlers with an empty
+	// io.Reader; for other Content-Types it is still wasted work on
+	// the URL query. We DO NOT gate on ContentLength: chunked-transfer
+	// requests have ContentLength == -1, and RFC 6750 §2.2 allows
+	// form-borne bearer tokens including under chunked encoding.
+	if len(formkeys) > 0 {
 		if err := req.ParseForm(); err != nil {
 			return nil, fmt.Errorf(`failed to parse form: %w`, err)
 		}
