@@ -462,8 +462,11 @@ OUTER:
 				}
 			}
 
-			// No verification.
-			m, err := jws.Parse(data, jws.WithCompact())
+			// No verification. Parse the LOOP-LOCAL `payload` (not the
+			// original `data`); for a 2-layer nested JWS, iter 2 must
+			// see the inner JWS bytes that iter 1 produced, not re-
+			// parse the outer envelope.
+			m, err := jws.Parse(payload, jws.WithCompact())
 			if err != nil {
 				return nil, fmt.Errorf(`invalid jws message: %w`, err)
 			}
