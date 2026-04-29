@@ -326,7 +326,7 @@ func validateCritical(protected Headers, allowedExtensions []string) error {
 		// is RFC 7797, not RFC 7515 — listing it in "crit" is the
 		// canonical use of the field per RFC 7797 §3 — so exclude it
 		// from this check even though it is a typed field on stdHeaders.
-		if name != "b64" && slices.Contains(stdHeaderNames, name) {
+		if name != B64Key && slices.Contains(stdHeaderNames, name) {
 			return makeVerifyError(`"crit" header must not contain standard header parameter %q`, name)
 		}
 
