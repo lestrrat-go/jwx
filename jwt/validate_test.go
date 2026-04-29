@@ -972,3 +972,37 @@ func TestValidateUnsupportedTimeClaimIsValidationError(t *testing.T) {
 	require.Contains(t, err.Error(), `custom_claim`,
 		`error should name the offending claim`)
 }
+
+// TestValidateTimeRangeRejectsMissingClaim documents that *isInTimeRange
+// (the validator behind MaxDeltaIs/MinDeltaIs) defensively rejects a token
+// whose referenced claims are missing, even when the user wraps the
+// validator in a ValidatorFunc or another Validator type.
+//
+// The auto-IsRequired piggyback in WithValidator type-switches on the
+// concrete *isInTimeRange — wrapping the validator skips that piggyback,
+// and a token with no `exp` would otherwise pass MaxDeltaIs because
+// timeClaim(missing) returns time.Time{} and `delta` becomes a hugely
+// negative number that trivially satisfies the upper-bound check.
+//
+// Defensive rejection inside Validate plugs the gap regardless of how the
+// validator is wrapped — a missing time claim is a missing time claim.
+func TestValidateTimeRangeRejectsMissingClaim(t *testing.T) {
+	t.Parallel()
+
+	// Token has iat set but is MISSING exp.
+	tok := jwt.New()
+	require.NoError(t, tok.Set(jwt.IssuedAtKey, time.Now().Round(0)))
+
+	// Wrap MaxDeltaIs in a ValidatorFunc — the canonical pattern that
+	// loses the IsRequired auto-append in WithValidator.
+	inner := jwt.MaxDeltaIs(jwt.ExpirationKey, jwt.IssuedAtKey, time.Hour)
+	wrapped := jwt.ValidatorFunc(func(ctx context.Context, t jwt.Token) error {
+		return inner.Validate(ctx, t)
+	})
+
+	err := jwt.Validate(tok, jwt.WithValidator(wrapped))
+	require.Error(t, err,
+		`Validate must reject a token with missing exp even when MaxDeltaIs is wrapped`)
+	require.Contains(t, err.Error(), jwt.ExpirationKey,
+		`error should name the missing claim (exp)`)
+}

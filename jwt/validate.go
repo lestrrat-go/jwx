@@ -221,10 +221,21 @@ func MinDeltaIs(c1, c2 string, dur time.Duration) Validator {
 func (iitr *isInTimeRange) Validate(ctx context.Context, t Token) error {
 	clock := ValidationCtxClock(ctx) // MUST be populated
 	skew := ValidationCtxSkew(ctx)   // MUST be populated
-	// We don't check if the claims already exist, because we already did that
-	// by piggybacking on `required` check.
 	t1 := timeClaim(t, clock, iitr.c1)
 	t2 := timeClaim(t, clock, iitr.c2)
+	// Defensive: reject zero-value claims before computing delta. The
+	// auto-IsRequired piggyback in WithValidator type-switches on the
+	// concrete *isInTimeRange — wrapping this validator (e.g., in
+	// ValidatorFunc) skips that piggyback, and a missing time claim
+	// would silently produce a hugely-negative delta that trivially
+	// satisfies the upper-bound check. Reject the missing claim
+	// regardless of how the validator was wrapped.
+	if t1.IsZero() {
+		return missingRequiredClaimErrorf(iitr.c1)
+	}
+	if t2.IsZero() {
+		return missingRequiredClaimErrorf(iitr.c2)
+	}
 	delta := t1.Sub(t2)
 
 	var msg string
