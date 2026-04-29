@@ -103,3 +103,9 @@ fields:
     type: "[]string"
     json: crit
     comment: https://tools.ietf.org/html/rfc7515#section-4.1.11
+  - name: b64
+    exported_name: B64
+    getter: B64
+    type: bool
+    json: b64
+    comment: https://tools.ietf.org/html/rfc7797#section-3

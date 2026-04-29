@@ -19,6 +19,7 @@ import (
 
 const (
 	AlgorithmKey              = "alg"
+	B64Key                    = "b64"
 	ContentTypeKey            = "cty"
 	CriticalKey               = "crit"
 	JWKKey                    = "jwk"
@@ -40,6 +41,7 @@ const (
 // In most cases, you likely want to use the protected headers, as this is part of the signed content.
 type Headers interface {
 	Algorithm() (jwa.SignatureAlgorithm, bool)
+	B64() (bool, bool)
 	ContentType() (string, bool)
 	Critical() ([]string, bool)
 	JWK() (jwk.Key, bool)
@@ -66,10 +68,11 @@ type Headers interface {
 }
 
 // stdHeaderNames is a list of all standard header names defined in the JWS specification.
-var stdHeaderNames = []string{AlgorithmKey, ContentTypeKey, CriticalKey, JWKKey, JWKSetURLKey, KeyIDKey, TypeKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, X509URLKey}
+var stdHeaderNames = []string{AlgorithmKey, B64Key, ContentTypeKey, CriticalKey, JWKKey, JWKSetURLKey, KeyIDKey, TypeKey, X509CertChainKey, X509CertThumbprintKey, X509CertThumbprintS256Key, X509URLKey}
 
 type stdHeaders struct {
 	algorithm              *jwa.SignatureAlgorithm // https://tools.ietf.org/html/rfc7515#section-4.1.1
+	b64                    *bool                   // https://tools.ietf.org/html/rfc7797#section-3
 	contentType            *string                 // https://tools.ietf.org/html/rfc7515#section-4.1.10
 	critical               []string                // https://tools.ietf.org/html/rfc7515#section-4.1.11
 	jwk                    jwk.Key                 // https://tools.ietf.org/html/rfc7515#section-4.1.3
@@ -97,6 +100,15 @@ func (h *stdHeaders) Algorithm() (jwa.SignatureAlgorithm, bool) {
 		return jwa.EmptySignatureAlgorithm(), false
 	}
 	return *(h.algorithm), true
+}
+
+func (h *stdHeaders) B64() (bool, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	if h.b64 == nil {
+		return false, false
+	}
+	return *(h.b64), true
 }
 
 func (h *stdHeaders) ContentType() (string, bool) {
@@ -191,6 +203,7 @@ func (h *stdHeaders) X509URL() (string, bool) {
 
 func (h *stdHeaders) clear() {
 	h.algorithm = nil
+	h.b64 = nil
 	h.contentType = nil
 	h.critical = nil
 	h.jwk = nil
@@ -207,6 +220,7 @@ func (h *stdHeaders) clear() {
 
 func (h *stdHeaders) isZero() bool {
 	return h.algorithm == nil &&
+		h.b64 == nil &&
 		h.contentType == nil &&
 		h.critical == nil &&
 		h.jwk == nil &&
@@ -250,6 +264,8 @@ func (h *stdHeaders) Has(name string) bool {
 	switch name {
 	case AlgorithmKey:
 		return h.algorithm != nil
+	case B64Key:
+		return h.b64 != nil
 	case ContentTypeKey:
 		return h.contentType != nil
 	case CriticalKey:
@@ -285,6 +301,11 @@ func (h *stdHeaders) Field(name string) (any, bool) {
 			return nil, false
 		}
 		return *(h.algorithm), true
+	case B64Key:
+		if h.b64 == nil {
+			return nil, false
+		}
+		return *(h.b64), true
 	case ContentTypeKey:
 		if h.contentType == nil {
 			return nil, false
@@ -359,6 +380,12 @@ func (h *stdHeaders) setNoLock(name string, value any) error {
 			return nil
 		}
 		return fmt.Errorf("expecte jwa.SignatureAlgorithm, received %T", alg)
+	case B64Key:
+		if v, ok := value.(bool); ok {
+			h.b64 = &v
+			return nil
+		}
+		return fmt.Errorf(`invalid value for %s key: %T`, B64Key, value)
 	case ContentTypeKey:
 		if v, ok := value.(string); ok {
 			h.contentType = &v
@@ -439,6 +466,8 @@ func (h *stdHeaders) Remove(key string) error {
 	switch key {
 	case AlgorithmKey:
 		h.algorithm = nil
+	case B64Key:
+		h.b64 = nil
 	case ContentTypeKey:
 		h.contentType = nil
 	case CriticalKey:
@@ -489,6 +518,12 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
 			}
 			h.algorithm = &decoded
+		case B64Key:
+			var decoded bool
+			if err := json.UnmarshalDecode(dec, &decoded); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, B64Key, err)
+			}
+			h.b64 = &decoded
 		case ContentTypeKey:
 			if err := json.AssignNextStringToken(&h.contentType, dec, nil); err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, ContentTypeKey, err)
@@ -563,9 +598,12 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 func (h *stdHeaders) Keys() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
-	keys := make([]string, 0, 11+len(h.privateParams))
+	keys := make([]string, 0, 12+len(h.privateParams))
 	if h.algorithm != nil {
 		keys = append(keys, AlgorithmKey)
+	}
+	if h.b64 != nil {
+		keys = append(keys, B64Key)
 	}
 	if h.contentType != nil {
 		keys = append(keys, ContentTypeKey)
@@ -613,6 +651,12 @@ func (dst *stdHeaders) cloneFrom(src *stdHeaders) {
 		dst.algorithm = &tmp
 	} else {
 		dst.algorithm = nil
+	}
+	if src.b64 != nil {
+		tmp := *(src.b64)
+		dst.b64 = &tmp
+	} else {
+		dst.b64 = nil
 	}
 	if src.contentType != nil {
 		tmp := *(src.contentType)
@@ -723,6 +767,9 @@ func (h *stdHeaders) MarshalJSON() ([]byte, error) {
 	h.mu.RLock()
 	if h.algorithm != nil {
 		l.pairs = append(l.pairs, fieldPair{Name: AlgorithmKey, Value: *(h.algorithm)})
+	}
+	if h.b64 != nil {
+		l.pairs = append(l.pairs, fieldPair{Name: B64Key, Value: *(h.b64)})
 	}
 	if h.contentType != nil {
 		l.pairs = append(l.pairs, fieldPair{Name: ContentTypeKey, Value: *(h.contentType)})

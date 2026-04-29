@@ -252,19 +252,17 @@ func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	return vc.VerifyMessage(buf)
 }
 
-// get the value of b64 header field.
-// If the field does not exist, returns true (default)
-// Otherwise return the value specified by the header field.
+// getB64Value reads the typed "b64" header field and returns its value,
+// or RFC 7797's default of true when the field is unset. The field is
+// declared in jws/objects.yml as a typed bool, so Set rejects non-bool
+// values at the API boundary; this helper exists so callers do not have
+// to write the same nil-default check at every read site.
 func getB64Value(hdr Headers) bool {
-	v, ok := hdr.Field("b64")
+	v, ok := hdr.B64()
 	if !ok {
-		return true // default
+		return true // RFC 7797 default
 	}
-	b64, ok := v.(bool)
-	if !ok {
-		return true // default
-	}
-	return b64
+	return v
 }
 
 // detectParseFormat inspects the first non-whitespace rune in src to
