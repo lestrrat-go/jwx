@@ -163,21 +163,25 @@ func Validate(t Token, options ...ValidateOption) error {
 // validateDefault is the fast path for Validate with no options.
 // It inlines the default iat/exp/nbf checks without allocating
 // context values, validator structs, or iterating through options.
+//
+// Order MUST match the slow path's baseValidators: iat, exp, nbf. A
+// token failing multiple checks must produce the same concrete error
+// type regardless of whether any option was supplied.
 func validateDefault(t Token) error {
 	trunc := getDefaultTruncation()
 	now := time.Now().Truncate(trunc)
-
-	// exp: expiration must be after now
-	if tv, ok := t.Expiration(); ok {
-		if !now.Before(tv.Truncate(trunc)) {
-			return validateErrorf(`validation failed: %w`, newTokenExpiredError(tv.Truncate(trunc), now, 0))
-		}
-	}
 
 	// iat: issued-at must not be in the future
 	if tv, ok := t.IssuedAt(); ok {
 		if now.Before(tv.Truncate(trunc)) {
 			return validateErrorf(`validation failed: %w`, newInvalidIssuedAtError(tv.Truncate(trunc), now, 0))
+		}
+	}
+
+	// exp: expiration must be after now
+	if tv, ok := t.Expiration(); ok {
+		if !now.Before(tv.Truncate(trunc)) {
+			return validateErrorf(`validation failed: %w`, newTokenExpiredError(tv.Truncate(trunc), now, 0))
 		}
 	}
 
