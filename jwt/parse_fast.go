@@ -82,16 +82,17 @@ func parseCompactFast(data []byte, ctx *fastParseCtx) (Token, error) {
 		if errors.Is(err, jws.ErrCritPresent()) {
 			return parseCompactCritFallback(data, ctx)
 		}
-		// The fast path uses strict base64url (RFC 7515). A caller
-		// whose issuer emits padded/standard base64 can re-parse with
-		// jwt.WithStrictBase64Encoding(false) to fall back to the
-		// lenient decoder used by jws.Verify. The underlying error
-		// doesn't point at that escape hatch, so surface the hint
-		// before wrapping.
+		// The fast path uses strict base64url (RFC 7515). On a
+		// strict-decode failure, surface a diagnosis first ("input
+		// is not strict RFC 7515 base64url") and only then mention
+		// the conditional remedy — the failure shape can't
+		// distinguish a known-non-conforming issuer from genuinely
+		// malformed / tampered input, so the caller has to make
+		// that call deliberately.
 		var corrupt base64.CorruptInputError
 		if errors.As(err, &corrupt) {
 			return nil, parseErrorf(`jwt.Parse`,
-				`base64 decode failed; if the issuer emits padded/standard base64, set jwt.WithStrictBase64Encoding(false): %w`, err)
+				`base64url decode failed under strict RFC 7515 rule; if the issuer is known to emit padded or standard-base64 alphabet, retry with jwt.WithStrictBase64Encoding(false), otherwise treat the input as malformed: %w`, err)
 		}
 		return nil, parseErrorf(`jwt.Parse`, `%w`, err)
 	}
