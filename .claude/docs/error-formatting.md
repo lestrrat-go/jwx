@@ -31,6 +31,7 @@ if errors.Is(err, jwt.TokenExpiredError()) { ... }
 | `jws` | `ParseError()` | Parse failed |
 | `jws` | `ErrCritPresent()` | `VerifyCompactFast` refused a `crit`-bearing protected header (use `jws.Verify`) |
 | `jws` | `ErrB64Present()` | `VerifyCompactFast` refused a `b64`-bearing protected header (use `jws.Verify`) |
+| `jws` | `ErrUnclassifiableKey()` | `AlgorithmsForKey` couldn't classify the key shape (Import failed, kty not registered, or key-agreement-only key like ecdh) |
 | `jwe` | `EncryptError()` | Encryption failed |
 | `jwe` | `DecryptError()` | Decryption failed |
 | `jwe` | `RecipientError()` | Recipient processing error |
