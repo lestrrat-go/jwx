@@ -83,26 +83,48 @@ func decryptKeyPBES2(recipientKey []byte, alg string, key any, headers Headers, 
 	if !ok {
 		return nil, fmt.Errorf(`jwe: decrypt key: missing %q field for PBES2`, CountKey)
 	}
-	var countFlt float64
+
+	// Parse p2c into int64 directly. Float64 cannot represent integers
+	// above 2^53 exactly; comparing a parsed value against a high
+	// MaxPBES2Count cap in float-space and then casting via int(...) lets
+	// out-of-range values silently round into the accepted range, which
+	// would defeat the cap when callers raise it past 2^53. int64 keeps
+	// the bound check exact.
+	var count int64
 	switch v := countV.(type) {
 	case float64:
-		countFlt = v
-	case stdjson.Number:
-		var err error
-		countFlt, err = v.Float64()
-		if err != nil {
-			return nil, fmt.Errorf(`jwe: decrypt key: %q field is not a valid number: %w`, CountKey, err)
+		if math.IsNaN(v) || math.IsInf(v, 0) || math.Trunc(v) != v {
+			return nil, fmt.Errorf(`jwe: decrypt key: invalid 'p2c' value: not a positive integer (got %v)`, v)
 		}
+		// Reject values outside int64 range before casting; the cast
+		// of an out-of-range float to int is implementation-defined.
+		// Use explicit float-domain bounds (2^63 / -2^63) instead of
+		// math.MaxInt64 / MinInt64 so the comparison is independent
+		// of the platform's int width and the constants do not need
+		// implicit conversion.
+		const (
+			int64MaxAsFloat = float64(1 << 63) // 2^63, the smallest float > MaxInt64
+			int64MinAsFloat = -int64MaxAsFloat // -2^63, exact float = MinInt64
+		)
+		if v >= int64MaxAsFloat || v < int64MinAsFloat {
+			return nil, fmt.Errorf(`jwe: decrypt key: invalid 'p2c' value: not representable as int64 (got %v)`, v)
+		}
+		count = int64(v)
+	case stdjson.Number:
+		c, err := v.Int64()
+		if err != nil {
+			return nil, fmt.Errorf(`jwe: decrypt key: invalid 'p2c' value: %q is not a valid integer: %w`, v.String(), err)
+		}
+		count = c
 	default:
 		return nil, fmt.Errorf(`jwe: decrypt key: %q field is not a number`, CountKey)
 	}
 
-	if math.IsNaN(countFlt) || math.IsInf(countFlt, 0) || math.Trunc(countFlt) != countFlt {
-		return nil, fmt.Errorf("jwe: decrypt key: invalid 'p2c' value")
+	if count < int64(minCount) {
+		return nil, fmt.Errorf(`jwe: decrypt key: invalid 'p2c' value: %d is below WithMinPBES2Count=%d (RFC 7518 §4.8.1.2 floor; loosen via jwe.WithMinPBES2Count)`, count, minCount)
 	}
-
-	if countFlt > float64(maxCount) || countFlt < float64(minCount) {
-		return nil, fmt.Errorf("jwe: decrypt key: invalid 'p2c' value")
+	if count > int64(maxCount) {
+		return nil, fmt.Errorf(`jwe: decrypt key: invalid 'p2c' value: %d exceeds WithMaxPBES2Count=%d (DoS amplification cap; raise via jwe.WithMaxPBES2Count)`, count, maxCount)
 	}
 
 	saltBytes, err := base64.DecodeString(saltB64)
@@ -113,7 +135,7 @@ func decryptKeyPBES2(recipientKey []byte, alg string, key any, headers Headers, 
 	salt := []byte(alg)
 	salt = append(salt, byte(0))
 	salt = append(salt, saltBytes...)
-	return jwebb.KeyDecryptPBES2(recipientKey, recipientKey, alg, password, salt, int(countFlt))
+	return jwebb.KeyDecryptPBES2(recipientKey, recipientKey, alg, password, salt, int(count))
 }
 
 func decryptKeyAESGCMKW(recipientKey []byte, alg string, key any, headers Headers) ([]byte, error) {
