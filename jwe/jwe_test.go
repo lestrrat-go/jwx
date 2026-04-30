@@ -2100,3 +2100,46 @@ func TestDecryptSubstepTypedErrors(t *testing.T) {
 		require.Equal(t, jwa.RSA1_5(), mismatch.Got, `Got should be the message-declared algorithm`)
 	})
 }
+
+// TestDecryptHonorsContextCancellation locks the contract that
+// jwe.Decrypt observes ctx cancellation between iterations of its
+// outer loops. The slow-path verifier was patched the same way for
+// jws.Verify; jwe was the asymmetric counterpart. Default config
+// bounds the worst case (MaxRecipients=100, requireKid=true), but
+// under explicit opt-in (large keyset + WithRequireKid(false)) the
+// fan-out can run hundreds of CEK-unwrap attempts after the
+// caller's deadline fires unless the loops check ctx.Err().
+func TestDecryptHonorsContextCancellation(t *testing.T) {
+	payload := []byte("hello world")
+
+	// Encrypt under one key; the keyset below contains different
+	// keys so every decrypt attempt fails (we want the loop busy
+	// when ctx fires).
+	encryptKey, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err)
+	encryptPub, err := jwk.PublicKeyOf(encryptKey)
+	require.NoError(t, err)
+	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.RSA_OAEP(), encryptPub))
+	require.NoError(t, err)
+
+	// Build a JWKS large enough that without ctx checks the loop
+	// would burn through every key.
+	set := jwk.NewSet()
+	for range 10 {
+		k, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err)
+		require.NoError(t, k.Set(jwk.AlgorithmKey, jwa.RSA_OAEP()))
+		require.NoError(t, set.AddKey(k))
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel() // pre-cancel so the very first iteration must observe it
+
+	_, err = jwe.Decrypt(encrypted,
+		jwe.WithContext(ctx),
+		jwe.WithKeySet(set, jwe.WithRequireKid(false)),
+	)
+	require.Error(t, err, `Decrypt must observe a pre-cancelled ctx`)
+	require.ErrorIs(t, err, context.Canceled,
+		`cancellation must propagate as context.Canceled`)
+}
