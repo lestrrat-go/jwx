@@ -40,6 +40,7 @@ var minPBES2Count atomic.Int64
 var pbes2Count atomic.Int64
 var maxRecipients atomic.Int64
 var maxDecompressBufferSize atomic.Int64
+var disabledKeyAlgs atomic.Pointer[map[string]struct{}]
 
 func init() {
 	maxPBES2Count.Store(10000)
@@ -91,8 +92,33 @@ func Settings(options ...GlobalOption) {
 				panic(fmt.Sprintf("jwe.Settings: value for option WithCBCBufferSize must be an int64: %s", err))
 			}
 			aescbc.SetMaxBufferSize(v)
+		case identDisabledKeyAlgorithms{}:
+			var algs []jwa.KeyEncryptionAlgorithm
+			if err := option.Value(&algs); err != nil {
+				panic(fmt.Sprintf("jwe.Settings: value for option WithDisabledKeyAlgorithms must be []jwa.KeyEncryptionAlgorithm: %s", err))
+			}
+			if len(algs) == 0 {
+				disabledKeyAlgs.Store(nil)
+				continue
+			}
+			m := make(map[string]struct{}, len(algs))
+			for _, alg := range algs {
+				m[alg.String()] = struct{}{}
+			}
+			disabledKeyAlgs.Store(&m)
 		}
 	}
+}
+
+// isKeyAlgorithmDisabled reports whether alg is in the global
+// jwe.WithDisabledKeyAlgorithms set.
+func isKeyAlgorithmDisabled(alg jwa.KeyEncryptionAlgorithm) bool {
+	m := disabledKeyAlgs.Load()
+	if m == nil {
+		return false
+	}
+	_, ok := (*m)[alg.String()]
+	return ok
 }
 
 const (
@@ -113,6 +139,9 @@ type recipientBuilder struct {
 }
 
 func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryptionAlgorithm, _ *content_crypt.Generic) ([]byte, error) {
+	if isKeyAlgorithmDisabled(b.alg) {
+		return nil, fmt.Errorf(`jwe.Encrypt: key encryption algorithm %q is disabled by jwe.WithDisabledKeyAlgorithms`, b.alg)
+	}
 	// we need the raw key for later use
 	rawKey := b.key
 
@@ -632,6 +661,9 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 }
 
 func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
+	if isKeyAlgorithmDisabled(alg) {
+		return nil, makeDecryptError(`key encryption algorithm %q is disabled by jwe.WithDisabledKeyAlgorithms`, alg)
+	}
 	if jwkKey, ok := key.(jwk.Key); ok {
 		var raw any
 		if err := jwk.Export(jwkKey, &raw); err != nil {

@@ -7,6 +7,28 @@ import (
 )
 
 type identCritExtension struct{}
+type identDisabledKeyAlgorithms struct{}
+
+// WithDisabledKeyAlgorithms returns a process-global option for jwe.Settings()
+// that refuses the named key encryption algorithms in both directions. After
+// the call returns, jwe.Encrypt() will not produce a recipient using any
+// listed algorithm, and jwe.Decrypt() will reject any recipient whose "alg"
+// is in the list, before any cryptographic work runs. The check fires per
+// recipient: a multi-recipient JWE is rejected as soon as a disabled "alg"
+// is seen on any recipient.
+//
+// The list is replaced (not unioned) on each Settings() call. To clear the
+// disabled set, call jwe.Settings(jwe.WithDisabledKeyAlgorithms()) with no
+// arguments.
+//
+// This is a deployment-time policy hook for the canonical "disable RSA1_5"
+// case (RFC 8725 §3.1) and similar legacy-algorithm bans. The jwa package
+// does not unregister these algorithms — keeping them registered preserves
+// header parsing for diagnostic logs, while this option blocks any actual
+// crypto use.
+func WithDisabledKeyAlgorithms(algorithms ...jwa.KeyEncryptionAlgorithm) GlobalOption {
+	return &globalOption{option.New(identDisabledKeyAlgorithms{}, algorithms)}
+}
 
 // WithCritExtension declares that the caller understands and will process
 // the named "crit" (Critical) header parameter extension(s) per RFC 7516

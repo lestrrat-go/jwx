@@ -1856,3 +1856,45 @@ func TestWithKeyValidatesAlgKeyShape(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestDisabledKeyAlgorithms(t *testing.T) {
+	plaintext := []byte("Live long and prosper.")
+
+	encrypted, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA1_5(), &rsaPrivKey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256()))
+	require.NoError(t, err, `Encrypt with RSA1_5 should succeed before policy is set`)
+
+	jwe.Settings(jwe.WithDisabledKeyAlgorithms(jwa.RSA1_5()))
+	t.Cleanup(func() {
+		jwe.Settings(jwe.WithDisabledKeyAlgorithms())
+	})
+
+	t.Run("Decrypt rejects disabled alg before any crypto runs", func(t *testing.T) {
+		_, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA1_5(), rsaPrivKey))
+		require.Error(t, err, `Decrypt should reject a disabled key algorithm`)
+		require.ErrorIs(t, err, jwe.DecryptError(), `error should wrap jwe.DecryptError`)
+		require.Contains(t, err.Error(), `RSA1_5`, `error should name the disabled algorithm`)
+		require.Contains(t, err.Error(), `disabled by jwe.WithDisabledKeyAlgorithms`, `error should explain why the alg was rejected`)
+	})
+
+	t.Run("Encrypt refuses to produce a disabled-alg recipient", func(t *testing.T) {
+		_, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA1_5(), &rsaPrivKey.PublicKey), jwe.WithContentEncryption(jwa.A128CBC_HS256()))
+		require.Error(t, err, `Encrypt should refuse to produce a disabled-alg recipient`)
+		require.Contains(t, err.Error(), `RSA1_5`, `error should name the disabled algorithm`)
+		require.Contains(t, err.Error(), `disabled by jwe.WithDisabledKeyAlgorithms`, `error should explain why the alg was rejected`)
+	})
+
+	t.Run("Other algorithms remain usable", func(t *testing.T) {
+		ct, err := jwe.Encrypt(plaintext, jwe.WithKey(jwa.RSA_OAEP(), &rsaPrivKey.PublicKey))
+		require.NoError(t, err, `Encrypt with RSA_OAEP should succeed`)
+		got, err := jwe.Decrypt(ct, jwe.WithKey(jwa.RSA_OAEP(), rsaPrivKey))
+		require.NoError(t, err, `Decrypt with RSA_OAEP should succeed`)
+		require.Equal(t, plaintext, got, `RSA_OAEP round-trip should produce the original plaintext`)
+	})
+
+	t.Run("Empty list re-enables the algorithm", func(t *testing.T) {
+		jwe.Settings(jwe.WithDisabledKeyAlgorithms())
+		got, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA1_5(), rsaPrivKey))
+		require.NoError(t, err, `Decrypt should succeed after the disabled set is cleared`)
+		require.Equal(t, plaintext, got, `Decrypt should return the original plaintext after re-enabling`)
+	})
+}
