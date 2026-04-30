@@ -743,44 +743,58 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 			return nil, fmt.Errorf(`failed to get %q field`, SaltKey)
 		}
 
-		// check if WithUseNumber is effective, because it will change the
-		// type of the underlying value (#1140)
-		var countFlt float64
+		// Parse p2c into int64 directly. Float64 cannot represent
+		// integers above 2^53 exactly; comparing a parsed value
+		// against a high MaxPBES2Count cap in float-space and then
+		// casting via int(...) lets out-of-range values silently
+		// round into the accepted range when callers raise the cap
+		// past 2^53. int64 keeps the bound check exact.
+		var count int64
 		if json.UseNumber() {
-			var count json.Number
-			if err := h2.Get(CountKey, &count); err != nil {
+			var n json.Number
+			if err := h2.Get(CountKey, &n); err != nil {
 				return nil, fmt.Errorf(`failed to get %q field`, CountKey)
 			}
-			v, err := count.Float64()
+			c, err := n.Int64()
 			if err != nil {
-				return nil, fmt.Errorf("failed to convert 'p2c' to float64: %w", err)
+				return nil, fmt.Errorf(`invalid 'p2c' value: %q is not a valid integer: %w`, n.String(), err)
 			}
-			countFlt = v
+			count = c
 		} else {
-			var count float64
-			if err := h2.Get(CountKey, &count); err != nil {
+			var v float64
+			if err := h2.Get(CountKey, &v); err != nil {
 				return nil, fmt.Errorf(`failed to get %q field`, CountKey)
 			}
-			countFlt = count
+			if math.IsNaN(v) || math.IsInf(v, 0) || math.Trunc(v) != v {
+				return nil, fmt.Errorf(`invalid 'p2c' value: not a positive integer (got %v)`, v)
+			}
+			// Use explicit float-domain bounds (2^63 / -2^63) so
+			// the comparison is platform-independent and does not
+			// go through math.MaxInt64's implicit conversion.
+			const (
+				int64MaxAsFloat = float64(1 << 63) // 2^63, smallest float > MaxInt64
+				int64MinAsFloat = -int64MaxAsFloat // -2^63, exact float = MinInt64
+			)
+			if v >= int64MaxAsFloat || v < int64MinAsFloat {
+				return nil, fmt.Errorf(`invalid 'p2c' value: not representable as int64 (got %v)`, v)
+			}
+			count = int64(v)
 		}
 
 		maxCount := dc.maxPBES2Count
 		minCount := dc.minPBES2Count
-		if math.IsNaN(countFlt) || math.IsInf(countFlt, 0) || math.Trunc(countFlt) != countFlt {
-			return nil, fmt.Errorf("invalid 'p2c' value")
+		if count < int64(minCount) {
+			return nil, fmt.Errorf(`invalid 'p2c' value: %d is below WithMinPBES2Count=%d (RFC 7518 §4.8.1.2 floor; loosen via jwe.WithMinPBES2Count)`, count, minCount)
 		}
-		if countFlt > float64(maxCount) {
-			return nil, fmt.Errorf("invalid 'p2c' value")
-		}
-		if countFlt < float64(minCount) {
-			return nil, fmt.Errorf("invalid 'p2c' value")
+		if count > int64(maxCount) {
+			return nil, fmt.Errorf(`invalid 'p2c' value: %d exceeds WithMaxPBES2Count=%d (DoS amplification cap; raise via jwe.WithMaxPBES2Count)`, count, maxCount)
 		}
 		salt, err := base64.DecodeString(saltB64)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to b64-decode 'salt': %w`, err)
 		}
 		dec.KeySalt(salt)
-		dec.KeyCount(int(countFlt))
+		dec.KeyCount(int(count))
 	}
 
 	plaintext, err := dec.Decrypt(recipient, msg.cipherText, msg)
@@ -1197,6 +1211,16 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 //
 //	jwe.Settings(jwe.WithMaxDecompressBufferSize(10*1024*1024)) // changes value globally
 //	jwe.Decrypt(..., jwe.WithMaxDecompressBufferSize(250*1024)) // changes just for this call
+//
+// PBES2 amplification: PBES2 algorithms (PBES2-HS256+A128KW, etc.)
+// derive the CEK via PBKDF2 with the iteration count taken from the
+// JWE's `p2c` header. An attacker-controlled iteration count multiplied
+// by `WithMaxRecipients` is the major CPU-amplification vector on the
+// decrypt side. Bound it via `WithMaxPBES2Count` (default 1,000,000)
+// and reject too-low counts via `WithMinPBES2Count` (default 1000;
+// RFC 7518 §4.8.1.2 floor — note OWASP 2023 recommends ≥600,000 for
+// production password-derived key material). Both options accept a
+// `Settings()` global or a per-call value.
 func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	dc := decryptContextPool.Get()
 	defer decryptContextPool.Put(dc)
