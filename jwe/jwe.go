@@ -1075,6 +1075,17 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 //
 //	jwe.Settings(jwe.WithMaxDecompressBufferSize(10*1024*1024)) // changes value globally
 //	jwe.Decrypt(..., jwe.WithMaxDecompressBufferSize(250*1024)) // changes just for this call
+//
+// PBES2 amplification: PBES2 algorithms (PBES2-HS256+A128KW, etc.)
+// derive the CEK via PBKDF2 with the iteration count taken from the
+// JWE's `p2c` header. An attacker-controlled iteration count multiplied
+// by `WithMaxRecipients` is the major CPU-amplification vector on the
+// decrypt side. Bound it via `WithMaxPBES2Count` (default 1,000,000)
+// and reject too-low counts via `WithMinPBES2Count` (default 1000;
+// RFC 7518 §4.8.1.2 floor — note OWASP 2023 recommends ≥600,000 for
+// production password-derived key material). Both options accept a
+// `Settings()` global or a per-call value the same way
+// `WithMaxDecompressBufferSize` does.
 func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 	dc := decryptContextPool.Get()
 	defer decryptContextPool.Put(dc)
