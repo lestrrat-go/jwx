@@ -1,6 +1,7 @@
 package jwk_test
 
 import (
+	"encoding/json"
 	"sort"
 	"testing"
 
@@ -74,6 +75,42 @@ func TestSetAddKeyNil(t *testing.T) {
 			_ = jwk.NewSet().AddKey(fakeStructKey{})
 		}, `AddKey must not panic when Key's dynamic type is a struct`)
 	})
+}
+
+// jwk.Parse is documented to accept a single bare JWK and return a Set
+// containing that one key. The streaming UnmarshalJSON pushes every
+// non-"keys" top-level field into privateParams (the slot for JWKS-level
+// extension members), then re-parses the whole blob as a Key when no
+// "keys" field was seen. If privateParams is not cleared on that fallback
+// path, the same key fields end up serialized at both the JWKS top level
+// and inside keys[0] on the next MarshalJSON.
+func TestSetSingleKeyRoundTripDoesNotDuplicateFields(t *testing.T) {
+	src, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err, `GenerateRsaJwk should succeed`)
+
+	input, err := json.Marshal(src)
+	require.NoError(t, err, `marshaling the source key should succeed`)
+
+	set, err := jwk.Parse(input)
+	require.NoError(t, err, `Parse should accept a single bare JWK`)
+	require.Equal(t, 1, set.Len(), `Set should contain exactly one key`)
+
+	out, err := json.Marshal(set)
+	require.NoError(t, err, `marshaling the Set should succeed`)
+
+	var top map[string]any
+	require.NoError(t, json.Unmarshal(out, &top), `unmarshal into map should succeed`)
+	require.Equal(t, []string{"keys"}, mapKeysSorted(top),
+		`top level should be a JWKS with exactly the "keys" field; got duplicated fields: %s`, string(out))
+}
+
+func mapKeysSorted(m map[string]any) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 func TestSetKeys(t *testing.T) {

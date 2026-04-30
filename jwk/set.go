@@ -11,6 +11,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
+	"github.com/lestrrat-go/jwx/v3/jwk/jwkbb"
 )
 
 const keysKey = `keys` // appease linter
@@ -231,13 +232,27 @@ func (s *set) UnmarshalJSON(data []byte) error {
 		ignoreParseError = dc.IgnoreParseError()
 	}
 
+	// jwk.Parse and direct json.Unmarshal accept either a JWKS document
+	// or a single bare JWK. Decide which one we have up front so the
+	// JWKS-level streaming pass only runs when "keys" is actually
+	// present — otherwise top-level fields would be misclassified as
+	// JWKS-level extension members instead of the single key's own
+	// members.
+	if !jwkbb.HeaderHas(jwkbb.HeaderParse(data), "keys") {
+		key, err := ParseKey(data, options...)
+		if err != nil {
+			return fmt.Errorf(`failed to parse sole key in key set: %w`, err)
+		}
+		s.keys = append(s.keys, key)
+		return nil
+	}
+
 	maxK := s.maxKeys
 	if maxK <= 0 {
 		maxK = int(maxKeys.Load())
 	}
 	rejectDupKid := s.rejectDuplicateKID || rejectDuplicateKID.Load()
 
-	var sawKeysField bool
 	dec := json.NewDecoder(bytes.NewReader(data))
 LOOP:
 	for {
@@ -258,7 +273,6 @@ LOOP:
 		case string:
 			switch tok {
 			case "keys":
-				sawKeysField = true
 				var list []json.RawMessage
 				if err := dec.Decode(&list); err != nil {
 					return fmt.Errorf(`failed to decode "keys": %w`, err)
@@ -298,19 +312,6 @@ LOOP:
 				s.privateParams[tok] = v
 			}
 		}
-	}
-
-	// This is really silly, but we can only detect the
-	// lack of the "keys" field after going through the
-	// entire object once
-	// Not checking for len(s.keys) == 0, because it could be
-	// an empty key set
-	if !sawKeysField {
-		key, err := ParseKey(data, options...)
-		if err != nil {
-			return fmt.Errorf(`failed to parse sole key in key set: %w`, err)
-		}
-		s.keys = append(s.keys, key)
 	}
 	return nil
 }
