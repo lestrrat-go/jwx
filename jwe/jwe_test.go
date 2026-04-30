@@ -1803,3 +1803,56 @@ func TestDecryptHonorsContextCancellation(t *testing.T) {
 	require.ErrorIs(t, err, context.Canceled,
 		`cancellation must propagate as context.Canceled`)
 }
+
+// TestWithKeyValidatesAlgKeyShape locks the option-time alg-vs-key
+// shape check on jwe.WithKey for v3.
+func TestWithKeyValidatesAlgKeyShape(t *testing.T) {
+	rsaKey, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err)
+	rsaPub, err := jwk.PublicKeyOf(rsaKey)
+	require.NoError(t, err)
+	var rawRSAPriv rsa.PrivateKey
+	require.NoError(t, jwk.Export(rsaKey, &rawRSAPriv))
+
+	t.Run("rejects RSA-OAEP + []byte at option-time on Encrypt", func(t *testing.T) {
+		_, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithKey(jwa.RSA_OAEP(), []byte("not-an-rsa-key")),
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `jwe.WithKey:`)
+		require.Contains(t, err.Error(), `requires an RSA key`)
+	})
+
+	t.Run("rejects A128KW + RSA key at option-time on Encrypt", func(t *testing.T) {
+		_, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithKey(jwa.A128KW(), &rawRSAPriv),
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `jwe.WithKey:`)
+		require.Contains(t, err.Error(), `requires a []byte key`)
+	})
+
+	t.Run("rejects ECDH-ES + []byte at option-time", func(t *testing.T) {
+		_, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithKey(jwa.ECDH_ES(), []byte("not-an-ec-key")),
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `jwe.WithKey:`)
+		require.Contains(t, err.Error(), `requires an ECDSA or ECDH key`)
+	})
+
+	t.Run("accepts jwk.Key wrapper (defers to dispatch)", func(t *testing.T) {
+		encrypted, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithKey(jwa.RSA_OAEP(), rsaPub),
+		)
+		require.NoError(t, err)
+		require.NotEmpty(t, encrypted)
+	})
+
+	t.Run("accepts symmetric byte key for AES-KW", func(t *testing.T) {
+		_, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithKey(jwa.A128KW(), make([]byte, 16)),
+		)
+		require.NoError(t, err)
+	})
+}
