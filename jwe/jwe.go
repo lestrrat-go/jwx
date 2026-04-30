@@ -39,6 +39,7 @@ var minPBES2Count atomic.Int64
 var pbes2Count atomic.Int64
 var maxRecipients atomic.Int64
 var maxDecompressBufferSize atomic.Int64
+var disabledKeyAlgs atomic.Pointer[map[string]struct{}]
 
 func init() {
 	// maxPBES2Count: 1_000_000 covers OWASP 2023's 600k HS256 floor with
@@ -72,9 +73,31 @@ func Settings(options ...GlobalOption) error {
 			maxDecompressBufferSize.Store(option.MustGet[int64](opt))
 		case identCBCBufferSize{}:
 			aescbc.SetMaxBufferSize(option.MustGet[int64](opt))
+		case identDisabledKeyAlgorithms{}:
+			algs := option.MustGet[[]jwa.KeyEncryptionAlgorithm](opt)
+			if len(algs) == 0 {
+				disabledKeyAlgs.Store(nil)
+				continue
+			}
+			m := make(map[string]struct{}, len(algs))
+			for _, alg := range algs {
+				m[alg.String()] = struct{}{}
+			}
+			disabledKeyAlgs.Store(&m)
 		}
 	}
 	return nil
+}
+
+// isKeyAlgorithmDisabled reports whether alg is in the global
+// jwe.WithDisabledKeyAlgorithms set.
+func isKeyAlgorithmDisabled(alg jwa.KeyEncryptionAlgorithm) bool {
+	m := disabledKeyAlgs.Load()
+	if m == nil {
+		return false
+	}
+	_, ok := (*m)[alg.String()]
+	return ok
 }
 
 const (
@@ -95,6 +118,9 @@ type recipientBuilder struct {
 }
 
 func (b *recipientBuilder) Build(r Recipient, cek []byte, calg jwa.ContentEncryptionAlgorithm) ([]byte, error) {
+	if isKeyAlgorithmDisabled(b.alg) {
+		return nil, fmt.Errorf(`jwe.Encrypt: key encryption algorithm %q is disabled by jwe.WithDisabledKeyAlgorithms`, b.alg)
+	}
 	// Resolve the key to its raw form and extract key ID.
 	resolvedKey := b.key
 
@@ -635,6 +661,9 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 }
 
 func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
+	if isKeyAlgorithmDisabled(alg) {
+		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: key encryption algorithm %q is disabled by jwe.WithDisabledKeyAlgorithms`, alg)}
+	}
 	if jwkKey, ok := key.(jwk.Key); ok {
 		raw, err := jwk.Export[any](jwkKey)
 		if err != nil {
