@@ -371,6 +371,9 @@ func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 			if !ok {
 				return fmt.Errorf("jwe.decrypt: WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", pair.alg)
 			}
+			if err := validateAlgorithmForKey(alg, pair.key); err != nil {
+				return fmt.Errorf("jwe.WithKey: %w", err)
+			}
 			dc.keyProviders = append(dc.keyProviders, &staticKeyProvider{alg: alg, key: pair.key})
 		case identCEK{}:
 			dc.cek = option.MustGet[*[]byte](opt)
@@ -785,6 +788,9 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 			v, ok := wk.alg.(jwa.KeyEncryptionAlgorithm)
 			if !ok {
 				return fmt.Errorf("jwe.encrypt: WithKey() option must be specified using jwa.KeyEncryptionAlgorithm (got %T)", wk.alg)
+			}
+			if err := validateAlgorithmForKey(v, wk.key); err != nil {
+				return fmt.Errorf("jwe.WithKey: %w", err)
 			}
 			if jwebb.IsDirectCEK(v.String()) {
 				useRawCEK = true

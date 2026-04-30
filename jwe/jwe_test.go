@@ -2195,3 +2195,62 @@ func TestDecryptHonorsContextCancellation(t *testing.T) {
 	require.ErrorIs(t, err, context.Canceled,
 		`cancellation must propagate as context.Canceled`)
 }
+
+// TestWithKeyValidatesAlgKeyShape locks the option-time alg-vs-key
+// shape check on jwe.WithKey. Mismatched (alg, key) pairs that cannot
+// succeed downstream produce a crisp `jwe.WithKey: ...` error at
+// option-time instead of a deep nested error from the dispatcher's
+// requireByteKey / keyconv gate.
+func TestWithKeyValidatesAlgKeyShape(t *testing.T) {
+	rsaKey, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err)
+	rsaPub, err := jwk.PublicKeyOf(rsaKey)
+	require.NoError(t, err)
+	rawRSAPub, err := jwk.Export[*rsa.PublicKey](rsaPub)
+	require.NoError(t, err)
+
+	t.Run("rejects RSA-OAEP + []byte at option-time on Encrypt", func(t *testing.T) {
+		_, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithKey(jwa.RSA_OAEP(), []byte("not-an-rsa-key")),
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `jwe.WithKey:`,
+			`error must originate at the option boundary`)
+		require.Contains(t, err.Error(), `requires an RSA key`,
+			`error must name the family expected`)
+	})
+
+	t.Run("rejects A128KW + RSA key at option-time on Encrypt", func(t *testing.T) {
+		_, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithKey(jwa.A128KW(), rawRSAPub),
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `jwe.WithKey:`)
+		require.Contains(t, err.Error(), `requires a []byte key`)
+	})
+
+	t.Run("rejects ECDH-ES + []byte at option-time", func(t *testing.T) {
+		_, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithKey(jwa.ECDH_ES(), []byte("not-an-ec-key")),
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `jwe.WithKey:`)
+		require.Contains(t, err.Error(), `requires an ECDSA or ECDH key`)
+	})
+
+	t.Run("accepts jwk.Key wrapper (defers to dispatch)", func(t *testing.T) {
+		// rsaPub wrapped as jwk.Key with RSA-OAEP — legitimate.
+		encrypted, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithKey(jwa.RSA_OAEP(), rsaPub),
+		)
+		require.NoError(t, err)
+		require.NotEmpty(t, encrypted)
+	})
+
+	t.Run("accepts symmetric byte key for AES-KW", func(t *testing.T) {
+		_, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithKey(jwa.A128KW(), make([]byte, 16)),
+		)
+		require.NoError(t, err)
+	})
+}

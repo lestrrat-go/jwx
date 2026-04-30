@@ -1,6 +1,8 @@
 package jwe
 
 import (
+	"crypto/ecdh"
+	"crypto/ecdsa"
 	"crypto/rsa"
 	"fmt"
 
@@ -99,6 +101,88 @@ func requireByteKey(key any, alg string) ([]byte, error) {
 		return nil, fmt.Errorf("jwe: []byte is required as key for %s (got %T)", alg, key)
 	}
 	return b, nil
+}
+
+// validateAlgorithmForKey checks that alg is family-compatible with
+// key at the WithKey option boundary, surfacing wrong-shape mismatches
+// as crisp `jwe.WithKey: ...` errors instead of nested errors deep in
+// the dispatcher (e.g. requireByteKey inside the AESKW path). Mirrors
+// jws.validateAlgorithmForKey in spirit but is shaped to JWE's
+// per-family key conventions.
+//
+// Permissive carve-outs (return nil, deferring validation):
+//
+//   - Untyped/extension algorithms: HPKE and ML-KEM. These are
+//     extension-pluggable via Register{HPKE,MLKEM}Algorithm; an
+//     extension may accept arbitrary key shapes (e.g. an
+//     HPKEKeyEncrypter raw type), so the option-time gate cannot
+//     enforce a closed-set rule. The downstream dispatch handles
+//     unsupported shapes via a typed error.
+//   - jwk.Key: the dispatcher unwraps via jwk.Export to a raw key,
+//     so the kty-vs-alg check happens then.
+//   - Nil key: legitimate for `dir` (caller provides CEK separately
+//     via WithCEK) and for callers exploring the API.
+//
+// All other built-in algorithm families enforce a concrete key-shape
+// expectation here. The error is wrapped by the WithKey site so the
+// caller sees `jwe.WithKey: ...` consistently.
+func validateAlgorithmForKey(alg jwa.KeyEncryptionAlgorithm, key any) error {
+	if key == nil {
+		return nil
+	}
+	// jwk.Key wrappers: defer to dispatch-time kty validation.
+	if _, ok := key.(jwk.Key); ok {
+		return nil
+	}
+	// Caller-supplied KeyEncrypter / KeyDecrypter implementations
+	// take responsibility for their own key-shape validation. Defer.
+	if _, ok := key.(KeyEncrypter); ok {
+		return nil
+	}
+	if _, ok := key.(KeyDecrypter); ok {
+		return nil
+	}
+	// HPKE raw key types implementing the HPKE key interfaces are
+	// extension-pluggable; defer.
+	if _, ok := key.(jwebb.HPKEKeyEncrypter); ok {
+		return nil
+	}
+	if _, ok := key.(jwebb.HPKEKeyDecrypter); ok {
+		return nil
+	}
+
+	algStr := alg.String()
+	switch {
+	case jwebb.IsHPKE(algStr) || jwebb.IsMLKEM(algStr) || jwebb.IsMLKEMDirect(algStr):
+		// Extension-pluggable; key shape is the extension's contract.
+		return nil
+	case jwebb.IsDirect(algStr):
+		// "dir" requires a byte slice (the CEK) or a symmetric jwk.
+		if _, ok := key.([]byte); !ok {
+			return fmt.Errorf(`algorithm %q requires a []byte key (got %T)`, algStr, key)
+		}
+	case jwebb.IsAESKW(algStr) || jwebb.IsAESGCMKW(algStr) || jwebb.IsPBES2(algStr):
+		if _, ok := key.([]byte); !ok {
+			return fmt.Errorf(`algorithm %q requires a []byte key (got %T)`, algStr, key)
+		}
+	case jwebb.IsRSA15(algStr) || jwebb.IsRSAOAEP(algStr):
+		switch key.(type) {
+		case *rsa.PublicKey, rsa.PublicKey, *rsa.PrivateKey, rsa.PrivateKey:
+		default:
+			return fmt.Errorf(`algorithm %q requires an RSA key (got %T)`, algStr, key)
+		}
+	case jwebb.IsECDHES(algStr):
+		switch key.(type) {
+		case *ecdsa.PublicKey, ecdsa.PublicKey, *ecdsa.PrivateKey, ecdsa.PrivateKey,
+			*ecdh.PublicKey, ecdh.PublicKey, *ecdh.PrivateKey, ecdh.PrivateKey:
+		default:
+			return fmt.Errorf(`algorithm %q requires an ECDSA or ECDH key (got %T)`, algStr, key)
+		}
+	default:
+		// Unknown algorithm family: defer to dispatch.
+		return nil
+	}
+	return nil
 }
 
 func encryptKeyRSA(cek []byte, alg string, key any, encryptFn func([]byte, string, *rsa.PublicKey) (keygen.ByteSource, error)) (keygen.ByteSource, error) {
