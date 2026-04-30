@@ -11,6 +11,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/jwx/v4/internal/pool"
+	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
 )
 
 const keysKey = `keys` // appease linter
@@ -229,13 +230,27 @@ func (s *set) UnmarshalJSON(data []byte) error {
 		ignoreParseError = dc.IgnoreParseError()
 	}
 
+	// jwk.Parse and direct json.Unmarshal accept either a JWKS document
+	// or a single bare JWK. Decide which one we have up front so the
+	// JWKS-level streaming pass only runs when "keys" is actually
+	// present — otherwise top-level fields would be misclassified as
+	// JWKS-level extension members instead of the single key's own
+	// members.
+	if !jwkbb.HeaderHas(jwkbb.HeaderParse(data), "keys") {
+		key, err := doParseKey(data, options...)
+		if err != nil {
+			return fmt.Errorf(`failed to parse sole key in key set: %w`, err)
+		}
+		s.keys = append(s.keys, key)
+		return nil
+	}
+
 	maxK := s.maxKeys
 	if maxK <= 0 {
 		maxK = int(maxKeys.Load())
 	}
 	rejectDupKid := s.rejectDuplicateKID || rejectDuplicateKID.Load()
 
-	var sawKeysField bool
 	dec := json.NewDecoder(bytes.NewReader(data))
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -252,7 +267,6 @@ func (s *set) UnmarshalJSON(data []byte) error {
 		fieldName := tok.String()
 		switch fieldName {
 		case "keys":
-			sawKeysField = true
 			var list []json.RawMessage
 			if err := json.UnmarshalDecode(dec, &list); err != nil {
 				return fmt.Errorf(`failed to decode "keys": %w`, err)
@@ -299,19 +313,6 @@ func (s *set) UnmarshalJSON(data []byte) error {
 	// consume closing '}'
 	if _, err := dec.ReadToken(); err != nil {
 		return fmt.Errorf(`error reading closing token: %w`, err)
-	}
-
-	// This is really silly, but we can only detect the
-	// lack of the "keys" field after going through the
-	// entire object once
-	// Not checking for len(s.keys) == 0, because it could be
-	// an empty key set
-	if !sawKeysField {
-		key, err := doParseKey(data, options...)
-		if err != nil {
-			return fmt.Errorf(`failed to parse sole key in key set: %w`, err)
-		}
-		s.keys = append(s.keys, key)
 	}
 	return nil
 }

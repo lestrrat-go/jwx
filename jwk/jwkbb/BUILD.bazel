@@ -3,16 +3,23 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "jwkbb",
     srcs = [
+        "header.go",
         "x509.go",
         "x509_registry.go",
     ],
     importpath = "github.com/lestrrat-go/jwx/v4/jwk/jwkbb",
     visibility = ["//visibility:public"],
+    deps = [
+        "@com_github_valyala_fastjson//:fastjson",
+    ],
 )
 
 go_test(
     name = "jwkbb_test",
-    srcs = ["x509_registry_test.go"],
+    srcs = [
+        "header_test.go",
+        "x509_registry_test.go",
+    ],
     deps = [
         ":jwkbb",
         "@com_github_stretchr_testify//require",
