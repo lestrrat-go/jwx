@@ -379,12 +379,11 @@ source: [examples/jwe_decrypt_with_key_example_test.go](https://github.com/lestr
 
 ## Decrypting using a JWKS
 
-To decrypt a payload using JWKS, by default you will need your payload and JWKS to have matching `alg` field.
+To decrypt a payload using JWKS, the JWE's `kid` header selects a key from the set; the key's `alg` field (when present) drives the decrypt-time dispatch. When the JWK lacks `alg`, the recipient's `alg` header is used as a fallback — `jwe.Decrypt` re-checks the chosen `alg` against the integrity-protected protected header before any cryptographic call.
 
-The `alg` field's requirement is the same for using a single key. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)", it's the same for `jwe.Decrypt()`.
+For more discussion on why `alg` cannot be inferred from the key alone, see "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)" — the same reasoning applies to `jwe.Decrypt()`.
 
-Note that unlike in JWT, the `kid` is not required by default, although you _can_ make it so
-by passing `jwe.WithRequireKid(true)`.
+`kid` IS required by default. The example below uses `jwe.WithRequireKid(false)` to opt out and try every key in the set.
 
 For more discussion on why/how `alg`/`kid` values work, please read the [relevant section in the JWT documentation](01-jwt.md#parse-and-verify-a-jwt-with-a-key-set-matching-kid).
 
