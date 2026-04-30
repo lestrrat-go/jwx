@@ -2254,3 +2254,42 @@ func TestWithKeyValidatesAlgKeyShape(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+// TestDecryptErrorBounded locks the contract that jwe.Decrypt's
+// error message length is bounded by the joined-error cap, so a
+// hostile JWE with many recipients × many keys cannot produce
+// unbounded error text. Also asserts the redundant outer
+// "jwe.Decrypt:" prefix has been dropped (only one copy in the
+// final message).
+func TestDecryptErrorBounded(t *testing.T) {
+	payload := []byte("hello")
+
+	encryptKey, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err)
+	encryptPub, err := jwk.PublicKeyOf(encryptKey)
+	require.NoError(t, err)
+	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.RSA_OAEP(), encryptPub))
+	require.NoError(t, err)
+
+	// 50 wrong keys → tryRecipient produces 50 attempt errors.
+	set := jwk.NewSet()
+	for range 50 {
+		k, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err)
+		require.NoError(t, k.Set(jwk.AlgorithmKey, jwa.RSA_OAEP()))
+		require.NoError(t, set.AddKey(k))
+	}
+
+	_, err = jwe.Decrypt(encrypted,
+		jwe.WithKeySet(set, jwe.WithRequireKid(false)),
+	)
+	require.Error(t, err)
+
+	msg := err.Error()
+	require.Contains(t, msg, `... and`,
+		`error must include the "and N more" cap sentinel when constituents exceed the cap`)
+	require.Contains(t, msg, `suppressed`,
+		`cap sentinel must say "suppressed"`)
+	require.Equal(t, 1, strings.Count(msg, `jwe.Decrypt: failed to decrypt any of the recipients`),
+		`top-level "failed to decrypt any of the recipients" should appear exactly once (no double-wrap)`)
+}

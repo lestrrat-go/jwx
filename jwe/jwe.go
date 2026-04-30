@@ -557,7 +557,29 @@ func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 		}
 		return decrypted, nil
 	}
-	return nil, fmt.Errorf(`jwe.Decrypt: failed to decrypt any of the recipients: %w`, errors.Join(errs...))
+	// Bound the joined-error count so a hostile JWE with many recipients
+	// can't produce an unbounded error string. R×K errors at default
+	// MaxRecipients=100 with a multi-key keyset can otherwise grow into
+	// a log-spam vector. Keep the first decryptErrorJoinCap entries
+	// verbatim and replace the rest with a single "... and N more" sentinel.
+	return nil, fmt.Errorf(`jwe.Decrypt: failed to decrypt any of the recipients: %w`, joinDecryptErrors(errs))
+}
+
+// decryptErrorJoinCap caps how many per-recipient / per-(alg,key)
+// constituent errors get joined into the final Decrypt error. A
+// hostile JWE with R recipients × K keys produces R×K constituent
+// errors; the cap prevents the resulting err.Error() string from
+// growing unboundedly.
+const decryptErrorJoinCap = 10
+
+func joinDecryptErrors(errs []error) error {
+	if len(errs) <= decryptErrorJoinCap {
+		return errors.Join(errs...)
+	}
+	kept := make([]error, decryptErrorJoinCap, decryptErrorJoinCap+1)
+	copy(kept, errs[:decryptErrorJoinCap])
+	kept = append(kept, fmt.Errorf("... and %d more error(s) suppressed", len(errs)-decryptErrorJoinCap))
+	return errors.Join(kept...)
 }
 
 func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
@@ -604,11 +626,12 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 			return decrypted, nil
 		}
 	}
-	// Preserve every per-key attempt error via errors.Join so that each
-	// constituent remains reachable through errors.Is / errors.As on the
-	// outer error. The top-level "jwe.Decrypt:" prefix is added by the
-	// caller (Decrypt) via makeDecryptError.
-	return nil, fmt.Errorf(`tried %d keys, but failed to match any of the keys with recipient: %w`, tried, errors.Join(attemptErrors...))
+	// Preserve per-key attempt errors via errors.Join so each constituent
+	// remains reachable through errors.Is / errors.As on the outer error.
+	// Cap the count so a hostile JWE with many keys per provider can't
+	// produce unbounded error text. Top-level "jwe.Decrypt:" prefix is
+	// added by the caller (Decrypt) via makeDecryptError.
+	return nil, fmt.Errorf(`tried %d keys, but failed to match any of the keys with recipient: %w`, tried, joinDecryptErrors(attemptErrors))
 }
 
 func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
@@ -1124,7 +1147,11 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 
 	ret, err := dc.DecryptMessage(buf)
 	if err != nil {
-		return nil, makeDecryptError(`%w`, err)
+		// DecryptMessage already returns errors prefixed with
+		// "jwe.Decrypt:" — wrap as decryptError without adding a
+		// second prefix, otherwise multi-recipient errors carry the
+		// "jwe.Decrypt:" string R×K + 2 times in their message.
+		return nil, decryptError{err}
 	}
 	return ret, nil
 }
