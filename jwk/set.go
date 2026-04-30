@@ -215,6 +215,39 @@ func (s *set) setRejectDuplicateKID(v bool) {
 	s.rejectDuplicateKID = v
 }
 
+// hasKeysField peeks the top-level JSON object for a "keys" member
+// without consuming or storing field values. Used to distinguish a JWKS
+// document (with "keys") from a single bare JWK (without).
+func hasKeysField(data []byte) (bool, error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	tok, err := dec.Token()
+	if err != nil {
+		return false, fmt.Errorf(`error reading token: %w`, err)
+	}
+	delim, ok := tok.(json.Delim)
+	if !ok || delim != tokens.OpenCurlyBracket {
+		return false, fmt.Errorf(`expected '%c' but got %v`, tokens.OpenCurlyBracket, tok)
+	}
+	for dec.More() {
+		tok, err := dec.Token()
+		if err != nil {
+			return false, fmt.Errorf(`error reading token: %w`, err)
+		}
+		name, ok := tok.(string)
+		if !ok {
+			return false, fmt.Errorf(`expected field name, got %v`, tok)
+		}
+		if name == "keys" {
+			return true, nil
+		}
+		var skip json.RawMessage
+		if err := dec.Decode(&skip); err != nil {
+			return false, fmt.Errorf(`error skipping value for %q: %w`, name, err)
+		}
+	}
+	return false, nil
+}
+
 func (s *set) UnmarshalJSON(data []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -231,13 +264,31 @@ func (s *set) UnmarshalJSON(data []byte) error {
 		ignoreParseError = dc.IgnoreParseError()
 	}
 
+	// jwk.Parse and direct json.Unmarshal accept either a JWKS document
+	// or a single bare JWK. Decide which one we have up front so the
+	// JWKS-level streaming pass only runs when "keys" is actually
+	// present — otherwise top-level fields would be misclassified as
+	// JWKS-level extension members instead of the single key's own
+	// members.
+	isJWKS, err := hasKeysField(data)
+	if err != nil {
+		return err
+	}
+	if !isJWKS {
+		key, err := ParseKey(data, options...)
+		if err != nil {
+			return fmt.Errorf(`failed to parse sole key in key set: %w`, err)
+		}
+		s.keys = append(s.keys, key)
+		return nil
+	}
+
 	maxK := s.maxKeys
 	if maxK <= 0 {
 		maxK = int(maxKeys.Load())
 	}
 	rejectDupKid := s.rejectDuplicateKID || rejectDuplicateKID.Load()
 
-	var sawKeysField bool
 	dec := json.NewDecoder(bytes.NewReader(data))
 LOOP:
 	for {
@@ -258,7 +309,6 @@ LOOP:
 		case string:
 			switch tok {
 			case "keys":
-				sawKeysField = true
 				var list []json.RawMessage
 				if err := dec.Decode(&list); err != nil {
 					return fmt.Errorf(`failed to decode "keys": %w`, err)
@@ -298,19 +348,6 @@ LOOP:
 				s.privateParams[tok] = v
 			}
 		}
-	}
-
-	// This is really silly, but we can only detect the
-	// lack of the "keys" field after going through the
-	// entire object once
-	// Not checking for len(s.keys) == 0, because it could be
-	// an empty key set
-	if !sawKeysField {
-		key, err := ParseKey(data, options...)
-		if err != nil {
-			return fmt.Errorf(`failed to parse sole key in key set: %w`, err)
-		}
-		s.keys = append(s.keys, key)
 	}
 	return nil
 }

@@ -1756,21 +1756,24 @@ func TestSetWithPrivateParams(t *testing.T) {
 		_ = k1.Set(`renewal_kid`, "foo")
 		_ = json.NewEncoder(&buf).Encode(k1)
 
+		// renewal_kid is a custom field on the KEY, not the JWKS document.
+		// jwk.Parse accepts a single bare JWK by wrapping it in a Set, but
+		// the field belongs to the wrapped key — Set.Get("renewal_kid")
+		// must NOT surface it (that slot is for JWKS-level extension
+		// members; see "JWKS with multiple keys" below).
 		var check = func(t *testing.T, buf []byte) {
 			set, err := jwk.Parse(buf)
 			require.NoError(t, err, `jwk.Parse should succeed`)
 			require.Equal(t, 1, set.Len(), `set.Len() should be 1`)
 
-			var kid string
-			require.NoError(t, set.Get(`renewal_kid`, &kid), `set.Get("renewal_kid") should succeed`)
-
-			require.Equal(t, `foo`, kid, `set.Get("renewal_kid") should return "foo"`)
+			var sink string
+			require.Error(t, set.Get(`renewal_kid`, &sink), `set.Get("renewal_kid") should NOT surface a single-key field at JWKS level`)
 
 			key, ok := set.Key(0)
 			require.True(t, ok, `set.Key(0) should return ok = true`)
 
-			kid = ""
-			require.NoError(t, key.Get(`renewal_kid`, &kid), `key.Get("renewal_kid") should return ok = true`)
+			var kid string
+			require.NoError(t, key.Get(`renewal_kid`, &kid), `key.Get("renewal_kid") should succeed`)
 
 			require.Equal(t, `foo`, kid, `key.Get("renewal_kid") should return "foo"`)
 		}
