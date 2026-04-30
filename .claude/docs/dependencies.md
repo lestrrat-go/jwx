@@ -42,7 +42,7 @@ Leaf Packages (no internal deps)
 | `transform` | (none — stdlib only) |
 | `jwk` | jwa, cert, transform |
 | `jwk/ecdsa` | jwa |
-| `jwk/jwkbb` | (stdlib only) |
+| `jwk/jwkbb` | (no internal jwx deps; uses valyala/fastjson) |
 | `jws` | jwa, jwk, cert |
 | `jwe` | jwa, jwk, cert, transform |
 | `jwt` | jwa, jws, jwe, jwk, transform |
@@ -54,5 +54,5 @@ Leaf Packages (no internal deps)
 |------------|---------|---------|
 | `lestrrat-go/dsig` | jws/jwsbb | Digital signature primitives (HMAC, RSA, ECDSA, EdDSA) |
 | `lestrrat-go/option/v3` | all packages | Functional options pattern |
-| `valyala/fastjson` | jws/jwsbb | Fast JSON header parsing |
+| `valyala/fastjson` | jws/jwsbb, jwk/jwkbb | Fast JSON header / object peek |
 | `golang.org/x/crypto` | jwe | Extended crypto (PBKDF2, etc.) |
