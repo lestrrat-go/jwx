@@ -1201,6 +1201,8 @@ func TestPBES2RejectsNonIntegerCount(t *testing.T) {
 		_, err := jwe.Decrypt(tampered, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
 		require.Error(t, err, `jwe.Decrypt should fail`)
 		require.Contains(t, err.Error(), `invalid 'p2c' value`)
+		require.Contains(t, err.Error(), `not a positive integer`,
+			`error should name the constraint`)
 	})
 
 	t.Run("UseNumber decoder rejects fractional count", func(t *testing.T) {
@@ -1210,6 +1212,56 @@ func TestPBES2RejectsNonIntegerCount(t *testing.T) {
 		_, err := jwe.Decrypt(tampered, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
 		require.Error(t, err, `jwe.Decrypt should fail`)
 		require.Contains(t, err.Error(), `invalid 'p2c' value`)
+		require.Contains(t, err.Error(), `not a valid integer`,
+			`UseNumber path should name the integer-parse failure`)
+	})
+}
+
+// TestPBES2P2cBoundsErrors locks the error-wording contract that the
+// max/min bound errors name the option, the offending value, and the
+// configured bound — replacing the previous opaque
+// "invalid 'p2c' value" string. Same site also moved from float-space
+// to int64-space comparison so the cap is enforced exactly.
+func TestPBES2P2cBoundsErrors(t *testing.T) {
+	password := []byte(`supersecret`)
+	key, err := jwk.Import(password)
+	require.NoError(t, err)
+
+	encrypted, err := jwe.Encrypt(
+		[]byte(`hello world`),
+		jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+		jwe.WithPBES2Count(2000),
+	)
+	require.NoError(t, err)
+
+	t.Run("error names the bound that was violated (max)", func(t *testing.T) {
+		tampered := rewriteCompactPBES2Count(t, encrypted, 99999999)
+		_, err := jwe.Decrypt(tampered,
+			jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+			jwe.WithMaxPBES2Count(10000),
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `WithMaxPBES2Count`,
+			`max-bound error must name the option`)
+		require.Contains(t, err.Error(), `99999999`,
+			`max-bound error must include the offending value`)
+		require.Contains(t, err.Error(), `10000`,
+			`max-bound error must include the cap`)
+	})
+
+	t.Run("error names the bound that was violated (min)", func(t *testing.T) {
+		tampered := rewriteCompactPBES2Count(t, encrypted, 100)
+		_, err := jwe.Decrypt(tampered,
+			jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+			jwe.WithMinPBES2Count(1000),
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `WithMinPBES2Count`,
+			`min-bound error must name the option`)
+		require.Contains(t, err.Error(), `100`,
+			`min-bound error must include the offending value`)
+		require.Contains(t, err.Error(), `1000`,
+			`min-bound error must include the floor`)
 	})
 }
 
