@@ -43,7 +43,7 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 - Extension: `RegisterCustomField()`, `RegisterKeyParser()`, `RegisterKeyImporter()`, `RegisterKeyExporter()`
 - Error sentinels: `ImportError()`, `ParseError()`, `WhitelistError()`, `ContinueError()`
 - Files: `jwk.go`, `set.go`, `parser.go`, `convert.go`, `fetch.go`, `cache.go`, `interface.go`, `errors.go`, `x509.go`, `filter.go`, `rsa.go`, `ecdsa.go`, `okp.go`, `symmetric.go`
-- Sub-packages: `jwk/ecdsa` — elliptic curve registration (`RegisterCurve`, `CurveFromAlgorithm`, `AlgorithmFromCurve`); `jwk/jwkbb` — X.509/PEM encoding building blocks (`EncodeX509`, `DecodeX509`)
+- Sub-packages: `jwk/ecdsa` — elliptic curve registration (`RegisterCurve`, `CurveFromAlgorithm`, `AlgorithmFromCurve`); `jwk/jwkbb` — X.509/PEM encoding building blocks (`EncodeX509`, `DecodeX509`) plus a fastjson-backed `Header` (sealed) for fast field probing of JWK / JWKS bytes: `HeaderParse`, `HeaderHas`, `HeaderGetString`, `HeaderGetStringBytes`, sentinel `ErrHeaderNotFound()`. Mirrors the `jws/jwsbb` Header API; experimental.
 - Imports: jwa, cert, transform, internal/{base64,json,ecutil}
 
 ## jws/

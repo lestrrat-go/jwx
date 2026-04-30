@@ -11,6 +11,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
+	"github.com/lestrrat-go/jwx/v3/jwk/jwkbb"
 )
 
 const keysKey = `keys` // appease linter
@@ -215,39 +216,6 @@ func (s *set) setRejectDuplicateKID(v bool) {
 	s.rejectDuplicateKID = v
 }
 
-// hasKeysField peeks the top-level JSON object for a "keys" member
-// without consuming or storing field values. Used to distinguish a JWKS
-// document (with "keys") from a single bare JWK (without).
-func hasKeysField(data []byte) (bool, error) {
-	dec := json.NewDecoder(bytes.NewReader(data))
-	tok, err := dec.Token()
-	if err != nil {
-		return false, fmt.Errorf(`error reading token: %w`, err)
-	}
-	delim, ok := tok.(json.Delim)
-	if !ok || delim != tokens.OpenCurlyBracket {
-		return false, fmt.Errorf(`expected '%c' but got %v`, tokens.OpenCurlyBracket, tok)
-	}
-	for dec.More() {
-		tok, err := dec.Token()
-		if err != nil {
-			return false, fmt.Errorf(`error reading token: %w`, err)
-		}
-		name, ok := tok.(string)
-		if !ok {
-			return false, fmt.Errorf(`expected field name, got %v`, tok)
-		}
-		if name == "keys" {
-			return true, nil
-		}
-		var skip json.RawMessage
-		if err := dec.Decode(&skip); err != nil {
-			return false, fmt.Errorf(`error skipping value for %q: %w`, name, err)
-		}
-	}
-	return false, nil
-}
-
 func (s *set) UnmarshalJSON(data []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -270,11 +238,7 @@ func (s *set) UnmarshalJSON(data []byte) error {
 	// present — otherwise top-level fields would be misclassified as
 	// JWKS-level extension members instead of the single key's own
 	// members.
-	isJWKS, err := hasKeysField(data)
-	if err != nil {
-		return err
-	}
-	if !isJWKS {
+	if !jwkbb.HeaderHas(jwkbb.HeaderParse(data), "keys") {
 		key, err := ParseKey(data, options...)
 		if err != nil {
 			return fmt.Errorf(`failed to parse sole key in key set: %w`, err)
