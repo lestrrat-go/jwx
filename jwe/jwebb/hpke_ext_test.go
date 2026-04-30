@@ -132,4 +132,22 @@ func TestRegisterHPKEAlgorithm(t *testing.T) {
 		t.Cleanup(func() { jwebb.UnregisterHPKEAlgorithm(custom) })
 		require.True(t, jwebb.IsHPKE(custom))
 	})
+
+	// RegisterHPKEAlgorithm is a privileged extension point — override
+	// of any identifier (including built-in HPKE tokens) is allowed by
+	// design. Re-registering a built-in HPKE identifier is a successful
+	// no-op.
+	t.Run("re-registering existing HPKE identifier is idempotent", func(t *testing.T) {
+		err := jwebb.RegisterHPKEAlgorithm("HPKE-0-KE")
+		require.NoError(t, err, `re-registering a built-in HPKE identifier should succeed (idempotent)`)
+		require.True(t, jwebb.IsHPKE("HPKE-0-KE"))
+	})
+
+	t.Run("accepts new HPKE-shaped identifiers", func(t *testing.T) {
+		const custom = "HPKE-CUSTOM-KE"
+		err := jwebb.RegisterHPKEAlgorithm(custom)
+		require.NoError(t, err, `new identifier should register`)
+		t.Cleanup(func() { jwebb.UnregisterHPKEAlgorithm(custom) })
+		require.True(t, jwebb.IsHPKE(custom))
+	})
 }

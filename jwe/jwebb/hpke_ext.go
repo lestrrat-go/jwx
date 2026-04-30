@@ -83,12 +83,36 @@ func init() {
 
 // RegisterHPKEAlgorithm registers an algorithm identifier as an HPKE
 // algorithm. After registration, IsHPKE returns true for this identifier,
-// causing the JWE encrypt/decrypt dispatch to route it through the HPKE path.
+// causing the JWE encrypt/decrypt dispatch to route it through the HPKE
+// path. Registration is idempotent.
 //
-// The error return is reserved for future validation. The current
-// implementation always returns nil, but callers — especially extension
-// modules calling this from init() — must check the return value and panic
-// on failure to stay forward-compatible.
+// # Privileged extension point
+//
+// This registry is an extension point on purpose: extension modules
+// (the canonical example is github.com/jwx-go/mlkem) install support
+// for new key-encryption algorithm identifiers from init(). Override
+// of an existing identifier — including a built-in HPKE token or a
+// non-HPKE token from another family (RSA, AES-KW, ECDH-ES, PBES2,
+// dir) — is allowed by design: an extension may legitimately need
+// to swap a default dispatch, and a programmatic check would either
+// break that pattern or be trivially bypassable (since extensions
+// can call any Register* from init()).
+//
+// Because override is the design, this function does NOT refuse
+// re-registration of any identifier and does NOT verify the caller's
+// intent. Anything in your import graph at init() can reshape the
+// HPKE dispatch surface. The supply-chain risk this implies lives one
+// layer up: audit your transitive dependencies, pin your go.mod, and
+// treat extensions that touch this registry the same way you would
+// treat any other init()-time hook into your crypto path. Contrast
+// with closed-set registers like jwk/ecdsa.RegisterCurve, which DO
+// refuse to re-register built-ins because no legitimate extension
+// wants to swap a built-in NIST curve.
+//
+// Companion modules calling this from init() must check the returned
+// error and panic on failure to stay forward-compatible — even though
+// the current implementation always returns nil, the error return is
+// part of the contract.
 func RegisterHPKEAlgorithm(alg string) error {
 	muHPKEAlgs.Lock()
 	defer muHPKEAlgs.Unlock()

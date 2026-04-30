@@ -70,12 +70,14 @@ var (
 // RegisterMLKEMAlgorithm registers an algorithm identifier as an ML-KEM
 // algorithm. After registration, IsMLKEM returns true for this identifier,
 // causing the JWE encrypt/decrypt dispatch to route it through the
-// ML-KEM path.
+// ML-KEM path. Registration is idempotent.
 //
-// The error return is reserved for future validation. The current
-// implementation always returns nil, but callers — especially extension
-// modules calling this from init() — must check the return value and panic
-// on failure to stay forward-compatible.
+// This is a privileged extension point — see [RegisterHPKEAlgorithm]
+// for the full design discussion of override semantics and supply-
+// chain considerations. The same rules apply: override is allowed by
+// design, callers must audit their import graph, and companion modules
+// calling this from init() must check the returned error and panic on
+// failure to stay forward-compatible.
 func RegisterMLKEMAlgorithm(alg string) error {
 	muMLKEMAlgs.Lock()
 	defer muMLKEMAlgs.Unlock()
@@ -88,10 +90,10 @@ func RegisterMLKEMAlgorithm(alg string) error {
 // derived shared secret as the CEK. Implementations should also call
 // RegisterMLKEMAlgorithm for the same identifier.
 //
-// The error return is reserved for future validation. The current
-// implementation always returns nil, but callers — especially extension
-// modules calling this from init() — must check the return value and panic
-// on failure to stay forward-compatible.
+// This is a privileged extension point — see [RegisterHPKEAlgorithm]
+// for override semantics. Companion modules calling this from init()
+// must check the returned error and panic on failure to stay forward-
+// compatible.
 func RegisterMLKEMDirectAlgorithm(alg string) error {
 	muMLKEMAlgs.Lock()
 	defer muMLKEMAlgs.Unlock()
