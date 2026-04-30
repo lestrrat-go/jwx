@@ -564,7 +564,26 @@ func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 		}
 		return decrypted, nil
 	}
-	return nil, fmt.Errorf(`jwe.Decrypt: failed to decrypt any of the recipients: %w`, errors.Join(errs...))
+	// Bound the joined-error count so a hostile JWE with many recipients
+	// can't produce an unbounded error string. Keep the first
+	// decryptErrorJoinCap entries verbatim and replace the rest with a
+	// single "... and N more" sentinel.
+	return nil, fmt.Errorf(`jwe.Decrypt: failed to decrypt any of the recipients: %w`, joinDecryptErrors(errs))
+}
+
+// decryptErrorJoinCap caps how many per-recipient constituent errors
+// get joined into the final Decrypt error so the resulting err.Error()
+// can't grow unboundedly under a hostile multi-recipient JWE.
+const decryptErrorJoinCap = 10
+
+func joinDecryptErrors(errs []error) error {
+	if len(errs) <= decryptErrorJoinCap {
+		return errors.Join(errs...)
+	}
+	kept := make([]error, decryptErrorJoinCap, decryptErrorJoinCap+1)
+	copy(kept, errs[:decryptErrorJoinCap])
+	kept = append(kept, fmt.Errorf("... and %d more error(s) suppressed", len(errs)-decryptErrorJoinCap))
+	return errors.Join(kept...)
 }
 
 func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
@@ -1237,7 +1256,11 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 
 	ret, err := dc.DecryptMessage(buf)
 	if err != nil {
-		return nil, makeDecryptError(`%w`, err)
+		// DecryptMessage already returns errors prefixed with
+		// "jwe.Decrypt:" — wrap as decryptError without adding a
+		// second prefix, otherwise multi-recipient errors carry
+		// the "jwe.Decrypt:" string multiple times.
+		return nil, decryptError{err}
 	}
 	return ret, nil
 }
