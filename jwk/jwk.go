@@ -360,7 +360,11 @@ func (ctx *setDecodeCtx) IgnoreParseError() bool {
 // Use [ParseKeyAs] when a concrete key subtype (e.g. [RSAPrivateKey],
 // [ECDSAPublicKey]) is required.
 func ParseKey(data []byte, options ...ParseOption) (Key, error) {
-	return doParseKey(data, options...)
+	key, err := doParseKey(data, options...)
+	if err != nil {
+		return nil, kparseerr(`%w`, err)
+	}
+	return key, nil
 }
 
 // ParseKeyAs behaves like [ParseKey] but asserts the parsed key to the
@@ -373,11 +377,11 @@ func ParseKeyAs[T Key](data []byte, options ...ParseOption) (T, error) {
 	var zero T
 	key, err := doParseKey(data, options...)
 	if err != nil {
-		return zero, err
+		return zero, kasparseerr(`%w`, err)
 	}
 	result, ok := key.(T)
 	if !ok {
-		return zero, parseerr(`%w`, KeyTypeMismatchError{
+		return zero, kasparseerr(`%w`, KeyTypeMismatchError{
 			Got:  reflect.TypeOf(key),
 			Want: reflect.TypeFor[T](),
 		})

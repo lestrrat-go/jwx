@@ -73,6 +73,14 @@ func sparseerr(f string, args ...any) error {
 	return bparseerr(`jwk.ParseString`, f, args...)
 }
 
+func kparseerr(f string, args ...any) error {
+	return bparseerr(`jwk.ParseKey`, f, args...)
+}
+
+func kasparseerr(f string, args ...any) error {
+	return bparseerr(`jwk.ParseKeyAs`, f, args...)
+}
+
 var errDefaultParseError = parseError{errors.New(`parse error`)}
 
 func ParseError() error {
