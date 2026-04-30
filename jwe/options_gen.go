@@ -366,6 +366,12 @@ func WithKeyUsed(v *any) DecryptOption {
 // exceeds this amount when decompressed, jwe.Decrypt will return an error.
 // The default value is 10MB.
 //
+// A non-positive value rejects every compressed JWE: the cap fires on
+// the first byte of inflated output, so any "zip"-compressed message
+// fails with an exceeds-cap error before any payload is delivered. Use
+// this when the deployment refuses to accept compressed JWEs at all.
+// Pass an explicit positive cap when compressed payloads are expected.
+//
 // This option can be used for `jwe.Settings()`, which changes the behavior
 // globally, or for `jwe.Decrypt()`, which changes the behavior for that
 // specific call.
