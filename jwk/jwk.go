@@ -19,6 +19,7 @@ import (
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwa"
+	"github.com/lestrrat-go/jwx/v3/jwk/jwkbb"
 )
 
 var fieldRegistry = json.NewRegistry()
@@ -448,8 +449,26 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		defer setter.setRejectDuplicateKID(false)
 	}
 
-	if err := json.Unmarshal(src, s); err != nil {
-		return nil, parseerr(`failed to unmarshal JWK set: %w`, err)
+	// Dispatch JWK-vs-JWKS up front. Set.UnmarshalJSON requires JWKS
+	// shape; the bare-JWK convenience lives here.
+	if jwkbb.HeaderHas(jwkbb.HeaderParse(src), "keys") {
+		if err := json.Unmarshal(src, s); err != nil {
+			return nil, parseerr(`failed to unmarshal JWK set: %w`, err)
+		}
+	} else {
+		key, err := ParseKey(src, options...)
+		if err != nil {
+			return nil, parseerr(`failed to parse sole key: %w`, err)
+		}
+		if err := s.AddKey(key); err != nil {
+			return nil, parseerr(`failed to add jwk.Key to set: %w`, err)
+		}
+	}
+
+	if rejectDupKid {
+		if kid, dup := firstDuplicateKID(s); dup {
+			return nil, parseerr(`duplicate "kid" %q`, kid)
+		}
 	}
 
 	return s, nil
