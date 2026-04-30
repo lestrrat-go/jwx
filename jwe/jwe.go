@@ -543,6 +543,12 @@ func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 
 	errs := make([]error, 0, len(recipients))
 	for _, recipient := range recipients {
+		// Honor caller's deadline between recipients. Symmetric with
+		// the per-keyProvider and per-(alg,key) checks in tryRecipient.
+		if err := dc.ctx.Err(); err != nil {
+			return nil, makeDecryptError(`%w`, err)
+		}
+
 		decrypted, err := dc.tryRecipient(msg, recipient, h, aad, computedAad)
 		if err != nil {
 			errs = append(errs, makeRecipientError(err))
@@ -562,12 +568,22 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 	var tried int
 	var lastError error
 	for i, kp := range dc.keyProviders {
+		// Honor caller's deadline between key providers.
+		if err := dc.ctx.Err(); err != nil {
+			return nil, err
+		}
+
 		var sink algKeySink
 		if err := kp.FetchKeys(dc.ctx, &sink, recipient, msg); err != nil {
 			return nil, fmt.Errorf(`key provider %d failed: %w`, i, err)
 		}
 
 		for _, pair := range sink.list {
+			// Honor caller's deadline between (alg,key) pairs.
+			if err := dc.ctx.Err(); err != nil {
+				return nil, err
+			}
+
 			tried++
 			// alg is converted here because pair.alg is of type jwa.KeyAlgorithm.
 			// this may seem ugly, but we're trying to avoid declaring separate

@@ -1718,3 +1718,36 @@ func TestDecryptRejectsAlgConflictBetweenProtectedAndPerRecipient(t *testing.T) 
 	require.ErrorIs(t, err, jwe.DecryptError())
 	require.Contains(t, err.Error(), "differs between protected", `error should name the conflict`)
 }
+
+// TestDecryptHonorsContextCancellation locks the contract that
+// jwe.Decrypt observes ctx cancellation between iterations of its
+// outer loops. Mirror of the JWS verify-loop ctx-honoring fix.
+func TestDecryptHonorsContextCancellation(t *testing.T) {
+	payload := []byte("hello world")
+
+	encryptKey, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err)
+	encryptPub, err := jwk.PublicKeyOf(encryptKey)
+	require.NoError(t, err)
+	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.RSA_OAEP(), encryptPub))
+	require.NoError(t, err)
+
+	set := jwk.NewSet()
+	for range 10 {
+		k, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err)
+		require.NoError(t, k.Set(jwk.AlgorithmKey, jwa.RSA_OAEP()))
+		require.NoError(t, set.AddKey(k))
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	_, err = jwe.Decrypt(encrypted,
+		jwe.WithContext(ctx),
+		jwe.WithKeySet(set, jwe.WithRequireKid(false)),
+	)
+	require.Error(t, err, `Decrypt must observe a pre-cancelled ctx`)
+	require.ErrorIs(t, err, context.Canceled,
+		`cancellation must propagate as context.Canceled`)
+}
