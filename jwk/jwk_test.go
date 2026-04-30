@@ -480,6 +480,8 @@ func TestParseKey(t *testing.T) {
 		t.Parallel()
 		_, err := jwk.ParseKey([]byte(`not json`))
 		require.Error(t, err)
+		require.ErrorIs(t, err, jwk.ParseError(),
+			`single-key parse failure should satisfy errors.Is(err, jwk.ParseError())`)
 	})
 }
 
@@ -541,6 +543,13 @@ func TestParseKeyAs(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, key)
 		require.Equal(t, jwa.OctetSeq(), key.KeyType())
+	})
+	t.Run("InvalidJSON", func(t *testing.T) {
+		t.Parallel()
+		_, err := jwk.ParseKeyAs[jwk.RSAPublicKey]([]byte(`not json`))
+		require.Error(t, err)
+		require.ErrorIs(t, err, jwk.ParseError(),
+			`typed parse failure should satisfy errors.Is(err, jwk.ParseError())`)
 	})
 }
 
