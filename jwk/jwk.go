@@ -248,6 +248,14 @@ func (ctx *setDecodeCtx) IgnoreParseError() bool {
 // are performed for certificate expiration, no checks against missing
 // parameters are performed, etc.
 func ParseKey(data []byte, options ...ParseOption) (Key, error) {
+	key, err := doParseKey(data, options...)
+	if err != nil {
+		return nil, kparseerr(`%w`, err)
+	}
+	return key, nil
+}
+
+func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 	var parsePEM bool
 	var localReg *json.Registry
 	var pemDecoder PEMDecoder
