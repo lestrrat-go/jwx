@@ -313,6 +313,19 @@ func TestNew(t *testing.T) {
 	require.Error(t, err, "nil key should cause an error")
 }
 
+// TestParseKeyError exercises the published `errors.Is(err, jwk.ParseError())`
+// contract on the single-key entry point.
+func TestParseKeyError(t *testing.T) {
+	t.Parallel()
+	t.Run("Invalid", func(t *testing.T) {
+		t.Parallel()
+		_, err := jwk.ParseKey([]byte(`not json`))
+		require.Error(t, err)
+		require.ErrorIs(t, err, jwk.ParseError(),
+			`single-key parse failure should satisfy errors.Is(err, jwk.ParseError())`)
+	})
+}
+
 func TestParse(t *testing.T) {
 	t.Parallel()
 	verify := func(t *testing.T, src string, expected reflect.Type) {
