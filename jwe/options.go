@@ -167,6 +167,31 @@ func WithKey(alg jwa.KeyAlgorithm, key any, options ...WithKeySuboption) Encrypt
 	})}
 }
 
+// WithKeySet specifies a JWKS (jwk.Set) to use for decryption. The
+// recipient's protected/per-recipient `kid` header selects a key from
+// the set, and the key's `alg` (or, when the JWK lacks `alg`, the
+// recipient's declared `alg`) drives the decrypt-time dispatch.
+//
+// By default WithKeySet requires the JWE to carry a `kid` header that
+// matches a key in the set. Pass `WithRequireKid(false)` to fall back
+// to trying every key in the set (slower, looser; intended for legacy
+// peers that don't emit `kid`). Per-key errors from the set are
+// surfaced via `errors.Join` when nothing matched, so a caller
+// debugging "why didn't my keyset match" sees the per-key reasons.
+//
+// Security caveats:
+//
+//   - The recipient's per-recipient header is unprotected. When the
+//     selected JWK has no `alg`, the keyset provider falls back to
+//     the per-recipient `alg`, then the protected header's `alg`.
+//     `jwe.Decrypt` re-checks `alg` against the integrity-protected
+//     protected header before any cryptographic call (RFC 7516
+//     §7.2.1 disjointness) — see the active prior
+//     `jwe-keyset-alg-confusion-blocked` for the full attack-tree
+//     analysis.
+//   - For untrusted issuers, prefer narrowing the keyset to keys
+//     already typed for the expected algorithm rather than relying
+//     on the header-fallback path.
 func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) DecryptOption {
 	requireKid := true
 	for _, opt := range options {

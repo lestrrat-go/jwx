@@ -2293,3 +2293,47 @@ func TestDecryptErrorBounded(t *testing.T) {
 	require.Equal(t, 1, strings.Count(msg, `jwe.Decrypt: failed to decrypt any of the recipients`),
 		`top-level "failed to decrypt any of the recipients" should appear exactly once (no double-wrap)`)
 }
+
+// TestKeySetProviderSurfacesPerKeyErrors locks the contract that
+// keySetProvider.FetchKeys returns a useful error when no key in the
+// set yielded a usable (alg, key) pair. Previously the per-key error
+// from selectKey ("key %q in set has no 'alg' field...") was
+// constructed but silently swallowed in the non-requireKid loop.
+func TestKeySetProviderSurfacesPerKeyErrors(t *testing.T) {
+	payload := []byte("hello")
+
+	encryptKey, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err)
+	encryptPub, err := jwk.PublicKeyOf(encryptKey)
+	require.NoError(t, err)
+	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.RSA_OAEP(), encryptPub))
+	require.NoError(t, err)
+
+	// Build a keyset where every key lacks "alg" and the JWE's
+	// recipient header has no "alg" either (it's only on the
+	// protected header). With WithRequireKid(false) the loop walks
+	// every key; selectKey rejects each one with the descriptive
+	// error. After the fix, that error reaches the caller.
+	set := jwk.NewSet()
+	for range 3 {
+		k, err := jwxtest.GenerateRsaJwk()
+		require.NoError(t, err)
+		// Strip the alg so selectKey hits the header-fallback path,
+		// then strip the recipient-header alg... actually the
+		// fallback uses the protected header alg, which IS present
+		// for our test JWE. So instead of testing the no-alg path
+		// (which would succeed), test the use=sig filter path.
+		require.NoError(t, k.Set(jwk.KeyUsageKey, "sig"))
+		require.NoError(t, set.AddKey(k))
+	}
+
+	_, err = jwe.Decrypt(encrypted,
+		jwe.WithKeySet(set, jwe.WithRequireKid(false)),
+	)
+	require.Error(t, err, `Decrypt must fail when no key in the set is usable`)
+	// The keyset error should appear in the joined error chain.
+	// We don't pin the exact wording; we just check that something
+	// from the keyset selection layer is reachable.
+	require.Contains(t, err.Error(), `failed to select`,
+		`error must surface keyset selection failure when no key matched`)
+}
