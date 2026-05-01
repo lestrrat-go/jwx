@@ -3009,7 +3009,7 @@ func TestMaxKeys(t *testing.T) {
 		buildLargeJWKS := func(n int) []byte {
 			var buf bytes.Buffer
 			buf.WriteString(`{"keys":[`)
-			for i := 0; i < n; i++ {
+			for i := range n {
 				if i > 0 {
 					buf.WriteByte(',')
 				}
