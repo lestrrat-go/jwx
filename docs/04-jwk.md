@@ -207,6 +207,29 @@ c4wOvhbalcX0FqTM3mXCgMFRbibquhwdxbU=
 source: [examples/jwk_parse_with_pem_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_parse_with_pem_example_test.go)
 <!-- END INCLUDE -->
 
+## Emit a key or a set in PEM format
+
+The reverse direction — turning a `jwk.Key` (or a whole `jwk.Set`) back into PEM-encoded ASN.1 DER bytes — uses [`jwkbb.EncodePEM`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk/jwkbb#EncodePEM) from the `jwk/jwkbb` sub-package. `EncodePEM` operates on raw Go crypto values (e.g. `*rsa.PublicKey`, `*ecdsa.PrivateKey`), not on `jwk.Key`, so unwrap first with [`jwk.Export[any]`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Export) for a single key or [`jwk.ExportAll[any]`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#ExportAll) for a set:
+
+```go
+import (
+  "github.com/lestrrat-go/jwx/v4/jwk"
+  "github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
+)
+
+// Single key
+raw, err := jwk.Export[any](key)
+if err != nil { /* ... */ }
+pemBytes, err := jwkbb.EncodePEM(raw)
+
+// Whole set
+raws, err := jwk.ExportAll[any](set)
+if err != nil { /* ... */ }
+pemBytes, err = jwkbb.EncodePEM(raws...)
+```
+
+`EncodePEM` dispatches by Go type, so registering a custom encoder for an extension key family is done with [`jwkbb.RegisterX509Encoder[T]`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk/jwkbb#RegisterX509Encoder).
+
 ## Parse a key from a file
 
 To parse keys stored in a file, [`jwk.ParseFS()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#ParseFS) can be used. 
