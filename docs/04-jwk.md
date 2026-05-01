@@ -746,3 +746,122 @@ For convenience, the library provides pre-defined filters that include standard 
 - [`jwk.SymmetricStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#SymmetricStandardFieldsFilter) - for symmetric keys
 
 These functions return filters configured to include the standard fields defined in the JWK specification for each key type.
+
+## Registering a custom key type
+
+The library supports adding new key types not implemented out of the
+box (e.g. a vendor-specific algorithm). The mechanism rests on four
+registration points:
+
+- `KeyProbe` — partial JSON unmarshaling that picks out hint fields used
+  to decide what concrete key type to construct. Add new hint fields with
+  [`jwk.RegisterProbeField[T]`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#RegisterProbeField).
+- `KeyParser` — converts a JSON payload into a `jwk.Key` using the
+  probe's hints. Register with [`jwk.RegisterKeyParser`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#RegisterKeyParser).
+- `KeyImporter[T]` — converts a raw Go crypto value into a `jwk.Key`.
+  Register with [`jwk.RegisterKeyImporter[T]`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#RegisterKeyImporter).
+- `KeyExporter` — converts a `jwk.Key` back into a raw Go value.
+  Register with [`jwk.RegisterKeyExporter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#RegisterKeyExporter),
+  keyed by `jwk.KeyKind` (case-insensitive — usually
+  `jwk.KeyKind(jwa.RSA().String())` or similar).
+
+The whole extension surface is marked **experimental** — the API may
+change in backward-incompatible ways even between minor versions.
+
+### How parsing dispatches
+
+`jwk.Parse` / `jwk.ParseKey` runs in two passes:
+
+1. **Probe.** A small sweep that captures the JSON values registered via
+   `RegisterProbeField`. The default probe captures `kty`, `d`, and
+   `priv`, which is enough to decide RSA / EC / OKP / oct / AKP and
+   whether the key is private.
+2. **Parse.** Each registered `KeyParser`'s `ParseKey` method is called
+   in reverse-registration order until one returns a non-`ContinueError`
+   result. The default parser handles the built-in key types last; your
+   parser runs first and either claims the key or returns
+   `jwk.ContinueError()` to fall through.
+
+A custom parser using a custom probe field looks like:
+
+```go
+func init() {
+    if err := jwk.RegisterProbeField[string]("MyHint", "my_hint"); err != nil {
+        panic(err)
+    }
+    if err := jwk.RegisterKeyParser(MyKeyParser{}); err != nil {
+        panic(err)
+    }
+}
+
+type MyKeyParser struct{}
+
+func (MyKeyParser) ParseKey(probe *jwk.KeyProbe, unmarshaler jwk.KeyUnmarshaler, data []byte) (jwk.Key, error) {
+    hintV, ok := probe.Field("MyHint")
+    if !ok {
+        // Not for us — let the next parser try.
+        return nil, jwk.ContinueError()
+    }
+    hint, _ := hintV.(string)
+
+    var key jwk.Key
+    switch hint {
+    case "...":
+        key = newMyAwesomeJWK()
+    default:
+        return nil, jwk.ContinueError()
+    }
+
+    if err := unmarshaler.UnmarshalKey(data, key); err != nil {
+        return nil, err
+    }
+    return key, nil
+}
+```
+
+### How import / export dispatch
+
+`jwk.Import[T](raw)` looks up a `KeyImporter[T]` registered for the
+exact Go type of `raw`. Pre-registered importers exist for the standard
+crypto types (`*rsa.PrivateKey`, `*ecdsa.PublicKey`, `ed25519.PrivateKey`,
+etc.); add your own:
+
+```go
+func init() {
+    if err := jwk.RegisterKeyImporter[*mypkg.SuperSecretKey](
+        func(raw *mypkg.SuperSecretKey) (jwk.Key, error) {
+            // raw is already typed — no `any`-cast or ContinueError
+            // needed. v4's import surface is one importer per Go type.
+            return mypkg.NewSuperSecretJWK(raw), nil
+        },
+    ); err != nil {
+        panic(err)
+    }
+}
+```
+
+`jwk.Export[T](key)` runs a `KeyExporter` keyed by `jwk.KeyKind`
+(matched case-insensitively against `key.KeyType()`):
+
+```go
+func init() {
+    if err := jwk.RegisterKeyExporter(
+        jwk.KeyKind("MY_AWESOME"),
+        jwk.KeyExportFunc(exportMyKey),
+    ); err != nil {
+        panic(err)
+    }
+}
+
+func exportMyKey(key jwk.Key, hint any) (any, error) {
+    k, ok := key.(*mypkg.SuperSecretJWK)
+    if !ok {
+        // Not compatible — let other exporters try.
+        return nil, jwk.ContinueError()
+    }
+    return k.Raw(), nil
+}
+```
+
+For built-in key types you can build the `KeyKind` from the matching
+`jwa` constant: `jwk.KeyKind(jwa.RSA().String())`.
