@@ -11,7 +11,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/jwx/v4/internal/pool"
-	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
 )
 
 const keysKey = `keys` // appease linter
@@ -214,7 +213,21 @@ func (s *set) setRejectDuplicateKID(v bool) {
 	s.rejectDuplicateKID = v
 }
 
+// UnmarshalJSON delegates to UnmarshalJSONFrom so the streaming /
+// cap-before-allocate behavior is identical for stdlib v1 callers
+// (encoding/json) and jsonv2 callers. This entry point requires JWKS
+// shape — bare JWK input is rejected here. Callers that don't know
+// the shape ahead of time should use [Parse], which dispatches.
 func (s *set) UnmarshalJSON(data []byte) error {
+	return s.UnmarshalJSONFrom(jsontext.NewDecoder(bytes.NewReader(data)))
+}
+
+// UnmarshalJSONFrom streams the JWKS document via the supplied decoder.
+// The "keys" array is read element-by-element with the per-Set cap
+// (or the global default) enforced BEFORE the (cap+1)-th element is
+// tokenized — an attacker-controlled input length cannot force
+// allocation past the cap.
+func (s *set) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -230,28 +243,12 @@ func (s *set) UnmarshalJSON(data []byte) error {
 		ignoreParseError = dc.IgnoreParseError()
 	}
 
-	// jwk.Parse and direct json.Unmarshal accept either a JWKS document
-	// or a single bare JWK. Decide which one we have up front so the
-	// JWKS-level streaming pass only runs when "keys" is actually
-	// present — otherwise top-level fields would be misclassified as
-	// JWKS-level extension members instead of the single key's own
-	// members.
-	if !jwkbb.HeaderHas(jwkbb.HeaderParse(data), "keys") {
-		key, err := doParseKey(data, options...)
-		if err != nil {
-			return fmt.Errorf(`failed to parse sole key in key set: %w`, err)
-		}
-		s.keys = append(s.keys, key)
-		return nil
-	}
-
 	maxK := s.maxKeys
 	if maxK <= 0 {
 		maxK = int(maxKeys.Load())
 	}
 	rejectDupKid := s.rejectDuplicateKID || rejectDuplicateKID.Load()
 
-	dec := json.NewDecoder(bytes.NewReader(data))
 	tok, err := dec.ReadToken()
 	if err != nil {
 		return fmt.Errorf(`error reading token: %w`, err)
@@ -267,25 +264,33 @@ func (s *set) UnmarshalJSON(data []byte) error {
 		fieldName := tok.String()
 		switch fieldName {
 		case "keys":
-			var list []json.RawMessage
-			if err := json.UnmarshalDecode(dec, &list); err != nil {
+			tok, err := dec.ReadToken()
+			if err != nil {
 				return fmt.Errorf(`failed to decode "keys": %w`, err)
 			}
-
-			if len(list) > maxK {
-				return fmt.Errorf(`too many keys in "keys" array: got %d, max %d`, len(list), maxK)
+			if tok.Kind() != '[' {
+				return fmt.Errorf(`failed to decode "keys": expected '[' but got '%c'`, tok.Kind())
 			}
 
 			var seenKIDs map[string]struct{}
 			if rejectDupKid {
-				seenKIDs = make(map[string]struct{}, len(list))
+				seenKIDs = make(map[string]struct{})
 			}
-			for i, keysrc := range list {
-				key, err := doParseKey(keysrc, options...)
+			var i int
+			for dec.PeekKind() != ']' {
+				if i >= maxK {
+					return fmt.Errorf(`too many keys in "keys" array: max %d`, maxK)
+				}
+				raw, err := dec.ReadValue()
+				if err != nil {
+					return fmt.Errorf(`failed to decode "keys": %w`, err)
+				}
+				key, err := doParseKey([]byte(raw), options...)
 				if err != nil {
 					if !ignoreParseError {
 						return fmt.Errorf(`failed to decode key #%d in "keys": %w`, i, err)
 					}
+					i++
 					continue
 				}
 				if seenKIDs != nil {
@@ -297,6 +302,10 @@ func (s *set) UnmarshalJSON(data []byte) error {
 					}
 				}
 				s.keys = append(s.keys, key)
+				i++
+			}
+			if _, err := dec.ReadToken(); err != nil {
+				return fmt.Errorf(`failed to decode "keys": %w`, err)
 			}
 		default:
 			var v any
@@ -310,7 +319,6 @@ func (s *set) UnmarshalJSON(data []byte) error {
 			s.privateParams[fieldName] = v
 		}
 	}
-	// consume closing '}'
 	if _, err := dec.ReadToken(); err != nil {
 		return fmt.Errorf(`error reading closing token: %w`, err)
 	}

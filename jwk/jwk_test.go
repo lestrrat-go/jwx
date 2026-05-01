@@ -558,8 +558,11 @@ func TestParse(t *testing.T) {
 	verify := func(t *testing.T, src string, expected reflect.Type) {
 		t.Helper()
 		t.Run("json.Unmarshal", func(t *testing.T) {
+			// json.Unmarshal targets the Set type directly, which
+			// requires JWKS shape. For unknown-shape input use
+			// jwk.Parse, which dispatches between bare JWK and JWKS.
 			set := jwk.NewSet()
-			err := json.Unmarshal([]byte(src), set)
+			err := json.Unmarshal([]byte(`{"keys":[`+src+`]}`), set)
 			require.NoError(t, err, `json.Unmarshal should succeed`)
 
 			require.True(t, set.Len() > 0, "set.Keys should be greater than 0")
@@ -2688,6 +2691,51 @@ func TestMaxKeys(t *testing.T) {
 		set, err := jwk.Parse(buildPEM(5), jwk.WithX509(true), jwk.WithMaxKeys(5))
 		require.NoError(t, err, `jwk.Parse should accept exactly the per-call PEM limit`)
 		require.Equal(t, 5, set.Len())
+	})
+
+	t.Run("cap fires from streaming UnmarshalJSONFrom", func(t *testing.T) {
+		// Valid 3-element JWKS with cap=2. With the streaming
+		// UnmarshalJSONFrom hooked into jsonv2, the (cap+1)-th
+		// element is never tokenized — the cap check fires after
+		// reading element 2 and before peeking element 3.
+		input := []byte(`{"keys":[{"kty":"oct","k":"AAAA"},{"kty":"oct","k":"BBBB"},{"kty":"oct","k":"CCCC"}]}`)
+		_, err := jwk.Parse(input, jwk.WithMaxKeys(2))
+		require.Error(t, err, `jwk.Parse should reject input that exceeds the cap`)
+		require.ErrorIs(t, err, jwk.ParseError())
+		require.Contains(t, err.Error(), `too many keys`,
+			`cap error should be reported, not a downstream parse error: %v`, err)
+	})
+
+	t.Run("allocations scale with cap, not with input length", func(t *testing.T) {
+		// Discriminator for materialize-then-check vs stream-then-cap:
+		// the streaming decoder stops touching elements past the cap,
+		// so allocation should scale with the cap, not with the
+		// (much larger) input element count. We assert a relative
+		// bound — capped parse must allocate much less than an
+		// uncapped parse of the same input — so the test stays
+		// stable across Go and jsonv2 versions.
+		buildLargeJWKS := func(n int) []byte {
+			var buf bytes.Buffer
+			buf.WriteString(`{"keys":[`)
+			for i := range n {
+				if i > 0 {
+					buf.WriteByte(',')
+				}
+				buf.WriteString(`{"kty":"oct","k":"AAAA"}`)
+			}
+			buf.WriteString(`]}`)
+			return buf.Bytes()
+		}
+		input := buildLargeJWKS(1000)
+		allocsCapped := testing.AllocsPerRun(10, func() {
+			_, _ = jwk.Parse(input, jwk.WithMaxKeys(2))
+		})
+		allocsUncapped := testing.AllocsPerRun(10, func() {
+			_, _ = jwk.Parse(input, jwk.WithMaxKeys(1001))
+		})
+		require.Less(t, allocsCapped*4, allocsUncapped,
+			`capped parse should allocate much less than uncapped; capped=%.0f uncapped=%.0f`,
+			allocsCapped, allocsUncapped)
 	})
 }
 
