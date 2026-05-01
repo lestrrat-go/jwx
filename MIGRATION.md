@@ -399,7 +399,7 @@ import _ "github.com/jwx-go/asmbase64/v4" // registration only
 ### Recipe 10: Custom Key Importer
 
 ```go
-// Before
+// Before (v3)
 jwk.RegisterKeyImporter(&myKeyType{}, jwk.KeyImportFunc(func(raw any) (jwk.Key, error) {
     src, ok := raw.(*myKeyType)
     if !ok {
@@ -408,10 +408,15 @@ jwk.RegisterKeyImporter(&myKeyType{}, jwk.KeyImportFunc(func(raw any) (jwk.Key, 
     // ... convert
 }))
 
-// After
-jwk.RegisterKeyImporter(func(src *myKeyType) (jwk.Key, error) {
-    // ... convert — type parameter inferred, no assertion needed
-})
+// After (v4): RegisterKeyImporter[T] takes a jwk.KeyImporter; use
+// jwk.TypedKeyImportFunc[T] to adapt a typed function. The type
+// parameter T identifies the dispatch key.
+jwk.RegisterKeyImporter[*myKeyType](
+    jwk.TypedKeyImportFunc[*myKeyType](func(src *myKeyType) (jwk.Key, error) {
+        // The adapter has already type-asserted; no manual assertion needed.
+        // ... convert
+    }),
+)
 ```
 
 ### Recipe 11: Iterating Over Sets and Tokens

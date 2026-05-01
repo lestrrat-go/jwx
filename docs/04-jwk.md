@@ -821,23 +821,46 @@ func (MyKeyParser) ParseKey(probe *jwk.KeyProbe, unmarshaler jwk.KeyUnmarshaler,
 
 ### How import / export dispatch
 
-`jwk.Import[T](raw)` looks up a `KeyImporter[T]` registered for the
+`jwk.Import[T](raw)` looks up the `KeyImporter` registered for the
 exact Go type of `raw`. Pre-registered importers exist for the standard
 crypto types (`*rsa.PrivateKey`, `*ecdsa.PublicKey`, `ed25519.PrivateKey`,
-etc.); add your own:
+etc.); register your own with `jwk.RegisterKeyImporter[T](KeyImporter)`.
+The type parameter `T` is the dispatch key (the Go type the importer
+handles); the value is any `KeyImporter` implementation. Use
+`jwk.TypedKeyImportFunc[T]` to adapt a typed function:
 
 ```go
 func init() {
     if err := jwk.RegisterKeyImporter[*mypkg.SuperSecretKey](
-        func(raw *mypkg.SuperSecretKey) (jwk.Key, error) {
-            // raw is already typed — no `any`-cast or ContinueError
-            // needed. v4's import surface is one importer per Go type.
-            return mypkg.NewSuperSecretJWK(raw), nil
-        },
+        jwk.TypedKeyImportFunc[*mypkg.SuperSecretKey](
+            func(raw *mypkg.SuperSecretKey) (jwk.Key, error) {
+                // The adapter has already type-asserted raw to the
+                // declared T; no `any`-cast needed in the body.
+                return mypkg.NewSuperSecretJWK(raw), nil
+            },
+        ),
     ); err != nil {
         panic(err)
     }
 }
+```
+
+For an importer with non-trivial state, implement the `KeyImporter`
+interface on your own type and pass an instance directly:
+
+```go
+type mySuperSecretImporter struct { /* config, caches, ... */ }
+
+func (i *mySuperSecretImporter) Import(raw any) (jwk.Key, error) {
+    src, ok := raw.(*mypkg.SuperSecretKey)
+    if !ok {
+        return nil, fmt.Errorf("expected *mypkg.SuperSecretKey, got %T", raw)
+    }
+    return i.convert(src)
+}
+
+// Registration:
+jwk.RegisterKeyImporter[*mypkg.SuperSecretKey](&mySuperSecretImporter{...})
 ```
 
 `jwk.Export[T](key)` runs a `KeyExporter` keyed by `jwk.KeyKind`

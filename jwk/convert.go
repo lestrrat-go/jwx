@@ -64,12 +64,13 @@ var keyExporters = make(map[KeyKind][]KeyExporter)
 var muKeyImporters sync.RWMutex
 var muKeyExporters sync.RWMutex
 
-// RegisterKeyImporter registers a typed import function for converting
-// raw keys of type T to jwk.Key. The type is derived from the type
-// parameter, eliminating the need to pass a zero value.
+// RegisterKeyImporter registers a [KeyImporter] under the raw key type
+// T. The type parameter T identifies the dispatch key — it is the Go
+// type of the raw value [Import] will be called with — and is not used
+// in the function signature itself; pass it explicitly at the call site.
 //
-// When `jwk.Import()` is called, the library looks up the appropriate
-// importer for the given raw key type (via `reflect`) and executes it.
+// When [Import] is called, the library looks up the importer for the
+// raw value's runtime type (via reflect) and invokes its Import method.
 //
 // Importer dispatch is single-valued per Go type T: there is exactly
 // one importer per reflect.Type. Subsequent registrations for the same
@@ -93,7 +94,14 @@ var muKeyExporters sync.RWMutex
 //
 // Extension modules calling this from init() must check the returned
 // error and panic on failure.
-func RegisterKeyImporter[T any](fn func(T) (Key, error)) error {
+//
+// To register from a typed function (the common case for extensions),
+// use [TypedKeyImportFunc] as the adapter:
+//
+//	jwk.RegisterKeyImporter[*mypkg.Key](
+//	    jwk.TypedKeyImportFunc[*mypkg.Key](importMyKey),
+//	)
+func RegisterKeyImporter[T any](ki KeyImporter) error {
 	muKeyImporters.Lock()
 	defer muKeyImporters.Unlock()
 	t := reflect.TypeFor[T]()
@@ -103,7 +111,7 @@ func RegisterKeyImporter[T any](fn func(T) (Key, error)) error {
 	if _, exists := keyImporters[t]; exists {
 		return fmt.Errorf(`jwk.RegisterKeyImporter: an importer for %s is already registered; call jwk.UnregisterKeyImporter[%s]() first if you need to replace it`, t, t)
 	}
-	keyImporters[t] = &keyImportAdapter[T]{fn: fn}
+	keyImporters[t] = ki
 	return nil
 }
 
@@ -190,24 +198,37 @@ type KeyImporter interface {
 	Import(any) (Key, error)
 }
 
-// KeyImportFunc is a convenience type to implement KeyImporter as a function.
+// KeyImportFunc is a convenience type to implement KeyImporter as a
+// function operating on the untyped any. Use [TypedKeyImportFunc]
+// instead when the importer expects a specific raw key type — it
+// performs the type assertion for you.
 type KeyImportFunc func(any) (Key, error)
 
 func (f KeyImportFunc) Import(raw any) (Key, error) {
 	return f(raw)
 }
 
-// keyImportAdapter wraps a typed function into a KeyImporter.
-type keyImportAdapter[T any] struct {
-	fn func(T) (Key, error)
-}
+// TypedKeyImportFunc is a convenience adapter that satisfies
+// [KeyImporter] from a typed import function. The Import method
+// type-asserts its argument to T and invokes the underlying function;
+// on a type mismatch (which should not happen given dispatch is keyed
+// by reflect.Type, but is still defensible) it returns an error.
+//
+// This is the preferred adapter for extensions that have a typed import
+// function — the alternative ([KeyImportFunc] over an untyped any) puts
+// the assertion burden on the caller.
+//
+//	jwk.RegisterKeyImporter[*mypkg.Key](
+//	    jwk.TypedKeyImportFunc[*mypkg.Key](importMyKey),
+//	)
+type TypedKeyImportFunc[T any] func(T) (Key, error)
 
-func (a *keyImportAdapter[T]) Import(raw any) (Key, error) {
+func (f TypedKeyImportFunc[T]) Import(raw any) (Key, error) {
 	v, ok := raw.(T)
 	if !ok {
-		return nil, fmt.Errorf(`cannot convert key type '%T' to %T`, raw, *new(T))
+		return nil, fmt.Errorf(`jwk.TypedKeyImportFunc: cannot convert key type %T to %T`, raw, *new(T))
 	}
-	return a.fn(v)
+	return f(v)
 }
 
 // KeyExporter is used to convert from a `jwk.Key` to a raw key. From the PoV of the `jwk.Key`,
@@ -269,7 +290,7 @@ func init() {
 func registerBuiltinKeyImporter[T any](fn func(T) (Key, error)) {
 	t := reflect.TypeFor[T]()
 	builtinImporterTypes[t] = struct{}{}
-	keyImporters[t] = &keyImportAdapter[T]{fn: fn}
+	keyImporters[t] = TypedKeyImportFunc[T](fn)
 }
 
 // panicOnRegistrationError converts a non-nil error returned by a Register*

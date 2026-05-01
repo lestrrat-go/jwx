@@ -49,31 +49,28 @@ func TestFindExportersCaseInsensitiveKeyKind(t *testing.T) {
 	require.Equal(t, sentinel, got, "Export should return sentinel from registered exporter")
 }
 
-// recipe10RawKey exercises the MIGRATION.md Recipe 10 custom-importer
-// syntax. Any change to jwk.RegisterKeyImporter's signature that breaks
-// bare-literal type inference (e.g. adding a second type parameter)
-// must break this test so the migration guide doesn't silently rot.
+// recipe10RawKey exercises the custom-importer registration syntax
+// shown in MIGRATION.md Recipe 10.
 type recipe10RawKey struct{ secret []byte }
 
-// TestMigrationRecipe10KeyImporterSyntax pins the Recipe 10 syntax shown
-// in MIGRATION.md: a bare function literal with a pointer argument whose
-// type parameter is inferred.
+// TestMigrationRecipe10KeyImporterSyntax pins the syntax shown in
+// MIGRATION.md Recipe 10: register a [jwk.KeyImporter] (typically via
+// [jwk.TypedKeyImportFunc] for a typed function) under an explicit
+// raw-key Go type parameter.
 func TestMigrationRecipe10KeyImporterSyntax(t *testing.T) {
-	// Intentionally mirrors MIGRATION.md Recipe 10 verbatim:
-	//
-	//	jwk.RegisterKeyImporter(func(src *myKeyType) (jwk.Key, error) {
-	//	    // ... convert — type parameter inferred, no assertion needed
-	//	})
+	importFn := func(src *recipe10RawKey) (jwk.Key, error) {
+		k, err := jwk.Import[jwk.Key](src.secret)
+		if err != nil {
+			return nil, err
+		}
+		require.NoError(t, k.Set(jwk.KeyIDKey, "recipe10"))
+		return k, nil
+	}
 	require.NoError(t,
-		jwk.RegisterKeyImporter(func(src *recipe10RawKey) (jwk.Key, error) {
-			k, err := jwk.Import[jwk.Key](src.secret)
-			if err != nil {
-				return nil, err
-			}
-			require.NoError(t, k.Set(jwk.KeyIDKey, "recipe10"))
-			return k, nil
-		}),
-		"RegisterKeyImporter should accept Recipe 10 bare-literal form")
+		jwk.RegisterKeyImporter[*recipe10RawKey](
+			jwk.TypedKeyImportFunc[*recipe10RawKey](importFn),
+		),
+		"RegisterKeyImporter should accept the typed-function adapter form")
 
 	key, err := jwk.Import[jwk.Key](&recipe10RawKey{secret: []byte("recipe-10-secret-material")})
 	require.NoError(t, err, "Import should dispatch to the Recipe 10 importer")
@@ -93,30 +90,30 @@ func TestRegisterKeyImporterRejectsDuplicate(t *testing.T) {
 	// Register/Unregister bookkeeping is correct. Return a non-nil
 	// error so the function doesn't look like a (nil, nil) sentinel
 	// that nilnil flags.
-	fn := func(dupImporterKey) (jwk.Key, error) {
+	importer := jwk.TypedKeyImportFunc[dupImporterKey](func(dupImporterKey) (jwk.Key, error) {
 		return nil, errors.New("dupImporterKey: importer body not exercised by this test")
-	}
+	})
 
 	t.Run("first registration succeeds", func(t *testing.T) {
-		require.NoError(t, jwk.RegisterKeyImporter(fn))
+		require.NoError(t, jwk.RegisterKeyImporter[dupImporterKey](importer))
 		defer jwk.UnregisterKeyImporter[dupImporterKey]()
 	})
 
 	t.Run("duplicate registration is rejected", func(t *testing.T) {
-		require.NoError(t, jwk.RegisterKeyImporter(fn))
+		require.NoError(t, jwk.RegisterKeyImporter[dupImporterKey](importer))
 		defer jwk.UnregisterKeyImporter[dupImporterKey]()
 
-		err := jwk.RegisterKeyImporter(fn)
+		err := jwk.RegisterKeyImporter[dupImporterKey](importer)
 		require.Error(t, err, `second RegisterKeyImporter should error`)
 		require.Contains(t, err.Error(), `already registered`,
 			`error should say the type is already registered`)
 	})
 
 	t.Run("Unregister + Register allows replacement", func(t *testing.T) {
-		require.NoError(t, jwk.RegisterKeyImporter(fn))
+		require.NoError(t, jwk.RegisterKeyImporter[dupImporterKey](importer))
 		require.True(t, jwk.UnregisterKeyImporter[dupImporterKey](),
 			`UnregisterKeyImporter should report removal`)
-		require.NoError(t, jwk.RegisterKeyImporter(fn),
+		require.NoError(t, jwk.RegisterKeyImporter[dupImporterKey](importer),
 			`RegisterKeyImporter should succeed after Unregister`)
 		defer jwk.UnregisterKeyImporter[dupImporterKey]()
 	})
@@ -138,11 +135,10 @@ func TestRegisterKeyImporterRejectsDuplicate(t *testing.T) {
 // resemble a (nil, nil) sentinel.
 func TestRegisterKeyImporterRejectsBuiltinTypes(t *testing.T) {
 	stubErr := errors.New("stub importer must not be invoked: built-in types are reserved")
+	stub := jwk.KeyImportFunc(func(any) (jwk.Key, error) { return nil, stubErr })
 
 	t.Run("RegisterKeyImporter[*rsa.PrivateKey]", func(t *testing.T) {
-		err := jwk.RegisterKeyImporter(func(*rsa.PrivateKey) (jwk.Key, error) {
-			return nil, stubErr
-		})
+		err := jwk.RegisterKeyImporter[*rsa.PrivateKey](stub)
 		require.Error(t, err, `RegisterKeyImporter should refuse a built-in raw key type`)
 		require.Contains(t, err.Error(), `built-in`,
 			`error should explain that built-in importers cannot be overridden`)
@@ -154,48 +150,20 @@ func TestRegisterKeyImporterRejectsBuiltinTypes(t *testing.T) {
 		name string
 		fn   func() error
 	}{
-		{"rsa.PrivateKey", func() error {
-			return jwk.RegisterKeyImporter(func(rsa.PrivateKey) (jwk.Key, error) { return nil, stubErr })
-		}},
-		{"*rsa.PublicKey", func() error {
-			return jwk.RegisterKeyImporter(func(*rsa.PublicKey) (jwk.Key, error) { return nil, stubErr })
-		}},
-		{"rsa.PublicKey", func() error {
-			return jwk.RegisterKeyImporter(func(rsa.PublicKey) (jwk.Key, error) { return nil, stubErr })
-		}},
-		{"*ecdsa.PrivateKey", func() error {
-			return jwk.RegisterKeyImporter(func(*ecdsa.PrivateKey) (jwk.Key, error) { return nil, stubErr })
-		}},
-		{"ecdsa.PrivateKey", func() error {
-			return jwk.RegisterKeyImporter(func(ecdsa.PrivateKey) (jwk.Key, error) { return nil, stubErr })
-		}},
-		{"*ecdsa.PublicKey", func() error {
-			return jwk.RegisterKeyImporter(func(*ecdsa.PublicKey) (jwk.Key, error) { return nil, stubErr })
-		}},
-		{"ecdsa.PublicKey", func() error {
-			return jwk.RegisterKeyImporter(func(ecdsa.PublicKey) (jwk.Key, error) { return nil, stubErr })
-		}},
-		{"ed25519.PrivateKey", func() error {
-			return jwk.RegisterKeyImporter(func(ed25519.PrivateKey) (jwk.Key, error) { return nil, stubErr })
-		}},
-		{"ed25519.PublicKey", func() error {
-			return jwk.RegisterKeyImporter(func(ed25519.PublicKey) (jwk.Key, error) { return nil, stubErr })
-		}},
-		{"*ecdh.PrivateKey", func() error {
-			return jwk.RegisterKeyImporter(func(*ecdh.PrivateKey) (jwk.Key, error) { return nil, stubErr })
-		}},
-		{"ecdh.PrivateKey", func() error {
-			return jwk.RegisterKeyImporter(func(ecdh.PrivateKey) (jwk.Key, error) { return nil, stubErr })
-		}},
-		{"*ecdh.PublicKey", func() error {
-			return jwk.RegisterKeyImporter(func(*ecdh.PublicKey) (jwk.Key, error) { return nil, stubErr })
-		}},
-		{"ecdh.PublicKey", func() error {
-			return jwk.RegisterKeyImporter(func(ecdh.PublicKey) (jwk.Key, error) { return nil, stubErr })
-		}},
-		{"[]byte", func() error {
-			return jwk.RegisterKeyImporter(func([]byte) (jwk.Key, error) { return nil, stubErr })
-		}},
+		{"rsa.PrivateKey", func() error { return jwk.RegisterKeyImporter[rsa.PrivateKey](stub) }},
+		{"*rsa.PublicKey", func() error { return jwk.RegisterKeyImporter[*rsa.PublicKey](stub) }},
+		{"rsa.PublicKey", func() error { return jwk.RegisterKeyImporter[rsa.PublicKey](stub) }},
+		{"*ecdsa.PrivateKey", func() error { return jwk.RegisterKeyImporter[*ecdsa.PrivateKey](stub) }},
+		{"ecdsa.PrivateKey", func() error { return jwk.RegisterKeyImporter[ecdsa.PrivateKey](stub) }},
+		{"*ecdsa.PublicKey", func() error { return jwk.RegisterKeyImporter[*ecdsa.PublicKey](stub) }},
+		{"ecdsa.PublicKey", func() error { return jwk.RegisterKeyImporter[ecdsa.PublicKey](stub) }},
+		{"ed25519.PrivateKey", func() error { return jwk.RegisterKeyImporter[ed25519.PrivateKey](stub) }},
+		{"ed25519.PublicKey", func() error { return jwk.RegisterKeyImporter[ed25519.PublicKey](stub) }},
+		{"*ecdh.PrivateKey", func() error { return jwk.RegisterKeyImporter[*ecdh.PrivateKey](stub) }},
+		{"ecdh.PrivateKey", func() error { return jwk.RegisterKeyImporter[ecdh.PrivateKey](stub) }},
+		{"*ecdh.PublicKey", func() error { return jwk.RegisterKeyImporter[*ecdh.PublicKey](stub) }},
+		{"ecdh.PublicKey", func() error { return jwk.RegisterKeyImporter[ecdh.PublicKey](stub) }},
+		{"[]byte", func() error { return jwk.RegisterKeyImporter[[]byte](stub) }},
 	}
 	for _, tc := range builtins {
 		t.Run("RegisterKeyImporter["+tc.name+"]", func(t *testing.T) {
