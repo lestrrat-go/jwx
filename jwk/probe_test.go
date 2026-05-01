@@ -7,6 +7,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TestProbeToleratesDuplicateFieldNames exercises the probe's
+// duplicate-key handling. The probe pass intentionally allows
+// duplicate JSON member names (jsontext.AllowDuplicateNames(true))
+// so probe failure on duplicates can't be turned into denial-of-
+// service. The internal "remaining" counter must not be drained by
+// repeated occurrences of the same field, otherwise N duplicate "kty"
+// entries (where N = number of registered probe fields) will prevent
+// later fields like "d" from being read — which would silently
+// misclassify a private key as public.
+func TestProbeToleratesDuplicateFieldNames(t *testing.T) {
+	const dKey = "AAAA"
+	src := []byte(`{"kty":"RSA","kty":"RSA","kty":"RSA","d":"` + dKey + `"}`)
+
+	probe, err := keyProbe.Probe(src)
+	require.NoError(t, err, `Probe should succeed`)
+
+	dV, ok := probe.Field("D")
+	require.True(t, ok, `probe should detect "d" even when "kty" appears multiple times`)
+	require.NotNil(t, dV, `probe.Field("D") value should be non-nil`)
+}
+
 // TestProbeFieldRegistrationConcurrent exercises the race between
 // RegisterProbeField (mutating the prober's field/name maps) and
 // concurrent KeyProbe.Field reads on a KeyProbe captured from an
