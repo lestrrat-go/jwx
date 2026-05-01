@@ -28,6 +28,28 @@ func (invalidReturningParser) ParseKey(_ *jwk.KeyProbe, _ jwk.KeyUnmarshaler, pa
 
 var registerInvalidImporterOnce sync.Once
 var registerInvalidParserOnce sync.Once
+var registerNilNilParserOnce sync.Once
+
+type nilNilReturningParser struct{}
+
+func (nilNilReturningParser) ParseKey(_ *jwk.KeyProbe, _ jwk.KeyUnmarshaler, payload []byte) (jwk.Key, error) {
+	if !bytes.Contains(payload, []byte(`"force-nil-parser":true`)) {
+		return nil, jwk.ContinueError()
+	}
+	// Intentional bug pattern under test: a buggy parser may return
+	// (nil, nil); jwk.ParseKey must treat it as ContinueError, not as
+	// a successful nil-Key result that gets handed back to the caller.
+	//nolint:nilnil
+	return nil, nil
+}
+
+func registerNilNilParser(t *testing.T) {
+	t.Helper()
+	registerNilNilParserOnce.Do(func() {
+		err := jwk.RegisterKeyParser(nilNilReturningParser{})
+		require.NoError(t, err)
+	})
+}
 
 func makeInvalidECDSAJWK() (jwk.Key, error) {
 	raw, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -108,4 +130,17 @@ func TestParseKeyRejectsInvalidKeyFromCustomParser(t *testing.T) {
 	_, err := jwk.ParseKey([]byte(`{"kty":"EC","force-invalid-parser":true}`))
 	require.Error(t, err)
 	require.True(t, jwk.IsKeyValidationError(err), `ParseKey should validate keys returned from custom parsers`)
+}
+
+// A buggy KeyParser returning (nil, nil) must not be treated as a
+// successful parse: the caller would receive a nil jwk.Key with nil
+// error and panic on the next method call. The dispatch should treat
+// (nil, nil) the same as ContinueError and fall through to the next
+// registered parser.
+func TestParseKeyContinuesPastNilNilCustomParser(t *testing.T) {
+	registerNilNilParser(t)
+
+	key, err := jwk.ParseKey([]byte(`{"kty":"oct","k":"AAAA","force-nil-parser":true}`))
+	require.NoError(t, err, `ParseKey should fall through to the default parser, not return (nil, nil)`)
+	require.NotNil(t, key, `ParseKey must not return a nil Key`)
 }
