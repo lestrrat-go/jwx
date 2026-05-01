@@ -175,9 +175,9 @@
 //	     hintV, ok := probe.Field("MyHint")
 //	     if !ok {
 //	        // if it doesn't have the `my_hint` field, it probably means
-//	        // it's not for us, so we return ContinueParseError so that
+//	        // it's not for us, so we return ContinueError so that
 //	        // the next parser can pick it up
-//	        return nil, jwk.ContinueParseError()
+//	        return nil, jwk.ContinueError()
 //	     }
 //	     hint := hintV.(string)
 //
@@ -189,7 +189,7 @@
 //			  ...
 //	     }
 //
-//	     return unmarshaler.Unmarshal(data, key)
+//	     return unmarshaler.UnmarshalKey(data, key)
 //	   }
 //
 // ## Registering KeyImporter/KeyExporter
