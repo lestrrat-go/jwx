@@ -322,6 +322,13 @@ func doParseKey(data []byte, options ...ParseOption) (Key, error) {
 		parser := parsers[i]
 		key, err := parser.ParseKey(probe, &unmarshaler, data)
 		if err == nil {
+			// A buggy custom parser may return (nil, nil); treat
+			// that as if it had returned ContinueError so the next
+			// parser runs instead of handing the caller a nil Key
+			// they will dereference.
+			if key == nil {
+				continue
+			}
 			return key, nil
 		}
 
