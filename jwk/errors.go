@@ -126,6 +126,41 @@ func typeName(t reflect.Type) string {
 }
 
 //-------------------------------------------------------------------
+// UnknownKeyTypeError
+//-------------------------------------------------------------------
+
+// UnknownKeyTypeError is returned by [Parse] / [ParseKey] / [ParseKeyAs]
+// when the input's "kty" hint cannot be resolved to a known key
+// family.
+//
+// KeyType is empty when the input had no "kty" field at all, or when
+// "kty" was present but not a JSON string (the probe could not extract
+// a usable identifier). KeyType is populated when the input carried a
+// string "kty" that didn't match any registered key family — useful
+// for callers that want to suggest installing an extension module.
+//
+// Use [errors.Is] with UnknownKeyTypeError{} to recognize the
+// condition, or [errors.AsType] to recover the KeyType field. The
+// error chain also satisfies [errors.Is] with [ParseError].
+type UnknownKeyTypeError struct {
+	// KeyType is the raw "kty" value the input carried, or "" when
+	// "kty" was missing or non-string.
+	KeyType string
+}
+
+func (e UnknownKeyTypeError) Error() string {
+	if e.KeyType == "" {
+		return `failed to get "kty" hint`
+	}
+	return fmt.Sprintf(`invalid key type from JSON (%s)`, e.KeyType)
+}
+
+func (UnknownKeyTypeError) Is(target error) bool {
+	_, ok := target.(UnknownKeyTypeError)
+	return ok
+}
+
+//-------------------------------------------------------------------
 // FieldNotFoundError
 //-------------------------------------------------------------------
 

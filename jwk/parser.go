@@ -64,7 +64,7 @@ func defaultParseKey(probe *KeyProbe, unmarshaler KeyUnmarshaler, data []byte) (
 	var key Key
 	ktyV, ok := probe.Field("Kty")
 	if !ok {
-		return nil, fmt.Errorf(`jwk.Parse: failed to get "kty" hint`)
+		return nil, fmt.Errorf(`jwk.Parse: %w`, UnknownKeyTypeError{})
 	}
 	kty, ok := ktyV.(string)
 	if !ok {
@@ -104,7 +104,7 @@ func defaultParseKey(probe *KeyProbe, unmarshaler KeyUnmarshaler, data []byte) (
 			key = newAKPPublicKey()
 		}
 	default:
-		return nil, fmt.Errorf(`invalid key type from JSON (%s)`, kty)
+		return nil, UnknownKeyTypeError{KeyType: kty}
 	}
 
 	if err := unmarshaler.UnmarshalKey(data, key); err != nil {
