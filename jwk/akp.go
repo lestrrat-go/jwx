@@ -73,6 +73,14 @@ func akpThumbprint(hash crypto.Hash, alg, pub string) []byte {
 	return h.Sum(nil)
 }
 
+// Thumbprint returns the RFC 7638 thumbprint of this AKP key.
+//
+// AKP keys hash the canonical JSON form `{alg, kty, pub}` per RFC 9802 §7
+// — different from the per-kty schemas RFC 7638 §3.2 defines for RSA, EC,
+// and oct. Both `alg` and `pub` are required at thumbprint time; an
+// error is returned if `alg` has not been set on the key. Other key
+// types tolerate a missing `alg` because their canonical thumbprint
+// input doesn't include it.
 func (k *akpPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
@@ -86,6 +94,12 @@ func (k *akpPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	return akpThumbprint(hash, (*k.algorithm).String(), base64.EncodeToString(k.pub)), nil
 }
 
+// Thumbprint returns the RFC 7638 thumbprint of this AKP key.
+//
+// The thumbprint is computed over the public components only, so the
+// returned value is identical to that of the corresponding
+// [akpPublicKey]. AKP keys hash the canonical JSON form `{alg, kty, pub}`
+// per RFC 9802 §7; both `alg` and `pub` are required at thumbprint time.
 func (k *akpPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
