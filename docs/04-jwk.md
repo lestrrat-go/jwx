@@ -150,7 +150,7 @@ source: [examples/jwk_parse_key_example_test.go](https://github.com/jwx-go/examp
 
 ## Parse a key or a set in PEM format
 
-Sometimes keys come in ASN.1 DER PEM format.  To parse these files, use the [`jwk.WithPEM()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#WithPEM) option.
+Sometimes keys come in ASN.1 DER PEM format.  To parse these files, use the [`jwk.WithX509(true)`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#WithX509) option.
 
 <!-- INCLUDE(examples/jwk_parse_with_pem_example_test.go) -->
 ```go
