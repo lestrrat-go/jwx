@@ -91,23 +91,24 @@ func ParseError() error {
 // KeyTypeMismatchError
 //-------------------------------------------------------------------
 
-// KeyTypeMismatchError is returned by [Import] when the imported key's
-// concrete type does not match the generic type parameter supplied by
-// the caller.
+// KeyTypeMismatchError is returned by [Import] / [ParseKeyAs] /
+// [Export] / [ExportAll] when the value the function produced does
+// not match the generic type parameter supplied by the caller.
 //
-// Callers that need to distinguish "wrong generic type parameter" from
-// "key validation failed" should use [errors.Is] with
-// KeyTypeMismatchError{}, or [errors.AsType] to recover the Got and
-// Want fields.
+// Got is the runtime type of the value the library produced; Want is
+// the type the caller asked for via the type parameter. Callers that
+// need to distinguish "wrong generic type parameter" from other
+// failures should use [errors.Is] with KeyTypeMismatchError{}, or
+// [errors.AsType] to recover the Got and Want fields.
 type KeyTypeMismatchError struct {
-	// Got is the runtime type of the key that was imported.
+	// Got is the runtime type of the value the library produced.
 	Got reflect.Type
-	// Want is the type requested via the Import type parameter.
+	// Want is the type requested via the function's type parameter.
 	Want reflect.Type
 }
 
 func (e KeyTypeMismatchError) Error() string {
-	return fmt.Sprintf(`imported key is %s, not %s`, typeName(e.Got), typeName(e.Want))
+	return fmt.Sprintf(`key type mismatch: got %s, want %s`, typeName(e.Got), typeName(e.Want))
 }
 
 func (e KeyTypeMismatchError) Is(target error) bool {
