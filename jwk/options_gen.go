@@ -210,7 +210,7 @@ func WithMaxKeys(v int) GlobalParseOption {
 // accepted by JWK validation and raw/PEM/X.509 import.
 //
 // The default is 2048. Lower this only for legacy interoperability with
-// older key material. A value of 0 disables the modulus-size floor.
+// older key material. Any value <= 0 disables the modulus-size floor.
 func WithMinRSAModulusBits(v int) GlobalOption {
 	return &globalOption{option.New(identMinRSAModulusBits{}, v)}
 }
@@ -219,8 +219,8 @@ func WithMinRSAModulusBits(v int) GlobalOption {
 // accepted by JWK validation and raw/PEM/X.509 import.
 //
 // The default is 3. The exponent must still be odd and fit in a Go `int`.
-// Lower this only for legacy interoperability. A value of 0 disables the
-// minimum-exponent floor.
+// Lower this only for legacy interoperability. Any value <= 0 disables
+// the minimum-exponent floor.
 func WithMinRSAPublicExponent(v int) GlobalOption {
 	return &globalOption{option.New(identMinRSAPublicExponent{}, v)}
 }
