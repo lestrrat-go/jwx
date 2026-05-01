@@ -66,7 +66,10 @@ func init() {
 //   - "crypto/rsa".PrivateKey and "crypto/rsa".PublicKey creates an RSA based key
 //   - "crypto/ecdsa".PrivateKey and "crypto/ecdsa".PublicKey creates an EC based key
 //   - "crypto/ed25519".PrivateKey and "crypto/ed25519".PublicKey creates an OKP based key
-//   - "crypto/ecdh".PrivateKey and "crypto/ecdh".PublicKey creates an OKP based key
+//   - "crypto/ecdh".PrivateKey and "crypto/ecdh".PublicKey for X25519
+//     creates an OKP based key; for the NIST P-curves (P-256, P-384,
+//     P-521) creates an EC based key (the same key material is valid
+//     for both ECDH and ECDSA, so JWK has no separate "EC for ECDH" type)
 //   - []byte creates a symmetric key
 //
 // The type parameter T specifies the expected key type. Use [Key] when you
