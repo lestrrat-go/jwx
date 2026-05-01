@@ -215,7 +215,13 @@ func (pt *probeTarget) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		key := tok.String()
 
 		def, ok := pt.kp.jsonKeys[key]
-		if !ok || remaining <= 0 {
+		// Skip when: the key is not registered for probing, we've
+		// already filled every slot, OR this slot is already filled
+		// (a duplicate occurrence of an earlier field — first-wins).
+		// Without the duplicate-skip, N repeats of one field would
+		// drain `remaining` and prevent later registered fields from
+		// being read, silently misclassifying the key.
+		if !ok || remaining <= 0 || pt.results[def.index] != nil {
 			if err := dec.SkipValue(); err != nil {
 				return err
 			}
