@@ -43,6 +43,7 @@ Only `jwt.UnknownPayloadTypeError()` remains a sentinel function (no struct type
 | Type | Structured Fields | Meaning |
 |------|------------------|---------|
 | `KeyTypeMismatchError` | `Got`, `Want` (both `reflect.Type`) | Generic type parameter on `Import[T]` / `ParseKeyAs[T]` does not match the resolved key type |
+| `UnknownKeyTypeError` | `KeyType` (string; empty when `kty` was missing) | Probe couldn't resolve `kty` to a known key family. Empty `KeyType` = `kty` field absent or non-string; populated = `kty` was a string but unrecognized |
 | `FieldNotFoundError` | `Name` | Field not present (`jwk.Get` miss) |
 | `FieldTypeMismatchError` | `Name`, `Got`, `Want` | Field present but wrong type (`jwk.Get` type assertion failed) |
 

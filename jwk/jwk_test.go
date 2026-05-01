@@ -483,6 +483,34 @@ func TestParseKey(t *testing.T) {
 		require.ErrorIs(t, err, jwk.ParseError(),
 			`single-key parse failure should satisfy errors.Is(err, jwk.ParseError())`)
 	})
+	// Probe-stage failures that boil down to "we couldn't determine
+	// the key type from the input" surface as jwk.UnknownKeyTypeError.
+	// The KeyType field is empty when "kty" was missing or non-string,
+	// and populated when "kty" was a string but didn't match a known
+	// or registered key family. Callers can branch on KeyType to log
+	// "install jwx-go/<extension> for kty=X" or skip the entry.
+	t.Run("UnknownKeyType/missing kty", func(t *testing.T) {
+		t.Parallel()
+		_, err := jwk.ParseKey([]byte(`{"foo":"bar"}`))
+		require.Error(t, err)
+		require.ErrorIs(t, err, jwk.UnknownKeyTypeError{})
+		require.ErrorIs(t, err, jwk.ParseError(), `should also satisfy the ParseError sentinel`)
+
+		var unkErr jwk.UnknownKeyTypeError
+		require.ErrorAs(t, err, &unkErr)
+		require.Empty(t, unkErr.KeyType, `KeyType should be empty when kty was absent`)
+	})
+	t.Run("UnknownKeyType/unregistered kty", func(t *testing.T) {
+		t.Parallel()
+		_, err := jwk.ParseKey([]byte(`{"kty":"FOO-NOT-A-REAL-KTY"}`))
+		require.Error(t, err)
+		require.ErrorIs(t, err, jwk.UnknownKeyTypeError{})
+
+		var unkErr jwk.UnknownKeyTypeError
+		require.ErrorAs(t, err, &unkErr)
+		require.Equal(t, "FOO-NOT-A-REAL-KTY", unkErr.KeyType,
+			`KeyType should carry the unrecognized kty value`)
+	})
 }
 
 // TestParseKeyAs exercises the typed entry point and the
