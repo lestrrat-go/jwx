@@ -78,6 +78,51 @@ func TestMigrationRecipe10KeyImporterSyntax(t *testing.T) {
 	require.Equal(t, "recipe10", kid, "KID should match the value set by the importer")
 }
 
+// structImporterKey is a fake raw key type used by
+// TestRegisterKeyImporterStructImpl. It is intentionally
+// package-local so it does not collide with any built-in importer.
+type structImporterKey struct{ payload []byte }
+
+// structImporter implements jwk.KeyImporter[*structImporterKey]
+// directly — no KeyImportFunc wrapper. This pins that the
+// closure-wrapping inside RegisterKeyImporter dispatches to a
+// KeyImporter[T] implementation other than KeyImportFunc[T] and
+// passes the raw value through with the correct T.
+type structImporter struct {
+	tag string
+}
+
+func (i *structImporter) Import(raw *structImporterKey) (jwk.Key, error) {
+	k, err := jwk.Import[jwk.Key](raw.payload)
+	if err != nil {
+		return nil, err
+	}
+	if err := k.Set(jwk.KeyIDKey, i.tag); err != nil {
+		return nil, err
+	}
+	return k, nil
+}
+
+// TestRegisterKeyImporterStructImpl exercises the closure-wrapping
+// path for a struct-shaped KeyImporter[T] — the variant a stateful
+// extension would use (config / caches / locks on the importer
+// receiver, etc.). The Recipe 10 test covers KeyImportFunc[T];
+// without this test the struct path would be silently uncovered.
+func TestRegisterKeyImporterStructImpl(t *testing.T) {
+	importer := &structImporter{tag: "struct-importer"}
+	require.NoError(t,
+		jwk.RegisterKeyImporter(importer),
+		"RegisterKeyImporter should accept a struct-shaped KeyImporter[T] (T inferred from the typed Import method)")
+	defer jwk.UnregisterKeyImporter[*structImporterKey]()
+
+	key, err := jwk.Import[jwk.Key](&structImporterKey{payload: []byte("struct-importer-secret")})
+	require.NoError(t, err, "Import should dispatch through the struct importer's typed Import method")
+
+	kid, ok := key.KeyID()
+	require.True(t, ok, "imported key should carry the KID set by the struct importer")
+	require.Equal(t, "struct-importer", kid)
+}
+
 // dupImporterKey is a fake raw key type used by TestRegisterKeyImporterRejectsDuplicate.
 // It is intentionally package-local so it does not collide with any
 // built-in importer.
