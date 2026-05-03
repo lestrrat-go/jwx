@@ -4,6 +4,158 @@ Changes
 v4 has many incompatibilities with v3. To see the full list of differences between
 v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MICRATION-v4.md)
 
+v4.0.2 UNRELEASED
+  * [jwk] BREAKING: `jwk.RegisterKeyImporter` now takes a
+    `jwk.KeyImporter[T]` interface rather than a bare typed
+    function. The v4.0.0 release exported `KeyImporter` and
+    `KeyImportFunc` but neither type was reachable from the
+    registration call, leaving `RegisterKeyImporter` inconsistent
+    with every other extension hook in `jwk` (which all anchor on
+    an interface plus a `FooFunc` adapter). The unused exported
+    types were the leftover surface of the original design that
+    didn't make it through to the registration call.
+
+    Correcting this is a compile-time break, but at the time of
+    this release the only known consumers of `RegisterKeyImporter`
+    are the `github.com/jwx-go/*` extension modules, which have
+    been updated in lock-step. Landing the intended shape now,
+    while the surface is still effectively private, costs less
+    than carrying the inconsistency through the rest of v4's
+    lifetime.
+
+    Wrap typed importer functions in `jwk.KeyImportFunc[T](...)`:
+
+        // before
+        jwk.RegisterKeyImporter(func(src *MyKey) (jwk.Key, error) { ... })
+
+        // after
+        jwk.RegisterKeyImporter(jwk.KeyImportFunc[*MyKey](func(src *MyKey) (jwk.Key, error) { ... }))
+
+    `KeyImporter[T any]` is now a generic interface; struct types
+    implementing `Import(T) (jwk.Key, error)` can be passed
+    directly without the adapter. (#2152)
+
+  * [jws] Coordinated RFC 7797 `b64=false` handling pass:
+    `jws.Verify` rejects payloads with `b64=false` unless `b64`
+    is also listed in `crit`; `jws.Sign` auto-declares `b64` in
+    `crit` when emitting `b64=false`; `Message.MarshalJSON`
+    honors `b64=false` instead of silently re-encoding;
+    `jws.VerifyCompactFast` refuses any compact JWS carrying
+    `b64` (the fast path doesn't process extension headers); and
+    `b64` is now declared as a typed boolean header field rather
+    than handled ad-hoc. (#2080, #2086, #2101, #2103, #2105)
+
+  * [jws] Reject malformed general-form JSON-serialized JWS:
+    inputs with a top-level `header` member as a sibling of
+    `signatures` are rejected (the spec only permits `header`
+    inside per-signature objects), as are inputs whose `protected`
+    member is a literal JSON object instead of a base64url-encoded
+    string. (#2088, #2107)
+
+  * [jws] `jws.AlgorithmsForKey` failures from unclassifiable
+    keys are now wrapped in a typed sentinel so callers can
+    branch on "couldn't categorize this key" without string
+    matching the error message. (#2109)
+
+  * [jws] Verify error-shape consistency: `VerifyCompactFast`
+    refusals now match the `jws.VerifyError()` taxonomy used by
+    the slow path, fan-out verify errors name the loose
+    `WithKeySet` options that were tried, multi-signature `b64`
+    mismatches name the offending signature index and conflicting
+    value, and the compact `b64=false`+payload-contains-`.` error
+    references RFC 7797 §5.2 and points at `WithDetachedPayload`.
+    (#2082, #2084, #2113)
+
+  * [jws][jwe] `jws.VerifyMessage` and `jwe.DecryptMessage`
+    observe context cancellation between loop iterations rather
+    than only at boundaries. Long fan-out verify/decrypt loops
+    now respond to a cancelled context promptly. (#2111, #2116)
+
+  * [jwe] Reject PBES2 messages whose `p2c` (iteration count)
+    does not parse cleanly into int64 or violates the configured
+    bound. The error now names the violated bound (min vs max)
+    instead of the generic "out of range". (#2118)
+
+  * [jwe] `jwe.WithKey()` validates the alg-vs-key shape at
+    option construction time rather than during encryption, so
+    misuse surfaces at the call site instead of inside the
+    encrypt loop. (#2120)
+
+  * [jwe] Decrypt error-path cleanup: per-key failures from
+    key-set providers are surfaced via `errors.Join` so each
+    underlying error remains inspectable; the joined error count
+    is bounded to keep diagnostics readable; the redundant outer
+    `Decrypt:` prefix is dropped; and the compression-cap error
+    names the "decompressed" payload, the option, and the size.
+    (#2122, #2124, #2126)
+
+  * [jwe] Add `jwe.WithDisabledKeyAlgorithms(...)` as a global
+    policy hook (`jwe.Configure(...)` or per-call) for refusing
+    specific key-management algorithms across all `jwe.Decrypt`
+    calls. (#2128)
+
+  * [jwk] Stop duplicating JWK fields at the JWKS top level on
+    parse. A JWKS whose top-level object carries fields with the
+    same names as JWK members no longer copies those values into
+    every key in `keys`. (#2132)
+
+  * [jwk] The probe pass tolerates duplicate JSON field names in
+    the input. Previously the probe rejected duplicates even
+    though the second-pass unmarshal accepts them, so valid
+    inputs that round-tripped through tolerant decoders were
+    inconsistently rejected at parse time. (#2138)
+
+  * [jwk] A custom `jwk.KeyParser` returning `(nil, nil)` now
+    signals "continue to the next parser" rather than
+    "successfully produced a nil key". Callers no longer end up
+    with a nil `jwk.Key` from a successful parse when an
+    extension returns the empty pair. (#2139)
+
+  * [jwk] Stream the JWKS `keys` array with a cap-before-allocate
+    strategy. Inputs respect `WithMaxKeys` before any unbounded
+    slice growth, and bounded-size JWKS no longer over-allocate
+    based on attacker-controlled length hints. (#2136)
+
+  * [jwk] Additional typed errors on parse and export paths:
+    `UnknownKeyTypeError{KeyType string}` (when input has no
+    usable `kty` or names an unregistered family),
+    `KeyTypeMismatchError` surfaced from `jwk.Export` when the
+    source key doesn't match the destination type, and
+    `ParseError` sentinel wrapping on `jwk.ParseKey` /
+    `jwk.ParseKeyAs`. All follow the existing zero-value-struct +
+    `errors.Is` / `errors.AsType[T]` pattern.
+    (#2134, #2143, #2151)
+
+  * [jwt] `jwt.ParseRequest` no longer skips the request body
+    when the request uses chunked transfer encoding. The
+    Content-Length-based fast path previously bypassed
+    `ParseForm` for chunked requests even when `WithFormKey` was
+    supplied. (#2090)
+
+  * [jwt] `jwt.Settings` rejects out-of-range NumericDate
+    precision values at configuration time instead of silently
+    clamping. (#2092)
+
+  * [jwt] Pedantic mode (`jwt.WithPedanticParse(true)`) enforces
+    that nested-envelope JWTs declare `cty=JWT`. Tokens missing
+    `cty` or carrying a different value are rejected. (#2093)
+
+  * [jwt] `jwt.ParseInsecure` parses the loop-local payload split
+    from the input rather than the original input bytes. Fixes a
+    case where `ParseInsecure` could return a token assembled
+    from a different signature segment than the one being
+    inspected. (#2096)
+
+  * [jwt] `jwt.WithMaxDeltaIs(...)` and `jwt.WithMinDeltaIs(...)`
+    reject tokens whose compared claim is missing rather than
+    treating it as zero. Validation no longer silently succeeds
+    when the claim isn't present on the token. (#2098)
+
+  * [jwt] `jwt.Validate` fast and slow paths now check
+    `iat`/`exp`/`nbf` in the same order, so the same token
+    reaches the same verdict regardless of which path evaluated
+    it. (#2100)
+
 v4.0.1 28 Apr 2026
   * [jwt] `jwt.Parse` / `jwt.ParseRequest` only call `ParseForm` when
     `WithFormKey` is supplied. Previously the form body could be
