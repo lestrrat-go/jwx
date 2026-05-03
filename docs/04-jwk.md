@@ -759,7 +759,7 @@ registration points:
 - `KeyParser` — converts a JSON payload into a `jwk.Key` using the
   probe's hints. Register with [`jwk.RegisterKeyParser`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#RegisterKeyParser).
 - `KeyImporter[T]` — converts a raw Go crypto value into a `jwk.Key`.
-  Register with [`jwk.RegisterKeyImporter[T]`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#RegisterKeyImporter).
+  Register with [`jwk.RegisterKeyImporter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#RegisterKeyImporter).
 - `KeyExporter` — converts a `jwk.Key` back into a raw Go value.
   Register with [`jwk.RegisterKeyExporter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#RegisterKeyExporter),
   keyed by `jwk.KeyKind` (case-insensitive — usually
@@ -821,21 +821,21 @@ func (MyKeyParser) ParseKey(probe *jwk.KeyProbe, unmarshaler jwk.KeyUnmarshaler,
 
 ### How import / export dispatch
 
-`jwk.Import[T](raw)` looks up the `KeyImporter` registered for the
+`jwk.Import[T](raw)` looks up the `KeyImporter[T]` registered for the
 exact Go type of `raw`. Pre-registered importers exist for the standard
 crypto types (`*rsa.PrivateKey`, `*ecdsa.PublicKey`, `ed25519.PrivateKey`,
-etc.); register your own with `jwk.RegisterKeyImporter[T](KeyImporter)`.
-The type parameter `T` is the dispatch key (the Go type the importer
-handles); the value is any `KeyImporter` implementation. Use
-`jwk.KeyImportFunc[T]` to adapt a typed function:
+etc.); register your own with `jwk.RegisterKeyImporter(KeyImporter[T])`.
+The interface is generic — its `Import(raw T) (Key, error)` method is
+typed — so the registration's type parameter is inferred from whatever
+you pass in. Use `jwk.KeyImportFunc[T]` to adapt a typed function:
 
 ```go
 func init() {
-    if err := jwk.RegisterKeyImporter[*mypkg.SuperSecretKey](
+    if err := jwk.RegisterKeyImporter(
         jwk.KeyImportFunc[*mypkg.SuperSecretKey](
             func(raw *mypkg.SuperSecretKey) (jwk.Key, error) {
-                // The adapter has already type-asserted raw to the
-                // declared T; no `any`-cast needed in the body.
+                // The interface is typed, so raw is *mypkg.SuperSecretKey
+                // — no any-cast needed in the body.
                 return mypkg.NewSuperSecretJWK(raw), nil
             },
         ),
@@ -845,22 +845,20 @@ func init() {
 }
 ```
 
-For an importer with non-trivial state, implement the `KeyImporter`
+For an importer with non-trivial state, implement the `KeyImporter[T]`
 interface on your own type and pass an instance directly:
 
 ```go
 type mySuperSecretImporter struct { /* config, caches, ... */ }
 
-func (i *mySuperSecretImporter) Import(raw any) (jwk.Key, error) {
-    src, ok := raw.(*mypkg.SuperSecretKey)
-    if !ok {
-        return nil, fmt.Errorf("expected *mypkg.SuperSecretKey, got %T", raw)
-    }
-    return i.convert(src)
+// Typed Import method makes mySuperSecretImporter satisfy
+// jwk.KeyImporter[*mypkg.SuperSecretKey].
+func (i *mySuperSecretImporter) Import(raw *mypkg.SuperSecretKey) (jwk.Key, error) {
+    return i.convert(raw)
 }
 
-// Registration:
-jwk.RegisterKeyImporter[*mypkg.SuperSecretKey](&mySuperSecretImporter{...})
+// Registration: T inferred from the Import method's parameter type.
+jwk.RegisterKeyImporter(&mySuperSecretImporter{...})
 ```
 
 `jwk.Export[T](key)` runs a `KeyExporter` keyed by `jwk.KeyKind`

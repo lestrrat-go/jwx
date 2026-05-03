@@ -168,7 +168,7 @@ func convertRawKey(raw any) (Key, error) {
 		return nil, fmt.Errorf(`failed to convert %T to jwk.Key: no converters were able to convert`, raw)
 	}
 
-	return conv.Import(raw)
+	return conv(raw)
 }
 
 func doImport(raw any) (Key, error) {

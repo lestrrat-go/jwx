@@ -21,20 +21,17 @@ func myFunc(src any) (jwk.Key, error) {
 
 **v4:**
 ```go
-jwk.RegisterKeyImporter[*rsa.PrivateKey](
-    jwk.KeyImportFunc[*rsa.PrivateKey](myFunc),
-)
-// myFunc accepts the concrete type — the adapter type-asserts for it
+jwk.RegisterKeyImporter(jwk.KeyImportFunc[*rsa.PrivateKey](myFunc))
+// myFunc accepts the concrete type. The outer T is inferred from the
+// adapter's typed Import method.
 func myFunc(src *rsa.PrivateKey) (jwk.Key, error) {
     ...
 }
 ```
 
-Implementation: `RegisterKeyImporter[T any](ki KeyImporter) error` uses `reflect.TypeFor[T]()` to derive the map key at registration time. The runtime dispatch in `Import()` still uses `reflect.TypeOf(raw)` — this is unavoidable since the input type is only known at call time. The type parameter `T` is solely a dispatch-key declaration; it does not appear in the function signature.
+Implementation: `KeyImporter[T any]` is a generic interface whose `Import(raw T) (Key, error)` method is itself typed; `KeyImportFunc[T any]` is a `func(T) (Key, error)` that satisfies it. `RegisterKeyImporter[T any](ki KeyImporter[T]) error` uses `reflect.TypeFor[T]()` to derive the map key at registration time and stores a closure that re-types `any` → T at dispatch. The runtime lookup in `Import()` still keys by `reflect.TypeOf(raw)`.
 
-`KeyImportFunc[T any]` is the typed-function adapter: its `Import` method type-asserts the raw `any` argument to `T` and invokes the underlying typed function. Callers with a full `KeyImporter` implementation pass it directly without the adapter.
-
-Earlier v4 iterations had `RegisterKeyImporter[T](fn func(T) (Key, error))` — accepting a typed function rather than a `KeyImporter`, with `KeyImportFunc` exposed as a separate untyped adapter that was never reachable from registration. The current shape restores the interface as the canonical registration value and makes `KeyImportFunc[T]` generic, so a single name covers the typed-function convenience.
+The earlier v4.0.0 release shipped `RegisterKeyImporter[T](fn func(T) (Key, error))` — accepting a typed function rather than a `KeyImporter`, with the public `KeyImporter` interface and `KeyImportFunc` adapter exposed but never reachable from registration. The current shape restores the interface as the canonical registration value, makes the interface generic so type-parameter inference covers the registration call, and makes `KeyImportFunc[T]` a generic typed-function adapter that satisfies it.
 
 ### Type-safe generic accessors
 
@@ -70,13 +67,10 @@ jwk.RegisterKeyImporter(&myKey{}, jwk.KeyImportFunc(func(src any) (jwk.Key, erro
     return doImport(k)
 }))
 
-// v4: type parameter declares the dispatch key; pass a KeyImporter
-// (KeyImportFunc adapts a typed function).
-jwk.RegisterKeyImporter[*myKey](
-    jwk.KeyImportFunc[*myKey](func(k *myKey) (jwk.Key, error) {
-        return doImport(k)
-    }),
-)
+// v4: pass a KeyImporter[T]; T inferred from the adapter's typed Import.
+jwk.RegisterKeyImporter(jwk.KeyImportFunc[*myKey](func(k *myKey) (jwk.Key, error) {
+    return doImport(k)
+}))
 ```
 
 ```go

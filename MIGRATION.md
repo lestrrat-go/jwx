@@ -408,15 +408,14 @@ jwk.RegisterKeyImporter(&myKeyType{}, jwk.KeyImportFunc(func(raw any) (jwk.Key, 
     // ... convert
 }))
 
-// After (v4): RegisterKeyImporter[T] takes a jwk.KeyImporter; use
-// jwk.KeyImportFunc[T] to adapt a typed function. The type
-// parameter T identifies the dispatch key.
-jwk.RegisterKeyImporter[*myKeyType](
-    jwk.KeyImportFunc[*myKeyType](func(src *myKeyType) (jwk.Key, error) {
-        // The adapter has already type-asserted; no manual assertion needed.
-        // ... convert
-    }),
-)
+// After (v4): RegisterKeyImporter takes a jwk.KeyImporter[T]; use
+// jwk.KeyImportFunc[T] to adapt a typed function. The outer type
+// parameter is inferred from the adapter's typed Import method.
+jwk.RegisterKeyImporter(jwk.KeyImportFunc[*myKeyType](func(src *myKeyType) (jwk.Key, error) {
+    // The interface is typed, so src is *myKeyType in the body —
+    // no manual assertion.
+    // ... convert
+}))
 ```
 
 ### Recipe 11: Iterating Over Sets and Tokens
