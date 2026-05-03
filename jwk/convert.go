@@ -22,7 +22,14 @@ import (
 // A converter that converts from a raw key to a `jwk.Key` is called a KeyImporter.
 // A converter that converts from a `jwk.Key` to a raw key is called a KeyExporter.
 
-var keyImporters = make(map[reflect.Type]KeyImporter)
+// keyImporters stores per-Go-type closures that adapt a typed
+// [KeyImporter] (parameterized by the same Go type that keys this map)
+// down to a non-generic any-taking dispatch shape. The closure carries
+// T and performs the raw.(T) type-assertion before delegating to the
+// underlying typed Import method; the assertion is safe because the
+// dispatch in [convertRawKey] keys this entry by reflect.TypeOf(raw)
+// matching reflect.TypeFor[T]().
+var keyImporters = make(map[reflect.Type]func(any) (Key, error))
 
 // builtinImporterTypes is the set of raw key types whose importers
 // are owned by the jwk package and cannot be overridden by callers.
@@ -64,12 +71,14 @@ var keyExporters = make(map[KeyKind][]KeyExporter)
 var muKeyImporters sync.RWMutex
 var muKeyExporters sync.RWMutex
 
-// RegisterKeyImporter registers a typed import function for converting
-// raw keys of type T to jwk.Key. The type is derived from the type
-// parameter, eliminating the need to pass a zero value.
+// RegisterKeyImporter registers a [KeyImporter] for the raw key type T.
+// The type parameter is normally inferred from the importer's typed
+// Import method; pass it explicitly only when inference would fail
+// (e.g. when supplying a [KeyImportFunc] without arguments).
 //
-// When `jwk.Import()` is called, the library looks up the appropriate
-// importer for the given raw key type (via `reflect`) and executes it.
+// When [Import] is called, the library looks up the importer for the
+// raw value's runtime type (via reflect) and invokes its Import method
+// through a closure that handles the any → T re-typing.
 //
 // Importer dispatch is single-valued per Go type T: there is exactly
 // one importer per reflect.Type. Subsequent registrations for the same
@@ -93,7 +102,12 @@ var muKeyExporters sync.RWMutex
 //
 // Extension modules calling this from init() must check the returned
 // error and panic on failure.
-func RegisterKeyImporter[T any](fn func(T) (Key, error)) error {
+//
+// To register from a typed function (the common case for extensions),
+// wrap it with [KeyImportFunc]:
+//
+//	jwk.RegisterKeyImporter(jwk.KeyImportFunc[*mypkg.Key](importMyKey))
+func RegisterKeyImporter[T any](ki KeyImporter[T]) error {
 	muKeyImporters.Lock()
 	defer muKeyImporters.Unlock()
 	t := reflect.TypeFor[T]()
@@ -103,7 +117,13 @@ func RegisterKeyImporter[T any](fn func(T) (Key, error)) error {
 	if _, exists := keyImporters[t]; exists {
 		return fmt.Errorf(`jwk.RegisterKeyImporter: an importer for %s is already registered; call jwk.UnregisterKeyImporter[%s]() first if you need to replace it`, t, t)
 	}
-	keyImporters[t] = &keyImportAdapter[T]{fn: fn}
+	keyImporters[t] = func(raw any) (Key, error) {
+		// Safe: dispatch in convertRawKey keys this entry by
+		// reflect.TypeOf(raw) matching reflect.TypeFor[T](), so the
+		// assertion cannot fail in the lookup path.
+		//nolint:forcetypeassert
+		return ki.Import(raw.(T))
+	}
 	return nil
 }
 
@@ -183,31 +203,34 @@ func RegisterKeyExporter(ident KeyKind, conv KeyExporter) error {
 	return nil
 }
 
-// KeyImporter is used to convert from a raw key to a `jwk.Key`. mneumonic: from the PoV of the `jwk.Key`,
-// we're _importing_ a raw key.
-type KeyImporter interface {
-	// Import takes the raw key to be converted, and returns a `jwk.Key` or an error if the conversion fails.
-	Import(any) (Key, error)
+// KeyImporter converts a raw key of Go type T into a [jwk.Key]. The
+// type parameter T is the raw-key type the importer handles. From the
+// point of view of the `jwk.Key`, we're _importing_ a raw key.
+//
+// Implementations are registered with [RegisterKeyImporter]; T flows
+// through to [reflect.TypeFor] at registration time to key the import
+// dispatch table.
+type KeyImporter[T any] interface {
+	// Import takes the raw key to be converted, and returns a
+	// [jwk.Key] or an error if the conversion fails.
+	Import(raw T) (Key, error)
 }
 
-// KeyImportFunc is a convenience type to implement KeyImporter as a function.
-type KeyImportFunc func(any) (Key, error)
+// KeyImportFunc is the typed-function adapter that satisfies
+// [KeyImporter] for type T. The Import method just calls f directly —
+// no internal type assertion is needed because [KeyImporter]'s Import
+// is itself typed.
+//
+// This is the canonical way to register a typed import function:
+//
+//	jwk.RegisterKeyImporter(jwk.KeyImportFunc[*mypkg.Key](importMyKey))
+//
+// For an importer with non-trivial state, implement [KeyImporter] on
+// your own type and pass an instance of it directly.
+type KeyImportFunc[T any] func(T) (Key, error)
 
-func (f KeyImportFunc) Import(raw any) (Key, error) {
+func (f KeyImportFunc[T]) Import(raw T) (Key, error) {
 	return f(raw)
-}
-
-// keyImportAdapter wraps a typed function into a KeyImporter.
-type keyImportAdapter[T any] struct {
-	fn func(T) (Key, error)
-}
-
-func (a *keyImportAdapter[T]) Import(raw any) (Key, error) {
-	v, ok := raw.(T)
-	if !ok {
-		return nil, fmt.Errorf(`cannot convert key type '%T' to %T`, raw, *new(T))
-	}
-	return a.fn(v)
 }
 
 // KeyExporter is used to convert from a `jwk.Key` to a raw key. From the PoV of the `jwk.Key`,
@@ -269,7 +292,13 @@ func init() {
 func registerBuiltinKeyImporter[T any](fn func(T) (Key, error)) {
 	t := reflect.TypeFor[T]()
 	builtinImporterTypes[t] = struct{}{}
-	keyImporters[t] = &keyImportAdapter[T]{fn: fn}
+	keyImporters[t] = func(raw any) (Key, error) {
+		// Safe: dispatch keys this entry by reflect.TypeOf(raw)
+		// matching reflect.TypeFor[T](); the assertion cannot fail
+		// when the closure is invoked from convertRawKey.
+		//nolint:forcetypeassert
+		return fn(raw.(T))
+	}
 }
 
 // panicOnRegistrationError converts a non-nil error returned by a Register*

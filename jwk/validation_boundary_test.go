@@ -73,9 +73,11 @@ func makeInvalidECDSAJWK() (jwk.Key, error) {
 func registerInvalidImporter(t *testing.T) {
 	t.Helper()
 	registerInvalidImporterOnce.Do(func() {
-		err := jwk.RegisterKeyImporter(func(invalidImportRaw) (jwk.Key, error) {
-			return makeInvalidECDSAJWK()
-		})
+		err := jwk.RegisterKeyImporter(
+			jwk.KeyImportFunc[invalidImportRaw](func(invalidImportRaw) (jwk.Key, error) {
+				return makeInvalidECDSAJWK()
+			}),
+		)
 		require.NoError(t, err)
 	})
 }
