@@ -386,6 +386,43 @@ func TestGenericImport(t *testing.T) {
 	})
 }
 
+// TestExportTypeMismatch verifies that jwk.Export and jwk.ExportAll
+// surface a type-parameter mismatch as a jwk.KeyTypeMismatchError, the
+// same shape jwk.Import and jwk.ParseKeyAs use. errors.As recovers the
+// concrete Got/Want types so callers can branch programmatically.
+func TestExportTypeMismatch(t *testing.T) {
+	t.Parallel()
+
+	rsaRaw, err := jwxtest.GenerateRsaKey()
+	require.NoError(t, err)
+	rsaKey, err := jwk.Import[jwk.Key](rsaRaw)
+	require.NoError(t, err)
+
+	t.Run("Export wrong T", func(t *testing.T) {
+		t.Parallel()
+		// rsaKey exports to *rsa.PrivateKey, not *ecdsa.PrivateKey.
+		_, err := jwk.Export[*ecdsa.PrivateKey](rsaKey)
+		require.Error(t, err)
+		require.ErrorIs(t, err, jwk.KeyTypeMismatchError{})
+
+		mismatch, ok := errors.AsType[jwk.KeyTypeMismatchError](err)
+		require.True(t, ok, `errors.AsType should recover KeyTypeMismatchError`)
+		require.Equal(t, reflect.TypeFor[*rsa.PrivateKey](), mismatch.Got)
+		require.Equal(t, reflect.TypeFor[*ecdsa.PrivateKey](), mismatch.Want)
+	})
+
+	t.Run("ExportAll wrong T", func(t *testing.T) {
+		t.Parallel()
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(rsaKey))
+
+		_, err := jwk.ExportAll[*ecdsa.PrivateKey](set)
+		require.Error(t, err)
+		require.ErrorIs(t, err, jwk.KeyTypeMismatchError{},
+			`ExportAll should chain KeyTypeMismatchError through the per-key wrap`)
+	})
+}
+
 func TestExportAll(t *testing.T) {
 	t.Parallel()
 

@@ -478,7 +478,10 @@ func Export[T any](key Key) (T, error) {
 	}
 	result, ok := v.(T)
 	if !ok {
-		return zero, fmt.Errorf(`jwk.Export: exported %T, requested %T`, v, zero)
+		return zero, fmt.Errorf(`jwk.Export: %w`, KeyTypeMismatchError{
+			Got:  reflect.TypeOf(v),
+			Want: reflect.TypeFor[T](),
+		})
 	}
 	return result, nil
 }
