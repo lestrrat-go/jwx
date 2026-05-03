@@ -55,8 +55,8 @@ type recipe10RawKey struct{ secret []byte }
 
 // TestMigrationRecipe10KeyImporterSyntax pins the syntax shown in
 // MIGRATION.md Recipe 10: register a [jwk.KeyImporter] (typically via
-// [jwk.TypedKeyImportFunc] for a typed function) under an explicit
-// raw-key Go type parameter.
+// [jwk.KeyImportFunc] for a typed function) under an explicit raw-key
+// Go type parameter.
 func TestMigrationRecipe10KeyImporterSyntax(t *testing.T) {
 	importFn := func(src *recipe10RawKey) (jwk.Key, error) {
 		k, err := jwk.Import[jwk.Key](src.secret)
@@ -68,7 +68,7 @@ func TestMigrationRecipe10KeyImporterSyntax(t *testing.T) {
 	}
 	require.NoError(t,
 		jwk.RegisterKeyImporter[*recipe10RawKey](
-			jwk.TypedKeyImportFunc[*recipe10RawKey](importFn),
+			jwk.KeyImportFunc[*recipe10RawKey](importFn),
 		),
 		"RegisterKeyImporter should accept the typed-function adapter form")
 
@@ -90,7 +90,7 @@ func TestRegisterKeyImporterRejectsDuplicate(t *testing.T) {
 	// Register/Unregister bookkeeping is correct. Return a non-nil
 	// error so the function doesn't look like a (nil, nil) sentinel
 	// that nilnil flags.
-	importer := jwk.TypedKeyImportFunc[dupImporterKey](func(dupImporterKey) (jwk.Key, error) {
+	importer := jwk.KeyImportFunc[dupImporterKey](func(dupImporterKey) (jwk.Key, error) {
 		return nil, errors.New("dupImporterKey: importer body not exercised by this test")
 	})
 
@@ -133,9 +133,16 @@ func TestRegisterKeyImporterRejectsDuplicate(t *testing.T) {
 //
 // The stub importer returns a non-nil error so the test does not
 // resemble a (nil, nil) sentinel.
+// stubImporter is a no-op importer used by tests that only exercise
+// the registration bookkeeping (e.g. built-in-type rejection). It
+// satisfies jwk.KeyImporter for any registration T without needing
+// per-T plumbing.
+type stubImporter struct{ err error }
+
+func (s stubImporter) Import(any) (jwk.Key, error) { return nil, s.err }
+
 func TestRegisterKeyImporterRejectsBuiltinTypes(t *testing.T) {
-	stubErr := errors.New("stub importer must not be invoked: built-in types are reserved")
-	stub := jwk.KeyImportFunc(func(any) (jwk.Key, error) { return nil, stubErr })
+	stub := stubImporter{err: errors.New("stub importer must not be invoked: built-in types are reserved")}
 
 	t.Run("RegisterKeyImporter[*rsa.PrivateKey]", func(t *testing.T) {
 		err := jwk.RegisterKeyImporter[*rsa.PrivateKey](stub)

@@ -827,12 +827,12 @@ crypto types (`*rsa.PrivateKey`, `*ecdsa.PublicKey`, `ed25519.PrivateKey`,
 etc.); register your own with `jwk.RegisterKeyImporter[T](KeyImporter)`.
 The type parameter `T` is the dispatch key (the Go type the importer
 handles); the value is any `KeyImporter` implementation. Use
-`jwk.TypedKeyImportFunc[T]` to adapt a typed function:
+`jwk.KeyImportFunc[T]` to adapt a typed function:
 
 ```go
 func init() {
     if err := jwk.RegisterKeyImporter[*mypkg.SuperSecretKey](
-        jwk.TypedKeyImportFunc[*mypkg.SuperSecretKey](
+        jwk.KeyImportFunc[*mypkg.SuperSecretKey](
             func(raw *mypkg.SuperSecretKey) (jwk.Key, error) {
                 // The adapter has already type-asserted raw to the
                 // declared T; no `any`-cast needed in the body.

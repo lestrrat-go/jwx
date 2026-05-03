@@ -409,10 +409,10 @@ jwk.RegisterKeyImporter(&myKeyType{}, jwk.KeyImportFunc(func(raw any) (jwk.Key, 
 }))
 
 // After (v4): RegisterKeyImporter[T] takes a jwk.KeyImporter; use
-// jwk.TypedKeyImportFunc[T] to adapt a typed function. The type
+// jwk.KeyImportFunc[T] to adapt a typed function. The type
 // parameter T identifies the dispatch key.
 jwk.RegisterKeyImporter[*myKeyType](
-    jwk.TypedKeyImportFunc[*myKeyType](func(src *myKeyType) (jwk.Key, error) {
+    jwk.KeyImportFunc[*myKeyType](func(src *myKeyType) (jwk.Key, error) {
         // The adapter has already type-asserted; no manual assertion needed.
         // ... convert
     }),

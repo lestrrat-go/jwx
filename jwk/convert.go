@@ -96,10 +96,10 @@ var muKeyExporters sync.RWMutex
 // error and panic on failure.
 //
 // To register from a typed function (the common case for extensions),
-// use [TypedKeyImportFunc] as the adapter:
+// use [KeyImportFunc] as the adapter:
 //
 //	jwk.RegisterKeyImporter[*mypkg.Key](
-//	    jwk.TypedKeyImportFunc[*mypkg.Key](importMyKey),
+//	    jwk.KeyImportFunc[*mypkg.Key](importMyKey),
 //	)
 func RegisterKeyImporter[T any](ki KeyImporter) error {
 	muKeyImporters.Lock()
@@ -198,35 +198,26 @@ type KeyImporter interface {
 	Import(any) (Key, error)
 }
 
-// KeyImportFunc is a convenience type to implement KeyImporter as a
-// function operating on the untyped any. Use [TypedKeyImportFunc]
-// instead when the importer expects a specific raw key type — it
-// performs the type assertion for you.
-type KeyImportFunc func(any) (Key, error)
-
-func (f KeyImportFunc) Import(raw any) (Key, error) {
-	return f(raw)
-}
-
-// TypedKeyImportFunc is a convenience adapter that satisfies
-// [KeyImporter] from a typed import function. The Import method
-// type-asserts its argument to T and invokes the underlying function;
-// on a type mismatch (which should not happen given dispatch is keyed
-// by reflect.Type, but is still defensible) it returns an error.
+// KeyImportFunc is the typed-function adapter that satisfies
+// [KeyImporter]. Its Import method type-asserts the raw any argument
+// to T and invokes the underlying function; on a type mismatch (which
+// should not happen given dispatch is keyed by reflect.Type, but is
+// still defensible) it returns an error.
 //
-// This is the preferred adapter for extensions that have a typed import
-// function — the alternative ([KeyImportFunc] over an untyped any) puts
-// the assertion burden on the caller.
+// This is the canonical way to register a typed import function:
 //
 //	jwk.RegisterKeyImporter[*mypkg.Key](
-//	    jwk.TypedKeyImportFunc[*mypkg.Key](importMyKey),
+//	    jwk.KeyImportFunc[*mypkg.Key](importMyKey),
 //	)
-type TypedKeyImportFunc[T any] func(T) (Key, error)
+//
+// For an importer with non-trivial state, implement [KeyImporter] on
+// your own type and pass an instance of it directly.
+type KeyImportFunc[T any] func(T) (Key, error)
 
-func (f TypedKeyImportFunc[T]) Import(raw any) (Key, error) {
+func (f KeyImportFunc[T]) Import(raw any) (Key, error) {
 	v, ok := raw.(T)
 	if !ok {
-		return nil, fmt.Errorf(`jwk.TypedKeyImportFunc: cannot convert key type %T to %T`, raw, *new(T))
+		return nil, fmt.Errorf(`jwk.KeyImportFunc: cannot convert key type %T to %T`, raw, *new(T))
 	}
 	return f(v)
 }
@@ -290,7 +281,7 @@ func init() {
 func registerBuiltinKeyImporter[T any](fn func(T) (Key, error)) {
 	t := reflect.TypeFor[T]()
 	builtinImporterTypes[t] = struct{}{}
-	keyImporters[t] = TypedKeyImportFunc[T](fn)
+	keyImporters[t] = KeyImportFunc[T](fn)
 }
 
 // panicOnRegistrationError converts a non-nil error returned by a Register*

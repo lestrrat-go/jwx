@@ -74,7 +74,7 @@ func registerInvalidImporter(t *testing.T) {
 	t.Helper()
 	registerInvalidImporterOnce.Do(func() {
 		err := jwk.RegisterKeyImporter[invalidImportRaw](
-			jwk.TypedKeyImportFunc[invalidImportRaw](func(invalidImportRaw) (jwk.Key, error) {
+			jwk.KeyImportFunc[invalidImportRaw](func(invalidImportRaw) (jwk.Key, error) {
 				return makeInvalidECDSAJWK()
 			}),
 		)
