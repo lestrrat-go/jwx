@@ -4,7 +4,7 @@ Changes
 v4 has many incompatibilities with v3. To see the full list of differences between
 v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MICRATION-v4.md)
 
-v4.0.2 UNRELEASED
+v4.0.2 7 May 2026
   * [jwk] BREAKING: `jwk.RegisterKeyImporter` now takes a
     `jwk.KeyImporter[T]` interface rather than a bare typed
     function. The v4.0.0 release exported `KeyImporter` and
