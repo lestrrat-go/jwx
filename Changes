@@ -4,7 +4,7 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
-v3.1.1 UNRELEASED
+v3.1.1 7 May 2026
   * [jws] Coordinated RFC 7797 `b64=false` handling pass: `jws.Verify`
     rejects payloads with `b64=false` unless `b64` is also listed in
     `crit`; `jws.Sign` auto-declares `b64` in `crit` when emitting
