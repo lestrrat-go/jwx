@@ -50,10 +50,11 @@ We are willing to help, but only as long as you are being nice to us.
 
 [Main source; if wordings differ, the main source supersedes this copy](https://github.com/lestrrat-go/contributions/blob/main/Contributions.md)
 
-On most of the projects that we provide, we have example test code available,
-most likely in the [`examples/`](../examples) directory. Before asking questions or filing issues, please make sure to take a look at the examples.
+Runnable examples for this project live in a separate repository at
+[`github.com/jwx-go/examples`](https://github.com/jwx-go/examples). Before asking
+questions or filing issues, please make sure to take a look at the examples.
 
-Specifically for Go projects, please first look for files with names `*_example_test.go`, which contain the runnable example code.
+Files there follow the `*_example_test.go` naming convention.
 
 If the examples do not solve your problems, feel free to proceed with your report. If there are missing examples or inaccuracies, please do not hesitate to contact us.
 
@@ -119,7 +120,7 @@ Use the `develop/vXXX` branches instead.
 ### `develop/vXXX` branches
 
 Development occurs on these branches. If you are wishing to make changes against
-`v2`, work on `develop/v2` branch.
+`v4`, work on `develop/v4` branch.
 
 When you make a PR, fork this branch, make your changes and create a PR against
 these development branches.
