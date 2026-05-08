@@ -108,13 +108,13 @@ func Example() {
 
   // Encrypt and Decrypt arbitrary payload with JWE!
   {
-    encrypted, err := jwe.Encrypt(payloadLoremIpsum, jwe.WithKey(jwa.RSA_OAEP(), jwkRSAPublicKey))
+    encrypted, err := jwe.Encrypt(payloadLoremIpsum, jwe.WithKey(jwa.RSA_OAEP_256(), jwkRSAPublicKey))
     if err != nil {
       fmt.Printf("failed to encrypt payload: %s\n", err)
       return
     }
 
-    decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), jwkRSAPrivateKey))
+    decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP_256(), jwkRSAPrivateKey))
     if err != nil {
       fmt.Printf("failed to decrypt payload: %s\n", err)
       return

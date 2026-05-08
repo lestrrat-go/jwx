@@ -146,13 +146,13 @@ func Example_jwe_encrypt() {
   }
 
   const payload = `Lorem ipsum`
-  encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP(), pubkey))
+  encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP_256(), pubkey))
   if err != nil {
     fmt.Printf("failed to encrypt payload: %s\n", err)
     return
   }
 
-  decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), privkey))
+  decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP_256(), privkey))
   if err != nil {
     fmt.Printf("failed to decrypt payload: %s\n", err)
     return
@@ -207,14 +207,14 @@ func Example_jwe_encrypt_json() {
   encrypted, err := jwe.Encrypt(
     []byte(payload),
     jwe.WithJSON(),                      // Toggle JSON serialization. Because there's only one key (recipient), this will produce Flattened JSON serialization
-    jwe.WithKey(jwa.RSA_OAEP(), pubkey), // Public key for encryption
+    jwe.WithKey(jwa.RSA_OAEP_256(), pubkey), // Public key for encryption
   )
   if err != nil {
     fmt.Printf("failed to encrypt payload: %s\n", err)
     return
   }
 
-  decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), privkey))
+  decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP_256(), privkey))
   if err != nil {
     fmt.Printf("failed to decrypt payload: %s\n", err)
     return
@@ -251,7 +251,7 @@ func Example_jwe_encrypt_json_multi() {
 
   options := []jwe.EncryptOption{jwe.WithJSON()}
   for _, key := range pubkeys {
-    options = append(options, jwe.WithKey(jwa.RSA_OAEP(), key))
+    options = append(options, jwe.WithKey(jwa.RSA_OAEP_256(), key))
   }
 
   const payload = `Lorem ipsum`
@@ -262,7 +262,7 @@ func Example_jwe_encrypt_json_multi() {
   }
 
   for _, key := range privkeys {
-    decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), key))
+    decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP_256(), key))
     if err != nil {
       fmt.Printf("failed to decrypt payload: %s\n", err)
       return
@@ -312,7 +312,7 @@ func Example_jwe_encrypt_with_headers() {
 
   hdrs := jwe.NewHeaders()
   hdrs.Set(`x-example`, true)
-  encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP(), privkey.PublicKey, jwe.WithPerRecipientHeaders(hdrs)))
+  encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP_256(), privkey.PublicKey, jwe.WithPerRecipientHeaders(hdrs)))
   if err != nil {
     fmt.Printf("failed to encrypt payload: %s\n", err)
     return
@@ -337,7 +337,7 @@ func Example_jwe_encrypt_with_headers() {
   json.NewEncoder(os.Stdout).Encode(msg.ProtectedHeaders())
 
   // OUTPUT:
-  // {"alg":"RSA-OAEP","enc":"A256GCM","x-example":true}
+  // {"alg":"RSA-OAEP-256","enc":"A256GCM","x-example":true}
 }
 ```
 source: [examples/jwe_encrypt_with_headers_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_encrypt_with_headers_example_test.go)
@@ -365,13 +365,13 @@ import (
 
 func Example_jwe_verify_with_key() {
   const payload = "Lorem ipsum"
-  encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP(), jwkRSAPublicKey))
+  encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP_256(), jwkRSAPublicKey))
   if err != nil {
     fmt.Printf("failed to sign payload: %s\n", err)
     return
   }
 
-  decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP(), jwkRSAPrivateKey))
+  decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.RSA_OAEP_256(), jwkRSAPrivateKey))
   if err != nil {
     fmt.Printf("failed to sign payload: %s\n", err)
     return
@@ -415,7 +415,7 @@ func Example_jwe_verify_with_jwk_set() {
     return
   }
   const payload = "Lorem ipsum"
-  encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP(), privkey.PublicKey))
+  encrypted, err := jwe.Encrypt([]byte(payload), jwe.WithKey(jwa.RSA_OAEP_256(), privkey.PublicKey))
   if err != nil {
     fmt.Printf("failed to sign payload: %s\n", err)
     return
@@ -430,7 +430,7 @@ func Example_jwe_verify_with_jwk_set() {
   set.AddKey(k2)
   // Add the real thing
   k3, _ := jwk.Import[jwk.Key](privkey)
-  k3.Set(jwk.AlgorithmKey, jwa.RSA_OAEP())
+  k3.Set(jwk.AlgorithmKey, jwa.RSA_OAEP_256())
   set.AddKey(k3)
 
   // Up to this point, you probably will replace with a simple
@@ -686,7 +686,7 @@ func Example_jwe_filter_basic() {
   // and application-specific custom fields.
   protectedHeaders := jwe.NewHeaders()
   protectedHeaders.Set(jwe.AlgorithmKey, jwa.RSA_OAEP_256())
-  protectedHeaders.Set(jwe.ContentEncryptionKey, jwa.A256GCM)
+  protectedHeaders.Set(jwe.ContentEncryptionKey, jwa.A256GCM())
   protectedHeaders.Set(jwe.ContentTypeKey, "application/json")
   protectedHeaders.Set(jwe.KeyIDKey, "example-key-1")
   protectedHeaders.Set("custom-header", "custom-value")
@@ -777,7 +777,7 @@ func Example_jwe_filter_advanced() {
   // Create JWE headers with comprehensive metadata including security and service information
   protectedHeaders := jwe.NewHeaders()
   protectedHeaders.Set(jwe.AlgorithmKey, jwa.RSA_OAEP_256())
-  protectedHeaders.Set(jwe.ContentEncryptionKey, jwa.A256GCM)
+  protectedHeaders.Set(jwe.ContentEncryptionKey, jwa.A256GCM())
   protectedHeaders.Set(jwe.ContentTypeKey, "application/json")
   protectedHeaders.Set(jwe.KeyIDKey, "service-key-001")
 

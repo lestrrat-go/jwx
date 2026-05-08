@@ -1446,7 +1446,7 @@ func Example_jwt_serialize_jwe_jws() {
   }
 
   serialized, err := jwt.NewSerializer().
-    Encrypt(jwt.WithKey(jwa.RSA_OAEP(), enckey)).
+    Encrypt(jwt.WithKey(jwa.RSA_OAEP_256(), enckey)).
     Sign(jwt.WithKey(jwa.HS256(), signkey)).
     Serialize(tok)
   if err != nil {
