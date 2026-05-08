@@ -34,9 +34,9 @@ Please be nice when you contact us.
 
 We are very glad that you find this project useful, and we intend to provide software that help you.
 
-You do not have to thank us, but please bare in mind that this is an opensource project that is provided **as-is**.
+You do not have to thank us, but please bear in mind that this is an opensource project that is provided **as-is**.
 This means that we are **NOT** obligated to support you, work for you, do your homework/research for you,
-or otherwise heed to you needs.
+or otherwise heed to your needs.
 
 We do not owe you one bit of code, or a fix, even if it's a critical one.
 
@@ -50,10 +50,11 @@ We are willing to help, but only as long as you are being nice to us.
 
 [Main source; if wordings differ, the main source supersedes this copy](https://github.com/lestrrat-go/contributions/blob/main/Contributions.md)
 
-On most of the projects that we provide, we have example test code available,
-most likely in the [`examples/`](../examples) directory. Before asking questions or filing issues, please make sure to take a look at the examples.
+Runnable examples for this project live in a separate repository at
+[`github.com/jwx-go/examples`](https://github.com/jwx-go/examples). Before asking
+questions or filing issues, please make sure to take a look at the examples.
 
-Specifically for Go projects, please first look for files with names `*_example_test.go`, which contain the runnable example code.
+Files there follow the `*_example_test.go` naming convention.
 
 If the examples do not solve your problems, feel free to proceed with your report. If there are missing examples or inaccuracies, please do not hesitate to contact us.
 
@@ -94,7 +95,7 @@ Please help us help you by providing us with a reproducible code.
 
 # Reviewer/Reviewee Guidelines
 
-If you are curious about what what gets reviewed and why some decisions
+If you are curious about what gets reviewed and why some decisions
 are made the way they are, please read [this document](https://github.com/lestrrat-go/contributions/blob/main/Reviews.md) to get some insight into the thinking process.
 
 # Brown M&M Clause
@@ -119,7 +120,7 @@ Use the `develop/vXXX` branches instead.
 ### `develop/vXXX` branches
 
 Development occurs on these branches. If you are wishing to make changes against
-`v2`, work on `develop/v2` branch.
+`v4`, work on `develop/v4` branch.
 
 When you make a PR, fork this branch, make your changes and create a PR against
 these development branches.
