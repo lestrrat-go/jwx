@@ -34,9 +34,9 @@ Please be nice when you contact us.
 
 We are very glad that you find this project useful, and we intend to provide software that help you.
 
-You do not have to thank us, but please bare in mind that this is an opensource project that is provided **as-is**.
+You do not have to thank us, but please bear in mind that this is an opensource project that is provided **as-is**.
 This means that we are **NOT** obligated to support you, work for you, do your homework/research for you,
-or otherwise heed to you needs.
+or otherwise heed to your needs.
 
 We do not owe you one bit of code, or a fix, even if it's a critical one.
 
@@ -95,7 +95,7 @@ Please help us help you by providing us with a reproducible code.
 
 # Reviewer/Reviewee Guidelines
 
-If you are curious about what what gets reviewed and why some decisions
+If you are curious about what gets reviewed and why some decisions
 are made the way they are, please read [this document](https://github.com/lestrrat-go/contributions/blob/main/Reviews.md) to get some insight into the thinking process.
 
 # Brown M&M Clause
