@@ -4,6 +4,15 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    target-branch: "develop/v4"
+    labels:
+      - "go"
+      - "dependencies"
+      - "dependabot"
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "daily"
     target-branch: "develop/v3"
     labels:
       - "go"
@@ -18,6 +27,11 @@ updates:
       - "go"
       - "dependencies"
       - "dependabot"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    target-branch: "develop/v4"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
