@@ -34,10 +34,6 @@ jobs:
           restore-keys: |
             fuzz-${{ matrix.package }}-
       - name: Run fuzz tests
-        run: |
-          FUZZTIME="${{ github.event.inputs.fuzz-time || '5m' }}"
-          for target in $(go test ./${{ matrix.package }}/ -list 'Fuzz.*' -run '^$' 2>/dev/null | grep '^Fuzz'); do
-            echo "::group::${target}"
-            go test ./${{ matrix.package }}/ -run '^$' -fuzz "^${target}\$" -fuzztime "${FUZZTIME}"
-            echo "::endgroup::"
-          done
+        env:
+          FUZZTIME: ${{ github.event.inputs.fuzz-time || '5m' }}
+        run: make fuzz-${{ matrix.package }}
