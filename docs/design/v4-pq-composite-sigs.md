@@ -11,7 +11,7 @@ Although the JOSE draft is only at `-01`, its cryptographic construction is inhe
 This change is additive: a new companion module under the jwx v4 ecosystem, no edits to the core library.
 
 - New module: `github.com/jwx-go/compsig/v4`
-- Repo layout follows the companion-module template (see `.claude/docs/companions.md`)
+- Repo layout follows the companion-module template (see `agents/docs/companions.md`)
 - Local development clone lives at `.companions/repo/compsig/` (gitignored)
 - Registered in `companions.yaml` alongside the other companion modules
 

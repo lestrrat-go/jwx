@@ -244,15 +244,15 @@ Read linked doc BEFORE working in that area. No exceptions.
 
 | Trigger | Doc |
 |---------|-----|
-| Looking up package APIs, types, functions | `.claude/docs/packages.md` |
-| Running or writing tests, fuzz tests | `.claude/docs/testing.md` |
-| Understanding package relationships, imports | `.claude/docs/dependencies.md` |
-| Working with errors, error handling patterns | `.claude/docs/error-formatting.md` |
-| Code generation, options pattern, extension points, JSON/base64 backends | `.claude/docs/internals.md` |
+| Looking up package APIs, types, functions | `agents/docs/packages.md` |
+| Running or writing tests, fuzz tests | `agents/docs/testing.md` |
+| Understanding package relationships, imports | `agents/docs/dependencies.md` |
+| Working with errors, error handling patterns | `agents/docs/error-formatting.md` |
+| Code generation, options pattern, extension points, JSON/base64 backends | `agents/docs/internals.md` |
 | Extension modules (ES256K, Ed448, ML-DSA, ML-KEM, X448, compsig, asmbase64, jwkcache) | `docs/10-extensions.md` |
-| Companion modules, CI templates, `/jwx-companion-bulk` | `.claude/docs/companions.md` |
-| Reverse-syncing action versions from companion workflows into templates | `.claude/docs/companion-template-sync.md` |
-| Cutting a release / tagging a new version | `.claude/docs/release.md` |
+| Companion modules, CI templates, `/jwx-companion-bulk` | `agents/docs/companions.md` |
+| Reverse-syncing action versions from companion workflows into templates | `agents/docs/companion-template-sync.md` |
+| Cutting a release / tagging a new version | `agents/docs/release.md` |
 
 ## Cache Maintenance
 
@@ -263,9 +263,9 @@ These docs cache repository state. Still read source before modifying code.
 
 | Doc | Update trigger |
 |-----|----------------|
-| `.claude/docs/packages.md` | New/renamed/removed exported functions, types, or packages |
-| `.claude/docs/testing.md` | Changes to test infrastructure, build tags, test helpers, fuzz targets |
-| `.claude/docs/dependencies.md` | New internal imports between packages, new external dependencies |
-| `.claude/docs/error-formatting.md` | New sentinel errors, changes to error wrapping patterns |
-| `.claude/docs/internals.md` | Changes to generators, options YAML schema, registration points, multi-module layout |
-| `.claude/docs/companions.md` | Changes to companion module tooling, templates, `companions.yaml`, or `.companions/` layout |
+| `agents/docs/packages.md` | New/renamed/removed exported functions, types, or packages |
+| `agents/docs/testing.md` | Changes to test infrastructure, build tags, test helpers, fuzz targets |
+| `agents/docs/dependencies.md` | New internal imports between packages, new external dependencies |
+| `agents/docs/error-formatting.md` | New sentinel errors, changes to error wrapping patterns |
+| `agents/docs/internals.md` | Changes to generators, options YAML schema, registration points, multi-module layout |
+| `agents/docs/companions.md` | Changes to companion module tooling, templates, `companions.yaml`, or `.companions/` layout |
