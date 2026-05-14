@@ -195,7 +195,7 @@ When replicating changes across modules, adapt these patterns:
 | Module name in `go.mod` | Read actual module path from the target's `go.mod` |
 | Module name in CI YAML | Package-specific test paths |
 | Import paths | Adjust `jwx-go/<proto>` to `jwx-go/<target>` |
-| Default branch | Use `branch` from companion-modules.yaml for each module |
+| Default branch | Use `branch` from `companions.yaml` for each module |
 | Modules without `go.mod` (benchmarks) | Skip Go-specific steps (build, lint, dep update) |
 
 ## Error Handling
@@ -218,7 +218,6 @@ When replicating changes across modules, adapt these patterns:
 - ALWAYS run pre-flight on ALL modules before modifying ANY.
 - ALWAYS verify `go build ./...` and `golangci-lint run ./...` before committing (for modules with go.mod).
 - ALWAYS report per-module results even on partial failure.
-- ALWAYS `cd` into `$PROJECT/.companions/repo/<name>` before running ANY command (git, go, golangci-lint, etc.) for that module. Using `--git-dir`/`--work-tree` does NOT work — the parent jwx repo's git context leaks through.
-- NEVER use `git -C`.
+- ALWAYS `cd` into `$PROJECT/.companions/repo/<name>` before running ANY command (git, go, golangci-lint) for that module. NEVER use `git -C`, `--git-dir`, or `--work-tree` instead — they don't apply to non-git tools, and the shell's working directory stays in the parent jwx repo so its git context leaks through.
 - NEVER use compound commands (`&&`, `||`, `;`) in Bash calls.
 - PRs are OFF by default. Only push/create PRs when `--pr` is specified.
