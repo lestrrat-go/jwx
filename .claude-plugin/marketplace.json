@@ -1,0 +1,14 @@
+{
+  "name": "jwx-v4",
+  "owner": {
+    "name": "lestrrat",
+    "url": "https://github.com/lestrrat-go/jwx"
+  },
+  "plugins": [
+    {
+      "name": "jwx-dev-v4",
+      "source": "./agents/plugin",
+      "description": "Guide for developing Go applications with github.com/lestrrat-go/jwx v4 — parse and sign JWTs, work with JWS/JWE/JWK, pick algorithms, and avoid common footguns."
+    }
+  ]
+}

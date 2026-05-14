@@ -1,0 +1,8 @@
+{
+  "name": "jwx-dev-v4",
+  "description": "Guide for developing Go applications with github.com/lestrrat-go/jwx v4 — parse and sign JWTs, work with JWS/JWE/JWK, pick algorithms, and avoid common footguns.",
+  "version": "0.0.1",
+  "homepage": "https://github.com/lestrrat-go/jwx",
+  "repository": "https://github.com/lestrrat-go/jwx",
+  "license": "MIT"
+}
