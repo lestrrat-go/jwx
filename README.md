@@ -1,4 +1,4 @@
-# github.com/lestrrat-go/jwx/v4 [![CI](https://github.com/lestrrat-go/jwx/actions/workflows/ci.yml/badge.svg)](https://github.com/lestrrat-go/jwx/actions/workflows/ci.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v4.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4)
+# github.com/lestrrat-go/jwx/v4 [![CI](https://github.com/lestrrat-go/jwx/actions/workflows/ci.yml/badge.svg)](https://github.com/lestrrat-go/jwx/actions/workflows/ci.yml) [![Go Reference](https://pkg.go.dev/badge/github.com/lestrrat-go/jwx/v4.svg)](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/lestrrat-go/jwx)
 
 Go module implementing various JWx (JWA/JWE/JWK/JWS/JWT, otherwise known as JOSE) technologies.
 
