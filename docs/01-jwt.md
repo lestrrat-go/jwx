@@ -941,7 +941,7 @@ source: [examples/jwt_validate_issuer_example_test.go](https://github.com/jwx-go
 
 ## Use a custom validator
 
-You may also create a custom validator that implements the `jwt.Validator` interface. These validators can be added as an option to `jwt.Validate()` using `jwt.WithValidator()`. Multiple validators can be specified. The error should be of type `jwt.ValidationError`. Use `jwt.NewValidationError` to create an error of appropriate type.
+You may also create a custom validator that implements the `jwt.Validator` interface. These validators can be added as an option to `jwt.Validate()` using `jwt.WithValidator()`. Multiple validators can be specified. Return any `error` from your validator — `jwt.Validate` wraps it in a `jwt.ValidationError` automatically, so callers can still match the result with `errors.Is(err, jwt.ValidationError{})`. You do not (and cannot) construct a `jwt.ValidationError` yourself; there is no public constructor.
 
 <!-- INCLUDE(examples/jwt_validate_validator_example_test.go) -->
 ```go
@@ -992,7 +992,7 @@ source: [examples/jwt_validate_validator_example_test.go](https://github.com/jwx
 
 ## Detecting error types
 
-If you enable validation during `jwt.Parse()`, you might sometimes want to differentiate between parsing errors and validation errors. To do this, you can use the function `jwt.IsValidationError()`. To further differentiate between specific errors, you can use `errors.Is()`:
+If you enable validation during `jwt.Parse()`, you might sometimes want to differentiate between parsing errors and validation errors. Use `errors.Is(err, jwt.ValidationError{})` to test for the general category, and `errors.Is(err, jwt.TokenExpiredError{})` / `errors.AsType[jwt.InvalidAudienceError](err)` / etc. to test for specific failures:
 
 <!-- INCLUDE(examples/jwt_validate_detect_error_type_example_test.go) -->
 ```go
@@ -1100,10 +1100,10 @@ To prevent token replay, callers should:
 validator := jwt.ValidatorFunc(func(_ context.Context, t jwt.Token) error {
     jti, ok := t.JwtID()
     if !ok {
-        return jwt.NewValidationError(fmt.Errorf(`"jti" claim is required`))
+        return fmt.Errorf(`"jti" claim is required`)
     }
     if replayCache.HasSeen(jti) {
-        return jwt.NewValidationError(fmt.Errorf(`token with jti %q has already been used`, jti))
+        return fmt.Errorf(`token with jti %q has already been used`, jti)
     }
     replayCache.MarkSeen(jti, t.Expiration())
     return nil
