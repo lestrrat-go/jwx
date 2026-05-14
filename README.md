@@ -15,6 +15,17 @@ If you are using this module in your product or your company, please add your pr
 go get github.com/lestrrat-go/jwx/v4
 ```
 
+## Claude Code Skill
+
+If you use [Claude Code](https://claude.com/claude-code), install the bundled `jwx-dev-v4` skill so the assistant can guide you through using this library — picking algorithms, parsing/signing JWTs, working with JWS/JWE/JWK, and avoiding common footguns:
+
+```
+/plugin marketplace add lestrrat-go/jwx
+/plugin install jwx-dev-v4
+```
+
+The skill is scoped to **v4** only. It is intended for developers *using* jwx, not for working on the library itself.
+
 # Migrating from v3
 
 If you are migrating from `github.com/lestrrat-go/jwx/v3`, see [`MIGRATION.md`](MIGRATION.md) for a step-by-step guide with before/after code examples. For a complete list of breaking changes and new features, see [`Changes-v4.md`](Changes-v4.md).
