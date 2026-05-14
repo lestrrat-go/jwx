@@ -28,14 +28,19 @@ jobs:
       - uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: ~/.cache/go-build/fuzz
-          key: fuzz-${{ hashFiles('go.mod') }}-${{ github.ref }}
+          key: fuzz-${{ github.run_id }}
           restore-keys: |
-            fuzz-${{ hashFiles('go.mod') }}-
+            fuzz-
       - name: Run fuzz tests
         run: |
           FUZZTIME="${{ github.event.inputs.fuzz-time || '5m' }}"
           mkdir -p /tmp/fuzz-output
-          for target in $(go test . -list '^Fuzz' -run '^$' | grep '^Fuzz' || true); do
+          targets=$(go test . -list '^Fuzz' -run '^$' | grep '^Fuzz')
+          if [ -z "$targets" ]; then
+            echo "no fuzz targets found"
+            exit 1
+          fi
+          for target in $targets; do
             echo "::group::${target}"
             go test . -run '^$' -fuzz "^${target}\$" -fuzztime "${FUZZTIME}" 2>&1 \
               | tee -a /tmp/fuzz-output/log.txt
