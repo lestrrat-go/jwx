@@ -819,6 +819,11 @@ func Example_jwt_parse_with_jku() {
   // its own keys accepted as "the issuer's keys". This example uses
   // srv.URL as a "known issuer" because httptest picks a random
   // port each run.
+  //
+  // If you use a RegexpWhitelist instead of a MapWhitelist, anchor
+  // the pattern — e.g. `^https://issuer\.example/` — because patterns
+  // are NOT anchored for you, and an unanchored pattern silently
+  // allows look-alike hosts like issuer.example.attacker.com.
   client := jwkfetch.NewClient(
     // httptest serves HTTPS with a self-signed cert, so the
     // Client needs srv.Client() to validate it.
