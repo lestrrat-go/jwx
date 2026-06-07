@@ -838,6 +838,17 @@ func Example_jwk_whitelist() {
       Whitelist: jwk.NewMapWhitelist().Add(`https://www.googleapis.com/oauth2/v3/certs`),
       Error:     true,
     },
+    // RegexpWhitelist patterns are NOT anchored for you. Always
+    // anchor the start with ^, escape the literal dots (\.), and
+    // terminate the host with a / so the pattern can only match the
+    // origin you intend. The pattern below does exactly that. A
+    // naive, unanchored `www\.googleapis\.com` would also match
+    // hostile look-alikes such as
+    // https://www.googleapis.com.attacker.com/evil or
+    // https://attacker.com/?x=www.googleapis.com, silently turning
+    // the allowlist into a bypass. Prefer MapWhitelist when the URL
+    // set is known exactly; reach for RegexpWhitelist only when you
+    // genuinely need patterns.
     {
       Whitelist: jwk.NewRegexpWhitelist().Add(regexp.MustCompile(`^https://www\.googleapis\.com/`)),
       Error:     true,
