@@ -789,6 +789,8 @@ Currently the package provides `jwk.MapWhitelist` and `jwk.RegexpWhitelist` type
 as well as `jwk.InsecureWhitelist` for when you explicitly want to allow all URLs.
 If you would like to implement something more complex, you can provide a function via `jwk.WhitelistFunc` or implement your own type of `jwk.Whitelist`.
 
+**If you use `jwk.RegexpWhitelist`, anchor your patterns.** Patterns are **not** anchored for you, so a naive pattern matches anywhere in the URL and can allow far more than you intend. `www\.googleapis\.com` also matches hostile look-alikes such as `https://www.googleapis.com.attacker.com/evil` and `https://attacker.com/?x=www.googleapis.com` — a whitelist bypass that reopens the SSRF / key-substitution hole the whitelist was meant to close. Anchor the start with `^`, escape the literal dots (`\.`), and terminate the host with a `/` (e.g. `^https://www\.googleapis\.com/`, as in the example below). Prefer `jwk.MapWhitelist` when the set of URLs is known exactly.
+
 <!-- INCLUDE(examples/jwk_whitelist_example_test.go) -->
 ```go
 package examples_test
