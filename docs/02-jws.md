@@ -634,6 +634,8 @@ jwx does NOT wrap the fetcher in a default-deny — it has no way to inspect a `
 
 A `jwkfetch.Client` whitelist is applied to both the initial URL and every redirect target, so a hostile JWKS host cannot 302-bypass the allowlist. See the [jwkfetch README](https://github.com/jwx-go/jwkfetch) for `MapWhitelist` / `RegexpWhitelist` / `WhitelistFunc` patterns and the regex footguns to avoid.
 
+**If you reach for `RegexpWhitelist`, anchor your patterns.** They are **not** anchored for you, so `example\.com` matches anywhere in the URL and also allows `https://example.com.attacker.com/evil` — a whitelist bypass back into the SSRF / key-substitution territory the whitelist was meant to close. Write `^https://example\.com/` (anchor the start with `^`, escape the dots, terminate the host with `/`), or prefer `MapWhitelist` when the `jku` URLs are known up front.
+
 The URL in the `jku` field must have the `https` scheme and the key ID in the fetched JWK Set must match the key ID in the JWS header.
 
 Passing `nil` to `jws.WithVerifyAuto` is not supported: jku verification will error at use time rather than silently falling back to any default. This is intentional — there is no correct default fetcher for jku verification because the policy (which URLs to trust) is site-specific.

@@ -808,6 +808,8 @@ Policy options (`WithHTTPClient`, `WithMaxBodySize`, `WithParseOptions`) work fo
 
 See the [module README](https://github.com/jwx-go/jwkfetch) for the full API reference and whitelist types (`InsecureWhitelist`, `BlockAllWhitelist`, `MapWhitelist`, `RegexpWhitelist`, `WhitelistFunc`).
 
+`RegexpWhitelist` patterns are **not** anchored for you. A naive pattern like `example\.com` matches anywhere in the URL, so it also allows `https://example.com.attacker.com/evil` and `https://attacker.com/?redirect=https://example.com` — a whitelist bypass that reopens the SSRF / key-substitution hole the whitelist was meant to close. Anchor the start with `^`, escape the dots (`\.`), and terminate the host with `/` — e.g. `^https://example\.com/`, or `^https://example\.com$` for the bare origin. Prefer `MapWhitelist` when the URL set is known up front.
+
 ---
 
 # Filters and Introspection (jwxfilter)

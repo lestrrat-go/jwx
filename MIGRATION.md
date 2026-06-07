@@ -261,6 +261,8 @@ type Fetcher interface {
 >
 > `jwkfetch.Client` applies the whitelist to both the initial URL and every HTTP redirect target, so a hostile JWKS host cannot 302 into an off-allowlist URL. This redirect-hop enforcement only applies when the configured `HTTPClient` is a `*http.Client`; if you supply a custom transport, you are responsible for policing redirects yourself.
 >
+> If you migrate a `RegexpWhitelist`, **anchor your patterns** — they are **not** anchored for you. `example\.com` matches anywhere in the URL and also allows `https://example.com.attacker.com/evil`, reopening the SSRF / key-substitution hole. Write `^https://example\.com/` (anchor the start with `^`, escape the dots, terminate the host with `/`), or use `MapWhitelist` when the issuer URLs are known exactly.
+>
 > `jws.WithVerifyAuto(nil)` / `jwt.WithVerifyAuto(nil)` is no longer supported — both error at jku-verification time rather than silently using any default.
 
 **Default behavior is equivalent to v3 for trusted, hard-coded URLs.** Both v3's `jwk.Fetch()` and v4's `jwkfetch.NewClient().Fetch()` permit every URL by default — the right choice when the URL is a compile-time constant or comes from trusted configuration. You generally do not need to pass `WithWhitelist` to migrate a hard-coded-URL call site. The SSRF risk above is specific to `jku`-style verification, where the URL originates in the untrusted JWS header.

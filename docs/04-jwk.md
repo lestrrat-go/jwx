@@ -621,10 +621,22 @@ Pass any implementation of `jwkfetch.Whitelist` to `jwkfetch.WithWhitelist`:
 - `jwkfetch.InsecureWhitelist{}` — allow every URL (the default when `WithWhitelist` isn't passed)
 - `jwkfetch.BlockAllWhitelist{}` — deny every URL (useful for tests, safety assertions)
 - `jwkfetch.NewMapWhitelist().Add(url1).Add(url2)` — fixed allow-list of exact URLs
-- `jwkfetch.NewRegexpWhitelist().Add(pattern)` — pattern-based allow-list
+- `jwkfetch.NewRegexpWhitelist().Add(regexp.MustCompile(pattern))` — pattern-based allow-list (**anchor your patterns — see the warning below**)
 - `jwkfetch.WhitelistFunc(func(string) bool)` — custom predicate
 
 All the restrictive types fail closed: a URL that doesn't match any listed entry / pattern / predicate is rejected with a `WhitelistError`, for both the initial URL and every redirect target. Whitelist rejections can be detected with `errors.Is(err, jwkfetch.WhitelistError())`.
+
+> **Anchor your `RegexpWhitelist` patterns.** Patterns are **not** anchored for you, so a naive pattern matches anywhere in the URL and can allow far more than you intend. `example\.com` also matches `https://example.com.attacker.com/evil` and `https://attacker.com/?redirect=https://example.com` — a whitelist bypass that hands an attacker SSRF or key substitution. Anchor the start with `^`, escape the dots (`\.`), and terminate the host with `/`:
+>
+> ```go
+> // BAD — matches "example.com" anywhere in the URL
+> jwkfetch.NewRegexpWhitelist().Add(regexp.MustCompile(`example\.com`))
+>
+> // GOOD — anchored to scheme + host
+> jwkfetch.NewRegexpWhitelist().Add(regexp.MustCompile(`^https://example\.com/`))
+> ```
+>
+> Use `^https://example\.com$` to allow the bare origin with no path, and `^https://example\.com(:\d+)?/` to also allow an explicit port. Prefer `MapWhitelist` whenever the set of URLs is known up front.
 
 The `Whitelist` concept applies to `Client` only. `Cache` has no `Whitelist` field — it's a cache, and the set of URLs it will ever contact is exactly the set you passed to `Register`. Trying to pass `WithWhitelist` to `NewCache` is a compile-time error.
 
