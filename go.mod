@@ -7,7 +7,7 @@ require (
 	github.com/lestrrat-go/option/v3 v3.0.0-alpha1
 	github.com/stretchr/testify v1.11.1
 	github.com/valyala/fastjson v1.6.10
-	golang.org/x/crypto v0.52.0
+	golang.org/x/crypto v0.53.0
 )
 
 require (
