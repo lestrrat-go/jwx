@@ -72,6 +72,44 @@ func TestDetachedPayloadMemberPresence(t *testing.T) {
 		require.NoError(t, err, `jws.Verify must accept detached payload when "payload" member is omitted`)
 	})
 
+	t.Run("reject detached JSON with null payload", func(t *testing.T) {
+		// A "payload":null member is present on the wire (so it is not a
+		// true detached JWS), and null is not a valid base64url payload
+		// string. It must be rejected, never treated as detached.
+		msg, err := jws.Parse(compact)
+		require.NoError(t, err, `jws.Parse should succeed`)
+		jsonbuf, err := json.Marshal(msg)
+		require.NoError(t, err, `json.Marshal should succeed`)
+
+		var obj map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(jsonbuf, &obj), `json.Unmarshal should succeed`)
+		obj["payload"] = json.RawMessage(`null`)
+		tampered, err := json.Marshal(obj)
+		require.NoError(t, err, `json.Marshal (tampered) should succeed`)
+
+		_, err = jws.Verify(tampered, jws.WithKey(jwa.RS256(), pubkey), jws.WithDetachedPayload(external))
+		require.Error(t, err, `jws.Verify must reject "payload":null and not treat it as detached`)
+	})
+
+	t.Run("reject normal JSON verification with null payload", func(t *testing.T) {
+		// A null payload is invalid even for ordinary (non-detached)
+		// verification: RFC 7515 payload is base64url text, not JSON null.
+		// Assert it errors out cleanly (no panic).
+		msg, err := jws.Parse(compact)
+		require.NoError(t, err, `jws.Parse should succeed`)
+		jsonbuf, err := json.Marshal(msg)
+		require.NoError(t, err, `json.Marshal should succeed`)
+
+		var obj map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(jsonbuf, &obj), `json.Unmarshal should succeed`)
+		obj["payload"] = json.RawMessage(`null`)
+		tampered, err := json.Marshal(obj)
+		require.NoError(t, err, `json.Marshal (tampered) should succeed`)
+
+		_, err = jws.Verify(tampered, jws.WithKey(jwa.RS256(), pubkey))
+		require.Error(t, err, `jws.Verify must reject "payload":null in normal verification`)
+	})
+
 	t.Run("allow true detached compact (empty middle segment)", func(t *testing.T) {
 		_, err := jws.Verify(compact, jws.WithKey(jwa.RS256(), pubkey), jws.WithDetachedPayload(external))
 		require.NoError(t, err, `jws.Verify must accept detached compact JWS`)
