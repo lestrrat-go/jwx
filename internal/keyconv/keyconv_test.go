@@ -3,6 +3,7 @@ package keyconv_test
 import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
 	"testing"
@@ -247,5 +248,42 @@ func TestECDHToECDSA(t *testing.T) {
 		_, err = keyconv.ECDHToECDSA(x25519Key)
 		require.Error(t, err, `ECDHToECDSA should fail for unsupported curve`)
 		require.Contains(t, err.Error(), "unsupported ECDH curve", `error should mention unsupported curve`)
+	})
+}
+
+func TestEd25519MalformedKey(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err, `ed25519.GenerateKey should succeed`)
+
+	t.Run("Ed25519PrivateKey", func(t *testing.T) {
+		t.Run("short key returns error", func(t *testing.T) {
+			_, err := keyconv.Ed25519PrivateKey(ed25519.PrivateKey{1, 2, 3})
+			require.Error(t, err, `short ed25519.PrivateKey must error`)
+		})
+		t.Run("nil key returns error", func(t *testing.T) {
+			_, err := keyconv.Ed25519PrivateKey(ed25519.PrivateKey(nil))
+			require.Error(t, err, `nil ed25519.PrivateKey must error`)
+		})
+		t.Run("valid key succeeds", func(t *testing.T) {
+			got, err := keyconv.Ed25519PrivateKey(priv)
+			require.NoError(t, err)
+			require.Equal(t, priv, *got)
+		})
+	})
+
+	t.Run("Ed25519PublicKey", func(t *testing.T) {
+		t.Run("short public key returns error", func(t *testing.T) {
+			_, err := keyconv.Ed25519PublicKey(ed25519.PublicKey{1, 2, 3})
+			require.Error(t, err, `short ed25519.PublicKey must error`)
+		})
+		t.Run("short private key returns error", func(t *testing.T) {
+			_, err := keyconv.Ed25519PublicKey(ed25519.PrivateKey{1, 2, 3})
+			require.Error(t, err, `short ed25519.PrivateKey must error`)
+		})
+		t.Run("valid public key succeeds", func(t *testing.T) {
+			got, err := keyconv.Ed25519PublicKey(pub)
+			require.NoError(t, err)
+			require.Equal(t, pub, *got)
+		})
 	})
 }

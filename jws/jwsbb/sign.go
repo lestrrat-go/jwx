@@ -122,6 +122,21 @@ func dispatchEdDSASign(key any, jwsAlg, dsigAlg string, payload []byte, rr io.Re
 	// Note: Extension algorithms (e.g. Ed448) are registered as dsig.Custom family,
 	// so they take the dsig.Custom branch in Sign() and never reach this function.
 
+	// A concrete ed25519.PrivateKey satisfies crypto.Signer, but its Public()
+	// method panics ("slice bounds out of range") when the key is not exactly
+	// ed25519.PrivateKeySize bytes. Reject malformed keys here so we return an
+	// error instead of panicking inside the crypto.Signer branch below.
+	switch k := key.(type) {
+	case ed25519.PrivateKey:
+		if len(k) != ed25519.PrivateKeySize {
+			return nil, fmt.Errorf(`jwsbb.Sign: invalid ed25519.PrivateKey length %d, expected %d`, len(k), ed25519.PrivateKeySize)
+		}
+	case *ed25519.PrivateKey:
+		if k == nil || len(*k) != ed25519.PrivateKeySize {
+			return nil, fmt.Errorf(`jwsbb.Sign: invalid *ed25519.PrivateKey length, expected %d`, ed25519.PrivateKeySize)
+		}
+	}
+
 	// Try crypto.Signer first (dsig can handle it directly)
 	if signer, ok := key.(crypto.Signer); ok {
 		// Verify it's an EdDSA key
