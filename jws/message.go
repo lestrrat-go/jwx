@@ -314,15 +314,18 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		// (or, with b64=false, raw) string. Reject JSON null and any
 		// non-string value (number/object/array/bool) rather than letting
 		// a null be silently mistaken for a detached payload.
-		var payload string
+		var payload *string
 		if err := json.Unmarshal(mup.Payload, &payload); err != nil {
 			return fmt.Errorf(`invalid "payload" value: must be a string: %w`, err)
 		}
+		if payload == nil {
+			return fmt.Errorf(`invalid "payload" value: must be a string`)
+		}
 
 		if !b64 { // NOT base64 encoded
-			m.payload = []byte(payload)
+			m.payload = []byte(*payload)
 		} else {
-			decoded, err := base64.DecodeString(payload)
+			decoded, err := base64.DecodeString(*payload)
 			if err != nil {
 				return fmt.Errorf(`failed to base64 decode payload: %w`, err)
 			}

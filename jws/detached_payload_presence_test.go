@@ -122,6 +122,28 @@ func TestDetachedPayloadMemberPresence(t *testing.T) {
 		require.Error(t, err, `jws.Verify must reject detached option when compact JWS carries a payload`)
 	})
 
+	t.Run("reject in-band JSON verification with null payload over empty payload", func(t *testing.T) {
+		// Regression: sign a valid in-band JSON JWS over an EMPTY payload, so
+		// the signature is computed over empty bytes. Then rewrite
+		// "payload":"" to "payload":null. With a non-pointer string unmarshal
+		// target, JSON null decodes to "" as a silent no-op, so the null
+		// payload would be mistaken for a valid empty payload and the
+		// signature (computed over empty) would still verify. The null must be
+		// rejected outright.
+		inband, err := jws.Sign([]byte{}, jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
+		require.NoError(t, err, `jws.Sign (in-band JSON, empty payload) should succeed`)
+
+		var obj map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(inband, &obj), `json.Unmarshal should succeed`)
+		require.Equal(t, json.RawMessage(`""`), obj["payload"], `signed payload member should be empty string`)
+		obj["payload"] = json.RawMessage(`null`)
+		tampered, err := json.Marshal(obj)
+		require.NoError(t, err, `json.Marshal (tampered) should succeed`)
+
+		_, err = jws.Verify(tampered, jws.WithKey(jwa.RS256(), pubkey))
+		require.Error(t, err, `jws.Verify must reject "payload":null in in-band verification, not treat it as empty`)
+	})
+
 	t.Run("normal in-band JSON verification still works", func(t *testing.T) {
 		inband, err := jws.Sign(external, jws.WithKey(jwa.RS256(), privkey), jws.WithJSON())
 		require.NoError(t, err, `jws.Sign (in-band JSON) should succeed`)
