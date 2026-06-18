@@ -473,6 +473,10 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 
 	var msg Message
 	msg.payload = decodedPayload
+	// Compact serialization has no way to express "present but empty":
+	// an empty middle segment is genuinely absent (detached). Presence is
+	// therefore simply whether the middle segment carried any bytes.
+	msg.payloadPresent = len(payload) > 0
 	msg.signatures = append(msg.signatures, &Signature{
 		protected: hdr,
 		signature: decodedSignature,

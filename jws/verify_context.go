@@ -173,7 +173,12 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 	defer msg.clearRaw()
 
 	if vc.detachedPayload != nil {
-		if len(msg.payload) != 0 {
+		// Reject when a "payload" member was present on the wire, even if
+		// it decoded to empty bytes. A JSON JWS carrying "payload":"" is
+		// an in-band JWS over an empty payload, not a detached one; only a
+		// truly absent payload member (RFC 7515 Appendix F) may be
+		// satisfied by a caller-supplied detached payload.
+		if msg.payloadPresent {
 			return nil, makeVerifyError(`can't specify detached payload for JWS with payload`)
 		}
 

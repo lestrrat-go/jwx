@@ -43,6 +43,7 @@ go_test(
     srcs = [
         "bench_marshal_test.go",
         "bench_serialize_test.go",
+        "detached_payload_presence_test.go",
         "ed25519_keylength_test.go",
         "fuzz_test.go",
         "headers_nil_test.go",

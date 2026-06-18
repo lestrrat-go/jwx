@@ -953,9 +953,13 @@ func TestStreamingDetachedJSONRejectsNonEmptyPayload(t *testing.T) {
 	require.Contains(t, err.Error(), `payload`)
 }
 
-func TestStreamingDetachedJSONAcceptsEmptyPayload(t *testing.T) {
+func TestStreamingDetachedJSONRejectsPresentEmptyPayload(t *testing.T) {
 	t.Parallel()
 
+	// A JSON JWS carrying a present-but-empty "payload":"" member is an
+	// in-band JWS over an empty payload, not a detached one. RFC 7515
+	// Appendix F detached form omits the member entirely, so the streaming
+	// detached path must reject a present member regardless of its value.
 	payload := []byte(`json-empty-payload`)
 	privkey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err)
@@ -977,7 +981,8 @@ func TestStreamingDetachedJSONAcceptsEmptyPayload(t *testing.T) {
 		jws.WithKey(jwa.RS256(), &privkey.PublicKey),
 		jws.WithDetachedPayloadReader(bytes.NewReader(payload)),
 	)
-	require.NoError(t, err)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), `payload`)
 }
 
 func TestStreamingDetachedJSONGeneralSingleSignature(t *testing.T) {

@@ -176,7 +176,7 @@ func (m Message) LookupSignature(kid string) []*Signature {
 // incoming JSON object. We then decide how to parse it
 // from the fields that are populated.
 type messageUnmarshalProbe struct {
-	Payload    *string           `json:"payload"`
+	Payload    json.RawMessage   `json:"payload"`
 	Signatures []json.RawMessage `json:"signatures,omitempty"`
 	Header     json.RawMessage   `json:"header,omitempty"`
 	Protected  *string           `json:"protected,omitempty"`
@@ -187,6 +187,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	m.payload = nil
 	m.signatures = nil
 	m.detached = false
+	m.payloadPresent = false
 	m.b64 = true
 
 	var mup messageUnmarshalProbe
@@ -293,13 +294,38 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		b64 = getB64Value(sig.protected)
 	}
 
+	// mup.Payload is json.RawMessage, so we can distinguish an omitted
+	// "payload" member (nil) from one that is present on the wire (non-nil),
+	// including the present-but-null case. encoding/json decodes both an
+	// omitted member and "payload":null to a nil *string, so a *string field
+	// could not tell "payload":null apart from a true detached JWS.
 	if mup.Payload == nil {
 		m.detached = true
 	} else {
+		// The "payload" member was present on the wire. Track this
+		// independently of whether it decodes to empty bytes: a JSON
+		// JWS that carries "payload":"" is an in-band JWS over an empty
+		// payload, NOT a detached JWS (RFC 7515 Appendix F omits the
+		// member entirely for detached). Detached verification must be
+		// able to tell the two apart.
+		m.payloadPresent = true
+
+		// RFC 7515 requires the "payload" member value to be a base64url
+		// (or, with b64=false, raw) string. Reject JSON null and any
+		// non-string value (number/object/array/bool) rather than letting
+		// a null be silently mistaken for a detached payload.
+		var payload *string
+		if err := json.Unmarshal(mup.Payload, &payload); err != nil {
+			return fmt.Errorf(`invalid "payload" value: must be a string: %w`, err)
+		}
+		if payload == nil {
+			return fmt.Errorf(`invalid "payload" value: must be a string`)
+		}
+
 		if !b64 { // NOT base64 encoded
-			m.payload = []byte(*mup.Payload)
+			m.payload = []byte(*payload)
 		} else {
-			decoded, err := base64.DecodeString(*mup.Payload)
+			decoded, err := base64.DecodeString(*payload)
 			if err != nil {
 				return fmt.Errorf(`failed to base64 decode payload: %w`, err)
 			}
