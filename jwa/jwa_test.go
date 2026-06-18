@@ -131,6 +131,52 @@ func TestKeyAlgorithmFrom(t *testing.T) {
 		require.NotContains(t, err.Error(), input, `error should not echo the full invalid value`)
 	})
 
+	// Pin the exact error string for several input lengths so that the
+	// bounded-allocation preview formatting stays byte-for-byte identical
+	// to the naive []rune(v) implementation.
+	t.Run("exact error string is identical regardless of length", func(t *testing.T) {
+		t.Parallel()
+
+		for _, tc := range []struct {
+			Name     string
+			Input    string
+			Expected string
+		}{
+			{
+				Name:     "short ASCII rendered in full",
+				Input:    "dummy",
+				Expected: `invalid key value: "dummy": invalid key algorithm`,
+			},
+			{
+				Name:     "exactly the preview length rendered in full",
+				Input:    strings.Repeat("a", 64),
+				Expected: fmt.Sprintf(`invalid key value: %q: invalid key algorithm`, strings.Repeat("a", 64)),
+			},
+			{
+				Name:     "one rune over the preview length is truncated",
+				Input:    strings.Repeat("a", 65),
+				Expected: fmt.Sprintf(`invalid key value: %q: invalid key algorithm`, strings.Repeat("a", 64)+`...`),
+			},
+			{
+				Name:     "long ASCII is truncated",
+				Input:    strings.Repeat("a", 1024),
+				Expected: fmt.Sprintf(`invalid key value: %q: invalid key algorithm`, strings.Repeat("a", 64)+`...`),
+			},
+			{
+				Name:     "long multibyte is truncated on rune boundaries",
+				Input:    strings.Repeat("あ", 1024),
+				Expected: fmt.Sprintf(`invalid key value: %q: invalid key algorithm`, strings.Repeat("あ", 64)+`...`),
+			},
+		} {
+			t.Run(tc.Name, func(t *testing.T) {
+				t.Parallel()
+				_, err := jwa.KeyAlgorithmFrom(tc.Input)
+				require.Error(t, err, `creating key algorithm should fail`)
+				require.Equal(t, tc.Expected, err.Error(), `error string must be byte-for-byte identical`)
+			})
+		}
+	})
+
 	t.Run("invalid type preserves type information", func(t *testing.T) {
 		t.Parallel()
 
