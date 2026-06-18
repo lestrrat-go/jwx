@@ -110,12 +110,14 @@ func (k *symmetricKey) PublicKey() (Key, error) {
 
 func (k *symmetricKey) Validate() error {
 	// Validate only checks that "k" is non-empty. It intentionally does NOT
-	// enforce algorithm-specific key lengths (e.g. exact AES sizes for
-	// A128/192/256GCM/KW, or an HMAC minimum) even when "alg" is present:
+	// enforce algorithm-specific key lengths even when "alg" is present:
 	// RFC 7517/7518 do not require parse-time key-length validation, and "alg"
-	// is an informational hint (RFC 7517 §4.4). A wrong-size key is rejected
-	// when used in a JOSE operation (e.g. aes.NewCipher fails on a bad length),
-	// not here. Do NOT add alg-specific length checks below.
+	// is an informational hint (RFC 7517 §4.4). Exact AES key sizes (for
+	// A128/192/256GCM/KW) are enforced at use time (aes.NewCipher rejects a bad
+	// length). HMAC minimum key sizes (RFC 7518 §3.2) are NOT enforced here OR
+	// at use time — a short non-empty HMAC key is accepted and yields a weak
+	// MAC, which is the caller's responsibility. Do NOT add alg-specific
+	// length checks below.
 	octets, ok := k.Octets()
 	if !ok || len(octets) == 0 {
 		return NewKeyValidationError(fmt.Errorf(`jwk.SymmetricKey: missing "k" field`))
