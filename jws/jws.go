@@ -661,6 +661,13 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 		var signerPubErr error
 		if signer, ok := key.(crypto.Signer); ok {
 			pub := signer.Public()
+			// A custom crypto.Signer may hand back a malformed (wrong-length or
+			// typed-nil) ed25519.PublicKey. Classifying that as OKP would let it
+			// reach the EdDSA verify path, which panics ("ed25519: bad public key
+			// length"). Reject it here instead.
+			if err := validateEd25519KeyShape(pub); err != nil {
+				return nil, fmt.Errorf(`%w: %w`, errUnclassifiableKey, err)
+			}
 			// Guard: only recurse if the public key is not itself a crypto.Signer,
 			// to prevent infinite recursion from pathological implementations.
 			if _, isSigner := pub.(crypto.Signer); !isSigner {

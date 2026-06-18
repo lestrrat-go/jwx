@@ -46,6 +46,9 @@ func validateEd25519KeyShape(key any) error {
 //
 // This function is now a thin wrapper around dsig.SignEdDSA. For new projects, you should
 // consider using dsig instead of this function.
+//
+// As a low-level primitive it assumes a well-formed, correctly-sized key; a
+// wrong-length key may panic. Use jws.Sign for untrusted or unvalidated keys.
 func SignEdDSA(key ed25519.PrivateKey, payload []byte) ([]byte, error) {
 	// Use dsig.Sign with EdDSA algorithm constant
 	return dsig.Sign(key, dsig.EdDSA, payload, nil)
@@ -58,6 +61,9 @@ func SignEdDSA(key ed25519.PrivateKey, payload []byte) ([]byte, error) {
 //
 // This function is now a thin wrapper around dsig.VerifyEdDSA. For new projects, you should
 // consider using dsig instead of this function.
+//
+// As a low-level primitive it assumes a well-formed, correctly-sized key; a
+// wrong-length key may panic. Use jws.Verify for untrusted or unvalidated keys.
 func VerifyEdDSA(key ed25519.PublicKey, payload, signature []byte) error {
 	// Use dsig.Verify with EdDSA algorithm constant
 	return dsig.Verify(key, dsig.EdDSA, payload, signature)

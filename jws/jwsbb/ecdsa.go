@@ -105,6 +105,9 @@ func SignECDSA(key *ecdsa.PrivateKey, payload []byte, h crypto.Hash, rr io.Reade
 // The signature is converted from ASN.1 format to JWS format (r||s).
 //
 // rr is an io.Reader that provides randomness for signing. If rr is nil, it defaults to rand.Reader.
+//
+// As a low-level primitive it assumes a well-formed signer; one returning a
+// malformed key may panic. Use jws.Sign for untrusted or unvalidated keys.
 func SignECDSACryptoSigner(signer crypto.Signer, raw []byte, h crypto.Hash, rr io.Reader) ([]byte, error) {
 	signed, err := SignCryptoSigner(signer, raw, h, h, rr)
 	if err != nil {
@@ -159,6 +162,9 @@ func VerifyECDSA(key *ecdsa.PublicKey, payload, signature []byte, h crypto.Hash)
 // This function is useful for verifying signatures created by hardware security modules
 // or other implementations of the crypto.Signer interface.
 // The payload parameter should be the pre-computed signing input (typically header.payload).
+//
+// As a low-level primitive it assumes a well-formed signer; one returning a
+// malformed key may panic. Use jws.Verify for untrusted or unvalidated keys.
 func VerifyECDSACryptoSigner(signer crypto.Signer, payload, signature []byte, h crypto.Hash) error {
 	var pubkey *ecdsa.PublicKey
 	switch cpub := signer.Public(); cpub := cpub.(type) {

@@ -147,6 +147,11 @@ func dispatchEdDSASign(key any, jwsAlg, dsigAlg string, payload []byte, rr io.Re
 	if signer, ok := key.(crypto.Signer); ok {
 		// Verify it's an EdDSA key
 		if pub, ok := signer.Public().(ed25519.PublicKey); ok {
+			// A custom signer may hand back a wrong-length ed25519.PublicKey,
+			// which would panic inside dsig. Reject it before any crypto call.
+			if err := validateEd25519KeyShape(pub); err != nil {
+				return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
+			}
 			if err := validateEdDSACurve(jwsAlg, pub); err != nil {
 				return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
 			}
