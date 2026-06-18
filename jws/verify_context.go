@@ -330,44 +330,56 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 	return nil
 }
 
-// algAliasGroups enumerates the RFC 9864 alias groups: sets of JWS "alg"
-// identifiers that name the same signature algorithm and so are mutually
-// interchangeable for the purpose of the alg-match guard. RFC 9864 deprecates
-// the polymorphic "EdDSA" identifier in favor of the fully-specified
-// "Ed25519" (and "Ed448"), so a message whose protected header advertises one
-// must be allowed to verify under the other.
+// RFC 9864 deprecates the polymorphic "EdDSA" identifier in favor of the
+// fully-specified "Ed25519" and "Ed448" identifiers. The generic "EdDSA" is an
+// alias for whichever fully-specified variant the key actually is, so a message
+// whose protected header advertises "EdDSA" must be allowed to verify under
+// "Ed25519" (or "Ed448"), and vice versa.
 //
-// This is a CLOSED, explicitly reviewed set. We do NOT treat two identifiers
-// as equivalent merely because they resolve to the same underlying dsig
-// algorithm: an extension can map two distinct JWS "alg" names onto a single
-// dsig name via jwsbb.RegisterDsigAlgorithm, and collapsing those into a match
-// would let a producer advertise one algorithm while a verifier accepts
-// another — exactly the algorithm-confusion the guard exists to prevent.
+// Crucially this relation is generic-vs-specific, NOT a flat mutual-equivalence
+// group: "Ed25519" and "Ed448" are different curves, different keys, and
+// different security levels, so they are NOT interchangeable with each other.
+// Only the generic "EdDSA" aliases either one.
 //
-// Only "Ed25519" is built in to the main module; "Ed448" is provided by an
-// extension module but is listed here so the alias holds whenever it is
-// registered. Add new entries here ONLY for genuine RFC aliases.
-var algAliasGroups = [][]string{
-	{"EdDSA", "Ed25519", "Ed448"},
+// "Ed25519" is built in to the main module; "Ed448" is provided by an extension
+// module but is recognized here so the alias holds whenever it is registered.
+const algEdDSAGeneric = "EdDSA"
+
+var algEdDSASpecific = map[string]struct{}{
+	"Ed25519": {},
+	"Ed448":   {},
 }
 
 // algorithmsMatch reports whether the protected header's advertised algorithm
 // and the algorithm we are about to verify under are compatible. They are
-// compatible only when their identifiers are exactly equal, or when both are
-// members of the same RFC 9864 alias group (see algAliasGroups). Genuinely
-// different algorithms (e.g. RS256 vs HS256) never match.
+// compatible only when their identifiers are exactly equal, or when exactly one
+// of them is the generic RFC 9864 "EdDSA" identifier and the other is a
+// fully-specified EdDSA variant ("Ed25519" or "Ed448"). Genuinely different
+// algorithms (e.g. RS256 vs HS256, or Ed25519 vs Ed448) never match.
+//
+// We deliberately do NOT treat two identifiers as equivalent merely because
+// they resolve to the same underlying dsig algorithm: an extension can map two
+// distinct JWS "alg" names onto a single dsig name via
+// jwsbb.RegisterDsigAlgorithm, and collapsing those into a match would let a
+// producer advertise one algorithm while a verifier accepts another — exactly
+// the algorithm-confusion the guard exists to prevent.
 func algorithmsMatch(hdrAlg, verifyAlg jwa.SignatureAlgorithm) bool {
 	h := hdrAlg.String()
 	v := verifyAlg.String()
 	if h == v {
 		return true
 	}
-	for _, group := range algAliasGroups {
-		if slices.Contains(group, h) && slices.Contains(group, v) {
-			return true
-		}
+	return isGenericSpecificEdDSAPair(h, v) || isGenericSpecificEdDSAPair(v, h)
+}
+
+// isGenericSpecificEdDSAPair reports whether generic is the RFC 9864 generic
+// "EdDSA" identifier and specific is a fully-specified EdDSA variant.
+func isGenericSpecificEdDSAPair(generic, specific string) bool {
+	if generic != algEdDSAGeneric {
+		return false
 	}
-	return false
+	_, ok := algEdDSASpecific[specific]
+	return ok
 }
 
 // validateB64InCritIfFalse enforces RFC 7797 §3: producers that set
