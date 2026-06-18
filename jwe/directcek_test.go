@@ -162,7 +162,7 @@ func TestDirectCEKRequiresEmptyEncryptedKey(t *testing.T) {
 		called := false
 		dec := jwe.KeyDecryptFunc(func(jwa.KeyEncryptionAlgorithm, []byte, jwe.Recipient, *jwe.Message) ([]byte, error) {
 			called = true
-			return nil, nil //nolint:nilnil // exercised only on the rejection path
+			return nil, nil
 		})
 
 		tampered := injectEncryptedKey(t, encrypted)
