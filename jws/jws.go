@@ -261,10 +261,13 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 // FetchKeys themselves (their backing data is already in memory) — see
 // the [WithContext] godoc for the full per-layer breakdown.
 //
-// Note: unlike VerifyCompactFast, Verify does not require the protected
-// header's "alg" to be present or to equal the algorithm used to verify
-// (that algorithm is determined by the key or provider you supply). Use
-// VerifyCompactFast if you need that strict header check.
+// Note: Verify performs no global check that the protected header's "alg"
+// equals the algorithm used to verify (unlike VerifyCompactFast). The
+// verification algorithm is determined by the key or provider you supply,
+// and providers differ in how they treat the header "alg": WithKey ignores
+// it entirely, while WithVerifyAuto requires a protected "alg" and matches
+// it during key routing. If you need the header "alg" strictly enforced,
+// use VerifyCompactFast.
 func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	vc := verifyContextPool.Get()
 	defer verifyContextPool.Put(vc)
