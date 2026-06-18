@@ -83,6 +83,12 @@ func init() {
 //
 // Import validates the populated JWK before returning it. Malformed raw
 // keys fail at import time instead of being returned for later validation.
+//
+// Import expects well-formed raw keys, such as those produced by the
+// standard library generators (e.g. ecdsa.GenerateKey, rsa.GenerateKey)
+// or by parsing an encoded key. Hand-crafting raw key structs with
+// internally inconsistent or out-of-range fields is not supported and may
+// cause the underlying crypto primitives to panic; avoid doing so.
 func Import[T Key](raw any) (T, error) {
 	var zero T
 	key, err := doImport(raw)

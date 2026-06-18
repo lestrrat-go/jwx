@@ -3,6 +3,7 @@ package jwk_test
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
 	"errors"
 	"math/big"
 	"testing"
@@ -155,5 +156,46 @@ func TestECDSAImportRejectsInvalidPoints(t *testing.T) {
 		require.Error(t, err, `jwk.Import must reject the identity point`)
 		require.ErrorIs(t, err, jwk.ImportError(), `Import error should be classified as jwk.ImportError`)
 		require.True(t, errors.Is(err, jwk.ImportError()), `errors.Is should match jwk.ImportError`)
+	})
+}
+
+// TestECDSAImportMalformedRawKey asserts that jwk.Import returns an error
+// (and does not panic) for hand-crafted ecdsa key structs with a nil curve
+// or an out-of-range D scalar, both of which previously panicked inside the
+// underlying crypto primitives (Curve.Params() nil deref and
+// big.Int.FillBytes on an oversized D).
+func TestECDSAImportMalformedRawKey(t *testing.T) {
+	t.Run("nil curve public key", func(t *testing.T) {
+		raw := &ecdsa.PublicKey{Curve: nil, X: big.NewInt(1), Y: big.NewInt(1)}
+		_, err := jwk.Import[jwk.Key](raw)
+		require.Error(t, err, `Import must reject a nil-curve public key without panicking`)
+	})
+
+	t.Run("nil curve private key", func(t *testing.T) {
+		raw := &ecdsa.PrivateKey{
+			PublicKey: ecdsa.PublicKey{Curve: nil, X: big.NewInt(1), Y: big.NewInt(1)},
+			D:         big.NewInt(1),
+		}
+		_, err := jwk.Import[jwk.Key](raw)
+		require.Error(t, err, `Import must reject a nil-curve private key without panicking`)
+	})
+
+	t.Run("oversized D private key", func(t *testing.T) {
+		priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err, `failed to generate P-256 key`)
+		// Replace D with a scalar far larger than the curve field so that
+		// AllocECPointBuffer -> big.Int.FillBytes would panic if unguarded.
+		priv.D = new(big.Int).Lsh(big.NewInt(1), 4096)
+		_, err = jwk.Import[jwk.Key](priv)
+		require.Error(t, err, `Import must reject an oversized D without panicking`)
+	})
+
+	t.Run("valid generated key imports", func(t *testing.T) {
+		priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err, `failed to generate P-256 key`)
+		_, err = jwk.Import[jwk.Key](priv)
+		require.NoError(t, err, `Import must accept a valid generated key`)
+		_, err = jwk.Import[jwk.Key](&priv.PublicKey)
+		require.NoError(t, err, `Import must accept a valid generated public key`)
 	})
 }
