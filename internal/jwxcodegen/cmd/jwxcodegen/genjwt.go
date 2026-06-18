@@ -359,6 +359,7 @@ func generateTokenUnmarshalJSON(o *codegen.Output, obj *codegen.Object) {
 	for _, f := range fields {
 		o.L("t.%s = nil", f.Name(false))
 	}
+	o.L("clear(t.privateClaims)")
 
 	o.L("dec := json.NewDecoder(bytes.NewReader(buf))")
 	o.L("tok, err := dec.ReadToken()")

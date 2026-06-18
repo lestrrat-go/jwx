@@ -841,3 +841,20 @@ func TestWithBase64Encoder(t *testing.T) {
 		require.NoError(t, err, `jwt.Parse should succeed`)
 	})
 }
+
+func TestUnmarshalResetsPrivateClaims(t *testing.T) {
+	t.Parallel()
+	tok := openid.New()
+	require.NoError(t, json.Unmarshal([]byte(`{"role":"admin","sub":"x"}`), tok))
+	v, ok := tok.Field("role")
+	require.True(t, ok, `role claim should be present after first unmarshal`)
+	require.Equal(t, "admin", v)
+
+	// Reuse the same token instance for a payload that omits "role".
+	require.NoError(t, json.Unmarshal([]byte(`{"sub":"y"}`), tok))
+	_, ok = tok.Field("role")
+	require.False(t, ok, `stale private claim "role" must be cleared on reuse`)
+	sub, ok := tok.Subject()
+	require.True(t, ok, `sub claim should be present after second unmarshal`)
+	require.Equal(t, "y", sub)
+}

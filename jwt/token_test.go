@@ -7,6 +7,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 
+	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwt"
 	"github.com/stretchr/testify/require"
 )
@@ -247,5 +248,56 @@ func TestToken(t *testing.T) {
 			require.True(t, ok, `tok.Field(%s) should succeed`, k)
 			require.NoError(t, newtok.Set(k, v), `newtok.Set should succeed`)
 		}
+	})
+}
+
+func TestUnmarshalResetsPrivateClaims(t *testing.T) {
+	t.Parallel()
+	t.Run("direct UnmarshalJSON", func(t *testing.T) {
+		t.Parallel()
+		tok := jwt.New()
+		require.NoError(t, json.Unmarshal([]byte(`{"role":"admin","sub":"x"}`), tok))
+		v, ok := tok.Field("role")
+		require.True(t, ok, `role claim should be present after first unmarshal`)
+		require.Equal(t, "admin", v)
+
+		// Reuse the same token instance for a payload that omits "role".
+		require.NoError(t, json.Unmarshal([]byte(`{"sub":"y"}`), tok))
+		_, ok = tok.Field("role")
+		require.False(t, ok, `stale private claim "role" must be cleared on reuse`)
+		sub, ok := tok.Subject()
+		require.True(t, ok, `sub claim should be present after second unmarshal`)
+		require.Equal(t, "y", sub)
+	})
+	t.Run("Parse with WithToken", func(t *testing.T) {
+		t.Parallel()
+		key := []byte("0123456789abcdef")
+
+		t1 := jwt.New()
+		require.NoError(t, t1.Set("role", "admin"))
+		require.NoError(t, t1.Set(jwt.SubjectKey, "x"))
+		signed1, err := jwt.Sign(t1, jwt.WithKey(jwa.HS256(), key))
+		require.NoError(t, err, `jwt.Sign should succeed`)
+
+		t2 := jwt.New()
+		require.NoError(t, t2.Set(jwt.SubjectKey, "y"))
+		signed2, err := jwt.Sign(t2, jwt.WithKey(jwa.HS256(), key))
+		require.NoError(t, err, `jwt.Sign should succeed`)
+
+		dst := jwt.New()
+		_, err = jwt.Parse(signed1, jwt.WithKey(jwa.HS256(), key), jwt.WithToken(dst))
+		require.NoError(t, err, `jwt.Parse should succeed`)
+		v, ok := dst.Field("role")
+		require.True(t, ok, `role claim should be present after first parse`)
+		require.Equal(t, "admin", v)
+
+		// Reuse the same destination token for a payload without "role".
+		_, err = jwt.Parse(signed2, jwt.WithKey(jwa.HS256(), key), jwt.WithToken(dst))
+		require.NoError(t, err, `jwt.Parse should succeed`)
+		_, ok = dst.Field("role")
+		require.False(t, ok, `stale private claim "role" must be cleared on reuse`)
+		sub, ok := dst.Subject()
+		require.True(t, ok, `sub claim should be present after second parse`)
+		require.Equal(t, "y", sub)
 	})
 }
