@@ -21,9 +21,10 @@ alias(
 
 go_test(
     name = "pool_test",
-    srcs = ["byte_slice_test.go"],
-    deps = [
-        ":pool",
-        "@com_github_stretchr_testify//require",
+    srcs = [
+        "byte_slice_test.go",
+        "error_slice_test.go",
     ],
+    embed = [":pool"],
+    deps = ["@com_github_stretchr_testify//require"],
 )

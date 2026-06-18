@@ -1,34 +1,36 @@
-package pool_test
+package pool
 
 import (
 	"errors"
 	"testing"
 
-	"github.com/lestrrat-go/jwx/v4/internal/pool"
 	"github.com/stretchr/testify/require"
 )
 
-// TestErrorSlicePoolClearsBackingArray verifies that returning an error slice to
-// the pool scrubs the backing array, so a later Get cannot observe stale error
-// values via the capacity range (which may reference request data).
-func TestErrorSlicePoolClearsBackingArray(t *testing.T) {
-	p := pool.ErrorSlice()
+// TestFreeErrorSliceClearsBackingArray verifies that freeErrorSlice scrubs the
+// entire backing array (up to cap), not just the live length. A returned slice
+// may hold errors that reference request data; leaving stale non-nil elements
+// reachable through the slice's capacity would keep that data alive in the
+// pool's backing storage. This is a white-box test calling freeErrorSlice
+// directly so it does not depend on sync.Pool returning the same backing array.
+func TestFreeErrorSliceClearsBackingArray(t *testing.T) {
+	// Construct a slice with stale, non-nil error elements occupying the full
+	// backing array, then hand it to freeErrorSlice.
+	const n = 4
+	s := make([]error, n, n)
+	for i := range s {
+		s[i] = errors.New("stale error")
+	}
 
-	s := p.Get()
-	require.Equal(t, 0, len(s), "initial slice should have length 0")
+	got := freeErrorSlice(s)
 
-	s = append(s, errors.New("stale error"))
-	require.Equal(t, 1, len(s), "slice length should reflect appended error")
+	require.Equal(t, 0, len(got), "freed slice should have length 0")
+	require.Equal(t, n, cap(got), "freed slice should retain its capacity")
 
-	c := cap(s)
-	p.Put(s)
-
-	s2 := p.Get()
-	require.Equal(t, 0, len(s2), "slice length after Put should be reset to 0")
-
-	// Inspect the full backing array up to its capacity: no stale element must remain.
-	full := s2[:cap(s2)]
-	require.GreaterOrEqual(t, cap(s2), c, "capacity should be retained after reuse")
+	// The entire backing array (up to cap) must be nil. This assertion fails
+	// against a no-clear implementation (e.g. returning s[:0] without clear),
+	// where the stale elements remain reachable via got[:cap(got)].
+	full := got[:cap(got)]
 	for i, e := range full {
 		require.Nil(t, e, "backing array element %d should be cleared", i)
 	}
