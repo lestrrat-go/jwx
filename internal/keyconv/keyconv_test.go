@@ -1,6 +1,7 @@
 package keyconv_test
 
 import (
+	"crypto"
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -282,6 +283,21 @@ func TestEd25519MalformedKey(t *testing.T) {
 		})
 		t.Run("valid public key succeeds", func(t *testing.T) {
 			got, err := keyconv.Ed25519PublicKey(pub)
+			require.NoError(t, err)
+			require.Equal(t, pub, *got)
+		})
+		t.Run("*crypto.PublicKey wrapping short public key returns error", func(t *testing.T) {
+			var cpk crypto.PublicKey = ed25519.PublicKey{1, 2, 3}
+			_, err := keyconv.Ed25519PublicKey(&cpk)
+			require.Error(t, err, `*crypto.PublicKey wrapping a short ed25519.PublicKey must error`)
+		})
+		t.Run("nil *crypto.PublicKey returns error", func(t *testing.T) {
+			_, err := keyconv.Ed25519PublicKey((*crypto.PublicKey)(nil))
+			require.Error(t, err, `nil *crypto.PublicKey must error`)
+		})
+		t.Run("*crypto.PublicKey wrapping valid public key succeeds", func(t *testing.T) {
+			var cpk crypto.PublicKey = pub
+			got, err := keyconv.Ed25519PublicKey(&cpk)
 			require.NoError(t, err)
 			require.Equal(t, pub, *got)
 		})

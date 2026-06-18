@@ -161,9 +161,15 @@ func Ed25519PublicKey(src any) (*ed25519.PublicKey, error) {
 		}
 		return src, nil
 	case *crypto.PublicKey:
+		if src == nil {
+			return nil, fmt.Errorf(`failed to retrieve ed25519.PublicKey out of nil *crypto.PublicKey`)
+		}
 		tmp, ok := (*src).(ed25519.PublicKey)
 		if !ok {
 			return nil, fmt.Errorf(`failed to retrieve ed25519.PublicKey out of *crypto.PublicKey`)
+		}
+		if len(tmp) != ed25519.PublicKeySize {
+			return nil, fmt.Errorf(`keyconv: invalid ed25519.PublicKey length %d, expected %d`, len(tmp), ed25519.PublicKeySize)
 		}
 		return &tmp, nil
 	case crypto.PublicKey:
