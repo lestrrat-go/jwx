@@ -260,6 +260,11 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 // staticKeyProvider and keySetProvider do not consult ctx inside
 // FetchKeys themselves (their backing data is already in memory) — see
 // the [WithContext] godoc for the full per-layer breakdown.
+//
+// Note: unlike VerifyCompactFast, Verify does not require the protected
+// header's "alg" to be present or to equal the algorithm used to verify
+// (that algorithm is determined by the key or provider you supply). Use
+// VerifyCompactFast if you need that strict header check.
 func Verify(buf []byte, options ...VerifyOption) ([]byte, error) {
 	vc := verifyContextPool.Get()
 	defer verifyContextPool.Put(vc)
@@ -829,10 +834,10 @@ func Settings(options ...GlobalOption) error {
 //
 // Returns the original payload that was signed if verification succeeds.
 //
-// Unlike jws.Verify(), this function requires you to specify the
-// algorithm explicitly rather than extracting it from the JWS headers.
-// This can be useful for performance-critical applications where the
-// algorithm is known in advance.
+// Unlike jws.Verify() — which resolves the verification algorithm from the
+// key or provider you supply (e.g. WithKey, WithKeySet) — this function takes
+// the algorithm as an explicit argument. It is useful for performance-critical
+// applications where the algorithm is known in advance.
 //
 // This function uses strict base64url encoding without padding (RFC 4648 §5)
 // for decoding the signature and payload. It does not auto-detect other

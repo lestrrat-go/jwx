@@ -281,6 +281,18 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 	return nil, makeVerifyError(`could not verify message using any of the signatures or keys: %w`, errors.Join(errs...))
 }
 
+// tryKey intentionally does NOT compare the protected header's "alg" to alg
+// (the algorithm used to verify). The verification algorithm is always supplied
+// by the key provider: WithKey pins it to the caller's alg, while
+// WithKeySet/WithVerifyAuto take it from the JWK's "alg" or the key's
+// AlgorithmsForKey capability set, using the header "alg" only to route to a
+// candidate key. The attacker-controlled header can therefore never introduce
+// an algorithm the chosen key is not already authorized to produce —
+// validateAlgorithmForKey (jws.go) enforces (alg,key) compatibility at option
+// time. The absence of a header-vs-verifier "alg" check here is thus
+// intentional and cosmetic, NOT an algorithm-confusion vulnerability; do not
+// "fix" it by rejecting header/alg mismatches. VerifyCompactFast is the strict
+// counterpart for callers who want the header "alg" enforced.
 func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, key any, msg *Message, sig *Signature) error {
 	if vc.validateKey {
 		if err := validateKeyBeforeUse(key); err != nil {
