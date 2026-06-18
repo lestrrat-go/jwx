@@ -40,6 +40,8 @@ go_library(
 go_test(
     name = "jwe_test",
     srcs = [
+        "accessors_test.go",
+        "aead_tag_length_test.go",
         "bench_encrypt_test.go",
         "fuzz_test.go",
         "gh402_test.go",
