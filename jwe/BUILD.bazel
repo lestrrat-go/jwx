@@ -43,6 +43,7 @@ go_test(
         "accessors_test.go",
         "aead_tag_length_test.go",
         "bench_encrypt_test.go",
+        "directcek_test.go",
         "fuzz_test.go",
         "gh402_test.go",
         "headers_nil_test.go",
