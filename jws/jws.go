@@ -240,6 +240,18 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 // accept messages with "none" signature algorithm, use `jws.Parse` to get the
 // raw JWS message.
 //
+// By default, Verify rejects a JWS whose protected header "alg" contradicts
+// the algorithm actually used to verify it. The verification algorithm is
+// resolved from the key or provider you supply (jws.WithKey, jws.WithKeySet,
+// jws.WithVerifyAuto, or a custom jws.WithKeyProvider); if the protected
+// header advertises a different "alg", verification fails even when the
+// signature would otherwise be cryptographically valid. This check fires only
+// when the protected header carries an "alg" — messages that place "alg" only
+// in the unprotected header (or omit it) are unaffected. Pass
+// jws.WithSkipAlgorithmMatch(true) to bypass the check for non-conforming
+// producers. The compact fast path [VerifyCompactFast] performs an equivalent
+// cross-check against its explicitly supplied algorithm.
+//
 // The error returned by this function is of type can be checked against
 // `jws.VerifyError()` and `jws.VerificationError()`. The latter is returned
 // when the verification process itself fails (e.g. invalid signature, wrong key),
@@ -829,10 +841,10 @@ func Settings(options ...GlobalOption) error {
 //
 // Returns the original payload that was signed if verification succeeds.
 //
-// Unlike jws.Verify(), this function requires you to specify the
-// algorithm explicitly rather than extracting it from the JWS headers.
-// This can be useful for performance-critical applications where the
-// algorithm is known in advance.
+// Unlike jws.Verify() — which resolves the verification algorithm from the
+// key or provider you supply (e.g. WithKey, WithKeySet) — this function takes
+// the algorithm as an explicit argument. It is useful for performance-critical
+// applications where the algorithm is known in advance.
 //
 // This function uses strict base64url encoding without padding (RFC 4648 §5)
 // for decoding the signature and payload. It does not auto-detect other

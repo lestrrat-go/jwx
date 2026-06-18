@@ -27,6 +27,7 @@ type verifyContext struct {
 	keyUsed            *any
 	validateKey        bool
 	critValidation     bool
+	skipAlgorithmMatch bool
 	criticalExtensions []string
 	encoder            Base64Encoder
 	//nolint:containedctx
@@ -52,6 +53,7 @@ func freeVerifyContext(vc *verifyContext) *verifyContext {
 	vc.keyUsed = nil
 	vc.validateKey = false
 	vc.critValidation = true
+	vc.skipAlgorithmMatch = false
 	vc.criticalExtensions = vc.criticalExtensions[:0]
 	vc.encoder = base64.DefaultEncoder()
 	vc.ctx = context.Background()
@@ -118,6 +120,8 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 			vc.validateKey = option.MustGet[bool](opt)
 		case identCritValidation{}:
 			vc.critValidation = option.MustGet[bool](opt)
+		case identSkipAlgorithmMatch{}:
+			vc.skipAlgorithmMatch = option.MustGet[bool](opt)
 		case identCritExtension{}:
 			vc.criticalExtensions = append(vc.criticalExtensions, option.MustGet[[]string](opt)...)
 		case identSerialization{}:
@@ -282,6 +286,23 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 }
 
 func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, key any, msg *Message, sig *Signature) error {
+	// Enforce that the algorithm we are about to verify under matches the
+	// "alg" advertised in this signature's protected header. tryKey is the
+	// single chokepoint every (alg, key) candidate funnels through, so this
+	// covers all key sources (WithKey, WithKeySet, WithVerifyAuto, and
+	// custom WithKeyProvider) — a provider cannot verify a message under an
+	// algorithm that contradicts the message's own protected "alg". The
+	// check fires only when the protected header carries an "alg"; if "alg"
+	// is absent (for example a JSON JWS that places it only in the
+	// unprotected header) we fall through unchanged. VerifyCompactFast
+	// performs the equivalent cross-check on the fast path. Use
+	// WithSkipAlgorithmMatch to bypass this for non-conforming producers.
+	if !vc.skipAlgorithmMatch && sig.protected != nil {
+		if hdrAlg, ok := sig.protected.Algorithm(); ok && !algorithmsMatch(hdrAlg, alg) {
+			return verifyError{verificationError{fmt.Errorf(`protected header %q %q does not match verification algorithm %q`, AlgorithmKey, hdrAlg, alg)}}
+		}
+	}
+
 	if vc.validateKey {
 		if err := validateKeyBeforeUse(key); err != nil {
 			return fmt.Errorf(`failed to validate key before verification: %w`, err)
@@ -307,6 +328,32 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 	}
 
 	return nil
+}
+
+// algorithmsMatch reports whether the protected header's advertised
+// algorithm and the algorithm we are about to verify under are compatible.
+// They are compatible when their identifiers are equal, or when both resolve
+// to the same underlying dsig algorithm. The latter case admits RFC 9864's
+// fully-specified EdDSA identifiers ("Ed25519") as equivalent to the
+// polymorphic "EdDSA" — both map to dsig.EdDSA and verify identical bytes —
+// without weakening the guard for genuinely different algorithms (e.g. RS256
+// vs HS256 resolve to different dsig algorithms and remain a mismatch).
+// Identifiers with no registered dsig mapping (custom algorithms registered
+// via RegisterVerifier without RegisterDsigAlgorithm) fall back to the strict
+// string comparison.
+func algorithmsMatch(hdrAlg, verifyAlg jwa.SignatureAlgorithm) bool {
+	if hdrAlg.String() == verifyAlg.String() {
+		return true
+	}
+	hdrDsig, ok := jwsbb.GetDsigAlgorithm(hdrAlg.String())
+	if !ok {
+		return false
+	}
+	verifyDsig, ok := jwsbb.GetDsigAlgorithm(verifyAlg.String())
+	if !ok {
+		return false
+	}
+	return hdrDsig == verifyDsig
 }
 
 // validateB64InCritIfFalse enforces RFC 7797 §3: producers that set
