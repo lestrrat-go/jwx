@@ -172,9 +172,17 @@ func (c Hmac) Overhead() int {
 	return c.blockCipher.BlockSize() + c.tlen
 }
 
-func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) ([]byte, error) {
+// aadBitLength returns the big-endian 64-bit AAD bit-length ("AL") field for
+// CBC-HMAC. The multiply is done in uint64 so a large AAD (>256MiB) does not
+// overflow the int multiplication on 32-bit platforms before the cast.
+func aadBitLength(n int) [8]byte {
 	var buf [8]byte
-	binary.BigEndian.PutUint64(buf[:], uint64(len(aad)*8))
+	binary.BigEndian.PutUint64(buf[:], uint64(n)*8)
+	return buf
+}
+
+func (c Hmac) ComputeAuthTag(aad, nonce, ciphertext []byte) ([]byte, error) {
+	buf := aadBitLength(len(aad))
 
 	h := hmac.New(c.hash, c.integrityKey)
 
