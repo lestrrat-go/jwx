@@ -176,7 +176,7 @@ func TestKeyAlgorithmFrom(t *testing.T) {
 				Input: "\xff\xfe" + strings.Repeat("a", 80),
 				Expected: fmt.Sprintf(
 					`invalid key value: %q: invalid key algorithm`,
-					string([]rune("\xff\xfe"+strings.Repeat("a", 80))[:64])+`...`,
+					string([]rune("\xff\xfe" + strings.Repeat("a", 80))[:64])+`...`,
 				),
 			},
 		} {
