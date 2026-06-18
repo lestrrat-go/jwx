@@ -130,6 +130,19 @@ func signECDSACryptoSigner(signer crypto.Signer, signed []byte) ([]byte, error) 
 	return PackECDSASignature(&r, &s, curveBits)
 }
 
+// ecdsaVerify uses the standard library's ecdsa.Verify, which intentionally
+// accepts both low-S and high-S signatures (it only checks that 0 < r,s < N).
+// jwx deliberately does NOT enforce canonical/low-S signatures: RFC 7515
+// imposes no low-S requirement, so a high-S signature is a valid JWS ECDSA
+// signature. Rejecting high-S on verify would reject legitimate signatures from
+// conformant signers — including Go's own randomized crypto/ecdsa.Sign, which
+// does not canonicalize S — which would be a broad interop break.
+//
+// The resulting malleability ((r,s) vs (r, N-s) both verify) does not affect
+// signature validity or enable forgery: an attacker still cannot sign new
+// messages. It only matters to systems that replay/dedup on the raw signature
+// or compact-JWS bytes, which should instead key on the verified payload/claims.
+// This is a deliberate won't-fix: do not "harden" this by enforcing low-S.
 func ecdsaVerify(key *ecdsa.PublicKey, buf []byte, h crypto.Hash, r, s *big.Int) error {
 	hasher := h.New()
 	hasher.Write(buf)
