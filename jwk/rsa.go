@@ -431,6 +431,13 @@ func validateRSAKey(key interface {
 		return err
 	}
 	if checkPrivate {
+		// For private keys we only require a non-empty "d". We intentionally do
+		// NOT validate p, q, the CRT values, primality, n == p*q, or e*d ≡ 1
+		// (mod λ(n)) here: RFC 7517/7518 do not mandate such parse-time checks and
+		// they are expensive. A malformed private key is caught by crypto/rsa's own
+		// consistency checks (p*q == n, d*e ≡ 1) the moment it is used to sign or
+		// decrypt, and the public thumbprint/export uses only n and e (validated
+		// just above). Do not add full RSA private-parameter validation here.
 		if priv, ok := key.(keyWithD); ok {
 			if d, ok := priv.D(); !ok || len(d) == 0 {
 				return fmt.Errorf(`missing "d" value`)
