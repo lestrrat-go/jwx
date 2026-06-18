@@ -1147,6 +1147,65 @@ func rewriteCompactPBES2Count(t *testing.T, token []byte, count any) []byte {
 	return bytes.Join(segs, []byte{'.'})
 }
 
+func rewriteCompactPBES2Salt(t *testing.T, token []byte, salt []byte) []byte {
+	t.Helper()
+
+	segs := bytes.Split(token, []byte{'.'})
+	require.Len(t, segs, 5, `compact JWE should have 5 segments`)
+
+	protectedJSON, err := base64.RawURLEncoding.DecodeString(string(segs[0]))
+	require.NoError(t, err, `protected header should decode`)
+
+	var protected map[string]any
+	require.NoError(t, json.Unmarshal(protectedJSON, &protected), `protected header should parse`)
+	protected[jwe.SaltKey] = base64.RawURLEncoding.EncodeToString(salt)
+
+	protectedJSON, err = json.Marshal(protected)
+	require.NoError(t, err, `protected header should marshal`)
+
+	segs[0] = []byte(base64.RawURLEncoding.EncodeToString(protectedJSON))
+	return bytes.Join(segs, []byte{'.'})
+}
+
+func TestPBES2SaltFloor(t *testing.T) {
+	// RFC 7518 §4.8.1.1 requires the p2s salt input to be at least 8
+	// octets. This floor is a hard requirement and is not loosenable
+	// via an option (unlike the p2c count floor).
+	password := []byte(`supersecret`)
+	key, err := jwk.Import[jwk.Key](password)
+	require.NoError(t, err, `jwk.Import should succeed`)
+
+	payload := []byte(`hello world`)
+	encrypted, err := jwe.Encrypt(payload,
+		jwe.WithKey(jwa.PBES2_HS256_A128KW(), key),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	t.Run("conformant salt round-trips", func(t *testing.T) {
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.NoError(t, err, `jwe.Decrypt should succeed with a conformant p2s`)
+		require.Equal(t, payload, decrypted, `decrypted payload should match`)
+	})
+
+	t.Run("short salt is rejected by the floor check", func(t *testing.T) {
+		// 4 octets is below the 8-octet minimum.
+		tampered := rewriteCompactPBES2Salt(t, encrypted, []byte{1, 2, 3, 4})
+		_, err := jwe.Decrypt(tampered, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.Error(t, err, `jwe.Decrypt should fail when p2s is below the floor`)
+		// The floor check fires right after p2s decode, before key
+		// derivation, so the error references the RFC floor specifically
+		// rather than a generic downstream unwrap failure.
+		require.Contains(t, err.Error(), `RFC 7518 §4.8.1.1`, `error should reference the salt floor`)
+	})
+
+	t.Run("empty salt is rejected by the floor check", func(t *testing.T) {
+		tampered := rewriteCompactPBES2Salt(t, encrypted, []byte{})
+		_, err := jwe.Decrypt(tampered, jwe.WithKey(jwa.PBES2_HS256_A128KW(), key))
+		require.Error(t, err, `jwe.Decrypt should fail when p2s is empty`)
+		require.Contains(t, err.Error(), `RFC 7518 §4.8.1.1`, `error should reference the salt floor`)
+	})
+}
+
 func TestMinPBES2Count(t *testing.T) {
 	// Encrypt with an explicit small p2c so the min-check assertions
 	// don't depend on the (per-variant, six-digit) encrypt defaults.

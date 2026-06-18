@@ -132,6 +132,12 @@ func decryptKeyPBES2(recipientKey []byte, alg string, key any, headers Headers, 
 		return nil, fmt.Errorf(`jwe: decrypt key: failed to decode 'p2s': %w`, err)
 	}
 
+	// RFC 7518 §4.8.1.1 requires the salt input to be at least 8 octets.
+	// This is a hard floor and is not loosenable via an option.
+	if len(saltBytes) < 8 {
+		return nil, fmt.Errorf(`jwe: decrypt key: invalid 'p2s' value: salt is %d octets, RFC 7518 §4.8.1.1 requires at least 8`, len(saltBytes))
+	}
+
 	salt := []byte(alg)
 	salt = append(salt, byte(0))
 	salt = append(salt, saltBytes...)
