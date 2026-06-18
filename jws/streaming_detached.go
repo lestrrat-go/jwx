@@ -272,7 +272,7 @@ func (vc *verifyContext) verifyStreaming(buf []byte) ([]byte, error) {
 	// protected header carries an "alg"; use WithSkipAlgorithmMatch to bypass
 	// it for non-conforming producers.
 	if !vc.skipAlgorithmMatch && sig.protected != nil {
-		if hdrAlg, ok := sig.protected.Algorithm(); ok && !algorithmsMatch(hdrAlg, alg) {
+		if hdrAlg, ok := sig.protected.Algorithm(); ok && !algorithmsMatch(hdrAlg, alg, key) {
 			return nil, verifyError{verificationError{fmt.Errorf(`protected header %q %q does not match verification algorithm %q`, AlgorithmKey, hdrAlg, alg)}}
 		}
 	}
