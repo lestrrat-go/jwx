@@ -14,22 +14,25 @@ import (
 // pool's backing storage. This is a white-box test calling freeErrorSlice
 // directly so it does not depend on sync.Pool returning the same backing array.
 func TestFreeErrorSliceClearsBackingArray(t *testing.T) {
-	// Construct a slice with stale, non-nil error elements occupying the full
-	// backing array, then hand it to freeErrorSlice.
+	// Fill the entire backing array with stale, non-nil errors, then shrink the
+	// slice so len < cap. The stale elements in [1:n] now live beyond len but
+	// remain reachable through the slice's capacity.
 	const n = 4
-	s := make([]error, n, n)
-	for i := range s {
-		s[i] = errors.New("stale error")
+	backing := make([]error, n)
+	for i := range backing {
+		backing[i] = errors.New("stale error")
 	}
+	s := backing[:1]
 
 	got := freeErrorSlice(s)
 
 	require.Equal(t, 0, len(got), "freed slice should have length 0")
 	require.Equal(t, n, cap(got), "freed slice should retain its capacity")
 
-	// The entire backing array (up to cap) must be nil. This assertion fails
-	// against a no-clear implementation (e.g. returning s[:0] without clear),
-	// where the stale elements remain reachable via got[:cap(got)].
+	// The entire backing array (up to cap), including the region beyond the
+	// original len, must be nil. This assertion fails against an implementation
+	// that only clears s[:len] without first widening to cap, because the stale
+	// elements in [1:n] would remain reachable via got[:cap(got)].
 	full := got[:cap(got)]
 	for i, e := range full {
 		require.Nil(t, e, "backing array element %d should be cleared", i)
