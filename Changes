@@ -11,7 +11,7 @@ UNRELEASED
     `"EdDSA"` and the fully-specified `"Ed25519"`/`"Ed448"` identifiers
     (RFC 9864) are now treated as distinct, so cross-identifier verification
     that previously succeeded is rejected by default — this is an RFC 9864
-    conformance fix. Pass the new `jws.WithSkipAlgorithmMatch()` option to
+    conformance fix. Pass the new `jws.WithSkipAlgorithmMatch(true)` option to
     restore the lenient behavior.
 
 v4.0.2 7 May 2026
