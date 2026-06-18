@@ -543,7 +543,22 @@ func generateKeyUnmarshalJSON(o *codegen.Output, kt *KeyType, obj *codegen.Objec
 	o.L("}")
 
 	for _, f := range obj.Fields() {
-		if f.Type() == "string" {
+		if f.Name(false) == "keyUsage" {
+			// "use" must honor the strictKeyUsage allowlist at parse time, so
+			// route the decoded value through KeyUsageType.Accept instead of
+			// assigning the raw string directly.
+			o.L("case %sKey:", f.Name(true))
+			o.L("val, err := json.ReadNextStringToken(dec, h.dc)")
+			o.L("if err != nil {")
+			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
+			o.L("}")
+			o.L("var acceptor KeyUsageType")
+			o.L("if err := acceptor.Accept(val); err != nil {")
+			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
+			o.L("}")
+			o.L("tmp := acceptor.String()")
+			o.L("h.%s = &tmp", f.Name(false))
+		} else if f.Type() == "string" {
 			o.L("case %sKey:", f.Name(true))
 			o.L("if err := json.AssignNextStringToken(&h.%s, dec, h.dc); err != nil {", f.Name(false))
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))
