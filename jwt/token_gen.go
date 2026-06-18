@@ -376,6 +376,7 @@ func (t *stdToken) UnmarshalJSON(buf []byte) error {
 	t.jwtID = nil
 	t.notBefore = nil
 	t.subject = nil
+	clear(t.privateClaims)
 	dec := json.NewDecoder(bytes.NewReader(buf))
 	tok, err := dec.ReadToken()
 	if err != nil {

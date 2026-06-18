@@ -475,7 +475,8 @@ func WithStrictStringClaims(v bool) ParseOption {
 }
 
 // WithToken specifies the token instance in which the resulting JWT is stored
-// when parsing JWT tokens
+// when parsing JWT tokens. The supplied token is fully reset (all claims,
+// including private claims, are cleared) before the parsed token is stored into it.
 func WithToken(v Token) ParseOption {
 	return &parseOption{option.New(identToken{}, v)}
 }

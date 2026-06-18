@@ -938,6 +938,7 @@ func (t *stdToken) UnmarshalJSON(buf []byte) error {
 	t.updatedAt = nil
 	t.website = nil
 	t.zoneinfo = nil
+	clear(t.privateClaims)
 	dec := json.NewDecoder(bytes.NewReader(buf))
 	tok, err := dec.ReadToken()
 	if err != nil {
