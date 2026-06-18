@@ -604,17 +604,19 @@ func WithCompact() SignVerifyParseOption {
 }
 
 // WithSkipAlgorithmMatch disables the check that the protected header's
-// "alg" parameter matches the algorithm actually used to verify the
-// signature. By default jws.Verify() rejects a JWS whose protected
+// "alg" parameter exactly equals the algorithm actually used to verify
+// the signature. By default jws.Verify() rejects a JWS whose protected
 // header advertises one algorithm while it is verified under another
 // (for example, a custom jws.WithKeyProvider that returns an HS256 key
-// for a message whose protected header claims RS256). This guard runs
-// for every key source — jws.WithKey(), jws.WithKeySet(),
-// jws.WithVerifyAuto(), and custom jws.WithKeyProvider() — so the
-// algorithm a message advertises always matches the discipline under
-// which it was accepted. The check only fires when the protected header
-// carries an "alg"; messages that place "alg" only in the unprotected
-// header (or omit it) are unaffected.
+// for a message whose protected header claims RS256). The match is plain
+// string equality, with no aliasing: the deprecated polymorphic "EdDSA"
+// and the fully-specified "Ed25519"/"Ed448" identifiers are distinct per
+// RFC 9864 and are not interchangeable. This guard runs for every key
+// source — jws.WithKey(), jws.WithKeySet(), jws.WithVerifyAuto(), and
+// custom jws.WithKeyProvider() — so the algorithm a message advertises
+// always matches the discipline under which it was accepted. The check
+// only fires when the protected header carries an "alg"; messages that
+// place "alg" only in the unprotected header (or omit it) are unaffected.
 //
 // Pass jws.WithSkipAlgorithmMatch(true) to bypass this check. It is
 // intended for recovery or interoperability with non-conforming

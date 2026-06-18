@@ -240,17 +240,20 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 // accept messages with "none" signature algorithm, use `jws.Parse` to get the
 // raw JWS message.
 //
-// By default, Verify rejects a JWS whose protected header "alg" contradicts
-// the algorithm actually used to verify it. The verification algorithm is
-// resolved from the key or provider you supply (jws.WithKey, jws.WithKeySet,
-// jws.WithVerifyAuto, or a custom jws.WithKeyProvider); if the protected
-// header advertises a different "alg", verification fails even when the
-// signature would otherwise be cryptographically valid. This check fires only
-// when the protected header carries an "alg" — messages that place "alg" only
-// in the unprotected header (or omit it) are unaffected. Pass
-// jws.WithSkipAlgorithmMatch(true) to bypass the check for non-conforming
-// producers. The compact fast path [VerifyCompactFast] performs an equivalent
-// cross-check against its explicitly supplied algorithm.
+// By default, Verify rejects a JWS whose protected header "alg" does not
+// exactly equal the algorithm actually used to verify it. The verification
+// algorithm is resolved from the key or provider you supply (jws.WithKey,
+// jws.WithKeySet, jws.WithVerifyAuto, or a custom jws.WithKeyProvider); if the
+// protected header advertises a different "alg", verification fails even when
+// the signature would otherwise be cryptographically valid. The match is plain
+// string equality, with no aliasing: the deprecated polymorphic "EdDSA" and the
+// fully-specified "Ed25519"/"Ed448" identifiers are distinct per RFC 9864 and
+// are not interchangeable. This check fires only when the protected header
+// carries an "alg" — messages that place "alg" only in the unprotected header
+// (or omit it) are unaffected. Pass jws.WithSkipAlgorithmMatch(true) to bypass
+// the check for non-conforming producers. The compact fast path
+// [VerifyCompactFast] performs an equivalent cross-check against its explicitly
+// supplied algorithm.
 //
 // The error returned by this function is of type can be checked against
 // `jws.VerifyError()` and `jws.VerificationError()`. The latter is returned

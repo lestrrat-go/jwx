@@ -286,19 +286,21 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 }
 
 func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, key any, msg *Message, sig *Signature) error {
-	// Enforce that the algorithm we are about to verify under matches the
-	// "alg" advertised in this signature's protected header. tryKey is the
+	// Enforce that the algorithm we are about to verify under exactly matches
+	// the "alg" advertised in this signature's protected header. tryKey is the
 	// single chokepoint every (alg, key) candidate funnels through, so this
 	// covers all key sources (WithKey, WithKeySet, WithVerifyAuto, and
 	// custom WithKeyProvider) — a provider cannot verify a message under an
-	// algorithm that contradicts the message's own protected "alg". The
-	// check fires only when the protected header carries an "alg"; if "alg"
-	// is absent (for example a JSON JWS that places it only in the
-	// unprotected header) we fall through unchanged. VerifyCompactFast
-	// performs the equivalent cross-check on the fast path. Use
-	// WithSkipAlgorithmMatch to bypass this for non-conforming producers.
+	// algorithm that contradicts the message's own protected "alg". The match
+	// is plain string equality: the deprecated polymorphic "EdDSA" and the
+	// fully-specified "Ed25519"/"Ed448" identifiers are distinct per RFC 9864
+	// and do NOT alias one another. The check fires only when the protected
+	// header carries an "alg"; if "alg" is absent (for example a JSON JWS that
+	// places it only in the unprotected header) we fall through unchanged.
+	// VerifyCompactFast performs the equivalent cross-check on the fast path.
+	// Use WithSkipAlgorithmMatch to bypass this for non-conforming producers.
 	if !vc.skipAlgorithmMatch && sig.protected != nil {
-		if hdrAlg, ok := sig.protected.Algorithm(); ok && !algorithmsMatch(hdrAlg, alg, key) {
+		if hdrAlg, ok := sig.protected.Algorithm(); ok && hdrAlg.String() != alg.String() {
 			return verifyError{verificationError{fmt.Errorf(`protected header %q %q does not match verification algorithm %q`, AlgorithmKey, hdrAlg, alg)}}
 		}
 	}
@@ -328,116 +330,6 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 	}
 
 	return nil
-}
-
-// RFC 9864 deprecates the polymorphic "EdDSA" identifier in favor of the
-// fully-specified "Ed25519" and "Ed448" identifiers. The generic "EdDSA" is an
-// alias for whichever fully-specified variant the key actually is, so a message
-// whose protected header advertises "EdDSA" must be allowed to verify under
-// "Ed25519" (or "Ed448"), and vice versa.
-//
-// Crucially this relation is generic-vs-specific, NOT a flat mutual-equivalence
-// group: "Ed25519" and "Ed448" are different curves, different keys, and
-// different security levels, so they are NOT interchangeable with each other.
-// Only the generic "EdDSA" aliases either one.
-//
-// "Ed25519" is built in to the main module; "Ed448" is provided by an extension
-// module but is recognized here so the alias holds whenever it is registered.
-const algEdDSAGeneric = "EdDSA"
-
-var algEdDSASpecific = map[string]struct{}{
-	"Ed25519": {},
-	"Ed448":   {},
-}
-
-// algorithmsMatch reports whether the protected header's advertised algorithm
-// and the algorithm we are about to verify under are compatible for the given
-// verification key. They are compatible only when their identifiers are exactly
-// equal, or when exactly one of them is the generic RFC 9864 "EdDSA" identifier
-// and the other is a fully-specified EdDSA variant ("Ed25519" or "Ed448") that
-// matches the key's actual curve. Genuinely different algorithms (e.g. RS256 vs
-// HS256, or Ed25519 vs Ed448) never match.
-//
-// The generic/specific EdDSA alias is KEY-AWARE: a generic "EdDSA" only aliases
-// the fully-specified variant that the key actually is. So a verifier holding an
-// Ed25519 key and the generic jwa.EdDSA() must reject a protected header that
-// claims "Ed448" (and vice versa) — accepting it would let a header advertise a
-// curve the key cannot possibly be. When the key's curve cannot be determined we
-// FAIL CLOSED (no match) rather than fall back to the name-only alias.
-//
-// We deliberately do NOT treat two identifiers as equivalent merely because
-// they resolve to the same underlying dsig algorithm: an extension can map two
-// distinct JWS "alg" names onto a single dsig name via
-// jwsbb.RegisterDsigAlgorithm, and collapsing those into a match would let a
-// producer advertise one algorithm while a verifier accepts another — exactly
-// the algorithm-confusion the guard exists to prevent.
-func algorithmsMatch(hdrAlg, verifyAlg jwa.SignatureAlgorithm, key any) bool {
-	h := hdrAlg.String()
-	v := verifyAlg.String()
-	if h == v {
-		return true
-	}
-	// The only non-exact match permitted is the generic-vs-specific EdDSA
-	// alias, and only when the specific variant equals the key's actual
-	// EdDSA curve. Determine which side is generic/specific, then confirm
-	// the specific side matches the key.
-	if specific, ok := genericSpecificEdDSASpecific(h, v); ok {
-		return keyMatchesEdDSACurve(key, specific)
-	}
-	return false
-}
-
-// genericSpecificEdDSASpecific reports whether exactly one of h/v is the generic
-// RFC 9864 "EdDSA" identifier and the other is a fully-specified EdDSA variant.
-// When so, it returns the fully-specified variant. The two values are never both
-// generic and never both specific here (exact equality is handled earlier).
-func genericSpecificEdDSASpecific(h, v string) (string, bool) {
-	if isGenericSpecificEdDSAPair(h, v) {
-		return v, true
-	}
-	if isGenericSpecificEdDSAPair(v, h) {
-		return h, true
-	}
-	return "", false
-}
-
-// isGenericSpecificEdDSAPair reports whether generic is the RFC 9864 generic
-// "EdDSA" identifier and specific is a fully-specified EdDSA variant.
-func isGenericSpecificEdDSAPair(generic, specific string) bool {
-	if generic != algEdDSAGeneric {
-		return false
-	}
-	_, ok := algEdDSASpecific[specific]
-	return ok
-}
-
-// keyMatchesEdDSACurve reports whether key's actual EdDSA curve corresponds to
-// the fully-specified EdDSA variant identifier (e.g. "Ed25519"/"Ed448"). It is
-// the key-aware gate for the generic/specific EdDSA alias.
-//
-// The signal is AlgorithmsForKey, which resolves a key's curve (from a jwk.Key's
-// Crv(), the stdlib ed25519 types, or an extension-registered raw key) into the
-// curve-specific signature algorithm(s) registered via RegisterAlgorithmForCurve
-// — i.e. "Ed25519" for an Ed25519 key and "Ed448" for an Ed448 key. This works
-// without importing the ed448 extension: the Ed448 curve registration is
-// contributed by the extension at init time, and AlgorithmsForKey reads that
-// shared registry. If the key cannot be classified, or it classifies only to the
-// generic "EdDSA" (curve indeterminate, e.g. no curve-specific registration is
-// present), we FAIL CLOSED and report no match.
-func keyMatchesEdDSACurve(key any, specific string) bool {
-	if key == nil {
-		return false
-	}
-	algs, err := AlgorithmsForKey(key)
-	if err != nil {
-		return false
-	}
-	for _, alg := range algs {
-		if alg.String() == specific {
-			return true
-		}
-	}
-	return false
 }
 
 // validateB64InCritIfFalse enforces RFC 7797 §3: producers that set

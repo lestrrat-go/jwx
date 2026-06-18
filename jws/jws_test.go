@@ -469,6 +469,13 @@ func TestRoundtrip(t *testing.T) {
 	})
 }
 
+// TestRFC9864CrossAlgorithmVerify pins that the deprecated polymorphic "EdDSA"
+// identifier and the fully-specified "Ed25519"/"Ed448" identifiers are DISTINCT
+// per RFC 9864: they do not alias one another. Cross-identifier verification
+// (signing under one and verifying under the other) is therefore rejected by
+// default because the protected header "alg" must exactly equal the verification
+// algorithm. The same underlying crypto still verifies when the algorithms match
+// or when jws.WithSkipAlgorithmMatch(true) is passed.
 func TestRFC9864CrossAlgorithmVerify(t *testing.T) {
 	t.Parallel()
 
@@ -477,7 +484,7 @@ func TestRFC9864CrossAlgorithmVerify(t *testing.T) {
 
 	payload := []byte("RFC 9864 cross-algorithm test")
 
-	t.Run("sign with EdDSAEd25519, verify with EdDSA", func(t *testing.T) {
+	t.Run("sign with EdDSAEd25519, verify with EdDSA rejected by default", func(t *testing.T) {
 		t.Parallel()
 		signed, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), key))
 		require.NoError(t, err, "signing with EdDSAEd25519 should succeed")
@@ -491,20 +498,43 @@ func TestRFC9864CrossAlgorithmVerify(t *testing.T) {
 		require.True(t, ok, "algorithm should be present")
 		require.Equal(t, jwa.EdDSAEd25519(), alg)
 
-		// Verify with EdDSA should also work (same crypto)
-		verified, err := jws.Verify(signed, jws.WithKey(jwa.EdDSA(), key.Public()))
-		require.NoError(t, err, "verifying EdDSAEd25519-signed message with EdDSA should succeed")
+		// Verifying under the generic "EdDSA" is rejected by default: the
+		// header "alg" ("Ed25519") does not equal the verification algorithm
+		// ("EdDSA"). They are distinct identifiers per RFC 9864.
+		_, err = jws.Verify(signed, jws.WithKey(jwa.EdDSA(), key.Public()))
+		require.Error(t, err, "cross-identifier verify should be rejected by default")
+		require.ErrorIs(t, err, jws.VerifyError())
+
+		// The same crypto verifies when the algorithm matches the header.
+		verified, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), key.Public()))
+		require.NoError(t, err, "verifying with the matching algorithm should succeed")
+		require.Equal(t, payload, verified)
+
+		// ...or when the alg-match check is explicitly skipped.
+		verified, err = jws.Verify(signed, jws.WithKey(jwa.EdDSA(), key.Public()), jws.WithSkipAlgorithmMatch(true))
+		require.NoError(t, err, "verifying with WithSkipAlgorithmMatch should succeed")
 		require.Equal(t, payload, verified)
 	})
 
-	t.Run("sign with EdDSA, verify with EdDSAEd25519", func(t *testing.T) {
+	t.Run("sign with EdDSA, verify with EdDSAEd25519 rejected by default", func(t *testing.T) {
 		t.Parallel()
 		signed, err := jws.Sign(payload, jws.WithKey(jwa.EdDSA(), key))
 		require.NoError(t, err, "signing with EdDSA should succeed")
 
-		// Verify with EdDSAEd25519 should also work (same crypto)
-		verified, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), key.Public()))
-		require.NoError(t, err, "verifying EdDSA-signed message with EdDSAEd25519 should succeed")
+		// The reverse direction is likewise rejected: header "alg" ("EdDSA")
+		// does not equal the verification algorithm ("Ed25519").
+		_, err = jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), key.Public()))
+		require.Error(t, err, "cross-identifier verify should be rejected by default")
+		require.ErrorIs(t, err, jws.VerifyError())
+
+		// The same crypto verifies when the algorithm matches the header.
+		verified, err := jws.Verify(signed, jws.WithKey(jwa.EdDSA(), key.Public()))
+		require.NoError(t, err, "verifying with the matching algorithm should succeed")
+		require.Equal(t, payload, verified)
+
+		// ...or when the alg-match check is explicitly skipped.
+		verified, err = jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), key.Public()), jws.WithSkipAlgorithmMatch(true))
+		require.NoError(t, err, "verifying with WithSkipAlgorithmMatch should succeed")
 		require.Equal(t, payload, verified)
 	})
 }
