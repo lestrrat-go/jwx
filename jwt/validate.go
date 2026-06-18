@@ -80,7 +80,13 @@ func Validate(t Token, options ...ValidateOption) error {
 	for _, o := range options {
 		switch o.Ident() {
 		case identClock{}:
-			clock = option.MustGet[Clock](o)
+			// A nil Clock falls back to the default clock (the system
+			// clock, time.Now) already assigned above, so only override
+			// when a non-nil Clock was supplied. This avoids a panic in
+			// clock.Now().
+			if c, ok := option.Get[Clock](o); ok && c != nil {
+				clock = c
+			}
 		case identAcceptableSkew{}:
 			skew = option.MustGet[time.Duration](o)
 			if skew < 0 {
@@ -95,7 +101,12 @@ func Validate(t Token, options ...ValidateOption) error {
 		case identCollectErrors{}:
 			collectErrors = option.MustGet[bool](o)
 		case identValidator{}:
-			v := option.MustGet[Validator](o)
+			// A nil Validator would panic when its Validate method is
+			// called, so reject it up front with a clear error.
+			v, ok := option.Get[Validator](o)
+			if !ok || v == nil {
+				return validateErrorf(`jwt.WithValidator: nil Validator`)
+			}
 			switch v := v.(type) {
 			case *isInTimeRange:
 				if v.c1 != "" {

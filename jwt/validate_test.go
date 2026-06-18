@@ -1047,3 +1047,43 @@ func TestValidateDefaultOrderMatchesSlowPath(t *testing.T) {
 	require.ErrorIs(t, errFast, jwt.InvalidIssuedAtError{},
 		`fast path must report iat error first too (symmetry with slow path)`)
 }
+
+func TestValidateNilClock(t *testing.T) {
+	t.Parallel()
+
+	// A nil Clock must fall back to the default clock (time.Now) instead
+	// of panicking.
+	valid, err := jwt.NewBuilder().
+		Expiration(time.Now().Add(time.Hour)).
+		Build()
+	require.NoError(t, err, `jwt.NewBuilder should succeed`)
+
+	require.NotPanics(t, func() {
+		err = jwt.Validate(valid, jwt.WithClock(nil))
+	}, `Validate with nil clock must not panic`)
+	require.NoError(t, err, `not-yet-expired token must validate with nil clock`)
+
+	expired, err := jwt.NewBuilder().
+		Expiration(time.Now().Add(-time.Hour)).
+		Build()
+	require.NoError(t, err, `jwt.NewBuilder should succeed`)
+
+	require.NotPanics(t, func() {
+		err = jwt.Validate(expired, jwt.WithClock(nil))
+	}, `Validate with nil clock must not panic`)
+	require.ErrorIs(t, err, jwt.TokenExpiredError{},
+		`expired token must fail with TokenExpiredError under nil (default) clock`)
+}
+
+func TestValidateNilValidator(t *testing.T) {
+	t.Parallel()
+
+	tok, err := jwt.NewBuilder().Build()
+	require.NoError(t, err, `jwt.NewBuilder should succeed`)
+
+	var err2 error
+	require.NotPanics(t, func() {
+		err2 = jwt.Validate(tok, jwt.WithValidator(nil))
+	}, `Validate with nil validator must not panic`)
+	require.Error(t, err2, `Validate with nil validator must return an error`)
+}
