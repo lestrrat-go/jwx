@@ -35,12 +35,31 @@ func ErrInvalidKeyAlgorithm() error {
 }
 
 func formatInvalidKeyAlgorithmValue(v string) string {
-	runes := []rune(v)
-	if len(runes) <= maxKeyAlgorithmErrorPreview {
+	// Collect at most maxKeyAlgorithmErrorPreview decoded runes without
+	// materializing []rune(v) for the whole string. For an
+	// attacker-controllable v this bounds the transient allocation to
+	// the preview window rather than the entire input.
+	//
+	// Ranging over a string decodes invalid UTF-8 to utf8.RuneError
+	// (U+FFFD), so the preview is byte-for-byte identical to the naive
+	// string([]rune(v)[:maxKeyAlgorithmErrorPreview]) implementation,
+	// including the U+FFFD substitution for malformed bytes within the
+	// window.
+	preview := make([]rune, 0, maxKeyAlgorithmErrorPreview)
+	truncated := false
+	for _, r := range v {
+		if len(preview) == maxKeyAlgorithmErrorPreview {
+			truncated = true
+			break
+		}
+		preview = append(preview, r)
+	}
+	if !truncated {
+		// v has maxKeyAlgorithmErrorPreview runes or fewer: render in full.
 		return fmt.Sprintf("%q", v)
 	}
 
-	return fmt.Sprintf("%q", string(runes[:maxKeyAlgorithmErrorPreview])+`...`)
+	return fmt.Sprintf("%q", string(preview)+`...`)
 }
 
 // algorithmKind tags entries in the shared algRegistry so the
