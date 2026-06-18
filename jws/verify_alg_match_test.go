@@ -150,13 +150,13 @@ func (ed25519BackedVerifier) Verify(key any, payload, signature []byte) error {
 }
 
 var (
-	errEd25519BackedVerifierKeyType = errEd25519Backed("ed25519BackedVerifier: key is not ed25519.PublicKey")
-	errEd25519BackedVerifierBadSig  = errEd25519Backed("ed25519BackedVerifier: signature verification failed")
+	errEd25519BackedVerifierKeyType = ed25519BackedError("ed25519BackedVerifier: key is not ed25519.PublicKey")
+	errEd25519BackedVerifierBadSig  = ed25519BackedError("ed25519BackedVerifier: signature verification failed")
 )
 
-type errEd25519Backed string
+type ed25519BackedError string
 
-func (e errEd25519Backed) Error() string { return string(e) }
+func (e ed25519BackedError) Error() string { return string(e) }
 
 // makeEdDSACurveConfusedCompact builds a compact JWS whose protected header
 // advertises headerAlg but whose signature is a valid Ed25519 signature over
@@ -231,7 +231,6 @@ func TestVerifyEdDSACurveAwareAlgMatch(t *testing.T) {
 	})
 
 	t.Run("Ed25519 header with generic EdDSA verifier + Ed25519 key verifies", func(t *testing.T) {
-		t.Parallel()
 		// Generic verifier, specific (matching-curve) header: the alias holds.
 		signed, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), priv))
 		require.NoError(t, err, `jws.Sign with Ed25519 should succeed`)
@@ -242,7 +241,6 @@ func TestVerifyEdDSACurveAwareAlgMatch(t *testing.T) {
 	})
 
 	t.Run("EdDSA header with specific Ed25519 verifier + Ed25519 key verifies", func(t *testing.T) {
-		t.Parallel()
 		signed, err := jws.Sign(payload, jws.WithKey(jwa.EdDSA(), priv))
 		require.NoError(t, err, `jws.Sign with EdDSA should succeed`)
 
@@ -252,7 +250,6 @@ func TestVerifyEdDSACurveAwareAlgMatch(t *testing.T) {
 	})
 
 	t.Run("exact EdDSA header and EdDSA verifier verifies", func(t *testing.T) {
-		t.Parallel()
 		signed, err := jws.Sign(payload, jws.WithKey(jwa.EdDSA(), priv))
 		require.NoError(t, err, `jws.Sign with EdDSA should succeed`)
 
