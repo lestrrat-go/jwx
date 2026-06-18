@@ -565,6 +565,12 @@ func generateKeyUnmarshalJSON(o *codegen.Output, kt *KeyType, obj *codegen.Objec
 			o.L("}")
 		} else if f.Type() == "jwa.KeyAlgorithm" {
 			o.L("case %sKey:", f.Name(true))
+			o.L("// The \"alg\" value is stored as-is and is NOT validated against the key")
+			o.L("// type, curve, or key size at parse time. This is intentional: per RFC 7517")
+			o.L("// section 4.4, \"alg\" is an OPTIONAL, informational hint identifying the")
+			o.L("// algorithm intended for use with the key, not a constraint on the key itself.")
+			o.L("// An incompatible \"alg\" is rejected when the key is used in a JOSE operation,")
+			o.L("// not at parse time. Do NOT add parse-time alg-vs-kty validation here.")
 			o.L("var s string")
 			o.L("if err := json.UnmarshalDecode(dec, &s); err != nil {")
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))

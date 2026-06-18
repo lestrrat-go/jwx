@@ -546,6 +546,12 @@ func (h *ecdsaPublicKey) UnmarshalJSON(buf []byte) error {
 				return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 			}
 		case AlgorithmKey:
+			// The "alg" value is stored as-is and is NOT validated against the key
+			// type, curve, or key size at parse time. This is intentional: per RFC 7517
+			// section 4.4, "alg" is an OPTIONAL, informational hint identifying the
+			// algorithm intended for use with the key, not a constraint on the key itself.
+			// An incompatible "alg" is rejected when the key is used in a JOSE operation,
+			// not at parse time. Do NOT add parse-time alg-vs-kty validation here.
 			var s string
 			if err := json.UnmarshalDecode(dec, &s); err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
@@ -1409,6 +1415,12 @@ func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) (retErr error) {
 				return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 			}
 		case AlgorithmKey:
+			// The "alg" value is stored as-is and is NOT validated against the key
+			// type, curve, or key size at parse time. This is intentional: per RFC 7517
+			// section 4.4, "alg" is an OPTIONAL, informational hint identifying the
+			// algorithm intended for use with the key, not a constraint on the key itself.
+			// An incompatible "alg" is rejected when the key is used in a JOSE operation,
+			// not at parse time. Do NOT add parse-time alg-vs-kty validation here.
 			var s string
 			if err := json.UnmarshalDecode(dec, &s); err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
