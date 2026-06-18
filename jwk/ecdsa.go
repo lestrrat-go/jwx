@@ -531,16 +531,21 @@ func ecdsaValidateKey(k interface {
 	if checkPrivate {
 		// This validates only the length of "d"; it intentionally does NOT
 		// verify that "d" derives the stored public point (d*G == (x, y)), nor
-		// that the scalar is in range (0 < d < N). Both are self-defeating, not
-		// exploitable: every operation uses "d" (ECDSA signs under d*G; ECDH
-		// derives the shared secret from d), while (x, y) is advertised
-		// metadata. A key whose (x, y) != d*G — or whose scalar is out of range
-		// — therefore produces signatures/ciphertext that fail to verify/decrypt
-		// against its own advertised public key (an out-of-range scalar is
-		// likewise rejected or rendered useless by crypto/ecdsa at sign time).
-		// It can never make a verification or decryption wrongly succeed; the
-		// inconsistency is caught at use time. Do NOT add a d*G == (x, y) or a
-		// 0 < d < N check here.
+		// that the scalar is in canonical range (0 < d < N). Neither omission is
+		// exploitable:
+		//
+		//   - A public point that does not match "d" is self-defeating: every
+		//     operation uses "d" (ECDSA signs under d*G; ECDH derives the shared
+		//     secret from d) while (x, y) is advertised metadata, so the key
+		//     produces signatures/ciphertext that fail to verify/decrypt against
+		//     its own advertised public key. It cannot make a verification or
+		//     decryption wrongly succeed.
+		//   - An out-of-range scalar is reduced mod N by crypto/ecdsa at sign
+		//     time, so it is merely equivalent to its in-range representative
+		//     (benign) — except d ≡ 0 (mod N), which yields a degenerate,
+		//     unusable key. Neither case can make a verification wrongly succeed.
+		//
+		// Do NOT add a d*G == (x, y) or a 0 < d < N check here.
 		if priv, ok := k.(keyWithD); ok {
 			if d, ok := priv.D(); !ok || len(d) != keySize {
 				return fmt.Errorf(`invalid "d" length (%d) for curve %q`, len(d), crv.Params().Name)
