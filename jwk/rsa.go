@@ -386,6 +386,9 @@ func trimLeadingZeroBytes(b []byte) []byte {
 }
 
 func rsaThumbprint(hash crypto.Hash, n, e []byte) ([]byte, error) {
+	if err := availableHash(hash); err != nil {
+		return nil, err
+	}
 	n = trimLeadingZeroBytes(n)
 	e = trimLeadingZeroBytes(e)
 	if len(n) == 0 {

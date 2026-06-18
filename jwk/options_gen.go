@@ -261,6 +261,10 @@ func WithStrictKeyUsage(v bool) GlobalOption {
 	return &globalOption{option.New(identStrictKeyUsage{}, v)}
 }
 
+// WithThumbprintHash specifies the hash algorithm `jwk.AssignKeyID` uses
+// to compute the thumbprint. If the hash is unavailable (e.g. its package
+// has not been imported), `AssignKeyID` returns an error rather than
+// panicking.
 func WithThumbprintHash(v crypto.Hash) AssignKeyIDOption {
 	return &assignKeyIDOption{option.New(identThumbprintHash{}, v)}
 }

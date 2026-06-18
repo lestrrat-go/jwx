@@ -2861,3 +2861,64 @@ func TestRejectDuplicateKID(t *testing.T) {
 		require.Equal(t, 2, set.Len())
 	})
 }
+
+// TestThumbprintUnavailableHash verifies that Thumbprint returns an error
+// (instead of panicking via hash.New) when handed a hash that is not
+// available — either the zero value crypto.Hash(0) or a registered-but-
+// unlinked hash such as crypto.MD4.
+func TestThumbprintUnavailableHash(t *testing.T) {
+	rsaRaw, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, `rsa.GenerateKey should succeed`)
+	rsaKey, err := jwk.Import[jwk.Key](rsaRaw)
+	require.NoError(t, err, `jwk.Import RSA should succeed`)
+
+	ecdsaRaw, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err, `ecdsa.GenerateKey should succeed`)
+	ecdsaKey, err := jwk.Import[jwk.Key](ecdsaRaw)
+	require.NoError(t, err, `jwk.Import ECDSA should succeed`)
+
+	_, edRaw, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err, `ed25519.GenerateKey should succeed`)
+	okpKey, err := jwk.Import[jwk.Key](edRaw)
+	require.NoError(t, err, `jwk.Import OKP should succeed`)
+
+	symKey, err := jwk.Import[jwk.Key]([]byte("top-secret-hmac-material"))
+	require.NoError(t, err, `jwk.Import symmetric should succeed`)
+
+	keys := map[string]jwk.Key{
+		"RSA":       rsaKey,
+		"ECDSA":     ecdsaKey,
+		"OKP":       okpKey,
+		"symmetric": symKey,
+	}
+
+	unavailable := map[string]crypto.Hash{
+		"zero hash": crypto.Hash(0),
+		"MD4":       crypto.MD4,
+	}
+
+	for name, key := range keys {
+		t.Run(name, func(t *testing.T) {
+			for hname, h := range unavailable {
+				t.Run(hname, func(t *testing.T) {
+					require.NotPanics(t, func() {
+						_, err := key.Thumbprint(h)
+						require.Error(t, err, `Thumbprint with unavailable hash should error`)
+					})
+				})
+			}
+
+			// Positive control: SHA-256 still works.
+			tp, err := key.Thumbprint(crypto.SHA256)
+			require.NoError(t, err, `Thumbprint with SHA256 should succeed`)
+			require.NotEmpty(t, tp)
+		})
+	}
+
+	// AssignKeyID propagates the error from Thumbprint when given an
+	// unavailable hash, rather than panicking.
+	require.NotPanics(t, func() {
+		err := jwk.AssignKeyID(rsaKey, jwk.WithThumbprintHash(crypto.MD4))
+		require.Error(t, err, `AssignKeyID with unavailable hash should error`)
+	})
+}

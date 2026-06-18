@@ -417,6 +417,9 @@ func okpThumbprint(hash crypto.Hash, crv, x string) []byte {
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638 / 8037
 func (k *okpPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	if err := availableHash(hash); err != nil {
+		return nil, err
+	}
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
@@ -434,6 +437,9 @@ func (k *okpPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638 / 8037
 func (k *okpPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	if err := availableHash(hash); err != nil {
+		return nil, err
+	}
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 

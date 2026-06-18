@@ -65,7 +65,9 @@ type Key interface {
 	Validate() error
 
 	// Thumbprint returns the JWK thumbprint using the indicated
-	// hashing algorithm, according to RFC 7638
+	// hashing algorithm, according to RFC 7638. An error is returned if the
+	// hash is unavailable (e.g. crypto.Hash(0) or a hash whose package has
+	// not been imported); it does not panic.
 	Thumbprint(crypto.Hash) ([]byte, error)
 
 	// Keys returns a list of the keys contained in this jwk.Key.

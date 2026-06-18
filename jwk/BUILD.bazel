@@ -27,6 +27,7 @@ go_library(
         "set.go",
         "symmetric.go",
         "symmetric_gen.go",
+        "thumbprint.go",
         "usage.go",
         "x509.go",
     ],

@@ -76,6 +76,9 @@ func octetSeqToRaw(keyif Key, _ any) (any, error) {
 // Thumbprint returns the JWK thumbprint using the indicated
 // hashing algorithm, according to RFC 7638
 func (k *symmetricKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	if err := availableHash(hash); err != nil {
+		return nil, err
+	}
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 	octets, err := Export[[]byte](k)
