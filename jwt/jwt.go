@@ -26,9 +26,12 @@ var muSettings sync.Mutex
 var defaultTruncation atomic.Int64
 
 // Settings controls global settings that are specific to JWTs.
+//
+// Each call adjusts only the options explicitly provided; settings that are
+// not specified are left unchanged from their previous value.
 func Settings(options ...GlobalOption) error {
-	var flattenAudience bool
-	var parsePedantic bool
+	var flattenAudience *bool
+	var parsePedantic *bool
 	var parsePrecision = types.MaxPrecision + 1  // illegal value, so we can detect nothing was set
 	var formatPrecision = types.MaxPrecision + 1 // illegal value, so we can detect nothing was set
 	truncation := time.Duration(-1)
@@ -37,9 +40,11 @@ func Settings(options ...GlobalOption) error {
 		case identTruncation{}:
 			truncation = option.MustGet[time.Duration](opt)
 		case identFlattenAudience{}:
-			flattenAudience = option.MustGet[bool](opt)
+			b := option.MustGet[bool](opt)
+			flattenAudience = &b
 		case identNumericDateParsePedantic{}:
-			parsePedantic = option.MustGet[bool](opt)
+			b := option.MustGet[bool](opt)
+			parsePedantic = &b
 		case identNumericDateParsePrecision{}:
 			v := option.MustGet[int](opt)
 			if v < 0 || v > int(types.MaxPrecision) {
@@ -66,17 +71,17 @@ func Settings(options ...GlobalOption) error {
 		types.FormatPrecision.Store(formatPrecision)
 	}
 
-	{
+	if parsePedantic != nil {
 		var newVal uint32
-		if parsePedantic {
+		if *parsePedantic {
 			newVal = 1
 		}
 		types.Pedantic.Store(newVal)
 	}
 
-	{
+	if flattenAudience != nil {
 		opts := TokenOptionSet(defaultOptions.Load())
-		if flattenAudience {
+		if *flattenAudience {
 			opts.Enable(FlattenAudience)
 		} else {
 			opts.Disable(FlattenAudience)
