@@ -774,7 +774,10 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 		return nil, fmt.Errorf(`jwe.Decrypt: failed to decrypt payload: %w`, err)
 	}
 
-	if v, ok := h2.Compression(); ok && v == jwa.Deflate() {
+	// Read compression only from the protected header. The "zip" header in
+	// the unprotected/per-recipient header is not covered by the AEAD, so
+	// honoring it would let an attacker flip post-decryption decompression.
+	if v, ok := protectedHeaders.Compression(); ok && v == jwa.Deflate() {
 		buf, err := uncompress(plaintext, dc.maxDecompressBufferSize)
 		if err != nil {
 			return nil, fmt.Errorf(`jwe.Decrypt: failed to uncompress payload: %w`, err)

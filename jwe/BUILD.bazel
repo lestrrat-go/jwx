@@ -53,6 +53,7 @@ go_test(
         "options_gen_test.go",
         "recipient_headers_test.go",
         "speed_test.go",
+        "zip_protected_only_test.go",
     ],
     embed = [":jwe"],
     deps = [
