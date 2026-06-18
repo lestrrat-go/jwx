@@ -517,6 +517,7 @@ func (h *rsaPublicKey) UnmarshalJSON(buf []byte) error {
 				return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 			}
 		case AlgorithmKey:
+			// "alg" is an informational hint stored as-is, not validated against the key type here; see [ParseKey] for rationale.
 			var s string
 			if err := json.UnmarshalDecode(dec, &s); err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)
@@ -1521,6 +1522,7 @@ func (h *rsaPrivateKey) UnmarshalJSON(buf []byte) (retErr error) {
 				return fmt.Errorf(`invalid kty value for RSAPublicKey (%s)`, val)
 			}
 		case AlgorithmKey:
+			// "alg" is an informational hint stored as-is, not validated against the key type here; see [ParseKey] for rationale.
 			var s string
 			if err := json.UnmarshalDecode(dec, &s); err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, AlgorithmKey, err)

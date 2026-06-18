@@ -565,6 +565,7 @@ func generateKeyUnmarshalJSON(o *codegen.Output, kt *KeyType, obj *codegen.Objec
 			o.L("}")
 		} else if f.Type() == "jwa.KeyAlgorithm" {
 			o.L("case %sKey:", f.Name(true))
+			o.L("// \"alg\" is an informational hint stored as-is, not validated against the key type here; see [ParseKey] for rationale.")
 			o.L("var s string")
 			o.L("if err := json.UnmarshalDecode(dec, &s); err != nil {")
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %sKey, err)", f.Name(true))

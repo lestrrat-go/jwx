@@ -367,6 +367,14 @@ func (ctx *setDecodeCtx) IgnoreParseError() bool {
 // are performed for certificate expiration, no checks against missing
 // parameters are performed, etc.
 //
+// In particular, the "alg" value is stored as-is and is NOT validated
+// against the key type, curve, or key size at parse time. This is
+// intentional: per RFC 7517 section 4.4, "alg" is an OPTIONAL,
+// informational hint identifying the algorithm intended for use with the
+// key, not a constraint on the key itself. An incompatible "alg" is
+// rejected when the key is used in a JOSE operation, not at parse time.
+// Parse-time alg-vs-kty validation must NOT be added.
+//
 // Use [ParseKeyAs] when a concrete key subtype (e.g. [RSAPrivateKey],
 // [ECDSAPublicKey]) is required.
 func ParseKey(data []byte, options ...ParseOption) (Key, error) {
