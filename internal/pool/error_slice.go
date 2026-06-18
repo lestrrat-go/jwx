@@ -7,7 +7,12 @@ func allocErrorSlice() []error {
 }
 
 func freeErrorSlice(s []error) []error {
-	// Reset the slice to its zero value
+	// Defensive: scrub the entire backing array, not just s[:len(s)]. The
+	// pooled errors may reference request data; clearing the full capacity
+	// keeps stale values from staying reachable in the pool's backing
+	// storage until they happen to be overwritten.
+	s = s[:cap(s)]
+	clear(s)
 	return s[:0]
 }
 
