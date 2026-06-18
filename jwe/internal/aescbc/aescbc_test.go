@@ -3,10 +3,31 @@ package aescbc
 import (
 	"bytes"
 	"crypto/aes"
+	"encoding/binary"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+// TestAADBitLength verifies that the AAD bit-length ("AL") field is computed
+// as a 64-bit big-endian value. The multiplication by 8 must be performed in
+// uint64 so that on 32-bit platforms a large AAD (>256MiB) does not overflow
+// the int multiplication before the widening cast.
+func TestAADBitLength(t *testing.T) {
+	for _, n := range []int{0, 1, 51, 1 << 20} {
+		var want [8]byte
+		binary.BigEndian.PutUint64(want[:], uint64(n)*8)
+		require.Equal(t, want, aadBitLength(n), "AL for len %d", n)
+	}
+
+	// A length that, multiplied by 8, exceeds the 32-bit signed int range.
+	// On 32-bit platforms `len*8` (int math) would overflow; the helper must
+	// widen to uint64 before multiplying.
+	const big = 1 << 29 // 512MiB; big*8 overflows int32
+	var want [8]byte
+	binary.BigEndian.PutUint64(want[:], uint64(big)*8)
+	require.Equal(t, want, aadBitLength(big), "AL for len %d", big)
+}
 
 func TestVectorsAESCBC128(t *testing.T) {
 	// Source: http://tools.ietf.org/html/draft-ietf-jose-json-web-encryption-29#appendix-A.2
