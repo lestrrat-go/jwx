@@ -47,6 +47,7 @@ go_test(
         "jwt_crit_test.go",
         "jwt_test.go",
         "options_gen_test.go",
+        "settings_test.go",
         "structured_errors_test.go",
         "token_options_test.go",
         "token_test.go",
