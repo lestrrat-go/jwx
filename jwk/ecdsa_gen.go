@@ -572,9 +572,16 @@ func (h *ecdsaPublicKey) UnmarshalJSON(buf []byte) error {
 			}
 			h.keyOps = &decoded
 		case KeyUsageKey:
-			if err := json.AssignNextStringToken(&h.keyUsage, dec, h.dc); err != nil {
+			val, err := json.ReadNextStringToken(dec, h.dc)
+			if err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, KeyUsageKey, err)
 			}
+			var acceptor KeyUsageType
+			if err := acceptor.Accept(val); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, KeyUsageKey, err)
+			}
+			tmp := acceptor.String()
+			h.keyUsage = &tmp
 		case ECDSAXKey:
 			if err := json.AssignNextBytesToken(&h.x, dec); err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, ECDSAXKey, err)
@@ -1432,9 +1439,16 @@ func (h *ecdsaPrivateKey) UnmarshalJSON(buf []byte) (retErr error) {
 			}
 			h.keyOps = &decoded
 		case KeyUsageKey:
-			if err := json.AssignNextStringToken(&h.keyUsage, dec, h.dc); err != nil {
+			val, err := json.ReadNextStringToken(dec, h.dc)
+			if err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, KeyUsageKey, err)
 			}
+			var acceptor KeyUsageType
+			if err := acceptor.Accept(val); err != nil {
+				return fmt.Errorf(`failed to decode value for key %s: %w`, KeyUsageKey, err)
+			}
+			tmp := acceptor.String()
+			h.keyUsage = &tmp
 		case ECDSAXKey:
 			if err := json.AssignNextBytesToken(&h.x, dec); err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, ECDSAXKey, err)

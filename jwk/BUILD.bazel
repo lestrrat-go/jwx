@@ -60,6 +60,7 @@ go_test(
         "options_gen_test.go",
         "probe_bench_test.go",
         "set_test.go",
+        "usage_parse_test.go",
         "x5c_test.go",
     ],
     data = glob(["testdata/**"]),
