@@ -103,6 +103,19 @@ func (k *ecdsaPrivateKey) Import(rawKey *ecdsa.PrivateKey) error {
 		return fmt.Errorf(`jwk: %w`, err)
 	}
 
+	// validateECDSAPoint guarantees a non-nil Curve. Bound D the same way
+	// the X/Y coordinates are bounded: AllocECPointBuffer writes D into a
+	// fixed-size buffer via big.Int.FillBytes, which panics on oversized
+	// input. A valid private scalar is in [1, n-1], so reject non-positive
+	// or over-wide values here.
+	bits := rawKey.Curve.Params().BitSize
+	if rawKey.D.Sign() <= 0 {
+		return fmt.Errorf(`jwk: invalid ECDSA private key: d must be a positive scalar`)
+	}
+	if rawKey.D.BitLen() > bits {
+		return fmt.Errorf(`jwk: invalid ECDSA private key: d is %d bits, exceeds curve %q field size of %d bits`, rawKey.D.BitLen(), rawKey.Curve.Params().Name, bits)
+	}
+
 	xbuf := ecutil.AllocECPointBuffer(rawKey.PublicKey.X, rawKey.Curve)
 	ybuf := ecutil.AllocECPointBuffer(rawKey.PublicKey.Y, rawKey.Curve)
 	dbuf := ecutil.AllocECPointBuffer(rawKey.D, rawKey.Curve)
@@ -169,6 +182,13 @@ func buildECDSAPublicKey(alg jwa.EllipticCurveAlgorithm, xbuf, ybuf []byte) (*ec
 // failing closed is preferable to silently accepting unvalidated
 // points.
 func validateECDSAPoint(crv elliptic.Curve, x, y *big.Int) error {
+	// A nil curve has no field parameters; every check below dereferences
+	// crv.Params(), so guard here to avoid a nil-pointer panic on
+	// hand-crafted keys with an unset Curve.
+	if crv == nil {
+		return fmt.Errorf(`invalid ECDSA key: nil curve`)
+	}
+
 	if x.Sign() == 0 && y.Sign() == 0 {
 		return fmt.Errorf(`invalid ECDSA public key: identity point is not a valid public key`)
 	}
