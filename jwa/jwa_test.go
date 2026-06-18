@@ -167,6 +167,18 @@ func TestKeyAlgorithmFrom(t *testing.T) {
 				Input:    strings.Repeat("あ", 1024),
 				Expected: fmt.Sprintf(`invalid key value: %q: invalid key algorithm`, strings.Repeat("あ", 64)+`...`),
 			},
+			{
+				// Invalid UTF-8 bytes within the preview window must be
+				// decoded to U+FFFD before %q quoting, matching the old
+				// string([]rune(v)[:64]) reference. The leading "\xff\xfe"
+				// are two invalid bytes that decode to two U+FFFD runes.
+				Name:  "invalid utf-8 before cutoff is decoded to replacement runes",
+				Input: "\xff\xfe" + strings.Repeat("a", 80),
+				Expected: fmt.Sprintf(
+					`invalid key value: %q: invalid key algorithm`,
+					string([]rune("\xff\xfe"+strings.Repeat("a", 80))[:64])+`...`,
+				),
+			},
 		} {
 			t.Run(tc.Name, func(t *testing.T) {
 				t.Parallel()
