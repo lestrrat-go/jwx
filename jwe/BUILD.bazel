@@ -40,7 +40,10 @@ go_library(
 go_test(
     name = "jwe_test",
     srcs = [
+        "accessors_test.go",
+        "aead_tag_length_test.go",
         "bench_encrypt_test.go",
+        "directcek_test.go",
         "fuzz_test.go",
         "gh402_test.go",
         "headers_nil_test.go",
@@ -53,6 +56,7 @@ go_test(
         "options_gen_test.go",
         "recipient_headers_test.go",
         "speed_test.go",
+        "zip_protected_only_test.go",
     ],
     embed = [":jwe"],
     deps = [

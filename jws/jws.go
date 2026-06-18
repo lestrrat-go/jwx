@@ -240,6 +240,21 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 // accept messages with "none" signature algorithm, use `jws.Parse` to get the
 // raw JWS message.
 //
+// By default, Verify rejects a JWS whose protected header "alg" does not
+// exactly equal the algorithm actually used to verify it. The verification
+// algorithm is resolved from the key or provider you supply (jws.WithKey,
+// jws.WithKeySet, jws.WithVerifyAuto, or a custom jws.WithKeyProvider); if the
+// protected header advertises a different "alg", verification fails even when
+// the signature would otherwise be cryptographically valid. The match is plain
+// string equality, with no aliasing: the deprecated polymorphic "EdDSA" and the
+// fully-specified "Ed25519"/"Ed448" identifiers are distinct per RFC 9864 and
+// are not interchangeable. This check fires only when the protected header
+// carries an "alg" — messages that place "alg" only in the unprotected header
+// (or omit it) are unaffected. Pass jws.WithSkipAlgorithmMatch(true) to bypass
+// the check for non-conforming producers. The compact fast path
+// [VerifyCompactFast] performs an equivalent cross-check against its explicitly
+// supplied algorithm.
+//
 // The error returned by this function is of type can be checked against
 // `jws.VerifyError()` and `jws.VerificationError()`. The latter is returned
 // when the verification process itself fails (e.g. invalid signature, wrong key),
@@ -430,6 +445,21 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 		decodedPayload = v
 	}
 
+	// The payload decode above and the signature decode below intentionally use
+	// the auto-detecting base64 decoder, which tolerates non-standard variants
+	// (e.g. padded base64url, standard base64) in addition to RFC 7515's raw
+	// base64url. This leniency is deliberate: jws.Verify is the interop path,
+	// whereas VerifyCompactFast strictly decodes the payload and signature
+	// (RFC 4648 §5 raw base64url, no padding) and its godoc directs callers whose
+	// JWS uses non-standard encoding to use jws.Verify instead. The cost is that
+	// serialized-JWS strings are
+	// non-canonical/malleable (a signature re-encoded in a different base64
+	// variant decodes to the same bytes but yields a different compact string).
+	// This does NOT affect signature validity or enable forgery; it only matters
+	// to systems that key replay/dedup on the raw compact-JWS string, which should
+	// instead key on the verified payload/claims. This is a deliberate won't-fix:
+	// do NOT switch this to strict decoding; callers needing strict raw base64url
+	// decoding of the payload and signature should use VerifyCompactFast.
 	decodedSignature, err := base64.Decode(signature)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to decode signature: %w`, err)
@@ -639,6 +669,17 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 		kty = jwa.OKP()
 		crv = jwa.Ed25519()
 		hasCrv = true
+	case *ed25519.PublicKey, *ed25519.PrivateKey:
+		// Pointer-form ed25519 keys satisfy crypto.Signer, so without an
+		// explicit case here a typed-nil or wrong-length pointer would
+		// fall through to the default branch and panic inside
+		// signer.Public(). Validate length/nil up front instead.
+		if err := validateEd25519KeyShape(key); err != nil {
+			return nil, fmt.Errorf(`%w: %w`, errUnclassifiableKey, err)
+		}
+		kty = jwa.OKP()
+		crv = jwa.Ed25519()
+		hasCrv = true
 	case *ecdh.PublicKey, ecdh.PublicKey, *ecdh.PrivateKey, ecdh.PrivateKey:
 		// ecdh keys are for key agreement (X25519/X448), not signing.
 		// Reject at the API boundary instead of returning a misleading
@@ -654,6 +695,13 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 		var signerPubErr error
 		if signer, ok := key.(crypto.Signer); ok {
 			pub := signer.Public()
+			// A custom crypto.Signer may hand back a malformed (wrong-length or
+			// typed-nil) ed25519.PublicKey. Classifying that as OKP would let it
+			// reach the EdDSA verify path, which panics ("ed25519: bad public key
+			// length"). Reject it here instead.
+			if err := validateEd25519KeyShape(pub); err != nil {
+				return nil, fmt.Errorf(`%w: %w`, errUnclassifiableKey, err)
+			}
 			// Guard: only recurse if the public key is not itself a crypto.Signer,
 			// to prevent infinite recursion from pathological implementations.
 			if _, isSigner := pub.(crypto.Signer); !isSigner {
@@ -763,6 +811,12 @@ func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
 		if hasCustomSigVerifier(alg) {
 			return nil
 		}
+		// A malformed ed25519 key (typed-nil or wrong-length, value or
+		// pointer form) satisfies crypto.Signer but panics in Public().
+		// Surface the classification error directly instead of probing it.
+		if shapeErr := validateEd25519KeyShape(key); shapeErr != nil {
+			return fmt.Errorf(`jws.WithKey: %w`, err)
+		}
 		if signer, ok := key.(crypto.Signer); ok {
 			if _, isSigner := signer.Public().(crypto.Signer); isSigner {
 				return nil
@@ -775,6 +829,37 @@ func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
 			return nil
 		}
 		return fmt.Errorf(`jws.WithKey: algorithm %q is not compatible with key type %T`, alg, key)
+	}
+	return nil
+}
+
+// validateEd25519KeyShape reports whether key is a malformed ed25519 key.
+// It returns a non-nil error when key is an ed25519 private/public key (value
+// or pointer form) that is typed-nil or not the expected length, and nil for
+// everything else — including non-ed25519 keys and well-formed ed25519 keys.
+//
+// Concrete ed25519 keys (and their pointer forms) satisfy crypto.Signer, but
+// their Public() method panics ("slice bounds out of range" / nil pointer
+// dereference) when the key is not exactly the right size. Callers use this to
+// reject malformed keys with an error before any code path reaches Public().
+func validateEd25519KeyShape(key any) error {
+	switch k := key.(type) {
+	case ed25519.PrivateKey:
+		if len(k) != ed25519.PrivateKeySize {
+			return fmt.Errorf(`invalid ed25519.PrivateKey length %d, expected %d`, len(k), ed25519.PrivateKeySize)
+		}
+	case *ed25519.PrivateKey:
+		if k == nil || len(*k) != ed25519.PrivateKeySize {
+			return fmt.Errorf(`invalid *ed25519.PrivateKey, expected length %d`, ed25519.PrivateKeySize)
+		}
+	case ed25519.PublicKey:
+		if len(k) != ed25519.PublicKeySize {
+			return fmt.Errorf(`invalid ed25519.PublicKey length %d, expected %d`, len(k), ed25519.PublicKeySize)
+		}
+	case *ed25519.PublicKey:
+		if k == nil || len(*k) != ed25519.PublicKeySize {
+			return fmt.Errorf(`invalid *ed25519.PublicKey, expected length %d`, ed25519.PublicKeySize)
+		}
 	}
 	return nil
 }
@@ -833,10 +918,10 @@ func Settings(options ...GlobalOption) error {
 //
 // Returns the original payload that was signed if verification succeeds.
 //
-// Unlike jws.Verify(), this function requires you to specify the
-// algorithm explicitly rather than extracting it from the JWS headers.
-// This can be useful for performance-critical applications where the
-// algorithm is known in advance.
+// Unlike jws.Verify() — which resolves the verification algorithm from the
+// key or provider you supply (e.g. WithKey, WithKeySet) — this function takes
+// the algorithm as an explicit argument. It is useful for performance-critical
+// applications where the algorithm is known in advance.
 //
 // This function uses strict base64url encoding without padding (RFC 4648 §5)
 // for decoding the signature and payload. It does not auto-detect other

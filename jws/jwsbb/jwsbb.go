@@ -13,6 +13,12 @@
 // 2. All exported functions are strongly typed (i.e. they do not take `any` types unless they absolutely have to).
 // 3. Does not rely on other public jwx packages (they are standalone, except for internal packages).
 //
+// As a corollary of (1), these primitives assume well-formed, correctly-sized
+// key material. Passing malformed or wrong-length keys (e.g. a short
+// ed25519.PublicKey) may panic. Callers handling untrusted or unvalidated keys
+// should use the high-level jws.Sign / jws.Verify API, which validates key
+// shape before any cryptographic operation.
+//
 // This implementation uses github.com/lestrrat-go/dsig as the underlying signature provider.
 package jwsbb
 

@@ -171,3 +171,39 @@ func TestEdDSA(t *testing.T) {
 		})
 	}
 }
+
+// A malformed ed25519 key (value or pointer) satisfies crypto.Signer but
+// panics inside Public(). It can reach the RSA/ECDSA dispatchers when a caller
+// pairs an ed25519 key with a non-EdDSA algorithm. Every dispatcher must
+// return an error instead of panicking.
+func TestSignVerifyMalformedEd25519KeyDoesNotPanic(t *testing.T) {
+	payload := []byte("hello")
+	signature := []byte("not-a-real-signature")
+
+	shortVal := ed25519.PrivateKey{1, 2, 3}
+	keys := []struct {
+		name string
+		key  any
+	}{
+		{"short value", shortVal},
+		{"short pointer", &shortVal},
+		{"typed-nil value", ed25519.PrivateKey(nil)},
+		{"typed-nil pointer", (*ed25519.PrivateKey)(nil)},
+	}
+
+	// Algorithms drawn from each non-EdDSA family plus EdDSA itself.
+	algs := []string{"RS256", "ES256", "HS256", "EdDSA"}
+
+	for _, k := range keys {
+		for _, alg := range algs {
+			t.Run(k.name+"/"+alg+"/Sign", func(t *testing.T) {
+				_, err := jwsbb.Sign(k.key, alg, payload, nil)
+				require.Error(t, err, "Sign must return an error, not panic")
+			})
+			t.Run(k.name+"/"+alg+"/Verify", func(t *testing.T) {
+				err := jwsbb.Verify(k.key, alg, payload, signature)
+				require.Error(t, err, "Verify must return an error, not panic")
+			})
+		}
+	}
+}

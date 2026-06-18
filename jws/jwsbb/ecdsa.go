@@ -105,6 +105,9 @@ func SignECDSA(key *ecdsa.PrivateKey, payload []byte, h crypto.Hash, rr io.Reade
 // The signature is converted from ASN.1 format to JWS format (r||s).
 //
 // rr is an io.Reader that provides randomness for signing. If rr is nil, it defaults to rand.Reader.
+//
+// As a low-level primitive it assumes a well-formed signer; one returning a
+// malformed key may panic. Use jws.Sign for untrusted or unvalidated keys.
 func SignECDSACryptoSigner(signer crypto.Signer, raw []byte, h crypto.Hash, rr io.Reader) ([]byte, error) {
 	signed, err := SignCryptoSigner(signer, raw, h, h, rr)
 	if err != nil {
@@ -130,6 +133,19 @@ func signECDSACryptoSigner(signer crypto.Signer, signed []byte) ([]byte, error) 
 	return PackECDSASignature(&r, &s, curveBits)
 }
 
+// ecdsaVerify uses the standard library's ecdsa.Verify, which intentionally
+// accepts both low-S and high-S signatures (it only checks that 0 < r,s < N).
+// jwx deliberately does NOT enforce canonical/low-S signatures: RFC 7515
+// imposes no low-S requirement, so a high-S signature is a valid JWS ECDSA
+// signature. Rejecting high-S on verify would reject legitimate signatures from
+// conformant signers — including Go's own randomized crypto/ecdsa.Sign, which
+// does not canonicalize S — which would be a broad interop break.
+//
+// The resulting malleability ((r,s) vs (r, N-s) both verify) does not affect
+// signature validity or enable forgery: an attacker still cannot sign new
+// messages. It only matters to systems that replay/dedup on the raw signature
+// or compact-JWS bytes, which should instead key on the verified payload/claims.
+// This is a deliberate won't-fix: do not "harden" this by enforcing low-S.
 func ecdsaVerify(key *ecdsa.PublicKey, buf []byte, h crypto.Hash, r, s *big.Int) error {
 	hasher := h.New()
 	hasher.Write(buf)
@@ -159,6 +175,9 @@ func VerifyECDSA(key *ecdsa.PublicKey, payload, signature []byte, h crypto.Hash)
 // This function is useful for verifying signatures created by hardware security modules
 // or other implementations of the crypto.Signer interface.
 // The payload parameter should be the pre-computed signing input (typically header.payload).
+//
+// As a low-level primitive it assumes a well-formed signer; one returning a
+// malformed key may panic. Use jws.Verify for untrusted or unvalidated keys.
 func VerifyECDSACryptoSigner(signer crypto.Signer, payload, signature []byte, h crypto.Hash) error {
 	var pubkey *ecdsa.PublicKey
 	switch cpub := signer.Public(); cpub := cpub.(type) {

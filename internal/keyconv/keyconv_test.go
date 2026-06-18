@@ -1,8 +1,10 @@
 package keyconv_test
 
 import (
+	"crypto"
 	"crypto/ecdh"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
 	"testing"
@@ -247,5 +249,84 @@ func TestECDHToECDSA(t *testing.T) {
 		_, err = keyconv.ECDHToECDSA(x25519Key)
 		require.Error(t, err, `ECDHToECDSA should fail for unsupported curve`)
 		require.Contains(t, err.Error(), "unsupported ECDH curve", `error should mention unsupported curve`)
+	})
+}
+
+// shortEd25519ExportKey is a minimal jwk.Key stub whose registered
+// exporter returns a wrong-length ed25519.PrivateKey, exercising the
+// jwk-export branch of keyconv.Ed25519PrivateKey. The embedded nil
+// jwk.Key satisfies the interface; only KeyType/KeyKind are called.
+type shortEd25519ExportKey struct {
+	jwk.Key
+}
+
+func (shortEd25519ExportKey) KeyType() jwa.KeyType { return jwa.OKP() }
+func (shortEd25519ExportKey) KeyKind() jwk.KeyKind {
+	return jwk.KeyKind("OKP:keyconv-test-short-ed25519")
+}
+
+func TestEd25519ExportBranchMalformed(t *testing.T) {
+	// Register an exporter that yields a too-short ed25519.PrivateKey for
+	// our unique KeyKind. keyconv.Ed25519PrivateKey must reject it rather
+	// than return a key that would panic in ed25519.PrivateKey.Public().
+	err := jwk.RegisterKeyExporter(jwk.KeyKind("OKP:keyconv-test-short-ed25519"),
+		jwk.KeyExportFunc(func(_ jwk.Key, _ any) (any, error) {
+			return ed25519.PrivateKey{1, 2, 3}, nil
+		}))
+	require.NoError(t, err, `RegisterKeyExporter should succeed`)
+
+	_, err = keyconv.Ed25519PrivateKey(shortEd25519ExportKey{})
+	require.Error(t, err, `exported short ed25519.PrivateKey must return an error, not panic`)
+}
+
+func TestEd25519MalformedKey(t *testing.T) {
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err, `ed25519.GenerateKey should succeed`)
+
+	t.Run("Ed25519PrivateKey", func(t *testing.T) {
+		t.Run("short key returns error", func(t *testing.T) {
+			_, err := keyconv.Ed25519PrivateKey(ed25519.PrivateKey{1, 2, 3})
+			require.Error(t, err, `short ed25519.PrivateKey must error`)
+		})
+		t.Run("nil key returns error", func(t *testing.T) {
+			_, err := keyconv.Ed25519PrivateKey(ed25519.PrivateKey(nil))
+			require.Error(t, err, `nil ed25519.PrivateKey must error`)
+		})
+		t.Run("valid key succeeds", func(t *testing.T) {
+			got, err := keyconv.Ed25519PrivateKey(priv)
+			require.NoError(t, err)
+			require.Equal(t, priv, *got)
+		})
+	})
+
+	t.Run("Ed25519PublicKey", func(t *testing.T) {
+		t.Run("short public key returns error", func(t *testing.T) {
+			_, err := keyconv.Ed25519PublicKey(ed25519.PublicKey{1, 2, 3})
+			require.Error(t, err, `short ed25519.PublicKey must error`)
+		})
+		t.Run("short private key returns error", func(t *testing.T) {
+			_, err := keyconv.Ed25519PublicKey(ed25519.PrivateKey{1, 2, 3})
+			require.Error(t, err, `short ed25519.PrivateKey must error`)
+		})
+		t.Run("valid public key succeeds", func(t *testing.T) {
+			got, err := keyconv.Ed25519PublicKey(pub)
+			require.NoError(t, err)
+			require.Equal(t, pub, *got)
+		})
+		t.Run("*crypto.PublicKey wrapping short public key returns error", func(t *testing.T) {
+			var cpk crypto.PublicKey = ed25519.PublicKey{1, 2, 3}
+			_, err := keyconv.Ed25519PublicKey(&cpk)
+			require.Error(t, err, `*crypto.PublicKey wrapping a short ed25519.PublicKey must error`)
+		})
+		t.Run("nil *crypto.PublicKey returns error", func(t *testing.T) {
+			_, err := keyconv.Ed25519PublicKey((*crypto.PublicKey)(nil))
+			require.Error(t, err, `nil *crypto.PublicKey must error`)
+		})
+		t.Run("*crypto.PublicKey wrapping valid public key succeeds", func(t *testing.T) {
+			var cpk crypto.PublicKey = pub
+			got, err := keyconv.Ed25519PublicKey(&cpk)
+			require.NoError(t, err)
+			require.Equal(t, pub, *got)
+		})
 	})
 }

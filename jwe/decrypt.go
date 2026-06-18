@@ -28,6 +28,24 @@ func decryptCEK(alg jwa.KeyEncryptionAlgorithm, key any, msg *Message, recipient
 	algStr := alg.String()
 	recipientKey := recipient.EncryptedKey()
 
+	// Direct-mode key management (RFC 7518 §4.5 "dir" and §4.6 bare ECDH-ES)
+	// derives the CEK without an encrypted key, so the JWE Encrypted Key must
+	// be the empty octet sequence. Enforce this here, before the KeyDecrypter
+	// branch, so a tampered message carrying a stray encrypted_key is rejected
+	// on every path -- including caller-supplied custom decrypters.
+	directMode := jwebb.IsDirect(algStr)
+	if !directMode && jwebb.IsECDHES(algStr) {
+		// ECDH-ES+A*KW (keywrap == true) legitimately carries an encrypted_key;
+		// only bare ECDH-ES is direct. Reuse the same helper the ECDH-ES path
+		// uses to determine keywrap.
+		if _, _, keywrap, err := jwebb.KeyEncryptionECDHESKeySize(algStr, ctx.ctalg.String()); err == nil {
+			directMode = !keywrap
+		}
+	}
+	if directMode && len(recipientKey) != 0 {
+		return nil, fmt.Errorf(`jwe: decrypt key: %q requires an empty encrypted_key`, algStr)
+	}
+
 	if kd, ok := key.(KeyDecrypter); ok {
 		return kd.DecryptKey(alg, recipientKey, recipient, msg)
 	}
@@ -57,6 +75,8 @@ func decryptCEK(alg jwa.KeyEncryptionAlgorithm, key any, msg *Message, recipient
 }
 
 func decryptKeyDirect(recipientKey []byte, alg string, key any) ([]byte, error) {
+	// The empty-encrypted_key invariant for "dir" (RFC 7518 §4.5) is enforced
+	// in decryptCEK ahead of the KeyDecrypter branch, so it covers every path.
 	cek, err := requireByteKey(key, alg)
 	if err != nil {
 		return nil, err
@@ -132,6 +152,12 @@ func decryptKeyPBES2(recipientKey []byte, alg string, key any, headers Headers, 
 		return nil, fmt.Errorf(`jwe: decrypt key: failed to decode 'p2s': %w`, err)
 	}
 
+	// RFC 7518 §4.8.1.1 requires the salt input to be at least 8 octets.
+	// This is a hard floor and is not loosenable via an option.
+	if len(saltBytes) < 8 {
+		return nil, fmt.Errorf(`jwe: decrypt key: invalid 'p2s' value: salt is %d octets, RFC 7518 §4.8.1.1 requires at least 8`, len(saltBytes))
+	}
+
 	salt := []byte(alg)
 	salt = append(salt, byte(0))
 	salt = append(salt, saltBytes...)
@@ -174,6 +200,12 @@ func decryptKeyECDHES(recipientKey []byte, alg string, ctalg jwa.ContentEncrypti
 	if err != nil {
 		return nil, fmt.Errorf(`jwe: decrypt key: failed to determine ECDH-ES key size: %w`, err)
 	}
+
+	// RFC 7518 §4.6: for bare ECDH-ES (keywrap == false) the CEK is derived
+	// directly and the JWE Encrypted Key must be the empty octet sequence.
+	// That invariant is enforced in decryptCEK ahead of the KeyDecrypter
+	// branch so it covers every path; ECDH-ES+A*KW legitimately carries an
+	// encrypted_key.
 
 	// Extract ephemeral public key from headers
 	epkV, ok := headers.Field(EphemeralPublicKeyKey)

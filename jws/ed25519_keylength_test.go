@@ -1,0 +1,163 @@
+package jws_test
+
+import (
+	"crypto"
+	"crypto/ed25519"
+	"crypto/rand"
+	"io"
+	"testing"
+
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jws"
+	"github.com/stretchr/testify/require"
+)
+
+// malformedEd25519Signer is a custom crypto.Signer whose Public() returns a
+// wrong-length ed25519.PublicKey. AlgorithmsForKey classifies the returned key
+// as OKP/Ed25519, so without a length guard the malformed public key would flow
+// into the EdDSA verify path and panic ("ed25519: bad public key length").
+type malformedEd25519Signer struct{}
+
+func (malformedEd25519Signer) Public() crypto.PublicKey {
+	return ed25519.PublicKey{1, 2, 3}
+}
+
+func (malformedEd25519Signer) Sign(io.Reader, []byte, crypto.SignerOpts) ([]byte, error) {
+	return nil, nil
+}
+
+func TestSignWithMalformedEd25519Key(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte("test payload")
+
+	t.Run("short private key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), ed25519.PrivateKey{1, 2, 3}))
+		require.Error(t, err, `signing with a too-short ed25519.PrivateKey must return an error, not panic`)
+	})
+
+	t.Run("too-long private key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		key := make(ed25519.PrivateKey, ed25519.PrivateKeySize+1)
+		_, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), key))
+		require.Error(t, err, `signing with a too-long ed25519.PrivateKey must return an error, not panic`)
+	})
+
+	t.Run("typed-nil private key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), ed25519.PrivateKey(nil)))
+		require.Error(t, err, `signing with a typed-nil ed25519.PrivateKey must return an error, not panic`)
+	})
+
+	t.Run("short pointer private key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		key := ed25519.PrivateKey{1, 2, 3}
+		_, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), &key))
+		require.Error(t, err, `signing with a too-short *ed25519.PrivateKey must return an error, not panic`)
+	})
+
+	t.Run("typed-nil pointer private key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), (*ed25519.PrivateKey)(nil)))
+		require.Error(t, err, `signing with a typed-nil *ed25519.PrivateKey must return an error, not panic`)
+	})
+
+	t.Run("valid key still signs", func(t *testing.T) {
+		t.Parallel()
+		_, priv, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+		signed, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), priv))
+		require.NoError(t, err)
+		require.NotEmpty(t, signed)
+	})
+
+	t.Run("valid pointer key still signs", func(t *testing.T) {
+		t.Parallel()
+		_, priv, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+		signed, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), &priv))
+		require.NoError(t, err)
+		require.NotEmpty(t, signed)
+	})
+}
+
+func TestVerifyWithMalformedEd25519Key(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte("test payload")
+	_, priv, err := ed25519.GenerateKey(rand.Reader)
+	require.NoError(t, err)
+	signed, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), priv))
+	require.NoError(t, err)
+
+	t.Run("short private key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), ed25519.PrivateKey{1, 2, 3}))
+		require.Error(t, err, `verifying with a too-short ed25519.PrivateKey must return an error, not panic`)
+	})
+
+	t.Run("too-long private key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		key := make(ed25519.PrivateKey, ed25519.PrivateKeySize+1)
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), key))
+		require.Error(t, err, `verifying with a too-long ed25519.PrivateKey must return an error, not panic`)
+	})
+
+	t.Run("typed-nil private key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), ed25519.PrivateKey(nil)))
+		require.Error(t, err, `verifying with a typed-nil ed25519.PrivateKey must return an error, not panic`)
+	})
+
+	t.Run("short pointer private key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		key := ed25519.PrivateKey{1, 2, 3}
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), &key))
+		require.Error(t, err, `verifying with a too-short *ed25519.PrivateKey must return an error, not panic`)
+	})
+
+	t.Run("typed-nil pointer private key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), (*ed25519.PrivateKey)(nil)))
+		require.Error(t, err, `verifying with a typed-nil *ed25519.PrivateKey must return an error, not panic`)
+	})
+
+	t.Run("short pointer public key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		key := ed25519.PublicKey{1, 2, 3}
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), &key))
+		require.Error(t, err, `verifying with a too-short *ed25519.PublicKey must return an error, not panic`)
+	})
+
+	t.Run("typed-nil pointer public key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), (*ed25519.PublicKey)(nil)))
+		require.Error(t, err, `verifying with a typed-nil *ed25519.PublicKey must return an error, not panic`)
+	})
+
+	t.Run("custom signer with malformed Public() returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), malformedEd25519Signer{}))
+		require.Error(t, err, `verifying with a crypto.Signer whose Public() is a wrong-length ed25519.PublicKey must return an error, not panic`)
+	})
+
+	t.Run("custom signer with malformed Public() (AlgorithmsForKey) returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.AlgorithmsForKey(malformedEd25519Signer{})
+		require.Error(t, err, `AlgorithmsForKey must reject a crypto.Signer whose Public() is a wrong-length ed25519.PublicKey instead of classifying it as OKP`)
+	})
+
+	t.Run("valid public key still verifies", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), priv.Public()))
+		require.NoError(t, err)
+	})
+
+	t.Run("valid pointer public key still verifies", func(t *testing.T) {
+		t.Parallel()
+		pub := priv.Public().(ed25519.PublicKey)
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), &pub))
+		require.NoError(t, err)
+	})
+}

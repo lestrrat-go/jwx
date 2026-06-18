@@ -44,6 +44,7 @@ go_test(
         "bench_marshal_test.go",
         "bench_serialize_test.go",
         "detached_payload_presence_test.go",
+        "ed25519_keylength_test.go",
         "fuzz_test.go",
         "headers_nil_test.go",
         "headers_test.go",
@@ -53,6 +54,7 @@ go_test(
         "options_gen_test.go",
         "signer_test.go",
         "streaming_detached_test.go",
+        "verify_alg_match_test.go",
     ],
     embed = [":jws"],
     deps = [
