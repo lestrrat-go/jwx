@@ -94,6 +94,17 @@ func (cc *Chain) UnmarshalJSON(data []byte) error {
 // Get returns the n-th ASN.1 DER + base64 encoded certificate
 // stored. `false` will be returned in the second argument if
 // the corresponding index is out of range.
+//
+// The returned slice aliases the Chain's internal storage and MUST be
+// treated as read-only: writing into it in place corrupts the stored
+// chain. This is intentionally not defended with a defensive copy. The
+// returned bytes are only ever consumed read-only (base64-decoded, parsed
+// via x509, compared, re-marshaled), the alias never crosses a trust
+// boundary (a Chain is the caller's own object; untrusted x5c input is
+// validated and normalized through Add, not Get), and the only way to
+// trigger corruption is the caller writing into bytes it was handed by a
+// read accessor — a self-inflicted bug, not an exploitable path. Do NOT
+// add a bytes.Clone here.
 func (cc *Chain) Get(index int) ([]byte, bool) {
 	if index < 0 || index >= len(cc.certificates) {
 		return nil, false
