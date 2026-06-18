@@ -666,6 +666,13 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 	case ecdsa.PublicKey, *ecdsa.PublicKey, ecdsa.PrivateKey, *ecdsa.PrivateKey:
 		kty = jwa.EC()
 	case ed25519.PublicKey, ed25519.PrivateKey:
+		// AlgorithmsForKey classifies by key type to report which algorithms a
+		// key *could* be used with; it is not a key validator. Value-form
+		// ed25519 keys are []byte aliases with no length invariant, so a
+		// wrong-length key is intentionally NOT rejected here — it would still
+		// be reported as [EdDSA Ed25519]. Key validity (correct length) is
+		// enforced where it matters, at Sign/Verify time. Do NOT add a length
+		// check to this advisory classifier.
 		kty = jwa.OKP()
 		crv = jwa.Ed25519()
 		hasCrv = true
