@@ -1047,3 +1047,84 @@ func TestValidateDefaultOrderMatchesSlowPath(t *testing.T) {
 	require.ErrorIs(t, errFast, jwt.InvalidIssuedAtError{},
 		`fast path must report iat error first too (symmetry with slow path)`)
 }
+
+func TestValidateNilClock(t *testing.T) {
+	t.Parallel()
+
+	// A nil Clock must fall back to the default clock (time.Now) instead
+	// of panicking.
+	valid, err := jwt.NewBuilder().
+		Expiration(time.Now().Add(time.Hour)).
+		Build()
+	require.NoError(t, err, `jwt.NewBuilder should succeed`)
+
+	require.NotPanics(t, func() {
+		err = jwt.Validate(valid, jwt.WithClock(nil))
+	}, `Validate with nil clock must not panic`)
+	require.NoError(t, err, `not-yet-expired token must validate with nil clock`)
+
+	expired, err := jwt.NewBuilder().
+		Expiration(time.Now().Add(-time.Hour)).
+		Build()
+	require.NoError(t, err, `jwt.NewBuilder should succeed`)
+
+	require.NotPanics(t, func() {
+		err = jwt.Validate(expired, jwt.WithClock(nil))
+	}, `Validate with nil clock must not panic`)
+	require.ErrorIs(t, err, jwt.TokenExpiredError{},
+		`expired token must fail with TokenExpiredError under nil (default) clock`)
+
+	// A later WithClock(nil) must reset to the default clock, undoing an
+	// earlier custom clock (documented behavior). Use a clock fixed far in
+	// the future: under it the not-yet-expired token would read as expired,
+	// so a clean validation proves the default clock won the reset.
+	future := jwt.ClockFunc(func() time.Time { return time.Now().Add(100 * time.Hour) })
+	require.NotPanics(t, func() {
+		err = jwt.Validate(valid, jwt.WithClock(future), jwt.WithClock(nil))
+	}, `Validate with custom-then-nil clock must not panic`)
+	require.NoError(t, err,
+		`WithClock(nil) after a custom clock must reset to the default clock`)
+
+	// A typed-nil Clock (an interface value wrapping a nil pointer) must
+	// also fall back to the default clock instead of panicking.
+	var typedNil jwt.Clock = (*nilClock)(nil)
+	require.NotPanics(t, func() {
+		err = jwt.Validate(valid, jwt.WithClock(typedNil))
+	}, `Validate with typed-nil clock must not panic`)
+	require.NoError(t, err,
+		`typed-nil clock must fall back to the default clock`)
+}
+
+// nilClock is a concrete Clock type used to construct typed-nil interface
+// values in tests. Its Now method is never expected to be reached.
+type nilClock struct{}
+
+func (*nilClock) Now() time.Time { return time.Time{} }
+
+// nilValidator is a concrete Validator type used to construct typed-nil
+// interface values in tests. Its Validate method is never expected to be
+// reached.
+type nilValidator struct{}
+
+func (*nilValidator) Validate(context.Context, jwt.Token) error { return nil }
+
+func TestValidateNilValidator(t *testing.T) {
+	t.Parallel()
+
+	tok, err := jwt.NewBuilder().Build()
+	require.NoError(t, err, `jwt.NewBuilder should succeed`)
+
+	var err2 error
+	require.NotPanics(t, func() {
+		err2 = jwt.Validate(tok, jwt.WithValidator(nil))
+	}, `Validate with nil validator must not panic`)
+	require.Error(t, err2, `Validate with nil validator must return an error`)
+
+	// A typed-nil Validator (an interface wrapping a nil pointer) must also
+	// be rejected with the nil-validator error rather than panicking later.
+	var typedNil jwt.Validator = (*nilValidator)(nil)
+	require.NotPanics(t, func() {
+		err2 = jwt.Validate(tok, jwt.WithValidator(typedNil))
+	}, `Validate with typed-nil validator must not panic`)
+	require.Error(t, err2, `Validate with typed-nil validator must return an error`)
+}

@@ -289,6 +289,8 @@ func WithBase64Encoder(v jws.Base64Encoder) SignParseOption {
 
 // WithClock specifies the `Clock` to be used when verifying
 // exp, iat and nbf claims.
+//
+// If v is nil, the default clock (the system clock, time.Now) is used.
 func WithClock(v Clock) ValidateOption {
 	return &validateOption{option.New(identClock{}, v)}
 }
@@ -507,6 +509,8 @@ func WithValidate(v bool) ParseOption {
 }
 
 // WithValidator validates the token with the given Validator.
+//
+// Passing a nil Validator causes Validate to return an error.
 //
 // For example, in order to validate tokens that are only valid during August, you would write
 //

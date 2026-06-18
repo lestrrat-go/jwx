@@ -20,6 +20,21 @@ func (f ClockFunc) Now() time.Time {
 	return f()
 }
 
+// isNilValue reports whether v is nil, including a typed-nil interface value
+// that wraps a nil pointer (or other nilable kind). A plain `== nil` check
+// misses the latter because the interface itself is non-nil.
+func isNilValue(v any) bool {
+	if v == nil {
+		return true
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Ptr, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
+		return rv.IsNil()
+	}
+	return false
+}
+
 func isSupportedTimeClaim(c string) error {
 	switch c {
 	case ExpirationKey, IssuedAtKey, NotBeforeKey:
@@ -66,7 +81,8 @@ func Validate(t Token, options ...ValidateOption) error {
 	ctx := context.Background()
 	trunc := getDefaultTruncation()
 
-	var clock Clock = ClockFunc(time.Now)
+	var defaultClock Clock = ClockFunc(time.Now)
+	clock := defaultClock
 	var skew time.Duration
 	var baseValidators = []Validator{
 		IsIssuedAtValid(),
@@ -80,7 +96,19 @@ func Validate(t Token, options ...ValidateOption) error {
 	for _, o := range options {
 		switch o.Ident() {
 		case identClock{}:
-			clock = option.MustGet[Clock](o)
+			// A nil Clock falls back to the default clock (the system
+			// clock, time.Now). WithClock(nil) stores an untyped nil, so
+			// option.Get reports ok=false; a typed-nil interface wrapping a
+			// nil pointer reports ok=true but isNilValue catches it. In both
+			// cases reset to the default so a later WithClock(nil) undoes an
+			// earlier custom clock, matching the documented behavior and
+			// avoiding a panic in clock.Now().
+			c, ok := option.Get[Clock](o)
+			if !ok || isNilValue(c) {
+				clock = defaultClock
+			} else {
+				clock = c
+			}
 		case identAcceptableSkew{}:
 			skew = option.MustGet[time.Duration](o)
 			if skew < 0 {
@@ -95,7 +123,13 @@ func Validate(t Token, options ...ValidateOption) error {
 		case identCollectErrors{}:
 			collectErrors = option.MustGet[bool](o)
 		case identValidator{}:
-			v := option.MustGet[Validator](o)
+			// A nil Validator (including a typed-nil interface wrapping a
+			// nil pointer) would panic when its Validate method is called,
+			// so reject it up front with a clear error.
+			v, ok := option.Get[Validator](o)
+			if !ok || isNilValue(v) {
+				return validateErrorf(`jwt.WithValidator: nil Validator`)
+			}
 			switch v := v.(type) {
 			case *isInTimeRange:
 				if v.c1 != "" {
