@@ -143,10 +143,15 @@ func (r *Registry) Unregister(name string) {
 // given field name. If no decoder is registered, the raw value is decoded
 // into any.
 func (r *Registry) Decode(name string, raw RawMessage) (any, error) {
+	// Snapshot the decoder under the read lock, then release the lock before
+	// invoking it. The user-supplied decoder may re-entrantly call
+	// Register/Unregister on this same registry (which take a write lock), and
+	// holding the read lock across the call would deadlock (RLock -> Lock).
 	r.mu.RLock()
-	defer r.mu.RUnlock()
+	ctr, ok := r.ctrs[name]
+	r.mu.RUnlock()
 
-	if ctr, ok := r.ctrs[name]; ok {
+	if ok {
 		v, err := ctr.Decode([]byte(raw))
 		if err != nil {
 			return nil, fmt.Errorf(`failed to decode field %s: %w`, name, err)
