@@ -103,16 +103,30 @@ func Ed25519PrivateKey(src any) (*ed25519.PrivateKey, error) {
 		if !ok {
 			// Export may return ed25519.PrivateKey (not pointer)
 			if v, ok := rawV.(ed25519.PrivateKey); ok {
+				if len(v) != ed25519.PrivateKeySize {
+					return nil, fmt.Errorf(`keyconv: invalid ed25519.PrivateKey length %d from export, expected %d`, len(v), ed25519.PrivateKeySize)
+				}
 				return &v, nil
 			}
 			return nil, fmt.Errorf(`keyconv: expected ed25519.PrivateKey from export, got %T`, rawV)
+		}
+		// Guard against a malformed exported key reaching ed25519.PrivateKey.Public(),
+		// which slices priv[32:] and panics when the key is not the expected size.
+		if ptr == nil || len(*ptr) != ed25519.PrivateKeySize {
+			return nil, fmt.Errorf(`keyconv: invalid ed25519.PrivateKey from export, expected length %d`, ed25519.PrivateKeySize)
 		}
 		return ptr, nil
 	}
 	switch src := src.(type) {
 	case *ed25519.PrivateKey:
+		if src == nil || len(*src) != ed25519.PrivateKeySize {
+			return nil, fmt.Errorf(`keyconv: invalid ed25519.PrivateKey length, expected %d`, ed25519.PrivateKeySize)
+		}
 		return src, nil
 	case ed25519.PrivateKey:
+		if len(src) != ed25519.PrivateKeySize {
+			return nil, fmt.Errorf(`keyconv: invalid ed25519.PrivateKey length %d, expected %d`, len(src), ed25519.PrivateKeySize)
+		}
 		return &src, nil
 	default:
 		return nil, fmt.Errorf(`keyconv: expected ed25519.PrivateKey or *ed25519.PrivateKey, got %T`, src)
@@ -128,22 +142,42 @@ func Ed25519PublicKey(src any) (*ed25519.PublicKey, error) {
 		src = pk
 	}
 
+	// Guard against malformed private keys before calling Public(), which
+	// slices priv[32:] and panics when the key is not ed25519.PrivateKeySize.
 	switch key := src.(type) {
 	case ed25519.PrivateKey:
+		if len(key) != ed25519.PrivateKeySize {
+			return nil, fmt.Errorf(`keyconv: invalid ed25519.PrivateKey length %d, expected %d`, len(key), ed25519.PrivateKeySize)
+		}
 		src = key.Public()
 	case *ed25519.PrivateKey:
+		if key == nil || len(*key) != ed25519.PrivateKeySize {
+			return nil, fmt.Errorf(`keyconv: invalid ed25519.PrivateKey length, expected %d`, ed25519.PrivateKeySize)
+		}
 		src = key.Public()
 	}
 
 	switch src := src.(type) {
 	case ed25519.PublicKey:
+		if len(src) != ed25519.PublicKeySize {
+			return nil, fmt.Errorf(`keyconv: invalid ed25519.PublicKey length %d, expected %d`, len(src), ed25519.PublicKeySize)
+		}
 		return &src, nil
 	case *ed25519.PublicKey:
+		if src == nil || len(*src) != ed25519.PublicKeySize {
+			return nil, fmt.Errorf(`keyconv: invalid ed25519.PublicKey length, expected %d`, ed25519.PublicKeySize)
+		}
 		return src, nil
 	case *crypto.PublicKey:
+		if src == nil {
+			return nil, fmt.Errorf(`failed to retrieve ed25519.PublicKey out of nil *crypto.PublicKey`)
+		}
 		tmp, ok := (*src).(ed25519.PublicKey)
 		if !ok {
 			return nil, fmt.Errorf(`failed to retrieve ed25519.PublicKey out of *crypto.PublicKey`)
+		}
+		if len(tmp) != ed25519.PublicKeySize {
+			return nil, fmt.Errorf(`keyconv: invalid ed25519.PublicKey length %d, expected %d`, len(tmp), ed25519.PublicKeySize)
 		}
 		return &tmp, nil
 	case crypto.PublicKey:

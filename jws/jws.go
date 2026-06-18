@@ -635,6 +635,17 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 		kty = jwa.OKP()
 		crv = jwa.Ed25519()
 		hasCrv = true
+	case *ed25519.PublicKey, *ed25519.PrivateKey:
+		// Pointer-form ed25519 keys satisfy crypto.Signer, so without an
+		// explicit case here a typed-nil or wrong-length pointer would
+		// fall through to the default branch and panic inside
+		// signer.Public(). Validate length/nil up front instead.
+		if err := validateEd25519KeyShape(key); err != nil {
+			return nil, fmt.Errorf(`%w: %w`, errUnclassifiableKey, err)
+		}
+		kty = jwa.OKP()
+		crv = jwa.Ed25519()
+		hasCrv = true
 	case *ecdh.PublicKey, ecdh.PublicKey, *ecdh.PrivateKey, ecdh.PrivateKey:
 		// ecdh keys are for key agreement (X25519/X448), not signing.
 		// Reject at the API boundary instead of returning a misleading
@@ -650,6 +661,13 @@ func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 		var signerPubErr error
 		if signer, ok := key.(crypto.Signer); ok {
 			pub := signer.Public()
+			// A custom crypto.Signer may hand back a malformed (wrong-length or
+			// typed-nil) ed25519.PublicKey. Classifying that as OKP would let it
+			// reach the EdDSA verify path, which panics ("ed25519: bad public key
+			// length"). Reject it here instead.
+			if err := validateEd25519KeyShape(pub); err != nil {
+				return nil, fmt.Errorf(`%w: %w`, errUnclassifiableKey, err)
+			}
 			// Guard: only recurse if the public key is not itself a crypto.Signer,
 			// to prevent infinite recursion from pathological implementations.
 			if _, isSigner := pub.(crypto.Signer); !isSigner {
@@ -759,6 +777,12 @@ func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
 		if hasCustomSigVerifier(alg) {
 			return nil
 		}
+		// A malformed ed25519 key (typed-nil or wrong-length, value or
+		// pointer form) satisfies crypto.Signer but panics in Public().
+		// Surface the classification error directly instead of probing it.
+		if shapeErr := validateEd25519KeyShape(key); shapeErr != nil {
+			return fmt.Errorf(`jws.WithKey: %w`, err)
+		}
 		if signer, ok := key.(crypto.Signer); ok {
 			if _, isSigner := signer.Public().(crypto.Signer); isSigner {
 				return nil
@@ -771,6 +795,37 @@ func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
 			return nil
 		}
 		return fmt.Errorf(`jws.WithKey: algorithm %q is not compatible with key type %T`, alg, key)
+	}
+	return nil
+}
+
+// validateEd25519KeyShape reports whether key is a malformed ed25519 key.
+// It returns a non-nil error when key is an ed25519 private/public key (value
+// or pointer form) that is typed-nil or not the expected length, and nil for
+// everything else — including non-ed25519 keys and well-formed ed25519 keys.
+//
+// Concrete ed25519 keys (and their pointer forms) satisfy crypto.Signer, but
+// their Public() method panics ("slice bounds out of range" / nil pointer
+// dereference) when the key is not exactly the right size. Callers use this to
+// reject malformed keys with an error before any code path reaches Public().
+func validateEd25519KeyShape(key any) error {
+	switch k := key.(type) {
+	case ed25519.PrivateKey:
+		if len(k) != ed25519.PrivateKeySize {
+			return fmt.Errorf(`invalid ed25519.PrivateKey length %d, expected %d`, len(k), ed25519.PrivateKeySize)
+		}
+	case *ed25519.PrivateKey:
+		if k == nil || len(*k) != ed25519.PrivateKeySize {
+			return fmt.Errorf(`invalid *ed25519.PrivateKey, expected length %d`, ed25519.PrivateKeySize)
+		}
+	case ed25519.PublicKey:
+		if len(k) != ed25519.PublicKeySize {
+			return fmt.Errorf(`invalid ed25519.PublicKey length %d, expected %d`, len(k), ed25519.PublicKeySize)
+		}
+	case *ed25519.PublicKey:
+		if k == nil || len(*k) != ed25519.PublicKeySize {
+			return fmt.Errorf(`invalid *ed25519.PublicKey, expected length %d`, ed25519.PublicKeySize)
+		}
 	}
 	return nil
 }

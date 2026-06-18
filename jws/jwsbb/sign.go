@@ -83,6 +83,13 @@ func dispatchHMACSign(key any, dsigAlg string, payload []byte) ([]byte, error) {
 }
 
 func dispatchRSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([]byte, error) {
+	// A malformed ed25519 key (value or pointer) satisfies crypto.Signer but
+	// panics in Public(). Reject it before the crypto.Signer probe below, which
+	// a cross-family caller (ed25519 key + RSA alg) could otherwise reach.
+	if err := validateEd25519KeyShape(key); err != nil {
+		return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
+	}
+
 	// Try crypto.Signer first (dsig can handle it directly)
 	if signer, ok := key.(crypto.Signer); ok {
 		// Verify it's an RSA key
@@ -101,6 +108,12 @@ func dispatchRSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([]b
 }
 
 func dispatchECDSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([]byte, error) {
+	// See dispatchRSASign: reject malformed ed25519 keys before the
+	// crypto.Signer probe to avoid a cross-family Public() panic.
+	if err := validateEd25519KeyShape(key); err != nil {
+		return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
+	}
+
 	// Try crypto.Signer first (dsig can handle it directly)
 	if signer, ok := key.(crypto.Signer); ok {
 		// Verify it's an ECDSA key
@@ -122,10 +135,23 @@ func dispatchEdDSASign(key any, jwsAlg, dsigAlg string, payload []byte, rr io.Re
 	// Note: Extension algorithms (e.g. Ed448) are registered as dsig.Custom family,
 	// so they take the dsig.Custom branch in Sign() and never reach this function.
 
+	// A concrete ed25519.PrivateKey satisfies crypto.Signer, but its Public()
+	// method panics ("slice bounds out of range") when the key is not exactly
+	// ed25519.PrivateKeySize bytes. Reject malformed keys here so we return an
+	// error instead of panicking inside the crypto.Signer branch below.
+	if err := validateEd25519KeyShape(key); err != nil {
+		return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
+	}
+
 	// Try crypto.Signer first (dsig can handle it directly)
 	if signer, ok := key.(crypto.Signer); ok {
 		// Verify it's an EdDSA key
 		if pub, ok := signer.Public().(ed25519.PublicKey); ok {
+			// A custom signer may hand back a wrong-length ed25519.PublicKey,
+			// which would panic inside dsig. Reject it before any crypto call.
+			if err := validateEd25519KeyShape(pub); err != nil {
+				return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
+			}
 			if err := validateEdDSACurve(jwsAlg, pub); err != nil {
 				return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
 			}
