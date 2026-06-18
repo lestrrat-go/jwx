@@ -41,6 +41,7 @@ go_test(
     name = "jwe_test",
     srcs = [
         "bench_encrypt_test.go",
+        "directcek_test.go",
         "fuzz_test.go",
         "gh402_test.go",
         "headers_nil_test.go",

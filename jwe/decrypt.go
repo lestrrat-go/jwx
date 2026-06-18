@@ -57,6 +57,11 @@ func decryptCEK(alg jwa.KeyEncryptionAlgorithm, key any, msg *Message, recipient
 }
 
 func decryptKeyDirect(recipientKey []byte, alg string, key any) ([]byte, error) {
+	// RFC 7518 §4.5: for "dir" the JWE Encrypted Key must be the empty octet
+	// sequence. Reject a stray non-empty value rather than silently ignoring it.
+	if len(recipientKey) != 0 {
+		return nil, fmt.Errorf(`jwe: decrypt key: %q requires an empty encrypted_key`, alg)
+	}
 	cek, err := requireByteKey(key, alg)
 	if err != nil {
 		return nil, err
@@ -173,6 +178,13 @@ func decryptKeyECDHES(recipientKey []byte, alg string, ctalg jwa.ContentEncrypti
 	derivedAlg, keysize, keywrap, err := jwebb.KeyEncryptionECDHESKeySize(alg, ctalgStr)
 	if err != nil {
 		return nil, fmt.Errorf(`jwe: decrypt key: failed to determine ECDH-ES key size: %w`, err)
+	}
+
+	// RFC 7518 §4.6: for bare ECDH-ES (keywrap == false) the CEK is derived
+	// directly and the JWE Encrypted Key must be the empty octet sequence.
+	// ECDH-ES+A*KW (keywrap == true) legitimately carries an encrypted_key.
+	if !keywrap && len(recipientKey) != 0 {
+		return nil, fmt.Errorf(`jwe: decrypt key: %q requires an empty encrypted_key`, alg)
 	}
 
 	// Extract ephemeral public key from headers
