@@ -102,4 +102,72 @@ func TestDirectCEKRequiresEmptyEncryptedKey(t *testing.T) {
 		require.NoError(t, err, `jwe.Decrypt (ECDH-ES+A128KW) should succeed`)
 		require.Equal(t, plaintext, decrypted)
 	})
+
+	// The empty-encrypted_key invariant for direct modes must hold even when
+	// the caller supplies a custom KeyDecrypter. The guard lives in decryptCEK
+	// ahead of the KeyDecrypter branch, so a tampered (non-empty encrypted_key)
+	// message is rejected before the custom decrypter ever runs.
+	t.Run("dir custom KeyDecrypter", func(t *testing.T) {
+		t.Parallel()
+
+		key := make([]byte, 16) // A128GCM CEK
+		_, err := rand.Read(key)
+		require.NoError(t, err, `rand.Read should succeed`)
+
+		encrypted, err := jwe.Encrypt(plaintext,
+			jwe.WithKey(jwa.DIRECT(), key),
+			jwe.WithContentEncryption(jwa.A128GCM()),
+			jwe.WithJSON(),
+		)
+		require.NoError(t, err, `jwe.Encrypt (dir) should succeed`)
+
+		// A custom decrypter for "dir" returns the supplied key as the CEK.
+		called := false
+		dec := jwe.KeyDecryptFunc(func(_ jwa.KeyEncryptionAlgorithm, _ []byte, _ jwe.Recipient, _ *jwe.Message) ([]byte, error) {
+			called = true
+			return key, nil
+		})
+
+		// Valid dir JWE (empty encrypted_key) decrypts through the custom decrypter.
+		decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.DIRECT(), dec))
+		require.NoError(t, err, `jwe.Decrypt (dir, custom decrypter) should succeed`)
+		require.Equal(t, plaintext, decrypted)
+		require.True(t, called, `custom decrypter should run for a valid dir message`)
+
+		// Tampered dir JWE (non-empty encrypted_key) is rejected before the
+		// custom decrypter is invoked.
+		called = false
+		tampered := injectEncryptedKey(t, encrypted)
+		_, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.DIRECT(), dec))
+		require.Error(t, err, `jwe.Decrypt (dir, non-empty encrypted_key, custom decrypter) should fail`)
+		require.False(t, called, `custom decrypter must not run for a tampered dir message`)
+	})
+
+	t.Run("ECDH-ES (bare) custom KeyDecrypter", func(t *testing.T) {
+		t.Parallel()
+
+		privkey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		require.NoError(t, err, `ecdsa.GenerateKey should succeed`)
+
+		encrypted, err := jwe.Encrypt(plaintext,
+			jwe.WithKey(jwa.ECDH_ES(), &privkey.PublicKey),
+			jwe.WithContentEncryption(jwa.A128GCM()),
+			jwe.WithJSON(),
+		)
+		require.NoError(t, err, `jwe.Encrypt (ECDH-ES) should succeed`)
+
+		// A custom decrypter that delegates to the built-in bare ECDH-ES path
+		// by returning a derived CEK is hard to reproduce here, so just assert
+		// the guard rejects the tampered message before the decrypter runs.
+		called := false
+		dec := jwe.KeyDecryptFunc(func(jwa.KeyEncryptionAlgorithm, []byte, jwe.Recipient, *jwe.Message) ([]byte, error) {
+			called = true
+			return nil, nil //nolint:nilnil // exercised only on the rejection path
+		})
+
+		tampered := injectEncryptedKey(t, encrypted)
+		_, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.ECDH_ES(), dec))
+		require.Error(t, err, `jwe.Decrypt (ECDH-ES, non-empty encrypted_key, custom decrypter) should fail`)
+		require.False(t, called, `custom decrypter must not run for a tampered bare ECDH-ES message`)
+	})
 }
