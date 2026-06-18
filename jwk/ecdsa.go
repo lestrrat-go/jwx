@@ -530,14 +530,17 @@ func ecdsaValidateKey(k interface {
 
 	if checkPrivate {
 		// This validates only the length of "d"; it intentionally does NOT
-		// verify that "d" derives the stored public point (d*G == (x, y)). A
-		// mismatch is self-defeating, not exploitable: every operation uses
-		// "d" (ECDSA signs under d*G; ECDH derives the shared secret from d),
-		// while (x, y) is advertised metadata. A key whose (x, y) != d*G
-		// therefore produces signatures/ciphertext that fail to verify/decrypt
-		// against its own advertised public key — it can never make a
-		// verification or decryption wrongly succeed; the inconsistency is
-		// caught at use time. Do NOT add a d*G == (x, y) check here.
+		// verify that "d" derives the stored public point (d*G == (x, y)), nor
+		// that the scalar is in range (0 < d < N). Both are self-defeating, not
+		// exploitable: every operation uses "d" (ECDSA signs under d*G; ECDH
+		// derives the shared secret from d), while (x, y) is advertised
+		// metadata. A key whose (x, y) != d*G — or whose scalar is out of range
+		// — therefore produces signatures/ciphertext that fail to verify/decrypt
+		// against its own advertised public key (an out-of-range scalar is
+		// likewise rejected or rendered useless by crypto/ecdsa at sign time).
+		// It can never make a verification or decryption wrongly succeed; the
+		// inconsistency is caught at use time. Do NOT add a d*G == (x, y) or a
+		// 0 < d < N check here.
 		if priv, ok := k.(keyWithD); ok {
 			if d, ok := priv.D(); !ok || len(d) != keySize {
 				return fmt.Errorf(`invalid "d" length (%d) for curve %q`, len(d), crv.Params().Name)
