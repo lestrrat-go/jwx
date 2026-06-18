@@ -411,7 +411,10 @@ func WithNumericDateParsePrecision(v int) GlobalOption {
 }
 
 // WithPedantic enables pedantic mode for parsing JWTs. Currently this only
-// applies to checking for the correct `typ` and/or `cty` when necessary.
+// applies to detecting nested JWTs via the `cty` (content type) header and
+// rejecting payloads that are not recognizable as a JWT. The `typ` header is
+// not inspected: it is OPTIONAL per RFC 7519 §5.1, so its absence or value is
+// not treated as an error.
 func WithPedantic(v bool) ParseOption {
 	return &parseOption{option.New(identPedantic{}, v)}
 }

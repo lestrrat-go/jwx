@@ -453,7 +453,7 @@ OUTER:
 				if state != _JwsVerifySkipped {
 					payload = v
 
-					// We only check for cty and typ if the pedantic flag is enabled
+					// We only check for cty (to detect nested JWTs) if the pedantic flag is enabled
 					if !ctx.pedantic {
 						continue
 					}
