@@ -430,6 +430,20 @@ func parse(protected, payload, signature []byte) (*Message, error) {
 		decodedPayload = v
 	}
 
+	// The payload decode above and the signature decode below intentionally use
+	// the auto-detecting base64 decoder, which tolerates non-standard variants
+	// (e.g. padded base64url, standard base64) in addition to RFC 7515's raw
+	// base64url. This leniency is deliberate: jws.Verify is the interop path,
+	// whereas VerifyCompactFast is the strict path (RFC 4648 §5 raw base64url, no
+	// padding) and its godoc directs callers whose JWS uses non-standard encoding
+	// to use jws.Verify instead. The cost is that serialized-JWS strings are
+	// non-canonical/malleable (a signature re-encoded in a different base64
+	// variant decodes to the same bytes but yields a different compact string).
+	// This does NOT affect signature validity or enable forgery; it only matters
+	// to systems that key replay/dedup on the raw compact-JWS string, which should
+	// instead key on the verified payload/claims. This is a deliberate won't-fix:
+	// do NOT switch this to strict decoding; callers needing canonical/strict
+	// base64url should use VerifyCompactFast.
 	decodedSignature, err := base64.Decode(signature)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to decode signature: %w`, err)
