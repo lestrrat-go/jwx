@@ -74,12 +74,13 @@ type DecodeCtx interface {
 // so callers that hash or dedup JWS messages by their JSON encoding will
 // not recognize a round-tripped message as equal to its input.
 type Message struct {
-	dc            DecodeCtx
-	payload       []byte
-	signatures    []*Signature
-	detached      bool
-	b64           bool // true if payload should be base64 encoded
-	maxSignatures int  // scratch cap enforced during UnmarshalJSON; 0 means use global default
+	dc             DecodeCtx
+	payload        []byte
+	signatures     []*Signature
+	detached       bool
+	payloadPresent bool // true if a "payload" member was present on the wire (even if empty); distinguishes JSON "payload":"" from an omitted member
+	b64            bool // true if payload should be base64 encoded
+	maxSignatures  int  // scratch cap enforced during UnmarshalJSON; 0 means use global default
 }
 
 type Signature struct {

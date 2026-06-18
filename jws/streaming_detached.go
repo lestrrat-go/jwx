@@ -255,7 +255,11 @@ func (vc *verifyContext) verifyStreaming(buf []byte) ([]byte, error) {
 	if len(msg.signatures) != 1 {
 		return nil, makeVerifyError(`jws.WithDetachedPayloadReader() supports only single-signature JWS, got %d`, len(msg.signatures))
 	}
-	if len(msg.payload) != 0 {
+	if msg.payloadPresent {
+		// As with the non-streaming detached path, a present-but-empty
+		// JSON "payload":"" member counts as an embedded (in-band)
+		// payload and must be rejected; only a truly omitted member is a
+		// detached JWS.
 		return nil, makeVerifyError(`JWS must not have an embedded payload when jws.WithDetachedPayloadReader() is used`)
 	}
 

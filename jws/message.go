@@ -187,6 +187,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	m.payload = nil
 	m.signatures = nil
 	m.detached = false
+	m.payloadPresent = false
 	m.b64 = true
 
 	var mup messageUnmarshalProbe
@@ -296,6 +297,13 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	if mup.Payload == nil {
 		m.detached = true
 	} else {
+		// The "payload" member was present on the wire. Track this
+		// independently of whether it decodes to empty bytes: a JSON
+		// JWS that carries "payload":"" is an in-band JWS over an empty
+		// payload, NOT a detached JWS (RFC 7515 Appendix F omits the
+		// member entirely for detached). Detached verification must be
+		// able to tell the two apart.
+		m.payloadPresent = true
 		if !b64 { // NOT base64 encoded
 			m.payload = []byte(*mup.Payload)
 		} else {
