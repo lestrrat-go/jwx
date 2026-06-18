@@ -4,6 +4,16 @@ Changes
 v4 has many incompatibilities with v3. To see the full list of differences between
 v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MICRATION-v4.md)
 
+UNRELEASED
+  * [jws] `jws.Verify` now rejects a JWS whose protected header `"alg"`
+    does not match the algorithm used to verify it (previously the
+    non-fast-path `jws.Verify` ignored this). In particular the polymorphic
+    `"EdDSA"` and the fully-specified `"Ed25519"`/`"Ed448"` identifiers
+    (RFC 9864) are now treated as distinct, so cross-identifier verification
+    that previously succeeded is rejected by default — this is an RFC 9864
+    conformance fix. Pass the new `jws.WithSkipAlgorithmMatch(true)` option to
+    restore the lenient behavior.
+
 v4.0.2 7 May 2026
   * [jwk] BREAKING: `jwk.RegisterKeyImporter` now takes a
     `jwk.KeyImporter[T]` interface rather than a bare typed
