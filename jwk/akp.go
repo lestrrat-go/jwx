@@ -82,6 +82,9 @@ func akpThumbprint(hash crypto.Hash, alg, pub string) []byte {
 // types tolerate a missing `alg` because their canonical thumbprint
 // input doesn't include it.
 func (k *akpPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	if err := availableHash(hash); err != nil {
+		return nil, err
+	}
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 
@@ -101,6 +104,9 @@ func (k *akpPublicKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
 // [akpPublicKey]. AKP keys hash the canonical JSON form `{alg, kty, pub}`
 // per RFC 9802 §7; both `alg` and `pub` are required at thumbprint time.
 func (k *akpPrivateKey) Thumbprint(hash crypto.Hash) ([]byte, error) {
+	if err := availableHash(hash); err != nil {
+		return nil, err
+	}
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 

@@ -25,6 +25,11 @@ options:
   - ident: ThumbprintHash
     interface: AssignKeyIDOption
     argument_type: crypto.Hash
+    comment: |
+      WithThumbprintHash specifies the hash algorithm `jwk.AssignKeyID` uses
+      to compute the thumbprint. If the hash is unavailable (e.g. its package
+      has not been imported), `AssignKeyID` returns an error rather than
+      panicking.
   - ident: ForceAssign
     interface: AssignKeyIDOption
     argument_type: bool
