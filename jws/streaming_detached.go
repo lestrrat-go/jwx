@@ -261,6 +261,22 @@ func (vc *verifyContext) verifyStreaming(buf []byte) ([]byte, error) {
 
 	sig := msg.signatures[0]
 
+	// Enforce that the algorithm we are about to verify under matches the
+	// "alg" advertised in this signature's protected header. The streaming
+	// path bypasses verifyContext.tryKey (it talks to dsig directly for
+	// incremental hashing), so without this guard a detached JWS whose
+	// protected header advertises one algorithm would still verify under the
+	// single pinned WithKey algorithm — the same algorithm-confusion the
+	// tryKey guard prevents on the non-streaming path. The single staticKP
+	// alg above is the verification algorithm. The check fires only when the
+	// protected header carries an "alg"; use WithSkipAlgorithmMatch to bypass
+	// it for non-conforming producers.
+	if !vc.skipAlgorithmMatch && sig.protected != nil {
+		if hdrAlg, ok := sig.protected.Algorithm(); ok && !algorithmsMatch(hdrAlg, alg) {
+			return nil, verifyError{verificationError{fmt.Errorf(`protected header %q %q does not match verification algorithm %q`, AlgorithmKey, hdrAlg, alg)}}
+		}
+	}
+
 	var rawHeaders []byte
 	if rbp, ok := sig.protected.(interface{ rawBuffer() []byte }); ok {
 		rawHeaders = rbp.rawBuffer()

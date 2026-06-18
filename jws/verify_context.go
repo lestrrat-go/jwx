@@ -330,30 +330,44 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 	return nil
 }
 
-// algorithmsMatch reports whether the protected header's advertised
-// algorithm and the algorithm we are about to verify under are compatible.
-// They are compatible when their identifiers are equal, or when both resolve
-// to the same underlying dsig algorithm. The latter case admits RFC 9864's
-// fully-specified EdDSA identifiers ("Ed25519") as equivalent to the
-// polymorphic "EdDSA" — both map to dsig.EdDSA and verify identical bytes —
-// without weakening the guard for genuinely different algorithms (e.g. RS256
-// vs HS256 resolve to different dsig algorithms and remain a mismatch).
-// Identifiers with no registered dsig mapping (custom algorithms registered
-// via RegisterVerifier without RegisterDsigAlgorithm) fall back to the strict
-// string comparison.
+// algAliasGroups enumerates the RFC 9864 alias groups: sets of JWS "alg"
+// identifiers that name the same signature algorithm and so are mutually
+// interchangeable for the purpose of the alg-match guard. RFC 9864 deprecates
+// the polymorphic "EdDSA" identifier in favor of the fully-specified
+// "Ed25519" (and "Ed448"), so a message whose protected header advertises one
+// must be allowed to verify under the other.
+//
+// This is a CLOSED, explicitly reviewed set. We do NOT treat two identifiers
+// as equivalent merely because they resolve to the same underlying dsig
+// algorithm: an extension can map two distinct JWS "alg" names onto a single
+// dsig name via jwsbb.RegisterDsigAlgorithm, and collapsing those into a match
+// would let a producer advertise one algorithm while a verifier accepts
+// another — exactly the algorithm-confusion the guard exists to prevent.
+//
+// Only "Ed25519" is built in to the main module; "Ed448" is provided by an
+// extension module but is listed here so the alias holds whenever it is
+// registered. Add new entries here ONLY for genuine RFC aliases.
+var algAliasGroups = [][]string{
+	{"EdDSA", "Ed25519", "Ed448"},
+}
+
+// algorithmsMatch reports whether the protected header's advertised algorithm
+// and the algorithm we are about to verify under are compatible. They are
+// compatible only when their identifiers are exactly equal, or when both are
+// members of the same RFC 9864 alias group (see algAliasGroups). Genuinely
+// different algorithms (e.g. RS256 vs HS256) never match.
 func algorithmsMatch(hdrAlg, verifyAlg jwa.SignatureAlgorithm) bool {
-	if hdrAlg.String() == verifyAlg.String() {
+	h := hdrAlg.String()
+	v := verifyAlg.String()
+	if h == v {
 		return true
 	}
-	hdrDsig, ok := jwsbb.GetDsigAlgorithm(hdrAlg.String())
-	if !ok {
-		return false
+	for _, group := range algAliasGroups {
+		if slices.Contains(group, h) && slices.Contains(group, v) {
+			return true
+		}
 	}
-	verifyDsig, ok := jwsbb.GetDsigAlgorithm(verifyAlg.String())
-	if !ok {
-		return false
-	}
-	return hdrDsig == verifyDsig
+	return false
 }
 
 // validateB64InCritIfFalse enforces RFC 7797 §3: producers that set
