@@ -34,11 +34,33 @@ func TestSignWithMalformedEd25519Key(t *testing.T) {
 		require.Error(t, err, `signing with a typed-nil ed25519.PrivateKey must return an error, not panic`)
 	})
 
+	t.Run("short pointer private key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		key := ed25519.PrivateKey{1, 2, 3}
+		_, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), &key))
+		require.Error(t, err, `signing with a too-short *ed25519.PrivateKey must return an error, not panic`)
+	})
+
+	t.Run("typed-nil pointer private key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), (*ed25519.PrivateKey)(nil)))
+		require.Error(t, err, `signing with a typed-nil *ed25519.PrivateKey must return an error, not panic`)
+	})
+
 	t.Run("valid key still signs", func(t *testing.T) {
 		t.Parallel()
 		_, priv, err := ed25519.GenerateKey(rand.Reader)
 		require.NoError(t, err)
 		signed, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), priv))
+		require.NoError(t, err)
+		require.NotEmpty(t, signed)
+	})
+
+	t.Run("valid pointer key still signs", func(t *testing.T) {
+		t.Parallel()
+		_, priv, err := ed25519.GenerateKey(rand.Reader)
+		require.NoError(t, err)
+		signed, err := jws.Sign(payload, jws.WithKey(jwa.EdDSAEd25519(), &priv))
 		require.NoError(t, err)
 		require.NotEmpty(t, signed)
 	})
@@ -72,9 +94,42 @@ func TestVerifyWithMalformedEd25519Key(t *testing.T) {
 		require.Error(t, err, `verifying with a typed-nil ed25519.PrivateKey must return an error, not panic`)
 	})
 
+	t.Run("short pointer private key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		key := ed25519.PrivateKey{1, 2, 3}
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), &key))
+		require.Error(t, err, `verifying with a too-short *ed25519.PrivateKey must return an error, not panic`)
+	})
+
+	t.Run("typed-nil pointer private key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), (*ed25519.PrivateKey)(nil)))
+		require.Error(t, err, `verifying with a typed-nil *ed25519.PrivateKey must return an error, not panic`)
+	})
+
+	t.Run("short pointer public key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		key := ed25519.PublicKey{1, 2, 3}
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), &key))
+		require.Error(t, err, `verifying with a too-short *ed25519.PublicKey must return an error, not panic`)
+	})
+
+	t.Run("typed-nil pointer public key returns error and does not panic", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), (*ed25519.PublicKey)(nil)))
+		require.Error(t, err, `verifying with a typed-nil *ed25519.PublicKey must return an error, not panic`)
+	})
+
 	t.Run("valid public key still verifies", func(t *testing.T) {
 		t.Parallel()
 		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), priv.Public()))
+		require.NoError(t, err)
+	})
+
+	t.Run("valid pointer public key still verifies", func(t *testing.T) {
+		t.Parallel()
+		pub := priv.Public().(ed25519.PublicKey)
+		_, err := jws.Verify(signed, jws.WithKey(jwa.EdDSAEd25519(), &pub))
 		require.NoError(t, err)
 	})
 }

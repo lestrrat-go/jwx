@@ -103,9 +103,17 @@ func Ed25519PrivateKey(src any) (*ed25519.PrivateKey, error) {
 		if !ok {
 			// Export may return ed25519.PrivateKey (not pointer)
 			if v, ok := rawV.(ed25519.PrivateKey); ok {
+				if len(v) != ed25519.PrivateKeySize {
+					return nil, fmt.Errorf(`keyconv: invalid ed25519.PrivateKey length %d from export, expected %d`, len(v), ed25519.PrivateKeySize)
+				}
 				return &v, nil
 			}
 			return nil, fmt.Errorf(`keyconv: expected ed25519.PrivateKey from export, got %T`, rawV)
+		}
+		// Guard against a malformed exported key reaching ed25519.PrivateKey.Public(),
+		// which slices priv[32:] and panics when the key is not the expected size.
+		if ptr == nil || len(*ptr) != ed25519.PrivateKeySize {
+			return nil, fmt.Errorf(`keyconv: invalid ed25519.PrivateKey from export, expected length %d`, ed25519.PrivateKeySize)
 		}
 		return ptr, nil
 	}

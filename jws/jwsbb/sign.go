@@ -83,6 +83,13 @@ func dispatchHMACSign(key any, dsigAlg string, payload []byte) ([]byte, error) {
 }
 
 func dispatchRSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([]byte, error) {
+	// A malformed ed25519 key (value or pointer) satisfies crypto.Signer but
+	// panics in Public(). Reject it before the crypto.Signer probe below, which
+	// a cross-family caller (ed25519 key + RSA alg) could otherwise reach.
+	if err := validateEd25519KeyShape(key); err != nil {
+		return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
+	}
+
 	// Try crypto.Signer first (dsig can handle it directly)
 	if signer, ok := key.(crypto.Signer); ok {
 		// Verify it's an RSA key
@@ -101,6 +108,12 @@ func dispatchRSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([]b
 }
 
 func dispatchECDSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([]byte, error) {
+	// See dispatchRSASign: reject malformed ed25519 keys before the
+	// crypto.Signer probe to avoid a cross-family Public() panic.
+	if err := validateEd25519KeyShape(key); err != nil {
+		return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
+	}
+
 	// Try crypto.Signer first (dsig can handle it directly)
 	if signer, ok := key.(crypto.Signer); ok {
 		// Verify it's an ECDSA key
@@ -126,15 +139,8 @@ func dispatchEdDSASign(key any, jwsAlg, dsigAlg string, payload []byte, rr io.Re
 	// method panics ("slice bounds out of range") when the key is not exactly
 	// ed25519.PrivateKeySize bytes. Reject malformed keys here so we return an
 	// error instead of panicking inside the crypto.Signer branch below.
-	switch k := key.(type) {
-	case ed25519.PrivateKey:
-		if len(k) != ed25519.PrivateKeySize {
-			return nil, fmt.Errorf(`jwsbb.Sign: invalid ed25519.PrivateKey length %d, expected %d`, len(k), ed25519.PrivateKeySize)
-		}
-	case *ed25519.PrivateKey:
-		if k == nil || len(*k) != ed25519.PrivateKeySize {
-			return nil, fmt.Errorf(`jwsbb.Sign: invalid *ed25519.PrivateKey length, expected %d`, ed25519.PrivateKeySize)
-		}
+	if err := validateEd25519KeyShape(key); err != nil {
+		return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
 	}
 
 	// Try crypto.Signer first (dsig can handle it directly)

@@ -252,6 +252,33 @@ func TestECDHToECDSA(t *testing.T) {
 	})
 }
 
+// shortEd25519ExportKey is a minimal jwk.Key stub whose registered
+// exporter returns a wrong-length ed25519.PrivateKey, exercising the
+// jwk-export branch of keyconv.Ed25519PrivateKey. The embedded nil
+// jwk.Key satisfies the interface; only KeyType/KeyKind are called.
+type shortEd25519ExportKey struct {
+	jwk.Key
+}
+
+func (shortEd25519ExportKey) KeyType() jwa.KeyType { return jwa.OKP() }
+func (shortEd25519ExportKey) KeyKind() jwk.KeyKind {
+	return jwk.KeyKind("OKP:keyconv-test-short-ed25519")
+}
+
+func TestEd25519ExportBranchMalformed(t *testing.T) {
+	// Register an exporter that yields a too-short ed25519.PrivateKey for
+	// our unique KeyKind. keyconv.Ed25519PrivateKey must reject it rather
+	// than return a key that would panic in ed25519.PrivateKey.Public().
+	err := jwk.RegisterKeyExporter(jwk.KeyKind("OKP:keyconv-test-short-ed25519"),
+		jwk.KeyExportFunc(func(_ jwk.Key, _ any) (any, error) {
+			return ed25519.PrivateKey{1, 2, 3}, nil
+		}))
+	require.NoError(t, err, `RegisterKeyExporter should succeed`)
+
+	_, err = keyconv.Ed25519PrivateKey(shortEd25519ExportKey{})
+	require.Error(t, err, `exported short ed25519.PrivateKey must return an error, not panic`)
+}
+
 func TestEd25519MalformedKey(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
 	require.NoError(t, err, `ed25519.GenerateKey should succeed`)
