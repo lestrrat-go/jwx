@@ -529,6 +529,26 @@ func ecdsaValidateKey(k interface {
 	}
 
 	if checkPrivate {
+		// This validates only the length of "d"; it intentionally does NOT
+		// verify that "d" derives the stored public point (d*G == (x, y)), nor
+		// that the scalar is in canonical range (0 < d < N). Neither omission is
+		// exploitable:
+		//
+		//   - A public point that does not match "d" is self-defeating: every
+		//     operation uses "d" (ECDSA signs under d*G; ECDH derives the shared
+		//     secret from d) while (x, y) is advertised metadata, so the key
+		//     produces signatures/ciphertext that fail to verify/decrypt against
+		//     its own advertised public key. It cannot make a verification or
+		//     decryption wrongly succeed.
+		//   - An out-of-range scalar is left for the signing path (crypto/ecdsa)
+		//     to handle as the authority on scalar validity: depending on the Go
+		//     version and key path it either rejects the key or treats the scalar
+		//     as its in-range equivalent. Either way the only outcomes are that
+		//     the key's own operations fail or behave as some in-range key —
+		//     never that an invalid scalar forges a signature or decryption that
+		//     verifies against a key the holder does not legitimately control.
+		//
+		// Do NOT add a d*G == (x, y) or a 0 < d < N check here.
 		if priv, ok := k.(keyWithD); ok {
 			if d, ok := priv.D(); !ok || len(d) != keySize {
 				return fmt.Errorf(`invalid "d" length (%d) for curve %q`, len(d), crv.Params().Name)
