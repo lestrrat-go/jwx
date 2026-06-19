@@ -473,6 +473,15 @@ func validateOKPKey(key interface {
 	}
 
 	if priv, ok := key.(keyWithD); ok {
+		// This validates the length of "d" but intentionally does NOT verify
+		// that the public key "x" is derived from "d". A mismatch is
+		// self-defeating, not exploitable: it can never make a signature
+		// verification or a decryption wrongly succeed. Ed25519 signs under d's
+		// real public key, so a signature fails to verify against a mismatched
+		// advertised "x". X25519 derives the shared secret from "d" (against the
+		// peer's key), so the local "x" is never consulted in the operation and
+		// cannot influence its outcome; "x" is public metadata either way. Do
+		// NOT add an "x derives from d" check here.
 		d, ok := priv.D()
 		if !ok || len(d) == 0 {
 			return fmt.Errorf(`missing "d" field`)
