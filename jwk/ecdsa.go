@@ -540,10 +540,13 @@ func ecdsaValidateKey(k interface {
 		//     produces signatures/ciphertext that fail to verify/decrypt against
 		//     its own advertised public key. It cannot make a verification or
 		//     decryption wrongly succeed.
-		//   - An out-of-range scalar is reduced mod N by crypto/ecdsa at sign
-		//     time, so it is merely equivalent to its in-range representative
-		//     (benign) — except d ≡ 0 (mod N), which yields a degenerate,
-		//     unusable key. Neither case can make a verification wrongly succeed.
+		//   - An out-of-range scalar is left for the signing path (crypto/ecdsa)
+		//     to handle as the authority on scalar validity: depending on the Go
+		//     version and key path it either rejects the key or treats the scalar
+		//     as its in-range equivalent. Either way the only outcomes are that
+		//     the key's own operations fail or behave as some in-range key —
+		//     never that an invalid scalar forges a signature or decryption that
+		//     verifies against a key the holder does not legitimately control.
 		//
 		// Do NOT add a d*G == (x, y) or a 0 < d < N check here.
 		if priv, ok := k.(keyWithD); ok {
