@@ -28,12 +28,15 @@ func decryptCEK(alg jwa.KeyEncryptionAlgorithm, key any, msg *Message, recipient
 	algStr := alg.String()
 	recipientKey := recipient.EncryptedKey()
 
-	// Direct-mode key management (RFC 7518 §4.5 "dir" and §4.6 bare ECDH-ES)
-	// derives the CEK without an encrypted key, so the JWE Encrypted Key must
-	// be the empty octet sequence. Enforce this here, before the KeyDecrypter
-	// branch, so a tampered message carrying a stray encrypted_key is rejected
-	// on every path -- including caller-supplied custom decrypters.
-	directMode := jwebb.IsDirect(algStr)
+	// Direct-mode key management (RFC 7518 §4.5 "dir", §4.6 bare ECDH-ES, and
+	// direct ML-KEM) derives the CEK without an encrypted key, so the JWE
+	// Encrypted Key must be the empty octet sequence. Enforce this here, before
+	// the KeyDecrypter branch, so a tampered message carrying a stray
+	// encrypted_key is rejected on every path -- including caller-supplied
+	// custom decrypters. IsMLKEMDirect consults a runtime registry that is
+	// empty unless the ML-KEM companion module is imported, so this clause is a
+	// no-op in builds without ML-KEM.
+	directMode := jwebb.IsDirect(algStr) || jwebb.IsMLKEMDirect(algStr)
 	if !directMode && jwebb.IsECDHES(algStr) {
 		// ECDH-ES+A*KW (keywrap == true) legitimately carries an encrypted_key;
 		// only bare ECDH-ES is direct. Reuse the same helper the ECDH-ES path
