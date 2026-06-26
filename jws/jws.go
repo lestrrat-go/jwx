@@ -965,17 +965,27 @@ func Settings(options ...GlobalOption) error {
 // regardless, since VerifyCompactFast has no way to accept a detached
 // payload.
 //
-// VerifyCompactFast only handles a minimal protected header: "alg" exactly
-// once, an optional single "typ"/"kid"/"cty", no JSON escape sequences, and
-// no other parameters. fastjson (used here) keeps duplicate object members
-// and resolves them first-wins, whereas encoding/json/v2 (used by jws.Verify)
-// rejects duplicate names — so a header with a duplicate, a nested object, an
-// unknown or key-source parameter, or an escaped key could be read
-// differently by the two paths (see issue #2234). Such headers are refused
-// with jws.ErrNonMinimalHeader(); like the crit refusal, callers should treat
-// it as "retry through jws.Verify", whose strict, recursive header handling
-// is authoritative. A missing "alg" is reported via the alg cross-check
-// above, not this refusal.
+// VerifyCompactFast only handles a "minimal" protected header. It proceeds
+// with verification only when ALL of the following hold; otherwise it refuses
+// with jws.ErrNonMinimalHeader() and the caller should retry through
+// jws.Verify:
+//
+//   - "alg" is present exactly once (a missing "alg" is reported separately,
+//     via the cross-check described above, not as ErrNonMinimalHeader);
+//   - "typ", "kid", and "cty" each appear at most once;
+//   - no other parameter is present — this excludes "crit" and "b64" (which
+//     have their own dedicated refusals, see above), key-source parameters
+//     such as "jwk"/"jku"/"x5u"/"x5c", and any unknown parameter;
+//   - the header contains no JSON escape sequences.
+//
+// The restriction exists because the fast path reads the header with a parser
+// that keeps duplicate object members and resolves them first-wins, whereas
+// jws.Verify uses encoding/json/v2, which rejects duplicate names outright.
+// Limiting the fast path to the minimal shape — and deferring everything else
+// to jws.Verify, whose strict, recursive header handling is authoritative —
+// guarantees the two entry points agree on which messages they accept (see
+// issue #2234). Like the crit refusal, ErrNonMinimalHeader means "retry
+// through jws.Verify".
 func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error) {
 	if err := validateAlgorithmForKey(alg, key); err != nil {
 		return nil, makeVerifyError(`%w`, err)

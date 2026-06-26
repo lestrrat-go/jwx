@@ -145,6 +145,19 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // ParseOptions control parsing and verification behavior, and
 // ValidateOptions are passed to `Validate()` when automatic validation is
 // enabled.
+//
+// For the common case — a single `jwt.WithKey()` naming a concrete signature
+// algorithm (no per-key suboptions), over a compact JWS — Parse verifies
+// through an internal fast path (see `jws.VerifyCompactFast`) that avoids
+// fully materializing the JWS message. This fast path is transparent: it
+// applies only to a minimal protected header (`alg` once, an optional single
+// `typ`/`kid`/`cty`, nothing else, no JSON escapes — see
+// `jws.VerifyCompactFast` for the exact shape), and any other header —
+// including one carrying duplicate, unknown, or key-source parameters,
+// `crit`, or `b64` — is automatically reverified through the full
+// `jws.Verify` path. The accept/reject outcome is identical either way; only
+// performance differs. In particular a protected header with duplicate
+// parameter names is rejected, matching `jws.Verify`.
 func Parse(s []byte, options ...ParseOption) (Token, error) {
 	tok, err := parseBytes(s, options...)
 	if err != nil {
