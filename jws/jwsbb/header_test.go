@@ -200,3 +200,30 @@ func TestHeader(t *testing.T) {
 		})
 	})
 }
+
+func TestHeaderParseDuplicateKeys(t *testing.T) {
+	t.Parallel()
+
+	t.Run("duplicate alg is rejected", func(t *testing.T) {
+		t.Parallel()
+		h := jwsbb.HeaderParse([]byte(`{"alg":"HS256","alg":"none"}`))
+		_, err := jwsbb.HeaderGetString(h, "alg")
+		require.Error(t, err, "duplicate header parameter name should be rejected")
+	})
+
+	t.Run("duplicate via escaped key is rejected", func(t *testing.T) {
+		t.Parallel()
+		// "crit" and "crit" are the same name once unescaped.
+		h := jwsbb.HeaderParse([]byte("{\"\\u0063rit\":[\"b64\"],\"crit\":[\"b64\"]}"))
+		_, err := jwsbb.HeaderGetStringArray(h, "crit")
+		require.Error(t, err, "escaped duplicate header parameter name should be rejected")
+	})
+
+	t.Run("well-formed header is accepted", func(t *testing.T) {
+		t.Parallel()
+		h := jwsbb.HeaderParse([]byte(`{"alg":"HS256","typ":"JWT"}`))
+		alg, err := jwsbb.HeaderGetString(h, "alg")
+		require.NoError(t, err)
+		require.Equal(t, "HS256", alg)
+	})
+}

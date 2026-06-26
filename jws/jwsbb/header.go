@@ -81,6 +81,26 @@ func HeaderParse(decoded []byte) Header {
 	if err != nil {
 		return &header{err: err}
 	}
+	// fastjson keeps duplicate object members and Get returns the first;
+	// reject them so the fast path matches jws.Verify.
+	if obj, oerr := v.Object(); oerr == nil {
+		seen := make(map[string]struct{})
+		var dup string
+		obj.Visit(func(key []byte, _ *fastjson.Value) {
+			if dup != "" {
+				return
+			}
+			k := string(key)
+			if _, ok := seen[k]; ok {
+				dup = k
+				return
+			}
+			seen[k] = struct{}{}
+		})
+		if dup != "" {
+			return &header{err: fmt.Errorf(`duplicate header parameter name %q`, dup)}
+		}
+	}
 	return &header{
 		v: v,
 	}
