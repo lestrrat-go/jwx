@@ -86,6 +86,38 @@ func HeaderParse(decoded []byte) Header {
 	}
 }
 
+// HeaderForEach calls fn once for each top-level parameter name in the
+// parsed header, in document order. Duplicate parameter names are reported
+// once per occurrence, so callers can detect duplicates. The name slice
+// passed to fn is only valid for the duration of the call; do not retain it.
+//
+// An error is returned if the header failed to parse or does not decode to a
+// JSON object.
+//
+// This enumeration primitive exists so that callers which need RFC-level
+// header rules — e.g. rejecting duplicate parameter names per RFC 7515 §4, or
+// restricting a fast path to a known set of parameters — can enforce those
+// rules themselves. HeaderParse stays deliberately spec-agnostic (see the
+// [Header] doc): the policy lives in the caller, not in this generic,
+// shared field-probe.
+//
+// This function is experimental and may change or be removed in the future.
+func HeaderForEach(h Header, fn func(name []byte)) error {
+	//nolint:forcetypeassert
+	hh := h.(*header) // we _know_ this can't be another type
+	if hh.err != nil {
+		return hh.err
+	}
+	obj, err := hh.v.Object()
+	if err != nil {
+		return err
+	}
+	obj.Visit(func(key []byte, _ *fastjson.Value) {
+		fn(key)
+	})
+	return nil
+}
+
 func headerGet(h Header, key string) (*fastjson.Value, error) {
 	//nolint:forcetypeassert
 	hh := h.(*header) // we _know_ this can't be another type

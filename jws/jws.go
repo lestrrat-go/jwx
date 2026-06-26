@@ -964,6 +964,18 @@ func Settings(options ...GlobalOption) error {
 // Detached-payload callers must use jws.Verify with jws.WithDetachedPayload
 // regardless, since VerifyCompactFast has no way to accept a detached
 // payload.
+//
+// VerifyCompactFast only handles a minimal protected header: "alg" exactly
+// once, an optional single "typ"/"kid"/"cty", no JSON escape sequences, and
+// no other parameters. fastjson (used here) keeps duplicate object members
+// and resolves them first-wins, whereas encoding/json/v2 (used by jws.Verify)
+// rejects duplicate names — so a header with a duplicate, a nested object, an
+// unknown or key-source parameter, or an escaped key could be read
+// differently by the two paths (see issue #2234). Such headers are refused
+// with jws.ErrNonMinimalHeader(); like the crit refusal, callers should treat
+// it as "retry through jws.Verify", whose strict, recursive header handling
+// is authoritative. A missing "alg" is reported via the alg cross-check
+// above, not this refusal.
 func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error) {
 	if err := validateAlgorithmForKey(alg, key); err != nil {
 		return nil, makeVerifyError(`%w`, err)
@@ -977,7 +989,27 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 		return nil, makeVerifyError("failed to split compact: %w", err)
 	}
 
-	parsedHdr := jwsbb.HeaderParseCompact(hdr)
+	// Decode the protected header ourselves (rather than via
+	// HeaderParseCompact) so we can inspect the raw JSON for escape
+	// sequences before parsing it.
+	decodedHdr, err := base64.Decode(hdr)
+	if err != nil {
+		return nil, makeVerifyError("failed to decode protected header: %w", err)
+	}
+
+	// Refuse any protected header containing a JSON escape sequence. For
+	// literal keys fastjson resolves duplicates first-wins deterministically,
+	// but for *escaped* keys its resolution becomes order/state-dependent and
+	// can diverge from encoding/json/v2 (which jws.Verify uses). Rather than
+	// reason about that, defer any escape-bearing header to jws.Verify. The
+	// header parameter names the fast path handles (alg/typ/kid/cty) never
+	// require escaping, so this refuses nothing a conformant minimal producer
+	// would emit.
+	if bytes.IndexByte(decodedHdr, '\\') >= 0 {
+		return nil, verifyError{errNonMinimalHeader}
+	}
+
+	parsedHdr := jwsbb.HeaderParse(decodedHdr)
 
 	// Refuse crit-bearing messages: the fast path has no WithCritExtension
 	// allowlist, so accepting them would silently violate RFC 7515 §4.1.11.
@@ -1000,8 +1032,60 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// / WithCritExtension machinery to handle b64=false correctly. As with
 	// the crit refusal above, the sentinel is wrapped in verifyError so the
 	// same error matches both jws.ErrB64Present() and jws.VerifyError().
-	if jwsbb.HeaderHas(parsedHdr, "b64") {
+	if jwsbb.HeaderHas(parsedHdr, B64Key) {
 		return nil, verifyError{errB64Present}
+	}
+
+	// Minimal-shape gate. fastjson keeps duplicate object members and resolves
+	// them first-wins, whereas encoding/json/v2 (jws.Verify) rejects duplicate
+	// names — so a header with a duplicate or otherwise unusual parameter
+	// could be read differently by the two paths (issue #2234). The fast path
+	// therefore only handles the common minimal shape: "alg" exactly once, an
+	// optional single "typ"/"kid"/"cty", and nothing else. Anything outside
+	// that — a duplicate, a nested object, an unknown or key-source parameter
+	// — is deferred to jws.Verify via errNonMinimalHeader, where json/v2's
+	// strict recursive duplicate rejection and full header handling apply. A
+	// *missing* "alg" is left to the cross-check below so the caller still
+	// gets the specific diagnostic.
+	//
+	// Why gate-here-and-defer rather than teach the header parser to reject
+	// duplicates itself:
+	//   - The jwsbb header parser is deliberately spec-agnostic: it is a
+	//     generic, reusable field-probe (shared with other call sites) that
+	//     "does not care about the JWS specification". Baking RFC 7515 §4
+	//     header rules into it would break that contract and silently change
+	//     behavior for every other consumer.
+	//   - A duplicate check inside the parser runs on *every* parse and needs
+	//     a per-call set/map allocation, taxing the very hot path the fast
+	//     path exists to keep cheap. The shape gate here is a single key sweep
+	//     with fixed counters — allocation-free.
+	//   - A parser-level top-level dedup would still miss *nested* duplicate
+	//     names; deferring unusual headers to jws.Verify inherits json/v2's
+	//     strict *recursive* rejection for free, so the two paths agree on
+	//     more than just the top level.
+	// Gating on shape and handing anything unusual to the authoritative slow
+	// path is both cheaper and more complete than making the parser spec-aware.
+	var algN, typN, kidN, ctyN, others int
+	if err := jwsbb.HeaderForEach(parsedHdr, func(name []byte) {
+		switch string(name) {
+		case AlgorithmKey:
+			algN++
+		case TypeKey:
+			typN++
+		case KeyIDKey:
+			kidN++
+		case ContentTypeKey:
+			ctyN++
+		default:
+			others++
+		}
+	}); err != nil {
+		// Header is not a JSON object (or failed to parse); let jws.Verify
+		// produce the authoritative error.
+		return nil, verifyError{errNonMinimalHeader}
+	}
+	if others > 0 || algN > 1 || typN > 1 || kidN > 1 || ctyN > 1 {
+		return nil, verifyError{errNonMinimalHeader}
 	}
 
 	// Cross-check the protected header "alg" against the caller-supplied

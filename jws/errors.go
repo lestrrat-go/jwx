@@ -45,6 +45,32 @@ func ErrB64Present() error {
 	return errB64Present
 }
 
+// errNonMinimalHeader is returned by VerifyCompactFast when the protected
+// header is not in the minimal shape the fast path handles: "alg" present
+// exactly once, an optional single "typ"/"kid"/"cty", no JSON escape
+// sequences, and no other parameters. fastjson (used by the fast path) keeps
+// duplicate object members and resolves them first-wins, whereas
+// encoding/json/v2 (used by jws.Verify) rejects duplicate names outright — so
+// a header carrying a duplicate, a nested object, an unknown or key-source
+// parameter, or an escaped key could be read differently by the two paths
+// (see issue #2234). Refusing such headers defers them to jws.Verify, whose
+// strict, recursive duplicate rejection and full header handling are the
+// authoritative behavior. As with errCritPresent, the sentinel is wrapped in
+// verifyError at the return site so the resulting error matches both
+// errors.Is(err, jws.ErrNonMinimalHeader()) and errors.Is(err, jws.VerifyError()).
+var errNonMinimalHeader = errors.New(`VerifyCompactFast: protected header is not in the fast-path minimal shape; use jws.Verify`)
+
+// ErrNonMinimalHeader returns the sentinel error returned by
+// VerifyCompactFast when the protected header is outside the minimal shape
+// the fast path handles (see ErrCritPresent for the analogous crit refusal).
+// The error returned from VerifyCompactFast also matches jws.VerifyError(),
+// so callers that only branch on the general class still classify the refusal
+// correctly. Callers that wrap VerifyCompactFast should treat this like
+// ErrCritPresent: fall through to jws.Verify.
+func ErrNonMinimalHeader() error {
+	return errNonMinimalHeader
+}
+
 // errUnclassifiableKey is the common sentinel for AlgorithmsForKey
 // failures: the key shape cannot be matched to any registered key type
 // for signing. Three different code paths land here — Import-failed,
