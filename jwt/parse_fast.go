@@ -75,13 +75,14 @@ func tryFastPath(ctx *fastParseCtx, data []byte, options []ParseOption) bool {
 func parseCompactFast(data []byte, ctx *fastParseCtx) (Token, error) {
 	payload, err := jws.VerifyCompactFast(ctx.key, data, ctx.alg)
 	if err != nil {
-		// VerifyCompactFast refuses crit-bearing and non-minimal headers.
-		// jwt.Parse must not be laxer than jws.Verify, so fall through to
-		// the full jws.Verify path: it enforces validateCritical with the
+		// VerifyCompactFast refuses any header outside its minimal shape
+		// (crit and b64 are specific cases of this umbrella). jwt.Parse must
+		// not be laxer than jws.Verify, so fall through to the full
+		// jws.Verify path: it enforces validateCritical with the
 		// default-strict (empty) WithCritExtension allowlist, plus json/v2's
 		// strict header decoding (e.g. duplicate-name rejection, issue
 		// #2234) that the fast path's minimal-shape gate defers to it.
-		if errors.Is(err, jws.ErrCritPresent()) || errors.Is(err, jws.ErrNonMinimalHeader()) {
+		if errors.Is(err, jws.ErrNonMinimalHeader()) {
 			return parseCompactSlowFallback(data, ctx)
 		}
 		// The fast path uses strict base64url (RFC 7515). On a

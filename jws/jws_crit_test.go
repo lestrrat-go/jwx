@@ -600,17 +600,22 @@ func TestVerifyCompactFastMinimalHeaderShape(t *testing.T) {
 		}
 	})
 
-	t.Run("crit and b64 keep their specific sentinels", func(t *testing.T) {
-		// crit/b64 headers are also non-minimal, but their dedicated refusal
-		// sentinels must keep matching: callers (and the jwt crit fallback)
-		// branch on them specifically.
+	t.Run("crit and b64 are specific cases of the umbrella sentinel", func(t *testing.T) {
+		// crit/b64 are specific reasons that wrap ErrNonMinimalHeader: their
+		// dedicated sentinels must keep matching (callers branch on them
+		// specifically), and they must ALSO match the umbrella so a single
+		// ErrNonMinimalHeader check classifies every fast-path header refusal.
 		critCompact := signHS256Compact(key, `{"alg":"HS256","crit":["x"]}`)
 		_, err := jws.VerifyCompactFast(key, critCompact, jwa.HS256())
-		require.ErrorIs(t, err, jws.ErrCritPresent())
+		require.ErrorIs(t, err, jws.ErrCritPresent(), `specific crit sentinel must match`)
+		require.ErrorIs(t, err, jws.ErrNonMinimalHeader(), `crit must also match the umbrella`)
+		require.NotErrorIs(t, err, jws.ErrB64Present(), `crit must not match the b64 sentinel`)
 
 		b64Compact := signHS256Compact(key, `{"alg":"HS256","b64":true}`)
 		_, err = jws.VerifyCompactFast(key, b64Compact, jwa.HS256())
-		require.ErrorIs(t, err, jws.ErrB64Present())
+		require.ErrorIs(t, err, jws.ErrB64Present(), `specific b64 sentinel must match`)
+		require.ErrorIs(t, err, jws.ErrNonMinimalHeader(), `b64 must also match the umbrella`)
+		require.NotErrorIs(t, err, jws.ErrCritPresent(), `b64 must not match the crit sentinel`)
 	})
 
 	t.Run("missing alg keeps the alg-specific diagnostic", func(t *testing.T) {

@@ -336,11 +336,12 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 			if err == nil {
 				return verified, peekJWSNestedState(ctx, payload), nil
 			}
-			// VerifyCompactFast refuses crit-bearing and non-minimal
-			// headers; on those sentinels, fall through to jws.Verify
-			// below so the full validateCritical rule set and json/v2's
-			// strict header handling (e.g. duplicate-name rejection) apply.
-			if !errors.Is(err, jws.ErrCritPresent()) && !errors.Is(err, jws.ErrNonMinimalHeader()) {
+			// VerifyCompactFast refuses any header outside its minimal
+			// shape (crit and b64 are specific cases of this); on that
+			// umbrella sentinel, fall through to jws.Verify below so the
+			// full validateCritical rule set and json/v2's strict header
+			// handling (e.g. duplicate-name rejection) apply.
+			if !errors.Is(err, jws.ErrNonMinimalHeader()) {
 				// The fast path uses strict base64url (RFC 7515).
 				// On a strict-decode failure, surface a diagnosis
 				// first ("input is not strict RFC 7515 base64url")
