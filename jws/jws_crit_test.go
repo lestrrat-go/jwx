@@ -622,6 +622,20 @@ func TestVerifyCompactFastMinimalHeaderShape(t *testing.T) {
 		require.NotErrorIs(t, err, jws.ErrCritPresent(), `b64 must not match the crit sentinel`)
 	})
 
+	t.Run("bare sentinels wrap the umbrella but not VerifyError", func(t *testing.T) {
+		// Documents the precise errors.Is lattice for the SENTINEL VALUES
+		// themselves (as distinct from errors returned by VerifyCompactFast):
+		// crit/b64 wrap ErrNonMinimalHeader via %w, so the bare sentinels match
+		// the umbrella; but the verifyError wrapper is applied only at the
+		// VerifyCompactFast return site, so the bare sentinels do NOT match
+		// VerifyError.
+		require.ErrorIs(t, jws.ErrCritPresent(), jws.ErrNonMinimalHeader(), `bare crit sentinel wraps the umbrella`)
+		require.ErrorIs(t, jws.ErrB64Present(), jws.ErrNonMinimalHeader(), `bare b64 sentinel wraps the umbrella`)
+		require.NotErrorIs(t, jws.ErrCritPresent(), jws.VerifyError(), `bare crit sentinel is not a verifyError`)
+		require.NotErrorIs(t, jws.ErrB64Present(), jws.VerifyError(), `bare b64 sentinel is not a verifyError`)
+		require.NotErrorIs(t, jws.ErrNonMinimalHeader(), jws.VerifyError(), `bare umbrella sentinel is not a verifyError`)
+	})
+
 	t.Run("missing alg keeps the alg-specific diagnostic", func(t *testing.T) {
 		// A missing "alg" is a malformed compact JWS (RFC 7515 §4.1.1), not a
 		// defer-to-jws.Verify case. The gate must let the alg cross-check

@@ -30,7 +30,10 @@ var errNonMinimalHeader = errors.New(`VerifyCompactFast: protected header is not
 // an unknown or key-source parameter, an escaped key, or the more specific
 // "crit"/"b64" cases (see ErrCritPresent / ErrB64Present, which both match
 // this sentinel too). Treat it as "the fast path declined this header; retry
-// through jws.Verify". The error also matches jws.VerifyError().
+// through jws.Verify". Errors returned from VerifyCompactFast that wrap this
+// sentinel additionally match jws.VerifyError() (they are wrapped in
+// verifyError at the return site); the bare sentinel value returned here does
+// not.
 func ErrNonMinimalHeader() error {
 	return errNonMinimalHeader
 }
@@ -46,8 +49,9 @@ func ErrNonMinimalHeader() error {
 var errCritPresent = fmt.Errorf(`%w (header contains "crit")`, errNonMinimalHeader)
 
 // ErrCritPresent returns the sentinel error returned by VerifyCompactFast
-// when the protected header contains a "crit" list. The returned error also
-// matches jws.ErrNonMinimalHeader() (the umbrella refusal) and
+// when the protected header contains a "crit" list. This sentinel itself also
+// matches jws.ErrNonMinimalHeader() (it wraps the umbrella refusal). Errors
+// returned from VerifyCompactFast that wrap it additionally match
 // jws.VerifyError() (the general class), so callers can branch at whatever
 // granularity fits.
 func ErrCritPresent() error {
@@ -69,8 +73,9 @@ func ErrCritPresent() error {
 var errB64Present = fmt.Errorf(`%w (header contains "b64")`, errNonMinimalHeader)
 
 // ErrB64Present returns the sentinel error returned by VerifyCompactFast when
-// the protected header contains a "b64" entry. The returned error also
-// matches jws.ErrNonMinimalHeader() (the umbrella refusal) and
+// the protected header contains a "b64" entry. This sentinel itself also
+// matches jws.ErrNonMinimalHeader() (it wraps the umbrella refusal). Errors
+// returned from VerifyCompactFast that wrap it additionally match
 // jws.VerifyError() (the general class).
 func ErrB64Present() error {
 	return errB64Present
