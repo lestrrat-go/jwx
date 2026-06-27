@@ -986,9 +986,14 @@ func Settings(options ...GlobalOption) error {
 // jws.Verify uses encoding/json/v2, which rejects duplicate names outright.
 // Limiting the fast path to the minimal shape — and deferring everything else
 // to jws.Verify, whose strict, recursive header handling is authoritative —
-// guarantees the two entry points agree on which messages they accept (see
-// issue #2234). Like the crit refusal, ErrNonMinimalHeader means "retry
-// through jws.Verify".
+// makes the two entry points agree on duplicate-name and header-shape handling
+// (see issue #2234). It is not a byte-for-byte mirror, though: the fast parser
+// does not reproduce all of encoding/json/v2's in-string validation, so a
+// header whose "typ"/"kid"/"cty" string value contains e.g. a raw control
+// character or invalid UTF-8 is accepted here but rejected by jws.Verify. The
+// signature is always verified, so this is a parser-strictness nuance, not a
+// bypass; for byte-for-byte parity call jws.Verify. Like the crit refusal,
+// ErrNonMinimalHeader means "retry through jws.Verify".
 func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error) {
 	if err := validateAlgorithmForKey(alg, key); err != nil {
 		return nil, makeVerifyError(`%w`, err)
@@ -1083,6 +1088,7 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// path is both cheaper and more complete than making the parser spec-aware.
 	var algN, typN, kidN, ctyN, others int
 	var firstOther string
+	var haveOther bool
 	if err := jwsbbi.HeaderForEachKey(parsedHdr, func(name []byte) {
 		switch string(name) {
 		case AlgorithmKey:
@@ -1094,8 +1100,12 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 		case ContentTypeKey:
 			ctyN++
 		default:
-			if firstOther == "" {
+			if !haveOther {
+				// Capture the first unknown parameter for the diagnostic.
+				// Use a bool sentinel (not firstOther == "") so a literal
+				// empty-string key is still reported as the first one.
 				firstOther = string(name)
+				haveOther = true
 			}
 			others++
 		}
