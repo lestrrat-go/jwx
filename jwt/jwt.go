@@ -145,6 +145,29 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // ParseOptions control parsing and verification behavior, and
 // ValidateOptions are passed to `Validate()` when automatic validation is
 // enabled.
+//
+// For the common case — a single `jwt.WithKey()` naming a concrete signature
+// algorithm (no per-key suboptions), over a compact JWS — Parse verifies
+// through an internal fast path (see `jws.VerifyCompactFast`) that avoids
+// fully materializing the JWS message. This fast path is transparent: it
+// applies only to a minimal protected header (`alg` once, an optional single
+// `typ`/`kid`/`cty`, nothing else, no JSON escapes — see
+// `jws.VerifyCompactFast` for the exact shape), and any other header —
+// including one carrying duplicate, unknown, or key-source parameters,
+// `crit`, or `b64` — is automatically reverified through the full
+// `jws.Verify` path, so it is never accepted more leniently than `jws.Verify`
+// would. In particular a protected header with duplicate parameter names is
+// rejected, matching `jws.Verify`.
+//
+// The fast path is a close but not byte-for-byte mirror of `jws.Verify`'s
+// header parsing. It validates parameter names and that `alg`/`typ`/`kid`/`cty`
+// are JSON strings, so the common divergences — duplicate names, non-string
+// values — are rejected, matching `jws.Verify`. A residual gap remains only
+// for value-level leniency the fast JSON parser tolerates but
+// `encoding/json/v2` does not (e.g. a raw control character or invalid UTF-8
+// inside a JSON string value); for byte-for-byte `jws.Verify` header
+// validation, call `jws.Verify` directly. The signature is always verified, so
+// any residual difference is a parser-strictness nuance, not a security bypass.
 func Parse(s []byte, options ...ParseOption) (Token, error) {
 	tok, err := parseBytes(s, options...)
 	if err != nil {
@@ -323,10 +346,12 @@ func verifyJWS(ctx *parseCtx, payload []byte) ([]byte, int, error) {
 			if err == nil {
 				return verified, peekJWSNestedState(ctx, payload), nil
 			}
-			// VerifyCompactFast refuses crit-bearing messages; on
-			// that sentinel, fall through to jws.Verify below so
-			// the full validateCritical rule set applies.
-			if !errors.Is(err, jws.ErrCritPresent()) {
+			// VerifyCompactFast refuses any header outside its minimal
+			// shape (crit and b64 are specific cases of this); on that
+			// umbrella sentinel, fall through to jws.Verify below so the
+			// full validateCritical rule set and json/v2's strict header
+			// handling (e.g. duplicate-name rejection) apply.
+			if !errors.Is(err, jws.ErrNonMinimalHeader()) {
 				// The fast path uses strict base64url (RFC 7515).
 				// On a strict-decode failure, surface a diagnosis
 				// first ("input is not strict RFC 7515 base64url")

@@ -63,7 +63,7 @@ JSON Web Signatures per RFC 7515. Sign, verify, parse.
 - Global/per-call settings: `WithMaxSignatures()` (usable in both `Settings()` and `Parse()`/`ReadFile()`)
 - Registration: `RegisterSigner()`, `RegisterVerifier()`, `AlgorithmsForKey()`, `RegisterAlgorithmForKeyType()`, `RegisterAlgorithmForCurve()`
 - Error sentinels: `SignError()`, `VerifyError()`, `VerificationError()`, `ParseError()`
-- Sub-package: `jws/jwsbb` — compact serialization, signing, verification building blocks
+- Sub-package: `jws/jwsbb` — compact serialization, signing, verification building blocks. The fastjson-backed `Header` probe (`HeaderParse`/`HeaderGet*`/`HeaderHas`) is a thin facade over `jws/internal/jwsbb`, which holds the implementation plus jwx-internal-only helpers not re-exported by the facade (e.g. `HeaderForEachKey`, the header-key enumerator used by `VerifyCompactFast`'s minimal-shape gate)
 - Files: `jws.go`, `message.go`, `signer.go`, `verifier.go`, `headers.go`, `interface.go`, `errors.go`, `options.go`, `key_provider.go`, `sign_context.go`, `verify_context.go`, `streaming_detached.go`
 - Imports: jwa, jwk, cert, internal/{base64,json,pool,tokens}
 

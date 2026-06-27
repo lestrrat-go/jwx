@@ -75,12 +75,15 @@ func tryFastPath(ctx *fastParseCtx, data []byte, options []ParseOption) bool {
 func parseCompactFast(data []byte, ctx *fastParseCtx) (Token, error) {
 	payload, err := jws.VerifyCompactFast(ctx.key, data, ctx.alg)
 	if err != nil {
-		// VerifyCompactFast refuses crit-bearing messages. jwt.Parse
-		// must not be laxer than jws.Verify, so fall through to the
-		// full jws.Verify path which enforces validateCritical with
-		// the default-strict (empty) WithCritExtension allowlist.
-		if errors.Is(err, jws.ErrCritPresent()) {
-			return parseCompactCritFallback(data, ctx)
+		// VerifyCompactFast refuses any header outside its minimal shape
+		// (crit and b64 are specific cases of this umbrella). jwt.Parse must
+		// not be laxer than jws.Verify, so fall through to the full
+		// jws.Verify path: it enforces validateCritical with the
+		// default-strict (empty) WithCritExtension allowlist, plus json/v2's
+		// strict header decoding (e.g. duplicate-name rejection, issue
+		// #2234) that the fast path's minimal-shape gate defers to it.
+		if errors.Is(err, jws.ErrNonMinimalHeader()) {
+			return parseCompactSlowFallback(data, ctx)
 		}
 		// The fast path uses strict base64url (RFC 7515). On a
 		// strict-decode failure, surface a diagnosis first ("input
@@ -111,12 +114,14 @@ func parseCompactFast(data []byte, ctx *fastParseCtx) (Token, error) {
 	return token, nil
 }
 
-// parseCompactCritFallback routes a fast-path-eligible input through
-// jws.Verify so the full RFC 7515 §4.1.11 "crit" rule set applies.
-// Reached only when the protected header actually contains "crit" (or
-// fails to split), so the extra cost is limited to adversarial / RFC 7797
+// parseCompactSlowFallback routes a fast-path-eligible input through
+// jws.Verify so the full RFC 7515 rule set applies: the §4.1.11 "crit"
+// handling, and json/v2's strict header decoding (duplicate-name rejection
+// etc.) that the fast path's minimal-shape gate defers here. Reached only
+// when the protected header actually contains "crit", is non-minimal, or
+// fails to split, so the extra cost is limited to adversarial / unusual
 // inputs.
-func parseCompactCritFallback(data []byte, ctx *fastParseCtx) (Token, error) {
+func parseCompactSlowFallback(data []byte, ctx *fastParseCtx) (Token, error) {
 	payload, err := jws.Verify(data, jws.WithCompact(), jws.WithKey(ctx.alg, ctx.key))
 	if err != nil {
 		return nil, parseErrorf(`jwt.Parse`, `%w`, err)

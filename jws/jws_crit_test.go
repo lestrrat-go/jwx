@@ -538,6 +538,119 @@ func TestVerifyCompactFastRefusalsMatchVerifyError(t *testing.T) {
 	})
 }
 
+// signHS256Compact hand-assembles an HS256 compact JWS with an arbitrary
+// protected header (JSON) over a fixed "payload", so tests can exercise
+// header shapes that jws.Sign would never emit — duplicate parameters, JSON
+// escapes, extra fields.
+func signHS256Compact(key []byte, hdrJSON string) []byte {
+	signingInput := base64.RawURLEncoding.EncodeToString([]byte(hdrJSON)) + "." +
+		base64.RawURLEncoding.EncodeToString([]byte("payload"))
+	mac := hmac.New(sha256.New, key)
+	mac.Write([]byte(signingInput))
+	sig := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	return []byte(signingInput + "." + sig)
+}
+
+// TestVerifyCompactFastMinimalHeaderShape documents the fast path's
+// minimal-shape gate (issue #2234). VerifyCompactFast uses fastjson, which
+// keeps duplicate object members and resolves them first-wins, while
+// jws.Verify uses encoding/json/v2, which rejects duplicate names. Without a
+// gate the two entry points disagreed: a duplicate-"alg" header verified on
+// the fast path but was rejected by jws.Verify. The fast path now only
+// handles a minimal header — "alg" exactly once, an optional single
+// "typ"/"kid"/"cty", no JSON escapes, nothing else — and refuses everything
+// else with jws.ErrNonMinimalHeader so callers defer it to jws.Verify.
+func TestVerifyCompactFastMinimalHeaderShape(t *testing.T) {
+	key := jwxtest.GenerateSymmetricKey()
+
+	t.Run("minimal shapes take the fast path", func(t *testing.T) {
+		for _, hdr := range []string{
+			`{"alg":"HS256"}`,
+			`{"alg":"HS256","typ":"JWT"}`,
+			`{"alg":"HS256","kid":"key-1"}`,
+			`{"alg":"HS256","typ":"JWT","kid":"key-1"}`,
+			`{"alg":"HS256","cty":"example"}`,
+		} {
+			t.Run(hdr, func(t *testing.T) {
+				compact := signHS256Compact(key, hdr)
+				payload, err := jws.VerifyCompactFast(key, compact, jwa.HS256())
+				require.NoError(t, err, `minimal header must verify on the fast path`)
+				require.Equal(t, []byte("payload"), payload)
+			})
+		}
+	})
+
+	t.Run("non-minimal shapes are refused with ErrNonMinimalHeader", func(t *testing.T) {
+		// wantMsg is a substring the refusal error must name, so the umbrella
+		// stays debuggable (the caller can see WHICH rule fired, not just that
+		// the header was non-minimal).
+		for _, tc := range []struct{ name, hdr, wantMsg string }{
+			{"duplicate alg", `{"alg":"HS256","alg":"none"}`, `duplicate "alg"`},
+			{"duplicate typ", `{"alg":"HS256","typ":"JWT","typ":"JWT"}`, `duplicate "typ"`},
+			{"unknown parameter", `{"alg":"HS256","x5t":"abc"}`, `"x5t"`},
+			{"key-source parameter", `{"alg":"HS256","jwk":{"kty":"oct"}}`, `"jwk"`},
+			{"nested duplicate", `{"alg":"HS256","extra":[{"a":1,"a":2}]}`, `"extra"`},
+			{"escaped key", "{\"\\u0061lg\":\"HS256\"}", `escape sequence`},
+			{"escaped duplicate", "{\"alg\":\"HS256\",\"\\u0061lg\":\"none\"}", `escape sequence`},
+			{"non-string typ", `{"alg":"HS256","typ":123}`, `non-string "typ"`},
+			{"non-string kid", `{"alg":"HS256","kid":123}`, `non-string "kid"`},
+			{"non-string cty", `{"alg":"HS256","cty":{"x":1}}`, `non-string "cty"`},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				compact := signHS256Compact(key, tc.hdr)
+				_, err := jws.VerifyCompactFast(key, compact, jwa.HS256())
+				require.Error(t, err)
+				require.ErrorIs(t, err, jws.ErrNonMinimalHeader(), `specific sentinel must match`)
+				require.ErrorIs(t, err, jws.VerifyError(), `refusal must also match jws.VerifyError() class`)
+				require.ErrorContains(t, err, tc.wantMsg, `refusal must name the specific trigger`)
+			})
+		}
+	})
+
+	t.Run("crit and b64 are specific cases of the umbrella sentinel", func(t *testing.T) {
+		// crit/b64 are specific reasons that wrap ErrNonMinimalHeader: their
+		// dedicated sentinels must keep matching (callers branch on them
+		// specifically), and they must ALSO match the umbrella so a single
+		// ErrNonMinimalHeader check classifies every fast-path header refusal.
+		critCompact := signHS256Compact(key, `{"alg":"HS256","crit":["x"]}`)
+		_, err := jws.VerifyCompactFast(key, critCompact, jwa.HS256())
+		require.ErrorIs(t, err, jws.ErrCritPresent(), `specific crit sentinel must match`)
+		require.ErrorIs(t, err, jws.ErrNonMinimalHeader(), `crit must also match the umbrella`)
+		require.NotErrorIs(t, err, jws.ErrB64Present(), `crit must not match the b64 sentinel`)
+
+		b64Compact := signHS256Compact(key, `{"alg":"HS256","b64":true}`)
+		_, err = jws.VerifyCompactFast(key, b64Compact, jwa.HS256())
+		require.ErrorIs(t, err, jws.ErrB64Present(), `specific b64 sentinel must match`)
+		require.ErrorIs(t, err, jws.ErrNonMinimalHeader(), `b64 must also match the umbrella`)
+		require.NotErrorIs(t, err, jws.ErrCritPresent(), `b64 must not match the crit sentinel`)
+	})
+
+	t.Run("bare sentinels wrap the umbrella but not VerifyError", func(t *testing.T) {
+		// Documents the precise errors.Is lattice for the SENTINEL VALUES
+		// themselves (as distinct from errors returned by VerifyCompactFast):
+		// crit/b64 wrap ErrNonMinimalHeader via %w, so the bare sentinels match
+		// the umbrella; but the verifyError wrapper is applied only at the
+		// VerifyCompactFast return site, so the bare sentinels do NOT match
+		// VerifyError.
+		require.ErrorIs(t, jws.ErrCritPresent(), jws.ErrNonMinimalHeader(), `bare crit sentinel wraps the umbrella`)
+		require.ErrorIs(t, jws.ErrB64Present(), jws.ErrNonMinimalHeader(), `bare b64 sentinel wraps the umbrella`)
+		require.NotErrorIs(t, jws.ErrCritPresent(), jws.VerifyError(), `bare crit sentinel is not a verifyError`)
+		require.NotErrorIs(t, jws.ErrB64Present(), jws.VerifyError(), `bare b64 sentinel is not a verifyError`)
+		require.NotErrorIs(t, jws.ErrNonMinimalHeader(), jws.VerifyError(), `bare umbrella sentinel is not a verifyError`)
+	})
+
+	t.Run("missing alg keeps the alg-specific diagnostic", func(t *testing.T) {
+		// A missing "alg" is a malformed compact JWS (RFC 7515 §4.1.1), not a
+		// defer-to-jws.Verify case. The gate must let the alg cross-check
+		// report it so the caller still gets the specific error.
+		compact := signHS256Compact(key, `{"typ":"JWT"}`)
+		_, err := jws.VerifyCompactFast(key, compact, jwa.HS256())
+		require.Error(t, err)
+		require.NotErrorIs(t, err, jws.ErrNonMinimalHeader())
+		require.ErrorContains(t, err, `"alg"`)
+	})
+}
+
 // TestMessageMarshalJSONHonorsB64False documents that Message.MarshalJSON
 // must NOT re-base64-encode the payload when the protected header carries
 // b64=false. The parser path (UnmarshalJSON) stores raw bytes in m.payload

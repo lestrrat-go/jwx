@@ -5,42 +5,78 @@ import (
 	"fmt"
 )
 
-// errCritPresent is returned by VerifyCompactFast when the protected
-// header carries a "crit" list. The fast path cannot enforce RFC 7515
-// §4.1.11 (it has no WithCritExtension allowlist), so it refuses rather
-// than silently accepting. The sentinel is wrapped in verifyError at the
-// return site so the resulting error matches BOTH errors.Is(err,
-// jws.ErrCritPresent()) (the specific reason) AND errors.Is(err,
-// jws.VerifyError()) (the general class), letting callers choose the
-// classification granularity that fits their code path.
-var errCritPresent = errors.New("VerifyCompactFast: protected header contains \"crit\"; use jws.Verify")
+// errNonMinimalHeader is the umbrella sentinel for every VerifyCompactFast
+// header refusal: the protected header is not in the minimal shape the fast
+// path handles ("alg" exactly once, an optional single "typ"/"kid"/"cty", no
+// JSON escape sequences, and no other parameters). fastjson (used by the fast
+// path) keeps duplicate object members and resolves them first-wins, whereas
+// encoding/json/v2 (used by jws.Verify) rejects duplicate names outright — so
+// a header carrying a duplicate, a nested object, an unknown or key-source
+// parameter, or an escaped key could be read differently by the two paths
+// (see issue #2234). Refusing such headers defers them to jws.Verify, whose
+// strict, recursive duplicate rejection and full header handling are the
+// authoritative behavior.
+//
+// The crit and b64 refusals (errCritPresent, errB64Present) are specific
+// reasons that wrap this sentinel, so a single errors.Is(err,
+// jws.ErrNonMinimalHeader()) check classifies every fast-path header refusal,
+// while errors.Is(err, jws.ErrCritPresent()) still identifies the precise
+// cause. The sentinel is wrapped in verifyError at the return site, so the
+// resulting error also matches errors.Is(err, jws.VerifyError()).
+var errNonMinimalHeader = errors.New(`VerifyCompactFast: protected header is not in the fast-path minimal shape; use jws.Verify`)
+
+// ErrNonMinimalHeader returns the umbrella sentinel that VerifyCompactFast
+// returns for every protected-header refusal: a duplicate, a nested object,
+// an unknown or key-source parameter, an escaped key, or the more specific
+// "crit"/"b64" cases (see ErrCritPresent / ErrB64Present, which both match
+// this sentinel too). Treat it as "the fast path declined this header; retry
+// through jws.Verify". Errors returned from VerifyCompactFast that wrap this
+// sentinel additionally match jws.VerifyError() (they are wrapped in
+// verifyError at the return site); the bare sentinel value returned here does
+// not.
+func ErrNonMinimalHeader() error {
+	return errNonMinimalHeader
+}
+
+// errCritPresent is the specific case of errNonMinimalHeader where the
+// protected header carries a "crit" list. The fast path cannot enforce
+// RFC 7515 §4.1.11 (it has no WithCritExtension allowlist), so it refuses
+// rather than silently accepting. It wraps errNonMinimalHeader, so the
+// returned error matches errors.Is(err, jws.ErrCritPresent()) (the specific
+// reason), errors.Is(err, jws.ErrNonMinimalHeader()) (the umbrella), and —
+// via the verifyError wrapper at the return site — errors.Is(err,
+// jws.VerifyError()) (the general class).
+var errCritPresent = fmt.Errorf(`%w (header contains "crit")`, errNonMinimalHeader)
 
 // ErrCritPresent returns the sentinel error returned by VerifyCompactFast
-// when the protected header contains a "crit" list. The error returned
-// from VerifyCompactFast also matches jws.VerifyError(), so callers that
-// only branch on the general class still classify the refusal correctly.
+// when the protected header contains a "crit" list. This sentinel itself also
+// matches jws.ErrNonMinimalHeader() (it wraps the umbrella refusal). Errors
+// returned from VerifyCompactFast that wrap it additionally match
+// jws.VerifyError() (the general class), so callers can branch at whatever
+// granularity fits.
 func ErrCritPresent() error {
 	return errCritPresent
 }
 
-// errB64Present is returned by VerifyCompactFast when the protected
-// header carries a "b64" entry (typically b64=false per RFC 7797). The
-// fast path assumes the default b64=true encoding for both the
+// errB64Present is the specific case of errNonMinimalHeader where the
+// protected header carries a "b64" entry (typically b64=false per RFC 7797).
+// The fast path assumes the default b64=true encoding for both the
 // signing-input reconstruction and the post-verify payload decode; a
-// b64=false message signed under non-conformant rules (b64 not declared
-// in "crit") would otherwise verify cryptographically while returning
-// a decoded payload that differs from the producer's intent. Refusing
-// here defers such messages to jws.Verify, which has the
-// WithDetachedPayload and WithCritExtension machinery to handle b64=false
-// correctly. As with errCritPresent, the sentinel is wrapped in
-// verifyError at the return site so the resulting error matches both
-// errors.Is(err, jws.ErrB64Present()) and errors.Is(err, jws.VerifyError()).
-var errB64Present = errors.New("VerifyCompactFast: protected header contains \"b64\"; use jws.Verify")
+// b64=false message signed under non-conformant rules (b64 not declared in
+// "crit") would otherwise verify cryptographically while returning a decoded
+// payload that differs from the producer's intent. Refusing here defers such
+// messages to jws.Verify, which has the WithDetachedPayload and
+// WithCritExtension machinery to handle b64=false correctly. Like
+// errCritPresent it wraps errNonMinimalHeader and is wrapped in verifyError at
+// the return site, so it matches ErrB64Present(), ErrNonMinimalHeader(), and
+// VerifyError().
+var errB64Present = fmt.Errorf(`%w (header contains "b64")`, errNonMinimalHeader)
 
-// ErrB64Present returns the sentinel error returned by VerifyCompactFast
-// when the protected header contains a "b64" entry. The error returned
-// from VerifyCompactFast also matches jws.VerifyError(), so callers that
-// only branch on the general class still classify the refusal correctly.
+// ErrB64Present returns the sentinel error returned by VerifyCompactFast when
+// the protected header contains a "b64" entry. This sentinel itself also
+// matches jws.ErrNonMinimalHeader() (it wraps the umbrella refusal). Errors
+// returned from VerifyCompactFast that wrap it additionally match
+// jws.VerifyError() (the general class).
 func ErrB64Present() error {
 	return errB64Present
 }

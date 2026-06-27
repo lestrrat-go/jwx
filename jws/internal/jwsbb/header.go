@@ -1,13 +1,42 @@
+// Package jwsbb holds the implementation of the jws/jwsbb building blocks.
+//
+// The public, end-user-facing API lives in github.com/lestrrat-go/jwx/v4/jws/jwsbb,
+// which is a thin facade over this package. Symbols that should be usable by
+// jwx-internal code but NOT exposed to end users (e.g. HeaderForEachKey) live
+// here and are simply not re-exported by the facade.
 package jwsbb
 
 import (
-	impl "github.com/lestrrat-go/jwx/v4/jws/internal/jwsbb"
+	"fmt"
+
+	"github.com/lestrrat-go/jwx/v4/internal/base64"
+	"github.com/valyala/fastjson"
 )
 
-// This file is a thin public facade over jws/internal/jwsbb. The header probe
-// implementation lives in the internal package so that jwx-internal-only
-// helpers (e.g. HeaderForEachKey) can be shared across the module without being
-// exposed to end users. Everything below simply re-exports the internal API.
+type headerNotFoundError struct {
+	key string
+}
+
+func (e headerNotFoundError) Error() string {
+	return fmt.Sprintf(`jwsbb: header "%s" not found`, e.key)
+}
+
+func (e headerNotFoundError) Is(target error) bool {
+	switch target.(type) {
+	case headerNotFoundError, *headerNotFoundError:
+		// If the target is a headerNotFoundError or a pointer to it, we
+		// consider it a match
+		return true
+	default:
+		return false
+	}
+}
+
+// ErrHeaderNotFound returns an error that can be passed to `errors.Is` to check if the error is
+// the result of the field not being found
+func ErrHeaderNotFound() error {
+	return headerNotFoundError{}
+}
 
 // Header is an object that allows you to access the JWS header in a quick and
 // dirty way. It does not verify anything, it does not know anything about what
@@ -21,20 +50,30 @@ import (
 // while the Header object is still in scope.
 //
 // This type is experimental and may change or be removed in the future.
-type Header = impl.Header
-
-// ErrHeaderNotFound returns an error that can be passed to `errors.Is` to check if the error is
-// the result of the field not being found.
-func ErrHeaderNotFound() error {
-	return impl.ErrHeaderNotFound()
+type Header interface {
+	// I'm hiding this behind an interface so that users won't accidentally
+	// rely on the underlying json handler implementation, nor the concrete
+	// type name that jwsbb provides, as we may choose a different one in the future.
+	jwsbbHeader()
 }
+
+type header struct {
+	v   *fastjson.Value
+	err error
+}
+
+func (h *header) jwsbbHeader() {}
 
 // HeaderParseCompact parses a JWS header from a compact serialization format.
 // You will need to call HeaderGet* functions to extract the values from the header.
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderParseCompact(buf []byte) Header {
-	return impl.HeaderParseCompact(buf)
+	decoded, err := base64.Decode(buf)
+	if err != nil {
+		return &header{err: err}
+	}
+	return HeaderParse(decoded)
 }
 
 // HeaderParse parses a JWS header from a byte slice containing the decoded JSON.
@@ -43,7 +82,60 @@ func HeaderParseCompact(buf []byte) Header {
 // Unlike HeaderParseCompact, this function does not perform any base64 decoding.
 // This function is experimental and may change or be removed in the future.
 func HeaderParse(decoded []byte) Header {
-	return impl.HeaderParse(decoded)
+	var p fastjson.Parser
+	v, err := p.ParseBytes(decoded)
+	if err != nil {
+		return &header{err: err}
+	}
+	return &header{
+		v: v,
+	}
+}
+
+// HeaderForEachKey calls fn once for each top-level parameter name in the
+// parsed header, in document order. Duplicate parameter names are reported
+// once per occurrence, so callers can detect duplicates. The name slice
+// passed to fn is only valid for the duration of the call; do not retain it.
+//
+// An error is returned if the header failed to parse or does not decode to a
+// JSON object.
+//
+// This enumeration primitive exists so that jwx-internal callers which need
+// RFC-level header rules — e.g. rejecting duplicate parameter names per
+// RFC 7515 §4, or restricting a fast path to a known set of parameters — can
+// enforce those rules themselves. HeaderParse stays deliberately spec-agnostic
+// (see the [Header] doc): the policy lives in the caller, not in this generic,
+// shared field-probe. It is deliberately NOT re-exported by the public jwsbb
+// facade — enumerating raw header parameter names is a jwx-internal concern,
+// not an end-user one.
+func HeaderForEachKey(h Header, fn func(name []byte)) error {
+	//nolint:forcetypeassert
+	hh := h.(*header) // we _know_ this can't be another type
+	if hh.err != nil {
+		return hh.err
+	}
+	obj, err := hh.v.Object()
+	if err != nil {
+		return err
+	}
+	obj.Visit(func(key []byte, _ *fastjson.Value) {
+		fn(key)
+	})
+	return nil
+}
+
+func headerGet(h Header, key string) (*fastjson.Value, error) {
+	//nolint:forcetypeassert
+	hh := h.(*header) // we _know_ this can't be another type
+	if hh.err != nil {
+		return nil, hh.err
+	}
+
+	v := hh.v.Get(key)
+	if v == nil {
+		return nil, headerNotFoundError{key: key}
+	}
+	return v, nil
 }
 
 // HeaderGetString returns the string value for the given key from the JWS header.
@@ -52,7 +144,17 @@ func HeaderParse(decoded []byte) Header {
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderGetString(h Header, key string) (string, error) {
-	return impl.HeaderGetString(h, key)
+	v, err := headerGet(h, key)
+	if err != nil {
+		return "", err
+	}
+
+	sb, err := v.StringBytes()
+	if err != nil {
+		return "", err
+	}
+
+	return string(sb), nil
 }
 
 // HeaderGetBool returns the boolean value for the given key from the JWS header.
@@ -61,7 +163,11 @@ func HeaderGetString(h Header, key string) (string, error) {
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderGetBool(h Header, key string) (bool, error) {
-	return impl.HeaderGetBool(h, key)
+	v, err := headerGet(h, key)
+	if err != nil {
+		return false, err
+	}
+	return v.Bool()
 }
 
 // HeaderGetFloat64 returns the float64 value for the given key from the JWS header.
@@ -70,7 +176,11 @@ func HeaderGetBool(h Header, key string) (bool, error) {
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderGetFloat64(h Header, key string) (float64, error) {
-	return impl.HeaderGetFloat64(h, key)
+	v, err := headerGet(h, key)
+	if err != nil {
+		return 0, err
+	}
+	return v.Float64()
 }
 
 // HeaderGetInt returns the int value for the given key from the JWS header.
@@ -79,7 +189,11 @@ func HeaderGetFloat64(h Header, key string) (float64, error) {
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderGetInt(h Header, key string) (int, error) {
-	return impl.HeaderGetInt(h, key)
+	v, err := headerGet(h, key)
+	if err != nil {
+		return 0, err
+	}
+	return v.Int()
 }
 
 // HeaderGetInt64 returns the int64 value for the given key from the JWS header.
@@ -88,7 +202,11 @@ func HeaderGetInt(h Header, key string) (int, error) {
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderGetInt64(h Header, key string) (int64, error) {
-	return impl.HeaderGetInt64(h, key)
+	v, err := headerGet(h, key)
+	if err != nil {
+		return 0, err
+	}
+	return v.Int64()
 }
 
 // HeaderGetStringBytes returns the JSON string bytes for the given key
@@ -104,14 +222,20 @@ func HeaderGetInt64(h Header, key string) (int64, error) {
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderGetStringBytes(h Header, key string) ([]byte, error) {
-	return impl.HeaderGetStringBytes(h, key)
+	v, err := headerGet(h, key)
+	if err != nil {
+		return nil, err
+	}
+
+	return v.StringBytes()
 }
 
 // HeaderHas returns true if the given key exists in the JWS header.
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderHas(h Header, key string) bool {
-	return impl.HeaderHas(h, key)
+	_, err := headerGet(h, key)
+	return err == nil
 }
 
 // HeaderGetStringArray returns a string array for the given key from the JWS header.
@@ -120,7 +244,25 @@ func HeaderHas(h Header, key string) bool {
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderGetStringArray(h Header, key string) ([]string, error) {
-	return impl.HeaderGetStringArray(h, key)
+	v, err := headerGet(h, key)
+	if err != nil {
+		return nil, err
+	}
+
+	arr, err := v.Array()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]string, len(arr))
+	for i, item := range arr {
+		sb, err := item.StringBytes()
+		if err != nil {
+			return nil, err
+		}
+		result[i] = string(sb)
+	}
+	return result, nil
 }
 
 // HeaderGetUint returns the uint value for the given key from the JWS header.
@@ -129,7 +271,11 @@ func HeaderGetStringArray(h Header, key string) ([]string, error) {
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderGetUint(h Header, key string) (uint, error) {
-	return impl.HeaderGetUint(h, key)
+	v, err := headerGet(h, key)
+	if err != nil {
+		return 0, err
+	}
+	return v.Uint()
 }
 
 // HeaderGetUint64 returns the uint64 value for the given key from the JWS header.
@@ -138,5 +284,10 @@ func HeaderGetUint(h Header, key string) (uint, error) {
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderGetUint64(h Header, key string) (uint64, error) {
-	return impl.HeaderGetUint64(h, key)
+	v, err := headerGet(h, key)
+	if err != nil {
+		return 0, err
+	}
+
+	return v.Uint64()
 }
