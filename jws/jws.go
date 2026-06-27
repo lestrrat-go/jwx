@@ -974,6 +974,8 @@ func Settings(options ...GlobalOption) error {
 //   - "alg" is present exactly once (a missing "alg" is reported separately,
 //     via the cross-check described above, not as ErrNonMinimalHeader);
 //   - "typ", "kid", and "cty" each appear at most once;
+//   - "typ", "kid", and "cty", when present, have JSON string values (a
+//     non-string value, which jws.Verify rejects, is refused here too);
 //   - no other parameter is present — this excludes "crit" and "b64" (which
 //     have their own dedicated refusals, see above), key-source parameters
 //     such as "jwk"/"jku"/"x5u"/"x5c", and any unknown parameter;
@@ -1120,6 +1122,29 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 			reason = `duplicate "cty"`
 		}
 		return nil, verifyError{fmt.Errorf(`%w (%s)`, errNonMinimalHeader, reason)}
+	}
+
+	// The optional descriptive parameters must be JSON strings, matching what
+	// jws.Verify's typed encoding/json/v2 header decode accepts. Without this,
+	// a genuinely-signed header like {"alg":"HS256","typ":123} would pass the
+	// name-count gate here yet be rejected by jws.Verify — the same fast/slow
+	// divergence the gate exists to prevent. HeaderGetStringBytes reports a
+	// non-string value without copying it, so this stays allocation-free; only
+	// headers that actually carry typ/kid/cty pay the (negligible) lookup.
+	if typN == 1 {
+		if _, err := jwsbbi.HeaderGetStringBytes(parsedHdr, TypeKey); err != nil {
+			return nil, verifyError{fmt.Errorf(`%w (non-string "typ")`, errNonMinimalHeader)}
+		}
+	}
+	if kidN == 1 {
+		if _, err := jwsbbi.HeaderGetStringBytes(parsedHdr, KeyIDKey); err != nil {
+			return nil, verifyError{fmt.Errorf(`%w (non-string "kid")`, errNonMinimalHeader)}
+		}
+	}
+	if ctyN == 1 {
+		if _, err := jwsbbi.HeaderGetStringBytes(parsedHdr, ContentTypeKey); err != nil {
+			return nil, verifyError{fmt.Errorf(`%w (non-string "cty")`, errNonMinimalHeader)}
+		}
 	}
 
 	// Cross-check the protected header "alg" against the caller-supplied

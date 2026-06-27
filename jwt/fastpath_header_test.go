@@ -59,4 +59,20 @@ func TestParseDuplicateHeaderParameters(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, "alice", sub)
 	})
+
+	t.Run("non-string typ rejected by every entry point", func(t *testing.T) {
+		// A genuinely-signed header with a non-string "typ" is rejected by
+		// jws.Verify (json/v2 typed decode); the fast path must agree rather
+		// than accept it, or jwt.Parse would be laxer than jws.Verify.
+		badTyp := signHS256Compact(key, `{"alg":"HS256","typ":123}`, payload)
+
+		_, err := jws.Verify(badTyp, jws.WithKey(jwa.HS256(), key))
+		require.Error(t, err, `jws.Verify must reject a non-string typ`)
+
+		_, err = jws.VerifyCompactFast(key, badTyp, jwa.HS256())
+		require.Error(t, err, `jws.VerifyCompactFast must reject a non-string typ`)
+
+		_, err = jwt.Parse(badTyp, jwt.WithKey(jwa.HS256(), key), jwt.WithValidate(false))
+		require.Error(t, err, `jwt.Parse must reject a non-string typ`)
+	})
 }

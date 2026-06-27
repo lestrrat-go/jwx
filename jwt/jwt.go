@@ -159,13 +159,15 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // would. In particular a protected header with duplicate parameter names is
 // rejected, matching `jws.Verify`.
 //
-// The fast path is not a perfect mirror of `jws.Verify`'s header parsing: it
-// checks parameter *names*, not value types, so it can accept a narrow set of
-// unusual-but-genuinely-signed minimal headers that a full `jws.Verify` parse
-// would reject — e.g. a non-string `typ`/`kid`/`cty` value. The signature is
-// always verified, so this is a parser-strictness difference, not a security
-// bypass; if you need byte-for-byte `jws.Verify` header validation, call
-// `jws.Verify` directly.
+// The fast path is a close but not byte-for-byte mirror of `jws.Verify`'s
+// header parsing. It validates parameter names and that `alg`/`typ`/`kid`/`cty`
+// are JSON strings, so the common divergences — duplicate names, non-string
+// scalar values — are rejected, matching `jws.Verify`. A residual gap remains
+// only for value-level leniency the fast JSON parser tolerates but
+// `encoding/json/v2` does not (e.g. certain control characters inside a JSON
+// string); for byte-for-byte `jws.Verify` header validation, call `jws.Verify`
+// directly. The signature is always verified, so any residual difference is a
+// parser-strictness nuance, not a security bypass.
 func Parse(s []byte, options ...ParseOption) (Token, error) {
 	tok, err := parseBytes(s, options...)
 	if err != nil {

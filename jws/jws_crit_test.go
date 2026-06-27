@@ -592,6 +592,9 @@ func TestVerifyCompactFastMinimalHeaderShape(t *testing.T) {
 			{"nested duplicate", `{"alg":"HS256","extra":[{"a":1,"a":2}]}`, `"extra"`},
 			{"escaped key", "{\"\\u0061lg\":\"HS256\"}", `escape sequence`},
 			{"escaped duplicate", "{\"alg\":\"HS256\",\"\\u0061lg\":\"none\"}", `escape sequence`},
+			{"non-string typ", `{"alg":"HS256","typ":123}`, `non-string "typ"`},
+			{"non-string kid", `{"alg":"HS256","kid":123}`, `non-string "kid"`},
+			{"non-string cty", `{"alg":"HS256","cty":{"x":1}}`, `non-string "cty"`},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				compact := signHS256Compact(key, tc.hdr)
