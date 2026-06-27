@@ -155,9 +155,17 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // `jws.VerifyCompactFast` for the exact shape), and any other header —
 // including one carrying duplicate, unknown, or key-source parameters,
 // `crit`, or `b64` — is automatically reverified through the full
-// `jws.Verify` path. The accept/reject outcome is identical either way; only
-// performance differs. In particular a protected header with duplicate
-// parameter names is rejected, matching `jws.Verify`.
+// `jws.Verify` path, so it is never accepted more leniently than `jws.Verify`
+// would. In particular a protected header with duplicate parameter names is
+// rejected, matching `jws.Verify`.
+//
+// The fast path is not a perfect mirror of `jws.Verify`'s header parsing: it
+// checks parameter *names*, not value types, so it can accept a narrow set of
+// unusual-but-genuinely-signed minimal headers that a full `jws.Verify` parse
+// would reject — e.g. a non-string `typ`/`kid`/`cty` value. The signature is
+// always verified, so this is a parser-strictness difference, not a security
+// bypass; if you need byte-for-byte `jws.Verify` header validation, call
+// `jws.Verify` directly.
 func Parse(s []byte, options ...ParseOption) (Token, error) {
 	tok, err := parseBytes(s, options...)
 	if err != nil {
