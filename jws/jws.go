@@ -1017,7 +1017,7 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// require escaping, so this refuses nothing a conformant minimal producer
 	// would emit.
 	if bytes.IndexByte(decodedHdr, '\\') >= 0 {
-		return nil, verifyError{errNonMinimalHeader}
+		return nil, verifyError{fmt.Errorf(`%w (header contains a JSON escape sequence)`, errNonMinimalHeader)}
 	}
 
 	// Header probing uses the jwx-internal jwsbb package directly: the
@@ -1080,6 +1080,7 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// Gating on shape and handing anything unusual to the authoritative slow
 	// path is both cheaper and more complete than making the parser spec-aware.
 	var algN, typN, kidN, ctyN, others int
+	var firstOther string
 	if err := jwsbbi.HeaderForEachKey(parsedHdr, func(name []byte) {
 		switch string(name) {
 		case AlgorithmKey:
@@ -1091,15 +1092,34 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 		case ContentTypeKey:
 			ctyN++
 		default:
+			if firstOther == "" {
+				firstOther = string(name)
+			}
 			others++
 		}
 	}); err != nil {
-		// Header is not a JSON object (or failed to parse); let jws.Verify
+		// Header failed to parse or is not a JSON object; let jws.Verify
 		// produce the authoritative error.
-		return nil, verifyError{errNonMinimalHeader}
+		return nil, verifyError{fmt.Errorf(`%w (protected header is not a valid JSON object)`, errNonMinimalHeader)}
 	}
+	// Refuse, naming the specific trigger so the refusal is debuggable. The
+	// error still wraps errNonMinimalHeader, so errors.Is classification
+	// (ErrNonMinimalHeader / VerifyError) is unchanged.
 	if others > 0 || algN > 1 || typN > 1 || kidN > 1 || ctyN > 1 {
-		return nil, verifyError{errNonMinimalHeader}
+		var reason string
+		switch {
+		case others > 0:
+			reason = fmt.Sprintf(`unexpected protected header parameter %q`, firstOther)
+		case algN > 1:
+			reason = `duplicate "alg"`
+		case typN > 1:
+			reason = `duplicate "typ"`
+		case kidN > 1:
+			reason = `duplicate "kid"`
+		default: // ctyN > 1
+			reason = `duplicate "cty"`
+		}
+		return nil, verifyError{fmt.Errorf(`%w (%s)`, errNonMinimalHeader, reason)}
 	}
 
 	// Cross-check the protected header "alg" against the caller-supplied

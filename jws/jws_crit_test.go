@@ -581,14 +581,17 @@ func TestVerifyCompactFastMinimalHeaderShape(t *testing.T) {
 	})
 
 	t.Run("non-minimal shapes are refused with ErrNonMinimalHeader", func(t *testing.T) {
-		for _, tc := range []struct{ name, hdr string }{
-			{"duplicate alg", `{"alg":"HS256","alg":"none"}`},
-			{"duplicate typ", `{"alg":"HS256","typ":"JWT","typ":"JWT"}`},
-			{"unknown parameter", `{"alg":"HS256","x5t":"abc"}`},
-			{"key-source parameter", `{"alg":"HS256","jwk":{"kty":"oct"}}`},
-			{"nested duplicate", `{"alg":"HS256","extra":[{"a":1,"a":2}]}`},
-			{"escaped key", "{\"\\u0061lg\":\"HS256\"}"},
-			{"escaped duplicate", "{\"alg\":\"HS256\",\"\\u0061lg\":\"none\"}"},
+		// wantMsg is a substring the refusal error must name, so the umbrella
+		// stays debuggable (the caller can see WHICH rule fired, not just that
+		// the header was non-minimal).
+		for _, tc := range []struct{ name, hdr, wantMsg string }{
+			{"duplicate alg", `{"alg":"HS256","alg":"none"}`, `duplicate "alg"`},
+			{"duplicate typ", `{"alg":"HS256","typ":"JWT","typ":"JWT"}`, `duplicate "typ"`},
+			{"unknown parameter", `{"alg":"HS256","x5t":"abc"}`, `"x5t"`},
+			{"key-source parameter", `{"alg":"HS256","jwk":{"kty":"oct"}}`, `"jwk"`},
+			{"nested duplicate", `{"alg":"HS256","extra":[{"a":1,"a":2}]}`, `"extra"`},
+			{"escaped key", "{\"\\u0061lg\":\"HS256\"}", `escape sequence`},
+			{"escaped duplicate", "{\"alg\":\"HS256\",\"\\u0061lg\":\"none\"}", `escape sequence`},
 		} {
 			t.Run(tc.name, func(t *testing.T) {
 				compact := signHS256Compact(key, tc.hdr)
@@ -596,6 +599,7 @@ func TestVerifyCompactFastMinimalHeaderShape(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, jws.ErrNonMinimalHeader(), `specific sentinel must match`)
 				require.ErrorIs(t, err, jws.VerifyError(), `refusal must also match jws.VerifyError() class`)
+				require.ErrorContains(t, err, tc.wantMsg, `refusal must name the specific trigger`)
 			})
 		}
 	})
