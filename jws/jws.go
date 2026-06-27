@@ -1021,8 +1021,8 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// can diverge from encoding/json/v2 (which jws.Verify uses). Rather than
 	// reason about that, defer any escape-bearing header to jws.Verify. The
 	// header parameter names the fast path handles (alg/typ/kid/cty) never
-	// require escaping, so this refuses nothing a conformant minimal producer
-	// would emit.
+	// require escaping; an escape in a value (e.g. a "kid" containing a quote
+	// or a control char) is simply deferred to jws.Verify, which handles it.
 	if bytes.IndexByte(decodedHdr, '\\') >= 0 {
 		return nil, verifyError{fmt.Errorf(`%w (header contains a JSON escape sequence)`, errNonMinimalHeader)}
 	}
