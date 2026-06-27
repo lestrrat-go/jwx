@@ -44,7 +44,7 @@ func ErrHeaderNotFound() error {
 // But when you need to access the JWS header for that one field that you
 // need, this is the object you want to use.
 //
-// As of this writing, HeaderParser cannot be used from concurrent goroutines.
+// As of this writing, Header cannot be used from concurrent goroutines.
 // You will need to create a new instance for each goroutine that needs to parse a JWS header.
 // Also, in general values obtained from this object should only be used
 // while the Header object is still in scope.
