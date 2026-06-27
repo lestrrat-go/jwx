@@ -56,6 +56,7 @@ import (
 	"github.com/lestrrat-go/jwx/v4/internal/tokens"
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwk"
+	jwsbbi "github.com/lestrrat-go/jwx/v4/jws/internal/jwsbb"
 	"github.com/lestrrat-go/jwx/v4/jws/jwsbb"
 )
 
@@ -1019,7 +1020,10 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 		return nil, verifyError{errNonMinimalHeader}
 	}
 
-	parsedHdr := jwsbb.HeaderParse(decodedHdr)
+	// Header probing uses the jwx-internal jwsbb package directly: the
+	// enumeration primitive (HeaderForEach) the minimal-shape gate below needs
+	// is intentionally not part of the public jwsbb facade.
+	parsedHdr := jwsbbi.HeaderParse(decodedHdr)
 
 	// Refuse crit-bearing messages: the fast path has no WithCritExtension
 	// allowlist, so accepting them would silently violate RFC 7515 §4.1.11.
@@ -1028,7 +1032,7 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// The sentinel is wrapped in verifyError so the same error also matches
 	// errors.Is(err, jws.VerifyError()) — fast-path refusals are a verify
 	// error, just one with a more specific classification available.
-	if jwsbb.HeaderHas(parsedHdr, CriticalKey) {
+	if jwsbbi.HeaderHas(parsedHdr, CriticalKey) {
 		return nil, verifyError{errCritPresent}
 	}
 
@@ -1042,7 +1046,7 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// / WithCritExtension machinery to handle b64=false correctly. As with
 	// the crit refusal above, the sentinel is wrapped in verifyError so the
 	// same error matches both jws.ErrB64Present() and jws.VerifyError().
-	if jwsbb.HeaderHas(parsedHdr, B64Key) {
+	if jwsbbi.HeaderHas(parsedHdr, B64Key) {
 		return nil, verifyError{errB64Present}
 	}
 
@@ -1076,7 +1080,7 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// Gating on shape and handing anything unusual to the authoritative slow
 	// path is both cheaper and more complete than making the parser spec-aware.
 	var algN, typN, kidN, ctyN, others int
-	if err := jwsbb.HeaderForEach(parsedHdr, func(name []byte) {
+	if err := jwsbbi.HeaderForEach(parsedHdr, func(name []byte) {
 		switch string(name) {
 		case AlgorithmKey:
 			algN++
@@ -1104,7 +1108,7 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// advertises and the discipline under which we verify is the sort of
 	// silent divergence that downstream code (e.g. JWT consumers) should
 	// not be asked to re-discover on its own.
-	hdrAlg, err := jwsbb.HeaderGetString(parsedHdr, AlgorithmKey)
+	hdrAlg, err := jwsbbi.HeaderGetString(parsedHdr, AlgorithmKey)
 	if err != nil {
 		return nil, verifyError{verificationError{fmt.Errorf(`jws.Verify: failed to extract %q from protected header: %w`, AlgorithmKey, err)}}
 	}
