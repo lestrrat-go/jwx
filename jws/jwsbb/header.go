@@ -6,7 +6,7 @@ import (
 
 // This file is a thin public facade over jws/internal/jwsbb. The header probe
 // implementation lives in the internal package so that jwx-internal-only
-// helpers (e.g. HeaderForEach) can be shared across the module without being
+// helpers (e.g. HeaderForEachKey) can be shared across the module without being
 // exposed to end users. Everything below simply re-exports the internal API.
 
 // Header is an object that allows you to access the JWS header in a quick and

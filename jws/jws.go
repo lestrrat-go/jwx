@@ -1021,7 +1021,7 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	}
 
 	// Header probing uses the jwx-internal jwsbb package directly: the
-	// enumeration primitive (HeaderForEach) the minimal-shape gate below needs
+	// enumeration primitive (HeaderForEachKey) the minimal-shape gate below needs
 	// is intentionally not part of the public jwsbb facade.
 	parsedHdr := jwsbbi.HeaderParse(decodedHdr)
 
@@ -1080,7 +1080,7 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// Gating on shape and handing anything unusual to the authoritative slow
 	// path is both cheaper and more complete than making the parser spec-aware.
 	var algN, typN, kidN, ctyN, others int
-	if err := jwsbbi.HeaderForEach(parsedHdr, func(name []byte) {
+	if err := jwsbbi.HeaderForEachKey(parsedHdr, func(name []byte) {
 		switch string(name) {
 		case AlgorithmKey:
 			algN++

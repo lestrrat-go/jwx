@@ -2,7 +2,7 @@
 //
 // The public, end-user-facing API lives in github.com/lestrrat-go/jwx/v4/jws/jwsbb,
 // which is a thin facade over this package. Symbols that should be usable by
-// jwx-internal code but NOT exposed to end users (e.g. HeaderForEach) live
+// jwx-internal code but NOT exposed to end users (e.g. HeaderForEachKey) live
 // here and are simply not re-exported by the facade.
 package jwsbb
 
@@ -92,7 +92,7 @@ func HeaderParse(decoded []byte) Header {
 	}
 }
 
-// HeaderForEach calls fn once for each top-level parameter name in the
+// HeaderForEachKey calls fn once for each top-level parameter name in the
 // parsed header, in document order. Duplicate parameter names are reported
 // once per occurrence, so callers can detect duplicates. The name slice
 // passed to fn is only valid for the duration of the call; do not retain it.
@@ -108,7 +108,7 @@ func HeaderParse(decoded []byte) Header {
 // shared field-probe. It is deliberately NOT re-exported by the public jwsbb
 // facade — enumerating raw header parameter names is a jwx-internal concern,
 // not an end-user one.
-func HeaderForEach(h Header, fn func(name []byte)) error {
+func HeaderForEachKey(h Header, fn func(name []byte)) error {
 	//nolint:forcetypeassert
 	hh := h.(*header) // we _know_ this can't be another type
 	if hh.err != nil {
