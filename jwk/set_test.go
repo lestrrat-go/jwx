@@ -17,8 +17,7 @@ func TestSet(t *testing.T) {
 		jwxtest.GenerateSymmetricJwk,
 	}
 
-	//nolint:prealloc
-	var keys []jwk.Key
+	keys := make([]jwk.Key, 0, len(keygens))
 	for _, gen := range keygens {
 		k, err := gen()
 		if !assert.NoError(t, err, `key generation should succeed`) {

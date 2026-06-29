@@ -11,7 +11,7 @@ func TestStringList_Accept(t *testing.T) {
 	t.Parallel()
 
 	var x types.StringList
-	interfaceList := make([]interface{}, 0)
+	interfaceList := make([]interface{}, 0, 2)
 	interfaceList = append(interfaceList, "first")
 	interfaceList = append(interfaceList, "second")
 	if !assert.NoError(t, x.Accept(interfaceList), "failed to convert []interface{} into StringList") {

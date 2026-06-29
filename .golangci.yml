@@ -5,6 +5,7 @@ linters:
     - cyclop
     - depguard
     - dupl
+    - embeddedstructfieldcheck
     - err113
     - errorlint
     - exhaustive
@@ -15,6 +16,7 @@ linters:
     - gocognit
     - gocritic
     - gocyclo
+    - godoclint # disable for v2.
     - godot
     - godox
     - gosec
@@ -26,9 +28,11 @@ linters:
     - maintidx
     - makezero
     - mnd
+    - modernize
     - nakedret
     - nestif
     - nlreturn
+    - noinlineerr
     - nonamedreturns
     - paralleltest
     - perfsprint
@@ -41,6 +45,7 @@ linters:
     - varnamelen
     - wrapcheck
     - wsl
+    - wsl_v5
   settings:
     govet:
       disable:
@@ -96,6 +101,14 @@ linters:
           - revive
         path: /*_test.go
         text: 'var-naming: '
+      - linters:
+          - revive
+        path: /internal/*
+        text: 'var-naming: '
+      - linters:
+          - revive
+        path: internal/*
+        text: 'var-naming: avoid package names that conflict'
     paths:
       - third_party$
       - builtin$
