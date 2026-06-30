@@ -12,7 +12,72 @@ UNRELEASED
     (RFC 9864) are now treated as distinct, so cross-identifier verification
     that previously succeeded is rejected by default — this is an RFC 9864
     conformance fix. Pass the new `jws.WithSkipAlgorithmMatch(true)` option to
-    restore the lenient behavior.
+    restore the lenient behavior. (#2212)
+
+  * [jws][jwt] Closed a gap where `jwt.Parse` and `jws.VerifyCompactFast`
+    (the compact-JWS fast path) were more lenient than `jws.Verify` about
+    the protected header. A token whose protected header has duplicate
+    parameter names (e.g. two `alg` entries) or a non-string `typ`/`kid`/
+    `cty` value used to verify successfully on the fast path even though
+    `jws.Verify` rejects it; `jwt.Parse` now rejects it too, so such a token
+    can no longer slip through one entry point but not the other. Well-formed
+    tokens are unaffected.
+
+    Direct callers of `jws.VerifyCompactFast` see one further change: a
+    protected header carrying anything beyond `alg` plus an optional
+    `typ`/`kid`/`cty` — for example `x5t`, `jku`, or a custom parameter —
+    now returns the new sentinel `jws.ErrNonMinimalHeader()` instead of
+    verifying. Route those through `jws.Verify` (which is what `jwt.Parse`
+    now does for you automatically). (#2236)
+
+  * [jws] Passing a non-nil payload together with `jws.WithDetachedPayload`
+    is now an error instead of being silently accepted; a detached payload
+    must be supplied only through the option. (#2211)
+
+  * [jwe] `jwe.Decrypt` now rejects a message whose authentication tag or
+    initialization vector is not the length required by the content
+    encryption algorithm, rather than attempting to decrypt it. (#2207)
+
+  * [jwe] Messages using AES-CBC-HMAC with a very large amount of additional
+    authenticated data now decrypt correctly; the AAD bit length is computed
+    as a 64-bit value rather than potentially overflowing. (#2198)
+
+  * [jwe] The `zip` (compression) parameter is honored only from the
+    protected header. A `zip` set in a per-recipient or unprotected header
+    is ignored and can no longer trigger decompression. (#2206)
+
+  * [jwe] PBES2 decryption now rejects a `p2s` (salt) shorter than the
+    8-octet minimum required by RFC 7518. (#2208)
+
+  * [jwe] Direct key agreement (`alg: "dir"`, including ML-KEM) now rejects
+    a message that also carries a non-empty `encrypted_key`, which direct
+    mode does not allow. (#2209, #2223)
+
+  * [jwk] An Ed25519 key whose byte length is wrong is now rejected at
+    import/parse, instead of being accepted as an unusable key. (#2201)
+
+  * [jwk] An EC key with a nil curve, or with a private scalar `d` larger
+    than the curve order, is now rejected at import. (#2199)
+
+  * [jwk] The `use` value is now validated when a key is parsed; an
+    unrecognized value is rejected. (#2205)
+
+  * [jwk] Computing a thumbprint with a hash whose implementation is not
+    linked into the binary now returns an error instead of panicking. (#2200)
+
+  * [jwt] `jwt.Validate` no longer panics when given a nil clock or a nil
+    validator. (#2202)
+
+  * [jwt] Reusing a token value across parses no longer carries over private
+    claims from a previous parse; they are cleared on unmarshal. (#2203)
+
+  * [jwt] A `jwt.Settings()` call changes only the options you pass;
+    previously, settings you did not specify (such as flatten-audience or
+    pedantic mode) were reset to their defaults. (#2204)
+
+  * [jws][jwk][jwe][jwt] A custom JSON field decoder that registers or
+    unregisters a decoder while it runs no longer deadlocks; the registry
+    read lock is released before your decoder is invoked. (#2197)
 
 v4.0.2 7 May 2026
   * [jwk] BREAKING: `jwk.RegisterKeyImporter` now takes a
