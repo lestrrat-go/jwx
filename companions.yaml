@@ -24,7 +24,6 @@ modules:
   - name: jwkfetch
     repo: git@github.com:jwx-go/jwkfetch.git
     branch: develop/v4
-    runtests: false
   - name: jwxfilter
     repo: git@github.com:jwx-go/jwxfilter.git
     branch: develop/v4
