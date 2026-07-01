@@ -4,7 +4,7 @@ Changes
 v4 has many incompatibilities with v3. To see the full list of differences between
 v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MICRATION-v4.md)
 
-UNRELEASED
+v4.1.0 1 July 2026
   * [jws] `jws.Verify` now rejects a JWS whose protected header `"alg"`
     does not match the algorithm used to verify it (previously the
     non-fast-path `jws.Verify` ignored this). In particular the polymorphic
