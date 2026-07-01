@@ -249,7 +249,7 @@ Read linked doc BEFORE working in that area. No exceptions.
 | Understanding package relationships, imports | `agents/docs/dependencies.md` |
 | Working with errors, error handling patterns | `agents/docs/error-formatting.md` |
 | Code generation, options pattern, extension points, JSON/base64 backends | `agents/docs/internals.md` |
-| Extension modules (ES256K, Ed448, ML-DSA, ML-KEM, X448, compsig, asmbase64, jwkcache) | `docs/10-extensions.md` |
+| Extension modules (ES256K, Ed448, ML-DSA, ML-KEM, X448, compsig, asmbase64, jwkfetch) | `docs/10-extensions.md` |
 | Companion modules, CI templates, `/jwx-companion-bulk` | `agents/docs/companions.md` |
 | Reverse-syncing action versions from companion workflows into templates | `agents/docs/companion-template-sync.md` |
 | Cutting a release / tagging a new version | `agents/docs/release.md` |
