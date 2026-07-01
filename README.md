@@ -38,7 +38,7 @@ If you are migrating from `github.com/lestrrat-go/jwx/v3`, see [`MIGRATION.md`](
 | **Opinionated, uniform API** | Everything is symmetric and follows a standard convention: `jws.Parse`/`Verify`/`Sign`, `jwe.Parse`/`Encrypt`/`Decrypt`. Arguments are organized as explicit required parameters and optional `WithXXXX()` style options. |
 | **Post-quantum cryptography** | Supports ML-KEM, ML-DSA, and HPKE. |
 | **Extension module architecture** | Opt-in features via extension modules. See [Extension Modules](docs/10-extensions.md). |
-| **JWK Caching** | [`jwkcache`](https://github.com/jwx-go/jwkcache) extension to always keep a JWKS up-to-date. |
+| **JWK Caching** | [`jwkfetch`](https://github.com/jwx-go/jwkfetch) extension to always keep a JWKS up-to-date. |
 | **Bazel Support** | [Bazel](https://bazel.build)-ready. |
 
 # SYNOPSIS
@@ -235,7 +235,7 @@ to specify alternate structs to parse objects with custom fields)
 In the end I think it comes down to your usage pattern, and priorities.
 Some general guidelines that come to mind are:
 
-* If you want a single library to handle everything JWx, such as using JWE, JWK, JWS, handling [auto-refreshing JWKs](https://github.com/jwx-go/jwkcache), use this module.
+* If you want a single library to handle everything JWx, such as using JWE, JWK, JWS, handling [auto-refreshing JWKs](https://github.com/jwx-go/jwkfetch), use this module.
 * If you want to honor all possible custom fields transparently, use this module.
 * If you want a standardized clean API, use this module.
 

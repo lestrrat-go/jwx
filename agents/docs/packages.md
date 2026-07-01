@@ -41,7 +41,7 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 - **AssignKeyID(key Key, ...AssignKeyIDOption) error** — compute and set kid via thumbprint
 - PEM output moved to `jwkbb.EncodePEM(keys ...any)`; unwrap via `jwk.Export[any]` / `jwk.ExportAll[any]` first
 - Global options: `WithStrictKeyUsage(bool)`, `WithMinRSAModulusBits(int)`, `WithMinRSAPublicExponent(int)`, `WithMaxKeys(int)` (also accepted as a per-call `ParseOption`; caps `"keys"` array + PEM block count at 1000 by default)
-- JWKS caching moved to `github.com/jwx-go/jwkcache` — see [Extension Modules](../../docs/10-extensions.md)
+- HTTP JWK Set retrieval + caching moved to `github.com/jwx-go/jwkfetch` — see [Extension Modules](../../docs/10-extensions.md)
 - Key interfaces: `Key`, `Set`, `RSAPublicKey`, `RSAPrivateKey`, `ECDSAPublicKey`, `ECDSAPrivateKey`, `OKPPublicKey`, `OKPPrivateKey`, `SymmetricKey`, `AKPPublicKey`, `AKPPrivateKey` (post-quantum, used by mldsa/mlkem extensions)
 - Extension: `RegisterCustomField[T]()`, `RegisterCustomDecoder[T]()`, `RegisterKeyParser()`, `RegisterKeyImporter()`, `RegisterKeyExporter()`
 - Error sentinels: `ImportError()`, `ParseError()`, `WhitelistError()`, `ContinueError()`
