@@ -363,7 +363,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	if proxy.Headers != nil || len(proxy.EncryptedKey) > 0 {
 		recipient := NewRecipient()
 
-		// `"heders"` could be empty. If that's the case, just skip the
+		// `"headers"` could be empty. If that's the case, just skip the
 		// following unmarshaling step
 		if proxy.Headers != nil {
 			hdrs := NewHeaders()
