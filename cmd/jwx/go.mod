@@ -6,8 +6,8 @@ require (
 	github.com/lestrrat-go/jwx/v3 v3.0.8
 	github.com/stretchr/testify v1.11.1
 	github.com/urfave/cli/v2 v2.26.0
-	golang.org/x/crypto v0.53.0
-	golang.org/x/term v0.44.0
+	golang.org/x/crypto v0.54.0
+	golang.org/x/term v0.45.0
 )
 
 require (
@@ -26,7 +26,7 @@ require (
 	github.com/segmentio/asm v1.2.1 // indirect
 	github.com/valyala/fastjson v1.6.10 // indirect
 	github.com/xrash/smetrics v0.0.0-20231213231151-1d8dd44e695e // indirect
-	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
