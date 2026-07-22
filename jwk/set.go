@@ -209,7 +209,12 @@ func (s *set) setMaxKeys(n int) {
 	s.maxKeys = n
 }
 
-func (s *set) setRejectDuplicateKID(v bool) {
+// setRejectDuplicateKID stores the reject-duplicate-kid value resolved by
+// Parse (global default already merged with any per-call option). A nil
+// pointer means "not resolved" — UnmarshalJSONFrom then falls back to the
+// global setting. The pointer form lets a per-call false override a global
+// true, which a plain bool scratch field cannot express.
+func (s *set) setRejectDuplicateKID(v *bool) {
 	s.rejectDuplicateKID = v
 }
 
@@ -256,7 +261,10 @@ func (s *set) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 	if maxK <= 0 {
 		maxK = int(maxKeys.Load())
 	}
-	rejectDupKid := s.rejectDuplicateKID || rejectDuplicateKID.Load()
+	rejectDupKid := rejectDuplicateKID.Load()
+	if s.rejectDuplicateKID != nil {
+		rejectDupKid = *s.rejectDuplicateKID
+	}
 	strict := strictKeySetParsing.Load()
 	if s.strictKeySetParsing != nil {
 		strict = *s.strictKeySetParsing

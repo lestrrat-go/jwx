@@ -2842,6 +2842,23 @@ func TestRejectDuplicateKID(t *testing.T) {
 		require.Contains(t, err.Error(), `same-kid`)
 	})
 
+	t.Run("per-call false overrides global true", func(t *testing.T) {
+		require.NoError(t, jwk.Settings(jwk.WithRejectDuplicateKID(true)))
+		t.Cleanup(func() {
+			require.NoError(t, jwk.Settings(jwk.WithRejectDuplicateKID(false)))
+		})
+		set, err := jwk.Parse(dupPayload, jwk.WithRejectDuplicateKID(false))
+		require.NoError(t, err, `per-call WithRejectDuplicateKID(false) must override the global true`)
+		require.Equal(t, 2, set.Len(), `both keys should be in the set`)
+	})
+
+	t.Run("per-call true overrides global false", func(t *testing.T) {
+		require.NoError(t, jwk.Settings(jwk.WithRejectDuplicateKID(false)))
+		_, err := jwk.Parse(dupPayload, jwk.WithRejectDuplicateKID(true))
+		require.Error(t, err, `per-call WithRejectDuplicateKID(true) must override the global false`)
+		require.Contains(t, err.Error(), `same-kid`)
+	})
+
 	t.Run("empty kid entries are ignored", func(t *testing.T) {
 		// Two keys, neither carrying a kid. Reject-duplicates should
 		// still accept — the setting targets explicit duplicates, not
