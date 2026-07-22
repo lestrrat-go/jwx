@@ -69,6 +69,7 @@ func TestUnsupportedKeyRejectedAcrossKeyPaths(t *testing.T) {
 	require.NoError(t, err, `jwe.Encrypt to the usable key should succeed`)
 
 	t.Run("WithKeySet decrypts via the usable key and never the placeholder", func(t *testing.T) {
+		t.Parallel()
 		set, _ := parseSetWithPlaceholder(t, usableKeyJSON)
 
 		var used any
@@ -85,6 +86,7 @@ func TestUnsupportedKeyRejectedAcrossKeyPaths(t *testing.T) {
 	})
 
 	t.Run("WithKeySet containing only the placeholder fails with no plaintext", func(t *testing.T) {
+		t.Parallel()
 		setJSON := []byte(`{"keys":[` + unsupportedKeyEntry + `]}`)
 		set, err := jwk.Parse(setJSON, jwk.WithStrictKeySetParsing(false))
 		require.NoError(t, err, `jwk.Parse in retain mode should succeed`)
@@ -100,6 +102,7 @@ func TestUnsupportedKeyRejectedAcrossKeyPaths(t *testing.T) {
 	})
 
 	t.Run("direct WithKey with the placeholder fails for Decrypt and Encrypt", func(t *testing.T) {
+		t.Parallel()
 		_, placeholder := parseSetWithPlaceholder(t, usableKeyJSON)
 
 		plaintext, err := jwe.Decrypt(ciphertext, jwe.WithKey(jwa.RSA_OAEP(), placeholder))
@@ -114,6 +117,7 @@ func TestUnsupportedKeyRejectedAcrossKeyPaths(t *testing.T) {
 	})
 
 	t.Run("custom KeyProvider that sinks the placeholder fails with no plaintext", func(t *testing.T) {
+		t.Parallel()
 		_, placeholder := parseSetWithPlaceholder(t, usableKeyJSON)
 
 		provider := jwe.KeyProviderFunc(func(_ context.Context, sink jwe.KeySink, _ jwe.Recipient, _ *jwe.Message) error {
