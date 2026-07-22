@@ -122,6 +122,23 @@ func (s recordingSigner) Sign(_ any, _ []byte) ([]byte, error) {
 	return []byte("bogus"), nil
 }
 
+// recordingLegacySigner is a legacy jws.Signer that records whether
+// Sign was ever invoked. Its Sign signature (payload, key) matches the
+// legacy Signer interface required by the deprecated (*Signature).Sign.
+type recordingLegacySigner struct {
+	alg    jwa.SignatureAlgorithm
+	called *bool
+}
+
+func (s recordingLegacySigner) Algorithm() jwa.SignatureAlgorithm {
+	return s.alg
+}
+
+func (s recordingLegacySigner) Sign(_ []byte, _ any) ([]byte, error) {
+	*s.called = true
+	return []byte("bogus"), nil
+}
+
 // recordingVerifier is a custom Verifier2 that records whether Verify
 // was ever invoked.
 type recordingVerifier struct {
@@ -163,6 +180,24 @@ func TestSignWithKeyRejectsPlaceholderBeforeCustomSigner(t *testing.T) {
 	_, err := jws.Sign([]byte("hello world"), jws.WithKey(alg, placeholder))
 	require.Error(t, err)
 	require.False(t, called, "custom signer must not be invoked with a placeholder")
+	require.Contains(t, err.Error(), "foo1", "error should name the kid")
+	require.Contains(t, err.Error(), "FOO", "error should name the unsupported kty")
+}
+
+// TestSignatureSignRejectsPlaceholder pins that the deprecated
+// (*Signature).Sign path rejects a placeholder up front — naming the
+// kid and kty — and never hands it to the Signer. This path builds a
+// signatureBuilder directly and bypasses validateAlgorithmForKey, so it
+// needs its own guard to uphold the crypto-isolation invariant that a
+// placeholder never reaches signing key material.
+func TestSignatureSignRejectsPlaceholder(t *testing.T) {
+	placeholder := parsePlaceholder(t)
+
+	called := false
+	sig := jws.NewSignature()
+	_, _, err := sig.Sign([]byte("hello world"), recordingLegacySigner{alg: jwa.RS256(), called: &called}, placeholder)
+	require.Error(t, err)
+	require.False(t, called, "signer must not be invoked with a placeholder")
 	require.Contains(t, err.Error(), "foo1", "error should name the kid")
 	require.Contains(t, err.Error(), "FOO", "error should name the unsupported kty")
 }
