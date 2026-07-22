@@ -215,6 +215,10 @@ func (s *set) setRejectDuplicateKID(v bool) {
 	s.rejectDuplicateKID = v
 }
 
+func (s *set) setStrictKeySetParsing(v *bool) {
+	s.strictKeySetParsing = v
+}
+
 // UnmarshalJSON streams a JWKS document. The "keys" array is read
 // element-by-element with the configured cap enforced BEFORE the
 // (cap+1)-th element is decoded — an attacker-controlled input length
@@ -242,6 +246,10 @@ func (s *set) UnmarshalJSON(data []byte) error {
 		maxK = int(maxKeys.Load())
 	}
 	rejectDupKid := s.rejectDuplicateKID || rejectDuplicateKID.Load()
+	strict := strictKeySetParsing.Load()
+	if s.strictKeySetParsing != nil {
+		strict = *s.strictKeySetParsing
+	}
 
 	dec := json.NewDecoder(bytes.NewReader(data))
 LOOP:
@@ -285,11 +293,23 @@ LOOP:
 					}
 					key, err := ParseKey(raw, options...)
 					if err != nil {
-						if !ignoreParseError {
+						// ignoreParseError is checked first so its
+						// long-standing "drop the entry" behavior is
+						// unchanged regardless of the strict flag. Then:
+						// strict (v3 default) fails the whole set; otherwise
+						// the entry is retained as an UnsupportedKey
+						// placeholder (RFC 7517 §5, opt-in via
+						// WithStrictKeySetParsing(false)).
+						if ignoreParseError {
+							i++
+							continue
+						}
+						if strict {
 							return fmt.Errorf(`failed to decode key #%d in "keys": %w`, i, err)
 						}
-						i++
-						continue
+						// dec.Decode may reuse its buffer, so
+						// newUnsupportedKey clones the raw bytes.
+						key = newUnsupportedKey(raw, err)
 					}
 					if seenKIDs != nil {
 						if kid, ok := key.KeyID(); ok && kid != "" {

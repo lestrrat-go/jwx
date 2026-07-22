@@ -108,6 +108,80 @@ func Example_jwk_parse_jwks() {
 source: [examples/jwk_parse_jwks_example_test.go](https://github.com/lestrrat-go/jwx/blob/v3/examples/jwk_parse_jwks_example_test.go)
 <!-- END INCLUDE -->
 
+## Unsupported keys in a set
+
+Per RFC 7517 §5, an implementation SHOULD ignore keys within a JWK Set whose
+key type is not understood, that are missing required members, or whose values
+are out of the supported range. A single such entry — for example a
+post-quantum key published by an identity provider alongside classical RSA/EC
+keys — should not have to prevent you from using every key you *do* understand.
+
+By default v3 stays fail-fast: the first entry in a `"keys"` array that cannot
+be parsed fails the whole set. This is unchanged from earlier v3 releases, so
+existing callers see no difference. `jwk.Parse` offers three modes for an
+entry that cannot be parsed:
+
+| Mode | Behavior | How to select |
+|------|----------|---------------|
+| Strict (default) | The first unparseable entry fails the whole set | (no option) |
+| Retain | The entry is kept in the set as a `jwk.UnsupportedKey` placeholder | `jwk.WithStrictKeySetParsing(false)` |
+| Drop | The entry is discarded | `jwk.WithIgnoreParseError(true)` — takes precedence regardless of the strict setting |
+
+In retain mode the set parses successfully and `Set.Len()` / iteration include
+the placeholder. A `jwk.UnsupportedKey` preserves the entry's original JSON, so
+a set that contains one round-trips losslessly (a fetch + re-serialize does not
+strip keys you did not understand), and `json.Marshal` of the placeholder itself
+reproduces the original entry. Check for a placeholder with
+`jwk.IsUnsupportedKey`; type-assert to `jwk.UnsupportedKey` when you also need
+`Reason()`:
+
+```go
+set, err := jwk.Parse(src, jwk.WithStrictKeySetParsing(false))
+if err != nil {
+  // ... handle error
+}
+for i := 0; i < set.Len(); i++ {
+  key, _ := set.Key(i)
+  if jwk.IsUnsupportedKey(key) {
+    // This entry is not supported by this build. Type-assert to
+    // jwk.UnsupportedKey to inspect it: Reason() explains why it could
+    // not be parsed (an extension module may be required), and
+    // json.Marshal(key) reproduces the original entry's JSON.
+    continue
+  }
+  // ... use the supported key
+}
+```
+
+A placeholder cannot be used for any cryptographic operation: `Thumbprint`,
+`PublicKey`, and `Validate` return an error, and key-selection paths in `jws`
+and `jwe` reject it with a descriptive per-key error (naming the `kid`, the raw
+`kty`, and the underlying reason) rather than aborting the whole verify/decrypt.
+`jwk.PublicSetOf` also errors when the input set contains a placeholder, because
+there is no way to prove the unparseable entry holds no private material; pass
+`jwk.WithOmitUnsupportedKeys(true)` to drop placeholders from the output set
+instead.
+
+`jwk.WithStrictKeySetParsing` can also be passed to `jwk.Configure()` to change
+the default process-wide. Note that retention applies only to sets:
+`jwk.ParseKey` (and a bare single JWK passed to `jwk.Parse`) always returns a
+hard error for an unparseable key, regardless of this option.
+
+Calling `Set.UnmarshalJSON` directly (for example via `json.Unmarshal`) takes
+no per-call options: strict vs. retain follows the global setting from
+`jwk.Configure`. Drop mode has no per-call option there either —
+`jwk.WithIgnoreParseError` is a `jwk.Parse` option, and there is no
+`jwk.Configure` equivalent for it.
+
+The pre-existing `jwk.WithIgnoreParseError(true)` remedy still drops unparseable
+entries silently; retention differs in that it *keeps* them as inspectable
+placeholders instead of discarding them.
+
+Cross-version note: v4 defaults to retain (false), while v3 defaults to strict
+(true). The option means the same thing in both — only the default differs — so
+call sites that pass it explicitly are source-compatible across the v3→v4
+migration.
+
 ## Parse a key
 
 If you are sure that the source only contains a single key, you can use [`jwk.ParseKey()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v3/jwk#ParseKey)
