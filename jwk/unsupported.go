@@ -3,6 +3,7 @@ package jwk
 import (
 	"bytes"
 	"crypto"
+	"errors"
 	"fmt"
 
 	"github.com/lestrrat-go/blackmagic"
@@ -46,10 +47,19 @@ type UnsupportedKey interface {
 
 	// Reason returns the error that prevented the entry from parsing.
 	Reason() error
+
+	// isUnsupportedKey seals this interface: only the placeholder type
+	// produced by this package implements it. Without the seal, any
+	// third-party Key that happens to define a Reason() error method
+	// would satisfy UnsupportedKey and be rejected as a placeholder by
+	// jwk.Export, jwk.AssignKeyID, and jws/jwe key selection.
+	isUnsupportedKey()
 }
 
 // IsUnsupportedKey reports whether key is a placeholder retained for a
-// JWK Set entry that could not be parsed. It is the sanctioned way to
+// JWK Set entry that could not be parsed. Only placeholders produced by
+// this package satisfy the check; a user-defined Key type can never be
+// mistaken for one. It is the sanctioned way to
 // skip placeholders when iterating a set; type-assert to
 // [UnsupportedKey] when you also need Reason().
 func IsUnsupportedKey(key Key) bool {
@@ -80,6 +90,12 @@ var _ Key = &unsupportedKey{}
 // and the error that prevented parsing. raw is cloned because the
 // decoder buffer it came from may be reused.
 func newUnsupportedKey(raw []byte, reason error) *unsupportedKey {
+	// reason is always non-nil in practice (a placeholder only exists
+	// because ParseKey failed), but guard anyway so a nil can never
+	// reach the %w verbs that wrap Reason().
+	if reason == nil {
+		reason = errors.New(`unspecified parse error`)
+	}
 	k := &unsupportedKey{
 		raw:    bytes.Clone(raw),
 		reason: reason,
@@ -126,6 +142,9 @@ func (k *unsupportedKey) parseBestEffort() {
 func (k *unsupportedKey) Reason() error {
 	return k.reason
 }
+
+// isUnsupportedKey implements the [UnsupportedKey] interface seal.
+func (k *unsupportedKey) isUnsupportedKey() {}
 
 // unsupportederr wraps the placeholder's Reason() in an error explaining
 // that the operation cannot be performed on an unsupported key.

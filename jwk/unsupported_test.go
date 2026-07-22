@@ -196,16 +196,47 @@ func TestUnsupportedKeyDropMode(t *testing.T) {
 	unknownEntry := []byte(`{"kty":"FOO","use":"sig","kid":"foo1","x":"dGVzdA"}`)
 	setJSON := makeSetJSON(unknownEntry, validRSAJWK(t, "rsa1"))
 
-	// Strict disabled + IgnoreParseError drops the entry (unchanged v3
-	// semantics of WithIgnoreParseError).
-	set, err := jwk.Parse(setJSON, jwk.WithStrictKeySetParsing(false), jwk.WithIgnoreParseError(true))
-	require.NoError(t, err)
-	require.Equal(t, 1, set.Len(), "the unparseable entry must be dropped, not retained")
+	t.Run("ignore alone drops under the default strict setting", func(t *testing.T) {
+		// WithIgnoreParseError(true) is checked before the strict flag,
+		// so it selects drop mode on its own — no need to also pass
+		// WithStrictKeySetParsing(false).
+		set, err := jwk.Parse(setJSON, jwk.WithIgnoreParseError(true))
+		require.NoError(t, err)
+		require.Equal(t, 1, set.Len(), "the unparseable entry must be dropped")
+	})
 
-	k0, ok := set.Key(0)
-	require.True(t, ok)
-	_, isPlaceholder := k0.(jwk.UnsupportedKey)
-	require.False(t, isPlaceholder)
+	t.Run("ignore wins over non-strict retention", func(t *testing.T) {
+		set, err := jwk.Parse(setJSON, jwk.WithStrictKeySetParsing(false), jwk.WithIgnoreParseError(true))
+		require.NoError(t, err)
+		require.Equal(t, 1, set.Len(), "the unparseable entry must be dropped, not retained")
+
+		k0, ok := set.Key(0)
+		require.True(t, ok)
+		_, isPlaceholder := k0.(jwk.UnsupportedKey)
+		require.False(t, isPlaceholder)
+	})
+}
+
+// keyWithReasonMethod imitates a third-party jwk.Key implementation that
+// happens to expose a Reason() error method. Because the UnsupportedKey
+// interface is sealed with an unexported marker method, such a key must
+// never be mistaken for a placeholder.
+type keyWithReasonMethod struct {
+	jwk.Key
+}
+
+func (keyWithReasonMethod) Reason() error { return nil }
+
+func TestThirdPartyKeyWithReasonMethodIsNotAPlaceholder(t *testing.T) {
+	base, err := jwxtest.GenerateRsaJwk()
+	require.NoError(t, err)
+	wrapped := keyWithReasonMethod{Key: base}
+
+	require.False(t, jwk.IsUnsupportedKey(wrapped),
+		"a third-party key with a Reason() method must not be detected as a placeholder")
+	require.NoError(t, jwk.AssignKeyID(wrapped),
+		"AssignKeyID must treat the wrapper as a normal key")
+	require.True(t, wrapped.Has(jwk.KeyIDKey), "AssignKeyID must have set a kid")
 }
 
 func TestUnsupportedKeyDuplicateKID(t *testing.T) {
@@ -224,9 +255,12 @@ func TestUnsupportedKeyPublicSetOf(t *testing.T) {
 	set, err := jwk.Parse(setJSON, jwk.WithStrictKeySetParsing(false))
 	require.NoError(t, err)
 
-	t.Run("errors by default", func(t *testing.T) {
+	t.Run("errors by default naming kty, kid and index", func(t *testing.T) {
 		_, err := jwk.PublicSetOf(set)
 		require.Error(t, err)
+		require.Contains(t, err.Error(), `kty="FOO"`, "error must name the kty")
+		require.Contains(t, err.Error(), `kid="foo1"`, "error must name the kid")
+		require.Contains(t, err.Error(), `index=0`, "error must name the index")
 	})
 
 	t.Run("omit drops the placeholder", func(t *testing.T) {
@@ -328,7 +362,10 @@ func TestUnsupportedKeyExport(t *testing.T) {
 		require.Error(t, jwk.Export(k0, &raw))
 	})
 
-	t.Run("AssignKeyID errors on a placeholder", func(t *testing.T) {
-		require.Error(t, jwk.AssignKeyID(k0))
+	t.Run("AssignKeyID errors on a placeholder naming kty and kid", func(t *testing.T) {
+		err := jwk.AssignKeyID(k0)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `kty="FOO"`, "error must name the kty")
+		require.Contains(t, err.Error(), `kid="foo1"`, "error must name the kid")
 	})
 }

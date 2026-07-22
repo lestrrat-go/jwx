@@ -14,7 +14,11 @@ v3.2.0 UNRELEASED
     entry's original JSON (marshaling round-trips losslessly) and the
     parse error via `Reason()`; use `jwk.IsUnsupportedKey` to detect one.
     The default is unchanged: v3 still fails the whole set on the first
-    unparseable entry, so existing callers see no difference. Placeholders
+    unparseable entry, so existing callers see no difference. The same
+    option exists in v4 with the opposite default (v4 retains by
+    default, v3 stays strict by default); call sites that pass the
+    option explicitly keep the same meaning across the v3→v4 migration.
+    Placeholders
     are rejected by `jws`/`jwe` key selection, `jwk.Export`,
     `jwk.AssignKeyID`, and `jwk.PublicSetOf` (which accepts a new
     `jwk.WithOmitUnsupportedKeys(true)` to drop them). (#2263)

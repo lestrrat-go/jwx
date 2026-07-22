@@ -535,9 +535,10 @@ func WithRejectDuplicateKID(v bool) GlobalParseOption {
 // it explicitly are source-compatible across the v3→v4 migration.
 //
 // This option is distinct from `WithIgnoreParseError`, which silently
-// *drops* unparseable entries instead of retaining placeholders. When
-// strict parsing is disabled and `WithIgnoreParseError(true)` is also
-// passed, the entry is dropped rather than retained.
+// *drops* unparseable entries instead of retaining placeholders.
+// `WithIgnoreParseError(true)` takes precedence regardless of the
+// strict setting: the entry is dropped rather than failing the set
+// or being retained.
 //
 // Can be set globally via `jwk.Configure()` or per-call on
 // `jwk.Parse()` / `jwk.ParseReader()` / `jwk.ParseString()`.

@@ -154,7 +154,7 @@ func PublicSetOf(v Set, options ...PublicSetOption) (Set, error) {
 				continue
 			}
 			kid, _ := uk.KeyID()
-			return nil, fmt.Errorf(`jwk.PublicSetOf: input set contains an unsupported key (kid=%q, index=%d) that could not be parsed; there is no way to prove it holds no private material, so it is not passed through. Pass jwk.WithOmitUnsupportedKeys(true) to drop such entries from the output: %w`, kid, i, uk.Reason())
+			return nil, fmt.Errorf(`jwk.PublicSetOf: input set contains an unsupported key (kty=%q, kid=%q, index=%d) that could not be parsed; there is no way to prove it holds no private material, so it is not passed through. Pass jwk.WithOmitUnsupportedKeys(true) to drop such entries from the output: %w`, uk.KeyType().String(), kid, i, uk.Reason())
 		}
 		if k.KeyType() == jwa.OctetSeq() && !allowSymmetric {
 			kid, _ := k.KeyID()
@@ -575,7 +575,8 @@ func ParseString(s string, options ...ParseOption) (Set, error) {
 // via `jwk.WithThumbprintHash`).
 func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
 	if uk, ok := key.(UnsupportedKey); ok {
-		return fmt.Errorf(`jwk.AssignKeyID: cannot assign a key ID to an unsupported key (kty=%q) that could not be parsed; its thumbprint cannot be computed: %w`, uk.KeyType().String(), uk.Reason())
+		kid, _ := uk.KeyID()
+		return fmt.Errorf(`jwk.AssignKeyID: cannot assign a key ID to an unsupported key (kty=%q, kid=%q) that could not be parsed; its thumbprint cannot be computed: %w`, uk.KeyType().String(), kid, uk.Reason())
 	}
 
 	hash := crypto.SHA256

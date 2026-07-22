@@ -118,14 +118,14 @@ keys — should not have to prevent you from using every key you *do* understand
 
 By default v3 stays fail-fast: the first entry in a `"keys"` array that cannot
 be parsed fails the whole set. This is unchanged from earlier v3 releases, so
-existing callers see no difference. `jwk.Parse` (and `Set.UnmarshalJSON`)
-offers three modes for an entry that cannot be parsed:
+existing callers see no difference. `jwk.Parse` offers three modes for an
+entry that cannot be parsed:
 
 | Mode | Behavior | How to select |
 |------|----------|---------------|
 | Strict (default) | The first unparseable entry fails the whole set | (no option) |
 | Retain | The entry is kept in the set as a `jwk.UnsupportedKey` placeholder | `jwk.WithStrictKeySetParsing(false)` |
-| Drop | The entry is discarded | `jwk.WithStrictKeySetParsing(false)` + `jwk.WithIgnoreParseError(true)` |
+| Drop | The entry is discarded | `jwk.WithIgnoreParseError(true)` — takes precedence regardless of the strict setting |
 
 In retain mode the set parses successfully and `Set.Len()` / iteration include
 the placeholder. A `jwk.UnsupportedKey` preserves the entry's original JSON, so
@@ -166,6 +166,12 @@ instead.
 the default process-wide. Note that retention applies only to sets:
 `jwk.ParseKey` (and a bare single JWK passed to `jwk.Parse`) always returns a
 hard error for an unparseable key, regardless of this option.
+
+Calling `Set.UnmarshalJSON` directly (for example via `json.Unmarshal`) takes
+no per-call options: strict vs. retain follows the global setting from
+`jwk.Configure`. Drop mode has no per-call option there either —
+`jwk.WithIgnoreParseError` is a `jwk.Parse` option, and there is no
+`jwk.Configure` equivalent for it.
 
 The pre-existing `jwk.WithIgnoreParseError(true)` remedy still drops unparseable
 entries silently; retention differs in that it *keeps* them as inspectable
