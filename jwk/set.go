@@ -211,7 +211,7 @@ func (s *set) setMaxKeys(n int) {
 	s.maxKeys = n
 }
 
-func (s *set) setRejectDuplicateKID(v bool) {
+func (s *set) setRejectDuplicateKID(v *bool) {
 	s.rejectDuplicateKID = v
 }
 
@@ -245,7 +245,10 @@ func (s *set) UnmarshalJSON(data []byte) error {
 	if maxK <= 0 {
 		maxK = int(maxKeys.Load())
 	}
-	rejectDupKid := s.rejectDuplicateKID || rejectDuplicateKID.Load()
+	rejectDupKid := rejectDuplicateKID.Load()
+	if s.rejectDuplicateKID != nil {
+		rejectDupKid = *s.rejectDuplicateKID
+	}
 	strict := strictKeySetParsing.Load()
 	if s.strictKeySetParsing != nil {
 		strict = *s.strictKeySetParsing

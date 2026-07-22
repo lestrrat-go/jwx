@@ -485,9 +485,13 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		setter.setMaxKeys(maxK)
 		defer setter.setMaxKeys(0)
 	}
-	if setter, ok := s.(interface{ setRejectDuplicateKID(bool) }); ok && rejectDupKid {
-		setter.setRejectDuplicateKID(true)
-		defer setter.setRejectDuplicateKID(false)
+	// Propagate the resolved reject-duplicate-KID flag. A pointer
+	// distinguishes "not set by Parse" (nil → Set.UnmarshalJSON uses the
+	// global default) from an explicit per-call true/false, so a per-call
+	// false overrides a global true.
+	if setter, ok := s.(interface{ setRejectDuplicateKID(*bool) }); ok {
+		setter.setRejectDuplicateKID(&rejectDupKid)
+		defer setter.setRejectDuplicateKID(nil)
 	}
 	// Propagate the resolved strict flag. A pointer distinguishes "not
 	// set by Parse" (nil → Set.UnmarshalJSON uses the global default of
