@@ -13,7 +13,7 @@ jobs:
     name: "Test [ Go ${{ matrix.go }} / JSON Backend ${{ matrix.json_backend }} ]"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v7.0.0
+        uses: actions/checkout@v7.0.1
       - name: Cache Go modules
         uses: actions/cache@v6.1.0
         with:
