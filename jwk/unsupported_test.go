@@ -231,6 +231,63 @@ func TestUnsupportedKeyPublicSetOf(t *testing.T) {
 	})
 }
 
+// TestParsingModePrecedence pins the rule that an explicit per-call
+// parsing-mode option beats the global setting when strict and drop
+// modes clash.
+func TestParsingModePrecedence(t *testing.T) {
+	unknownEntry := []byte(`{"kty":"FOO","use":"sig","kid":"foo1","x":"dGVzdA"}`)
+	setJSON := makeSetJSON(unknownEntry, validRSAJWK(t, "rsa1"))
+
+	t.Run("per-call ignore beats global strict", func(t *testing.T) {
+		require.NoError(t, jwk.Settings(jwk.WithStrictKeySetParsing(true)))
+		t.Cleanup(func() {
+			require.NoError(t, jwk.Settings(jwk.WithStrictKeySetParsing(false)))
+		})
+		set, err := jwk.Parse(setJSON, jwk.WithIgnoreParseError(true))
+		require.NoError(t, err, `explicit per-call WithIgnoreParseError(true) must select drop mode over the global strict setting`)
+		require.Equal(t, 1, set.Len(), `the unparseable entry must be dropped`)
+	})
+
+	t.Run("explicit per-call strict beats per-call ignore", func(t *testing.T) {
+		_, err := jwk.Parse(setJSON, jwk.WithIgnoreParseError(true), jwk.WithStrictKeySetParsing(true))
+		require.Error(t, err, `an explicit per-call strict true must win over drop mode in the same call`)
+	})
+
+	t.Run("global strict with per-call strict and ignore still fails fast", func(t *testing.T) {
+		require.NoError(t, jwk.Settings(jwk.WithStrictKeySetParsing(true)))
+		t.Cleanup(func() {
+			require.NoError(t, jwk.Settings(jwk.WithStrictKeySetParsing(false)))
+		})
+		_, err := jwk.Parse(setJSON, jwk.WithIgnoreParseError(true), jwk.WithStrictKeySetParsing(true))
+		require.Error(t, err)
+	})
+}
+
+// TestBareKeyParseConsumesStrictKeySetParsing pins that the set-scoped
+// WithStrictKeySetParsing option does not break parsing a bare single
+// JWK via jwk.Parse: the option is consumed and ignored. Direct
+// jwk.ParseKey keeps rejecting it.
+func TestBareKeyParseConsumesStrictKeySetParsing(t *testing.T) {
+	bareKey := []byte(`{"kty":"oct","k":"AAAA","kid":"barekey"}`)
+
+	t.Run("strict true is ignored for a bare JWK", func(t *testing.T) {
+		set, err := jwk.Parse(bareKey, jwk.WithStrictKeySetParsing(true))
+		require.NoError(t, err, `a valid bare JWK must parse even when WithStrictKeySetParsing(true) is passed`)
+		require.Equal(t, 1, set.Len())
+	})
+
+	t.Run("strict false is ignored for a bare JWK", func(t *testing.T) {
+		set, err := jwk.Parse(bareKey, jwk.WithStrictKeySetParsing(false))
+		require.NoError(t, err, `a valid bare JWK must parse even when WithStrictKeySetParsing(false) is passed`)
+		require.Equal(t, 1, set.Len())
+	})
+
+	t.Run("ParseKey still rejects the option", func(t *testing.T) {
+		_, err := jwk.ParseKey(bareKey, jwk.WithStrictKeySetParsing(true))
+		require.Error(t, err)
+	})
+}
+
 func TestUnsupportedKeyBareParseKey(t *testing.T) {
 	unknownEntry := []byte(`{"kty":"FOO","use":"sig","kid":"foo1","x":"dGVzdA"}`)
 
@@ -267,7 +324,10 @@ func TestUnsupportedKeyMethodContract(t *testing.T) {
 	})
 
 	t.Run("Validate wraps Reason", func(t *testing.T) {
-		require.Error(t, uk.Validate())
+		err := uk.Validate()
+		require.Error(t, err)
+		require.True(t, jwk.IsKeyValidationError(err), `Validate failure must be classified like builtin key validation failures`)
+		require.ErrorIs(t, err, uk.Reason(), `Reason must remain reachable through the error chain`)
 	})
 
 	t.Run("Set and Remove error", func(t *testing.T) {
@@ -323,4 +383,27 @@ func TestUnsupportedKeyExport(t *testing.T) {
 		require.Contains(t, err.Error(), `kty="FOO"`, `error must name the raw kty`)
 		require.Contains(t, err.Error(), `kid="foo1"`, `error must name the entry's kid`)
 	})
+}
+
+// reasonedKey is a user-defined key type that happens to define a
+// Reason() error method on top of a perfectly valid embedded jwk.Key.
+// It must NOT be mistaken for an UnsupportedKey placeholder.
+type reasonedKey struct {
+	jwk.Key
+}
+
+func (reasonedKey) Reason() error { return nil }
+
+func TestCustomKeyWithReasonMethodIsNotAPlaceholder(t *testing.T) {
+	base, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err)
+	require.NoError(t, base.Set(jwk.KeyIDKey, "custom1"))
+
+	wrapped := reasonedKey{Key: base}
+	require.False(t, jwk.IsUnsupportedKey(wrapped), `a custom key defining Reason() must not satisfy UnsupportedKey`)
+
+	_, err = jwk.Export[[]byte](wrapped)
+	require.NoError(t, err, `jwk.Export must not reject the valid wrapped key as a placeholder`)
+
+	require.NoError(t, jwk.AssignKeyID(wrapped), `jwk.AssignKeyID must not reject the valid wrapped key as a placeholder`)
 }

@@ -116,14 +116,19 @@ are out of the supported range. A single such entry — for example a
 post-quantum key published by an identity provider alongside classical RSA/EC
 keys — should not prevent you from using every key you *do* understand.
 
-`jwk.Parse` (and `Set.UnmarshalJSON`) offers three modes for a `"keys"` entry
-that cannot be parsed:
+`jwk.Parse` offers three modes for a `"keys"` entry that cannot be parsed:
 
 | Mode | Behavior | How to select |
 |------|----------|---------------|
 | Retain (default) | The entry is kept in the set as a `jwk.UnsupportedKey` placeholder | (no option) |
 | Drop | The entry is discarded | `jwk.WithIgnoreParseError(true)` |
 | Strict | The first unparseable entry fails the whole set | `jwk.WithStrictKeySetParsing(true)` |
+
+Direct JSON unmarshaling into a `jwk.Set` (for example `json.Unmarshal` or
+`Set.UnmarshalJSON`) has no per-call option channel: it retains unparseable
+entries as placeholders by default, and honors only the *global* strict
+setting configured via `jwk.Settings()`. Drop mode is only available through
+`jwk.Parse`.
 
 In the default retain mode, the set parses successfully and `Set.Len()` /
 iteration include the placeholder. A `jwk.UnsupportedKey` preserves the entry's
@@ -157,9 +162,16 @@ instead.
 
 `jwk.WithStrictKeySetParsing(true)` can also be passed to `jwk.Settings()` to
 apply strict mode process-wide; a per-call value passed to `jwk.Parse`
-overrides the global setting in both directions. Note that retention applies
+overrides the global setting in both directions. The same rule resolves a
+clash between the modes: an explicit per-call option beats the global
+setting, so `jwk.WithIgnoreParseError(true)` selects drop mode even when
+strict mode is enabled globally, and only an explicit
+`jwk.WithStrictKeySetParsing(true)` in the same call keeps strict mode (fail
+fast) ahead of drop. Note that retention applies
 only to sets: `jwk.ParseKey` (and a bare single JWK passed to `jwk.Parse`) still
-returns a hard error for an unparseable key.
+returns a hard error for an unparseable key. A set-scoped
+`jwk.WithStrictKeySetParsing` passed to a `jwk.Parse` call whose input turns
+out to be a bare single JWK is simply ignored.
 
 Strict mode is the same *policy* as v3's default — one unparseable entry fails
 the whole set — but it is policy parity, not error parity. v4 understands more

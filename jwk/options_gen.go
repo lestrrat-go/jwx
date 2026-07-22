@@ -188,6 +188,19 @@ func WithForceAssign(v bool) AssignKeyIDOption {
 // Again, DO NOT USE unless you have exhausted all other routes.
 // When you use this option, you will not be able to tell if you are
 // using a faulty JWKS, except for when there are JSON syntax errors.
+//
+// Precedence versus `WithStrictKeySetParsing`: an explicit per-call
+// option beats the global setting. Passing `WithIgnoreParseError(true)`
+// to `jwk.Parse()` selects drop mode even when strict mode was enabled
+// globally via `jwk.Settings()`. Only when the same call also passes
+// an explicit `WithStrictKeySetParsing(true)` does strict mode win
+// (the whole set fails fast).
+//
+// This option has no effect on direct JSON unmarshaling into a
+// `jwk.Set` (there is no per-call option channel there): direct
+// unmarshaling retains unparseable entries as `jwk.UnsupportedKey`
+// placeholders by default, or fails fast under a global strict
+// setting.
 func WithIgnoreParseError(v bool) ParseOption {
 	return &parseOption{option.New(identIgnoreParseError{}, v)}
 }
@@ -297,12 +310,20 @@ func WithRejectDuplicateKID(v bool) GlobalParseOption {
 //
 // This option is distinct from `WithIgnoreParseError`, which silently
 // *drops* unparseable entries instead of retaining placeholders.
+// When both parsing modes are requested, an explicit per-call option
+// beats the global setting: a per-call `WithIgnoreParseError(true)`
+// selects drop mode even under a global strict setting, while an
+// explicit per-call `WithStrictKeySetParsing(true)` in the same call
+// wins over `WithIgnoreParseError(true)` (the set fails fast).
 //
 // Can be set globally via `jwk.Settings()` or per-call on
 // `jwk.Parse()` / `jwk.ParseReader()` / `jwk.ParseString()`. A
 // per-call value takes precedence over the global setting in both
 // directions: per-call false relaxes a global true, and per-call
-// true tightens a global false.
+// true tightens a global false. When passed per-call to `jwk.Parse()`
+// whose input turns out to be a bare single JWK rather than a JWK
+// Set, the option is ignored (it is set-scoped); `jwk.ParseKey()`
+// still rejects it outright.
 func WithStrictKeySetParsing(v bool) GlobalParseOption {
 	return &globalParseOption{option.New(identStrictKeySetParsing{}, v)}
 }

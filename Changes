@@ -23,7 +23,10 @@ UNRELEASED
 
     Two escape hatches: `jwk.WithStrictKeySetParsing(true)` (per call or
     via `jwk.Settings()`) restores the previous fail-fast behavior, and
-    `jwk.WithIgnoreParseError(true)` still drops unparseable entries.
+    `jwk.WithIgnoreParseError(true)` still drops unparseable entries on
+    `jwk.Parse` (direct `Set.UnmarshalJSON` has no per-call options and
+    honors only the global strict setting). An explicit per-call option
+    beats the global setting when the two modes clash.
     `jwk.PublicSetOf` rejects a set containing a placeholder unless you
     pass the new `jwk.WithOmitUnsupportedKeys(true)`, which drops them from
     the output. (#2263)

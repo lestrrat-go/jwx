@@ -111,34 +111,42 @@ type keySetProvider struct {
 	multipleKeysPerKeyID bool // true if we should attempt to match multiple keys per key ID. if false we assume that only one key exists for a given key ID
 }
 
-func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _ *Message) error {
+// selectKey routes key into sink with the algorithm(s) it should be
+// tried under. The boolean return reports whether at least one
+// (alg, key) candidate was actually emitted into sink: a nil error with
+// a false boolean means the key was skipped without being tried (for
+// example a key with no "alg" member while algorithm inference is
+// disabled). Callers use it to tell "nothing was tried" apart from
+// "candidates were emitted", so collected per-key errors are not
+// discarded when no candidate ever reached the sink.
+func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _ *Message) (bool, error) {
 	if uk, ok := key.(jwk.UnsupportedKey); ok {
 		kid, _ := uk.KeyID()
-		return fmt.Errorf(`key with kid %q has unsupported key type %q and cannot be used for signature verification; an extension module may be required to parse it: %w`, kid, uk.KeyType().String(), uk.Reason())
+		return false, fmt.Errorf(`key with kid %q has unsupported key type %q and cannot be used for signature verification; an extension module may be required to parse it: %w`, kid, uk.KeyType().String(), uk.Reason())
 	}
 
 	if usage, ok := key.KeyUsage(); ok {
 		// it's okay if use: "". we'll assume it's "sig"
 		if usage != "" && usage != jwk.ForSignature.String() {
 			kid, _ := key.KeyID()
-			return fmt.Errorf(`key with kid %q is marked use=%q, not usable for signature verification (expected %q)`, kid, usage, jwk.ForSignature.String())
+			return false, fmt.Errorf(`key with kid %q is marked use=%q, not usable for signature verification (expected %q)`, kid, usage, jwk.ForSignature.String())
 		}
 	}
 
 	if v, ok := key.Algorithm(); ok {
 		salg, ok := jwa.LookupSignatureAlgorithm(v.String())
 		if !ok {
-			return fmt.Errorf(`invalid signature algorithm %q`, v)
+			return false, fmt.Errorf(`invalid signature algorithm %q`, v)
 		}
 
 		sink.Key(salg, key)
-		return nil
+		return true, nil
 	}
 
 	if kp.inferAlgorithm {
 		algs, err := AlgorithmsForKey(key)
 		if err != nil {
-			return fmt.Errorf(`failed to get a list of signature methods for key type %s: %w`, key.KeyType(), err)
+			return false, fmt.Errorf(`failed to get a list of signature methods for key type %s: %w`, key.KeyType(), err)
 		}
 
 		// bail out if the JWT has a `alg` field, and it doesn't match
@@ -146,19 +154,19 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _
 			for _, alg := range algs {
 				if tokAlg == alg {
 					sink.Key(alg, key)
-					return nil
+					return true, nil
 				}
 			}
-			return fmt.Errorf(`algorithm in the message does not match any of the inferred algorithms`)
+			return false, fmt.Errorf(`algorithm in the message does not match any of the inferred algorithms`)
 		}
 
 		// Yes, you get to try them all!!!!!!!
 		for _, alg := range algs {
 			sink.Key(alg, key)
 		}
-		return nil
+		return len(algs) > 0, nil
 	}
-	return nil
+	return false, nil
 }
 
 func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signature, msg *Message) error {
@@ -179,7 +187,8 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 			if !ok {
 				return fmt.Errorf(`failed to get key at index 0 (empty JWKS?)`)
 			}
-			return kp.selectKey(sink, key, sig, msg)
+			_, err := kp.selectKey(sink, key, sig, msg)
+			return err
 		}
 
 		// Otherwise we better be able to look up the key.
@@ -190,31 +199,42 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 			if !ok {
 				return fmt.Errorf(`failed to find key with key ID %q in key set`, wantedKid)
 			}
-			return kp.selectKey(sink, key, sig, msg)
+			_, err := kp.selectKey(sink, key, sig, msg)
+			return err
 		}
 
 		// if multipleKeysPerKeyID is true, we attempt all keys whose key ID matches
 		// the wantedKey
-		found := false
+		var matched, emitted bool
 		var errs []error
 		for i := range kp.set.Len() {
 			key, _ := kp.set.Key(i)
 			if kid, ok := key.KeyID(); !ok || kid != wantedKid {
 				continue
 			}
+			matched = true
 
-			if err := kp.selectKey(sink, key, sig, msg); err != nil {
+			ok, err := kp.selectKey(sink, key, sig, msg)
+			if err != nil {
 				errs = append(errs, fmt.Errorf(`key #%d: %w`, i, err))
 				continue
 			}
-			found = true
+			if ok {
+				emitted = true
+			}
 			// continue processing so that we try all keys with the same key ID
 		}
-		if !found {
+		if !emitted {
+			// No candidate reached the sink. Surface the collected
+			// per-key errors (e.g. an unsupported-key placeholder's
+			// named rejection) instead of discarding them just because
+			// some other kid-matching key was skipped without error.
 			if len(errs) > 0 {
 				return fmt.Errorf(`failed to select any key with key ID %q: %w`, wantedKid, errors.Join(errs...))
 			}
-			return fmt.Errorf(`failed to find key with key ID %q in key set`, wantedKid)
+			if !matched {
+				return fmt.Errorf(`failed to find key with key ID %q in key set`, wantedKid)
+			}
 		}
 		return nil
 	}
@@ -240,7 +260,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 	if hdrAlg, ok := sig.ProtectedHeaders().Algorithm(); ok {
 		allowedKtys = keyTypesForAlgorithm(hdrAlg)
 	}
-	found := false
+	emitted := false
 	var errs []error
 	for i := range kp.set.Len() {
 		key, ok := kp.set.Key(i)
@@ -256,13 +276,20 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 		if allowedKtys != nil && !slices.Contains(allowedKtys, key.KeyType()) && !jwk.IsUnsupportedKey(key) {
 			continue
 		}
-		if err := kp.selectKey(sink, key, sig, msg); err != nil {
+		ok, err := kp.selectKey(sink, key, sig, msg)
+		if err != nil {
 			errs = append(errs, fmt.Errorf(`key #%d: %w`, i, err))
 			continue
 		}
-		found = true
+		if ok {
+			emitted = true
+		}
 	}
-	if !found && len(errs) > 0 {
+	// Only when no candidate reached the sink do the collected per-key
+	// errors become the outcome: a key that was skipped without error
+	// (e.g. no "alg" member and inference disabled) must not mask the
+	// named rejections of the keys that did fail.
+	if !emitted && len(errs) > 0 {
 		return fmt.Errorf(`no key in the key set was usable: %w`, errors.Join(errs...))
 	}
 	return nil

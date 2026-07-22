@@ -527,6 +527,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 	maxK := int(maxKeys.Load())
 	rejectDupKid := rejectDuplicateKID.Load()
 	strict := strictKeySetParsing.Load()
+	var strictExplicit bool
 	for _, opt := range options {
 		switch opt.Ident() {
 		case identX509{}:
@@ -535,6 +536,7 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			ignoreParseError = option.MustGet[bool](opt)
 		case identStrictKeySetParsing{}:
 			strict = option.MustGet[bool](opt)
+			strictExplicit = true
 		case identTypedField{}:
 			pair := option.MustGet[typedFieldPair](opt)
 			if localReg == nil {
@@ -550,6 +552,16 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		case identRejectDuplicateKID{}:
 			rejectDupKid = option.MustGet[bool](opt)
 		}
+	}
+
+	// Precedence between the two parsing-mode options: an explicit
+	// per-call option beats the global setting. A per-call
+	// WithIgnoreParseError(true) therefore selects drop mode even when
+	// the global strict setting is true. Only an explicit per-call
+	// WithStrictKeySetParsing(true) in the same call keeps strict mode
+	// (fail fast) ahead of drop mode.
+	if ignoreParseError && !strictExplicit {
+		strict = false
 	}
 
 	s := NewSet()
@@ -626,7 +638,18 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 			return nil, parseerr(`failed to unmarshal JWK set: %w`, err)
 		}
 	} else {
-		key, err := doParseKey(src, options...)
+		// WithStrictKeySetParsing is set-scoped: a bare single JWK has no
+		// "keys" array to be strict about, so the option is consumed here
+		// (ignored) rather than forwarded to doParseKey, which rejects it
+		// as it does for direct ParseKey calls.
+		keyOptions := make([]ParseOption, 0, len(options))
+		for _, opt := range options {
+			if opt.Ident() == (identStrictKeySetParsing{}) {
+				continue
+			}
+			keyOptions = append(keyOptions, opt)
+		}
+		key, err := doParseKey(src, keyOptions...)
 		if err != nil {
 			return nil, parseerr(`failed to parse sole key: %w`, err)
 		}

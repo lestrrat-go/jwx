@@ -303,7 +303,11 @@ func (s *set) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 					// Precedence: strict fails the whole set (legacy
 					// behavior); else ignoreParseError drops the entry;
 					// else the entry is retained as an UnsupportedKey
-					// placeholder (RFC 7517 §5, new default).
+					// placeholder (RFC 7517 §5, new default). Parse has
+					// already resolved per-call vs global for both modes
+					// before this point (a per-call WithIgnoreParseError
+					// beats a global strict); the values seen here are
+					// final.
 					if strict {
 						return fmt.Errorf(`failed to decode key #%d in "keys": %w`, i, err)
 					}

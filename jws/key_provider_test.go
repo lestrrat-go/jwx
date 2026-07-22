@@ -118,7 +118,8 @@ func TestKeySetProviderUseEncSurfacesError(t *testing.T) {
 	require.NoError(t, hdr.Set(AlgorithmKey, jwa.RS256()))
 	sig.SetProtectedHeaders(hdr)
 
-	err = kp.selectKey(&countingKeySink{}, rsaKey, sig, &Message{})
+	emitted, err := kp.selectKey(&countingKeySink{}, rsaKey, sig, &Message{})
+	require.False(t, emitted, `selectKey should not emit a candidate on use=enc`)
 	require.Error(t, err, `selectKey should error on use=enc`)
 	require.Contains(t, err.Error(), `signer-kid`, `error should name the kid`)
 	require.Contains(t, err.Error(), `use="enc"`, `error should quote the usage`)
