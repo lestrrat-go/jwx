@@ -317,7 +317,16 @@ func TestUnsupportedKeyMethodContract(t *testing.T) {
 	})
 
 	t.Run("Validate wraps Reason", func(t *testing.T) {
-		require.Error(t, uk.Validate())
+		err := uk.Validate()
+		require.Error(t, err)
+		// A placeholder's Validate failure must classify like every other
+		// built-in Key.Validate failure, so callers using
+		// jwk.IsKeyValidationError handle it uniformly...
+		require.True(t, jwk.IsKeyValidationError(err),
+			"Validate error must be a key validation error")
+		// ...while Reason() stays reachable through the wrapping chain.
+		require.ErrorIs(t, err, uk.Reason(),
+			"Validate error must still unwrap to Reason()")
 	})
 
 	t.Run("Set and Remove error", func(t *testing.T) {

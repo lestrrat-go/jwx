@@ -270,9 +270,12 @@ func (k *unsupportedKey) Remove(string) error {
 }
 
 // Validate reports the retained parse error: a placeholder is by
-// definition not a valid key.
+// definition not a valid key. The error is wrapped in a key validation
+// error so it classifies like every other built-in Key.Validate failure
+// (jwk.IsKeyValidationError is true), while Reason() stays reachable
+// through the wrapping chain.
 func (k *unsupportedKey) Validate() error {
-	return k.unsupportederr("validate")
+	return NewKeyValidationError(k.unsupportederr("validate"))
 }
 
 // Thumbprint always returns an error: RFC 7638 thumbprints require the
