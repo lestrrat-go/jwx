@@ -34,15 +34,16 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 - **Fetch(ctx, url, ...FetchOption) (Set, error)** — HTTP fetch with optional whitelist, body size limit (default 10 MB via `WithMaxFetchBodySize`)
 - **DefaultHTTPClient() \*http.Client** — returns a new http.Client with library defaults (30s timeout, redirect policy)
 - **Import(raw any) (Key, error)** / **Export(key Key, dst any) error** — convert between Go crypto types and JWK
-- **PublicKeyOf(v any) (Key, error)** / **PublicSetOf(v Set, ...PublicSetOption) (Set, error)** — extract public keys. `PublicSetOf` rejects sets containing symmetric (oct) keys by default; pass `WithAllowSymmetric(true)` for legacy pass-through.
+- **PublicKeyOf(v any) (Key, error)** / **PublicSetOf(v Set, ...PublicSetOption) (Set, error)** — extract public keys. `PublicSetOf` rejects sets containing symmetric (oct) keys by default (pass `WithAllowSymmetric(true)` for legacy pass-through) and rejects `UnsupportedKey` placeholders by default (pass `WithOmitUnsupportedKeys(true)` to drop them).
 - **NewCache(ctx, client) (*Cache, error)** — auto-refreshing JWKS cache
 - **AssignKeyID(key Key, ...AssignKeyIDOption) error** — compute and set kid via thumbprint
+- **IsUnsupportedKey(key Key) bool** — reports whether a key is an `UnsupportedKey` placeholder retained for an unparseable JWK Set entry (opt-in via `WithStrictKeySetParsing(false)`; RFC 7517 §5). The `UnsupportedKey` interface adds `Reason() error`; the placeholder preserves the entry's raw JSON (round-trips losslessly) and errors on all crypto/mutation ops. Default parsing stays fail-fast — the option only relaxes it.
 - **Pem(v any) ([]byte, error)** — PEM encode
-- Global options: `WithStrictKeyUsage(bool)`, `WithHTTPClient(HTTPClient)`, `WithMaxFetchBodySize(int64)`, `WithMinRSAModulusBits(int)`, `WithMinRSAPublicExponent(int)`, `WithMaxKeys(int)` (also accepted as a per-call `ParseOption`; caps `"keys"` array + PEM block count at 1000 by default)
-- Key interfaces: `Key`, `Set`, `RSAPublicKey`, `RSAPrivateKey`, `ECDSAPublicKey`, `ECDSAPrivateKey`, `OKPPublicKey`, `OKPPrivateKey`, `SymmetricKey`
+- Global options: `WithStrictKeyUsage(bool)`, `WithHTTPClient(HTTPClient)`, `WithMaxFetchBodySize(int64)`, `WithMinRSAModulusBits(int)`, `WithMinRSAPublicExponent(int)`, `WithMaxKeys(int)` (also accepted as a per-call `ParseOption`; caps `"keys"` array + PEM block count at 1000 by default), `WithStrictKeySetParsing(bool)` (GlobalParseOption; default true = fail-fast; false retains unparseable set entries as `UnsupportedKey` placeholders)
+- Key interfaces: `Key`, `Set`, `RSAPublicKey`, `RSAPrivateKey`, `ECDSAPublicKey`, `ECDSAPrivateKey`, `OKPPublicKey`, `OKPPrivateKey`, `SymmetricKey`, `UnsupportedKey`
 - Extension: `RegisterCustomField()`, `RegisterKeyParser()`, `RegisterKeyImporter()`, `RegisterKeyExporter()`
 - Error sentinels: `ImportError()`, `ParseError()`, `WhitelistError()`, `ContinueError()`
-- Files: `jwk.go`, `set.go`, `parser.go`, `convert.go`, `fetch.go`, `cache.go`, `interface.go`, `errors.go`, `x509.go`, `filter.go`, `rsa.go`, `ecdsa.go`, `okp.go`, `symmetric.go`
+- Files: `jwk.go`, `set.go`, `parser.go`, `convert.go`, `fetch.go`, `cache.go`, `interface.go`, `errors.go`, `x509.go`, `filter.go`, `rsa.go`, `ecdsa.go`, `okp.go`, `symmetric.go`, `unsupported.go`
 - Sub-packages: `jwk/ecdsa` — elliptic curve registration (`RegisterCurve`, `CurveFromAlgorithm`, `AlgorithmFromCurve`); `jwk/jwkbb` — X.509/PEM encoding building blocks (`EncodeX509`, `DecodeX509`) plus a fastjson-backed `Header` (sealed) for fast field probing of JWK / JWKS bytes: `HeaderParse`, `HeaderHas`, `HeaderGetString`, `HeaderGetStringBytes`, sentinel `ErrHeaderNotFound()`. Mirrors the `jws/jwsbb` Header API; experimental.
 - Imports: jwa, cert, transform, internal/{base64,json,ecutil}
 

@@ -116,6 +116,11 @@ type keySetProvider struct {
 // It returns true if at least one pair was added, false if the key was
 // filtered out (e.g. wrong usage, no matching algorithm).
 func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _ *Message) (bool, error) {
+	if uk, ok := key.(jwk.UnsupportedKey); ok {
+		kid, _ := uk.KeyID()
+		return false, fmt.Errorf(`key with kid %q has unsupported key type %q and cannot be used for signature verification; an extension module may be required to parse it: %w`, kid, uk.KeyType().String(), uk.Reason())
+	}
+
 	if usage, ok := key.KeyUsage(); ok {
 		// it's okay if use: "". we'll assume it's "sig"
 		if usage != "" && usage != jwk.ForSignature.String() {
