@@ -3106,6 +3106,20 @@ func TestRejectDuplicateKID(t *testing.T) {
 		require.Contains(t, err.Error(), `same-kid`)
 	})
 
+	t.Run("per-call false overrides global true", func(t *testing.T) {
+		jwk.Configure(jwk.WithRejectDuplicateKID(true))
+		defer jwk.Configure(jwk.WithRejectDuplicateKID(false))
+		set, err := jwk.Parse(dupPayload, jwk.WithRejectDuplicateKID(false))
+		require.NoError(t, err, `per-call false must override global true`)
+		require.Equal(t, 2, set.Len())
+	})
+
+	t.Run("per-call true overrides global default", func(t *testing.T) {
+		_, err := jwk.Parse(dupPayload, jwk.WithRejectDuplicateKID(true))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `same-kid`)
+	})
+
 	t.Run("empty kid entries are ignored", func(t *testing.T) {
 		noKidA, err := jwxtest.GenerateSymmetricJwk()
 		require.NoError(t, err)
