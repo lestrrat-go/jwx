@@ -116,6 +116,12 @@ are out of the supported range. A single such entry — for example a
 post-quantum key published by an identity provider alongside classical RSA/EC
 keys — should not have to prevent you from using every key you *do* understand.
 
+This is no longer hypothetical. As post-quantum cryptography is deployed,
+identity providers are expected to publish JWK Sets that mix classical RSA/EC
+keys with PQC key types (for example `AKP`, used by ML-DSA) that a v3 build
+does not understand. A JWKS that parses cleanly today can gain an entry v3
+cannot decode the moment the provider rotates in a PQC key.
+
 By default v3 stays fail-fast: the first entry in a `"keys"` array that cannot
 be parsed fails the whole set. This is unchanged from earlier v3 releases, so
 existing callers see no difference. `jwk.Parse` offers three modes for an
@@ -126,6 +132,16 @@ entry that cannot be parsed:
 | Strict (default) | The first unparseable entry fails the whole set | (no option) |
 | Retain | The entry is kept in the set as a `jwk.UnsupportedKey` placeholder | `jwk.WithStrictKeySetParsing(false)` |
 | Drop | The entry is discarded | `jwk.WithIgnoreParseError(true)` — takes precedence regardless of the strict setting |
+
+**If you consume third-party JWK Sets, opt into retain.** Unlike v4 (which
+retains by default), v3's default is fail-fast — safe for JWK Sets you control,
+but a liability for a set published by someone else. Under the default, the
+first entry your build cannot parse — a PQC key your provider rotates in, say —
+fails the whole set, and you lose the classical keys you could still have used.
+When you parse a JWKS from a provider that may add key types this build does not
+understand, pass `jwk.WithStrictKeySetParsing(false)` (or set it process-wide
+via `jwk.Configure`) so the unknown entry is retained as an inspectable
+`jwk.UnsupportedKey` placeholder instead of breaking the parse.
 
 In retain mode the set parses successfully and `Set.Len()` / iteration include
 the placeholder. A `jwk.UnsupportedKey` preserves the entry's original JSON, so
