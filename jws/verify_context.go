@@ -291,6 +291,15 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 }
 
 func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, key any, msg *Message, sig *Signature) error {
+	// Reject jwk.UnsupportedKey placeholders before any verifier —
+	// including a custom-registered one — is selected. tryKey is the
+	// single chokepoint every (alg, key) candidate funnels through, so
+	// this also covers candidates from custom KeyProviders, which never
+	// pass through validateAlgorithmForKey.
+	if err := unsupportedKeyError(key, "signature verification"); err != nil {
+		return err
+	}
+
 	// Enforce that the algorithm we are about to verify under exactly matches
 	// the "alg" advertised in this signature's protected header. tryKey is the
 	// single chokepoint every (alg, key) candidate funnels through, so this

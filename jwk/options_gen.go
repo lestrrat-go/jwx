@@ -84,7 +84,9 @@ type identLocalRegistry struct{}
 type identMaxKeys struct{}
 type identMinRSAModulusBits struct{}
 type identMinRSAPublicExponent struct{}
+type identOmitUnsupportedKeys struct{}
 type identRejectDuplicateKID struct{}
+type identStrictKeySetParsing struct{}
 type identStrictKeyUsage struct{}
 type identThumbprintHash struct{}
 type identX509 struct{}
@@ -117,8 +119,16 @@ func (identMinRSAPublicExponent) String() string {
 	return "WithMinRSAPublicExponent"
 }
 
+func (identOmitUnsupportedKeys) String() string {
+	return "WithOmitUnsupportedKeys"
+}
+
 func (identRejectDuplicateKID) String() string {
 	return "WithRejectDuplicateKID"
+}
+
+func (identStrictKeySetParsing) String() string {
+	return "WithStrictKeySetParsing"
 }
 
 func (identStrictKeyUsage) String() string {
@@ -178,6 +188,19 @@ func WithForceAssign(v bool) AssignKeyIDOption {
 // Again, DO NOT USE unless you have exhausted all other routes.
 // When you use this option, you will not be able to tell if you are
 // using a faulty JWKS, except for when there are JSON syntax errors.
+//
+// Precedence versus `WithStrictKeySetParsing`: an explicit per-call
+// option beats the global setting. Passing `WithIgnoreParseError(true)`
+// to `jwk.Parse()` selects drop mode even when strict mode was enabled
+// globally via `jwk.Settings()`. Only when the same call also passes
+// an explicit `WithStrictKeySetParsing(true)` does strict mode win
+// (the whole set fails fast).
+//
+// This option has no effect on direct JSON unmarshaling into a
+// `jwk.Set` (there is no per-call option channel there): direct
+// unmarshaling retains unparseable entries as `jwk.UnsupportedKey`
+// placeholders by default, or fails fast under a global strict
+// setting.
 func WithIgnoreParseError(v bool) ParseOption {
 	return &parseOption{option.New(identIgnoreParseError{}, v)}
 }
@@ -225,6 +248,21 @@ func WithMinRSAPublicExponent(v int) GlobalOption {
 	return &globalOption{option.New(identMinRSAPublicExponent{}, v)}
 }
 
+// WithOmitUnsupportedKeys controls how `jwk.PublicSetOf` treats
+// `jwk.UnsupportedKey` placeholders in the input set.
+//
+// By default this option is false: a placeholder in the input is an
+// error, because there is no way to prove that an unparseable entry
+// contains no private material, and passing it through would risk
+// republishing a private key.
+//
+// Pass `WithOmitUnsupportedKeys(true)` to drop placeholders from the
+// output set instead. Use this when you intend to publish the public
+// set and want unparseable entries silently excluded.
+func WithOmitUnsupportedKeys(v bool) PublicSetOption {
+	return &publicSetOption{option.New(identOmitUnsupportedKeys{}, v)}
+}
+
 // WithRejectDuplicateKID instructs `jwk.Parse()` /
 // `jwk.ParseReader()` / `jwk.ParseString()` and the companion
 // `Set.UnmarshalJSON()` to return an error when the JWKS contains
@@ -246,6 +284,48 @@ func WithMinRSAPublicExponent(v int) GlobalOption {
 // remain permissive (AddKey dedupes only by pointer identity).
 func WithRejectDuplicateKID(v bool) GlobalParseOption {
 	return &globalParseOption{option.New(identRejectDuplicateKID{}, v)}
+}
+
+// WithStrictKeySetParsing restores the fail-fast behavior for JWK Set
+// parsing: when true, the first entry in the "keys" array that cannot
+// be parsed fails the entire set, as in older releases.
+//
+// This is the same *policy* as v3's default (one unparseable entry
+// fails the whole set), but it is policy parity, not error parity:
+// v4 understands more key types than v3 (for example `AKP`), so an
+// entry that fails under v3 may parse successfully under v4 — or
+// fail at a different stage, with a different error.
+//
+// By default this option is false. In the default (retain) mode, an
+// unparseable entry is neither dropped nor fatal — it is kept in the
+// set as a `jwk.UnsupportedKey` placeholder that preserves the entry's
+// original JSON and the error that prevented parsing (RFC 7517 §5).
+// This lets a set that mixes understood and not-yet-understood keys
+// (for example, post-quantum keys published by an identity provider)
+// remain usable for the keys you do understand.
+//
+// Use this option when your issuer guarantees every key is parseable
+// and a failure should surface immediately at parse time rather than
+// later at key-selection time.
+//
+// This option is distinct from `WithIgnoreParseError`, which silently
+// *drops* unparseable entries instead of retaining placeholders.
+// When both parsing modes are requested, an explicit per-call option
+// beats the global setting: a per-call `WithIgnoreParseError(true)`
+// selects drop mode even under a global strict setting, while an
+// explicit per-call `WithStrictKeySetParsing(true)` in the same call
+// wins over `WithIgnoreParseError(true)` (the set fails fast).
+//
+// Can be set globally via `jwk.Settings()` or per-call on
+// `jwk.Parse()` / `jwk.ParseReader()` / `jwk.ParseString()`. A
+// per-call value takes precedence over the global setting in both
+// directions: per-call false relaxes a global true, and per-call
+// true tightens a global false. When passed per-call to `jwk.Parse()`
+// whose input turns out to be a bare single JWK rather than a JWK
+// Set, the option is ignored (it is set-scoped); `jwk.ParseKey()`
+// still rejects it outright.
+func WithStrictKeySetParsing(v bool) GlobalParseOption {
+	return &globalParseOption{option.New(identStrictKeySetParsing{}, v)}
 }
 
 // WithStrictKeyUsage specifies if during JWK parsing, the "use" field

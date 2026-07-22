@@ -801,6 +801,10 @@ func isRegisteredUnderAnyCurve(alg jwa.SignatureAlgorithm) bool {
 // Every other classification failure is surfaced so callers get a crisp
 // option-boundary rejection instead of a deep-stack error.
 //
+// A jwk.UnsupportedKey placeholder is rejected before any carve-out is
+// considered: it carries no usable key material, so not even a custom
+// Signer/Verifier may receive it.
+//
 // Carve-out (b) is OR-symmetric across the two registries: hasCustomSigVerifier
 // checks both signerDB and verifierDB, so registering EITHER a custom Signer
 // OR a custom Verifier loosens the gate for that alg on BOTH the sign and
@@ -813,6 +817,13 @@ func isRegisteredUnderAnyCurve(alg jwa.SignatureAlgorithm) bool {
 func validateAlgorithmForKey(alg jwa.SignatureAlgorithm, key any) error {
 	if key == nil {
 		return nil
+	}
+	// A jwk.UnsupportedKey placeholder must never reach a Signer or
+	// Verifier — including a custom-registered one, whose carve-out (b)
+	// below would otherwise skip key classification entirely and hand
+	// the placeholder to the callback as key material.
+	if err := unsupportedKeyError(key, "signing or verification"); err != nil {
+		return fmt.Errorf(`jws.WithKey: %w`, err)
 	}
 	algs, err := AlgorithmsForKey(key)
 	if err != nil {
@@ -870,6 +881,22 @@ func validateEd25519KeyShape(key any) error {
 		}
 	}
 	return nil
+}
+
+// unsupportedKeyError returns a descriptive error — naming the kid and
+// the raw kty, and wrapping Reason() — when key is a
+// jwk.UnsupportedKey placeholder retained for an unparseable JWK Set
+// entry, and nil otherwise. op names the operation being refused.
+// Placeholders carry no usable key material, so they are rejected
+// before any Signer or Verifier (default or custom-registered) is
+// selected.
+func unsupportedKeyError(key any, op string) error {
+	uk, ok := key.(jwk.UnsupportedKey)
+	if !ok {
+		return nil
+	}
+	kid, _ := uk.KeyID()
+	return fmt.Errorf(`key with kid %q has unsupported key type %q and cannot be used for %s; an extension module may be required to parse it: %w`, kid, uk.KeyType().String(), op, uk.Reason())
 }
 
 // hasCustomSigVerifier reports whether a non-default Signer or

@@ -213,6 +213,15 @@ func (s *set) setRejectDuplicateKID(v bool) {
 	s.rejectDuplicateKID = v
 }
 
+// setStrictKeySetParsing stores the strict value resolved by Parse
+// (global default already merged with any per-call option). A nil
+// pointer means "not resolved" — UnmarshalJSONFrom then falls back to
+// the global setting. The pointer form lets a per-call false override
+// a global true, which a plain bool scratch field cannot express.
+func (s *set) setStrictKeySetParsing(v *bool) {
+	s.strictKeySetParsing = v
+}
+
 // UnmarshalJSON delegates to UnmarshalJSONFrom so the streaming /
 // cap-before-allocate behavior is identical for stdlib v1 callers
 // (encoding/json) and jsonv2 callers. This entry point requires JWKS
@@ -248,6 +257,10 @@ func (s *set) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		maxK = int(maxKeys.Load())
 	}
 	rejectDupKid := s.rejectDuplicateKID || rejectDuplicateKID.Load()
+	strict := strictKeySetParsing.Load()
+	if s.strictKeySetParsing != nil {
+		strict = *s.strictKeySetParsing
+	}
 
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -287,11 +300,24 @@ func (s *set) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				}
 				key, err := doParseKey([]byte(raw), options...)
 				if err != nil {
-					if !ignoreParseError {
+					// Precedence: strict fails the whole set (legacy
+					// behavior); else ignoreParseError drops the entry;
+					// else the entry is retained as an UnsupportedKey
+					// placeholder (RFC 7517 §5, new default). Parse has
+					// already resolved per-call vs global for both modes
+					// before this point (a per-call WithIgnoreParseError
+					// beats a global strict); the values seen here are
+					// final.
+					if strict {
 						return fmt.Errorf(`failed to decode key #%d in "keys": %w`, i, err)
 					}
-					i++
-					continue
+					if ignoreParseError {
+						i++
+						continue
+					}
+					// dec.ReadValue may reuse its buffer, so newUnsupportedKey
+					// clones the raw bytes.
+					key = newUnsupportedKey([]byte(raw), err)
 				}
 				if seenKIDs != nil {
 					if kid, ok := key.KeyID(); ok && kid != "" {

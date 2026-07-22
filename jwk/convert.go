@@ -551,6 +551,11 @@ func ExportAll[T any](set Set) ([]T, error) {
 }
 
 func doExport(key Key, hint any) (any, error) {
+	if uk, ok := key.(UnsupportedKey); ok {
+		kid, _ := uk.KeyID()
+		return nil, fmt.Errorf(`jwk.Export: cannot export an unsupported key (kty=%q, kid=%q) that could not be parsed; an extension module may be required: %w`, uk.KeyType().String(), kid, uk.Reason())
+	}
+
 	muKeyExporters.RLock()
 	exporters := findExporters(key)
 	muKeyExporters.RUnlock()
