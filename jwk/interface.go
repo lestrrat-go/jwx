@@ -54,6 +54,11 @@ const (
 // the `Field()` method. Per-key extension members live on the
 // individual `jwk.Key` objects, accessible via that key's `Field()`.
 //
+// A set parsed from JSON may contain [UnsupportedKey] placeholders for
+// entries that could not be parsed; they count toward Len(), appear in
+// iteration, and are found by LookupKeyID. Use [IsUnsupportedKey] to
+// skip them before performing cryptographic operations.
+//
 //nolint:interfacebloat
 type Set interface {
 	// AddKey adds the specified key. If the key already exists in the set,
@@ -131,12 +136,13 @@ type Set interface {
 }
 
 type set struct {
-	keys               []Key
-	mu                 sync.RWMutex
-	dc                 DecodeCtx
-	privateParams      map[string]any
-	maxKeys            int  // scratch cap consumed by UnmarshalJSON; 0 means use global default
-	rejectDuplicateKID bool // scratch flag consumed by UnmarshalJSON; false falls back to global
+	keys                []Key
+	mu                  sync.RWMutex
+	dc                  DecodeCtx
+	privateParams       map[string]any
+	maxKeys             int  // scratch cap consumed by UnmarshalJSON; 0 means use global default
+	rejectDuplicateKID  bool // scratch flag consumed by UnmarshalJSON; false falls back to global
+	strictKeySetParsing bool // scratch flag consumed by UnmarshalJSON; false falls back to global
 }
 
 type PublicKeyer interface {

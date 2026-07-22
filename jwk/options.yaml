@@ -150,6 +150,37 @@ options:
 
       This does not affect `(*Set).AddKey` — programmatic additions
       remain permissive (AddKey dedupes only by pointer identity).
+  - ident: StrictKeySetParsing
+    interface: GlobalParseOption
+    argument_type: bool
+    comment: |
+      WithStrictKeySetParsing restores the fail-fast behavior for JWK Set
+      parsing: when true, the first entry in the "keys" array that cannot
+      be parsed fails the entire set, as in older releases.
+
+      This is the same *policy* as v3's default (one unparseable entry
+      fails the whole set), but it is policy parity, not error parity:
+      v4 understands more key types than v3 (for example `AKP`), so an
+      entry that fails under v3 may parse successfully under v4 — or
+      fail at a different stage, with a different error.
+
+      By default this option is false. In the default (retain) mode, an
+      unparseable entry is neither dropped nor fatal — it is kept in the
+      set as a `jwk.UnsupportedKey` placeholder that preserves the entry's
+      original JSON and the error that prevented parsing (RFC 7517 §5).
+      This lets a set that mixes understood and not-yet-understood keys
+      (for example, post-quantum keys published by an identity provider)
+      remain usable for the keys you do understand.
+
+      Use this option when your issuer guarantees every key is parseable
+      and a failure should surface immediately at parse time rather than
+      later at key-selection time.
+
+      This option is distinct from `WithIgnoreParseError`, which silently
+      *drops* unparseable entries instead of retaining placeholders.
+
+      Can be set globally via `jwk.Settings()` or per-call on
+      `jwk.Parse()` / `jwk.ParseReader()` / `jwk.ParseString()`.
   - ident: AllowSymmetric
     interface: PublicSetOption
     argument_type: bool
@@ -166,3 +197,18 @@ options:
       Pass `WithAllowSymmetric(true)` only if you are certain the
       resulting set will not be published. When true, symmetric keys
       are passed through unchanged, matching the legacy behavior.
+  - ident: OmitUnsupportedKeys
+    interface: PublicSetOption
+    argument_type: bool
+    comment: |
+      WithOmitUnsupportedKeys controls how `jwk.PublicSetOf` treats
+      `jwk.UnsupportedKey` placeholders in the input set.
+
+      By default this option is false: a placeholder in the input is an
+      error, because there is no way to prove that an unparseable entry
+      contains no private material, and passing it through would risk
+      republishing a private key.
+
+      Pass `WithOmitUnsupportedKeys(true)` to drop placeholders from the
+      output set instead. Use this when you intend to publish the public
+      set and want unparseable entries silently excluded.

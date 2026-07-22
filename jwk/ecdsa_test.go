@@ -53,10 +53,12 @@ func TestECDSAInvalidPointsRejectedOnParse(t *testing.T) {
 			require.True(t, jwk.IsKeyValidationError(err), `ParseKey error must unwrap to a key-validation error: %v`, err)
 
 			// The Set-level entry point funnels individual keys through
-			// defaultParseKey too, so the same body wrapped in a JWKS must
-			// also be rejected.
+			// defaultParseKey too. Under the default retain mode an invalid
+			// entry becomes a jwk.UnsupportedKey placeholder; with
+			// WithStrictKeySetParsing the whole set is rejected, which is
+			// what this trust-boundary test asserts.
 			setBody := []byte(`{"keys":[` + string(body) + `]}`)
-			_, err = jwk.Parse(setBody)
+			_, err = jwk.Parse(setBody, jwk.WithStrictKeySetParsing(true))
 			require.Error(t, err, `jwk.Parse must reject a JWKS containing an invalid ECDSA point`)
 		})
 	}

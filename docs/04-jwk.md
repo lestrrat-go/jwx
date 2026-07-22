@@ -108,6 +108,126 @@ func Example_jwk_parse_jwks() {
 source: [examples/jwk_parse_jwks_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_parse_jwks_example_test.go)
 <!-- END INCLUDE -->
 
+## Unsupported keys in a set
+
+Per RFC 7517 §5, an implementation SHOULD ignore keys within a JWK Set whose
+key type is not understood, that are missing required members, or whose values
+are out of the supported range. A single such entry — for example a
+post-quantum key published by an identity provider alongside classical RSA/EC
+keys — should not prevent you from using every key you *do* understand.
+
+`jwk.Parse` (and `Set.UnmarshalJSON`) offers three modes for a `"keys"` entry
+that cannot be parsed:
+
+| Mode | Behavior | How to select |
+|------|----------|---------------|
+| Retain (default) | The entry is kept in the set as a `jwk.UnsupportedKey` placeholder | (no option) |
+| Drop | The entry is discarded | `jwk.WithIgnoreParseError(true)` |
+| Strict | The first unparseable entry fails the whole set | `jwk.WithStrictKeySetParsing(true)` |
+
+In the default retain mode, the set parses successfully and `Set.Len()` /
+iteration include the placeholder. A `jwk.UnsupportedKey` preserves the entry's
+original JSON, so a set that contains one round-trips losslessly (a fetch +
+re-serialize does not strip keys you did not understand), and `json.Marshal`
+of the placeholder itself reproduces the original entry. Check for a
+placeholder with `jwk.IsUnsupportedKey`; type-assert to `jwk.UnsupportedKey`
+when you also need `Reason()`:
+
+```go
+for _, key := range set.All() {
+  if jwk.IsUnsupportedKey(key) {
+    // This entry is not supported by this build. Type-assert to
+    // jwk.UnsupportedKey to inspect it: Reason() explains why it could
+    // not be parsed (an extension module may be required), and
+    // json.Marshal(key) reproduces the original entry's JSON.
+    continue
+  }
+  // ... use the supported key
+}
+```
+
+A placeholder cannot be used for any cryptographic operation: `Thumbprint`,
+`PublicKey`, and `Validate` return an error, and key-selection paths in `jws`
+and `jwe` reject it with a descriptive per-key error (naming the `kid`, the raw
+`kty`, and the underlying reason) rather than aborting the whole verify/decrypt.
+`jwk.PublicSetOf` also errors when the input set contains a placeholder, because
+there is no way to prove the unparseable entry holds no private material; pass
+`jwk.WithOmitUnsupportedKeys(true)` to drop placeholders from the output set
+instead.
+
+`jwk.WithStrictKeySetParsing(true)` can also be passed to `jwk.Settings()` to
+apply strict mode process-wide. Note that retention applies
+only to sets: `jwk.ParseKey` (and a bare single JWK passed to `jwk.Parse`) still
+returns a hard error for an unparseable key.
+
+Strict mode is the same *policy* as v3's default — one unparseable entry fails
+the whole set — but it is policy parity, not error parity. v4 understands more
+key types than v3 (for example `AKP`), so an entry that fails under v3 may
+parse successfully under v4, or fail at a different stage with a different
+error. Do not write code that matches v3's error strings against v4 strict
+mode.
+
+The three modes, runnable:
+
+<!-- INCLUDE(examples/jwk_parse_unsupported_example_test.go) -->
+```go
+package examples_test
+
+import (
+  "fmt"
+
+  "github.com/lestrrat-go/jwx/v4/jwk"
+)
+
+// Example_jwk_parse_unsupported demonstrates the three parsing modes for
+// a JWK Set containing an entry that this build cannot parse.
+func Example_jwk_parse_unsupported() {
+  // One entry with a key type this build does not understand, plus a
+  // regular EC key (from RFC 7517 Appendix A.1).
+  raw := []byte(`{"keys":[
+	  {"kty":"PQ-FUTURE","kid":"pq1","alg":"PQ-ALG-1"},
+	  {"kty":"EC","crv":"P-256","x":"MKBCTNIcKUSDii11ySs3526iDZ8AiTo7Tu6KPAqv7D4","y":"4Etl6SRW2YiLUrN5vfvVHuhp7x8PxltmWWlbbM4IFyM","use":"enc","kid":"ec1"}
+	]}`)
+
+  // Default (retain): the set parses, and the unknown entry is kept as
+  // a jwk.UnsupportedKey placeholder alongside the usable EC key.
+  set, err := jwk.Parse(raw)
+  if err != nil {
+    fmt.Println("default: error:", err)
+    return
+  }
+  fmt.Println("default: keys:", set.Len())
+  for i, key := range set.All() {
+    fmt.Printf("default: key %d unsupported: %t\n", i, jwk.IsUnsupportedKey(key))
+  }
+
+  // WithIgnoreParseError(true): the unknown entry is silently dropped.
+  dropped, err := jwk.Parse(raw, jwk.WithIgnoreParseError(true))
+  if err != nil {
+    fmt.Println("ignore: error:", err)
+    return
+  }
+  fmt.Println("ignore: keys:", dropped.Len())
+
+  // WithStrictKeySetParsing(true): the whole set fails to parse. This
+  // is the same policy as v3's default behavior — but only the policy:
+  // v4 understands more key types than v3 (for example "AKP"), so an
+  // entry that fails under v3 may parse successfully under v4, or fail
+  // at a different stage with a different error.
+  _, err = jwk.Parse(raw, jwk.WithStrictKeySetParsing(true))
+  fmt.Println("strict: parse failed:", err != nil)
+
+  // OUTPUT:
+  // default: keys: 2
+  // default: key 0 unsupported: true
+  // default: key 1 unsupported: false
+  // ignore: keys: 1
+  // strict: parse failed: true
+}
+```
+source: [examples/jwk_parse_unsupported_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_parse_unsupported_example_test.go)
+<!-- END INCLUDE -->
+
 ## Parse a key
 
 If you are sure that the source only contains a single key, you can use [`jwk.ParseKey()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#ParseKey)

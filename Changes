@@ -4,6 +4,30 @@ Changes
 v4 has many incompatibilities with v3. To see the full list of differences between
 v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MICRATION-v4.md)
 
+UNRELEASED
+  * [jwk] `jwk.Parse` (and `Set.UnmarshalJSON`) no longer fails an entire
+    JWK Set when a single entry in the "keys" array cannot be parsed. By
+    default such an entry is now retained as a `jwk.UnsupportedKey`
+    placeholder that preserves the entry's original JSON and the error
+    that prevented parsing (RFC 7517 §5). This lets a set that mixes
+    understood keys with keys the current build does not understand — for
+    example post-quantum keys published alongside RSA/EC keys — remain
+    usable for the keys you do understand.
+
+    Because of this, `Set.Len()` and iteration now include placeholders.
+    Code that performs a cryptographic operation on every key in a set
+    should skip entries for which `jwk.IsUnsupportedKey` returns true.
+    `jws`/`jwe` key selection and `jwk.PublicSetOf` / `jwk.Export` /
+    `jwk.ExportAll` / `jwk.AssignKeyID` already reject placeholders with a
+    descriptive error rather than a generic failure.
+
+    Two escape hatches: `jwk.WithStrictKeySetParsing(true)` (per call or
+    via `jwk.Settings()`) restores the previous fail-fast behavior, and
+    `jwk.WithIgnoreParseError(true)` still drops unparseable entries.
+    `jwk.PublicSetOf` rejects a set containing a placeholder unless you
+    pass the new `jwk.WithOmitUnsupportedKeys(true)`, which drops them from
+    the output. (#2263)
+
 v4.1.0 1 July 2026
   * [jws] `jws.Verify` now rejects a JWS whose protected header `"alg"`
     does not match the algorithm used to verify it (previously the

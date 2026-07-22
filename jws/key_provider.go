@@ -112,6 +112,11 @@ type keySetProvider struct {
 }
 
 func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _ *Message) error {
+	if uk, ok := key.(jwk.UnsupportedKey); ok {
+		kid, _ := uk.KeyID()
+		return fmt.Errorf(`key with kid %q has unsupported key type %q and cannot be used for signature verification; an extension module may be required to parse it: %w`, kid, uk.KeyType().String(), uk.Reason())
+	}
+
 	if usage, ok := key.KeyUsage(); ok {
 		// it's okay if use: "". we'll assume it's "sig"
 		if usage != "" && usage != jwk.ForSignature.String() {
@@ -308,6 +313,10 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 	key, ok := set.LookupKeyID(kid)
 	if !ok {
 		return fmt.Errorf(`jku: key with "kid" %q not found in JWKS fetched from %q`, kid, u)
+	}
+
+	if uk, ok := key.(jwk.UnsupportedKey); ok {
+		return fmt.Errorf(`jku: key with "kid" %q from %q has unsupported key type %q and cannot be used for signature verification; an extension module may be required to parse it: %w`, kid, u, uk.KeyType().String(), uk.Reason())
 	}
 
 	if usage, ok := key.KeyUsage(); ok {

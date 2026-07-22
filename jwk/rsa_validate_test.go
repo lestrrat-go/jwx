@@ -55,7 +55,10 @@ func TestRSAInvalidParametersRejectedOnParse(t *testing.T) {
 		require.True(t, jwk.IsKeyValidationError(err))
 		require.Contains(t, err.Error(), "rsa modulus too small")
 
-		_, err = jwk.Parse([]byte(`{"keys":[` + string(payload) + `]}`))
+		// Under the default retain mode this entry becomes a
+		// jwk.UnsupportedKey placeholder; WithStrictKeySetParsing keeps
+		// the set-level rejection this test asserts.
+		_, err = jwk.Parse([]byte(`{"keys":[`+string(payload)+`]}`), jwk.WithStrictKeySetParsing(true))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "rsa modulus too small")
 	})

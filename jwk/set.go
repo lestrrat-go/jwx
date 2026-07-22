@@ -213,6 +213,10 @@ func (s *set) setRejectDuplicateKID(v bool) {
 	s.rejectDuplicateKID = v
 }
 
+func (s *set) setStrictKeySetParsing(v bool) {
+	s.strictKeySetParsing = v
+}
+
 // UnmarshalJSON delegates to UnmarshalJSONFrom so the streaming /
 // cap-before-allocate behavior is identical for stdlib v1 callers
 // (encoding/json) and jsonv2 callers. This entry point requires JWKS
@@ -248,6 +252,7 @@ func (s *set) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		maxK = int(maxKeys.Load())
 	}
 	rejectDupKid := s.rejectDuplicateKID || rejectDuplicateKID.Load()
+	strict := s.strictKeySetParsing || strictKeySetParsing.Load()
 
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -287,11 +292,20 @@ func (s *set) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 				}
 				key, err := doParseKey([]byte(raw), options...)
 				if err != nil {
-					if !ignoreParseError {
+					// Precedence: strict fails the whole set (legacy
+					// behavior); else ignoreParseError drops the entry;
+					// else the entry is retained as an UnsupportedKey
+					// placeholder (RFC 7517 §5, new default).
+					if strict {
 						return fmt.Errorf(`failed to decode key #%d in "keys": %w`, i, err)
 					}
-					i++
-					continue
+					if ignoreParseError {
+						i++
+						continue
+					}
+					// dec.ReadValue may reuse its buffer, so newUnsupportedKey
+					// clones the raw bytes.
+					key = newUnsupportedKey([]byte(raw), err)
 				}
 				if seenKIDs != nil {
 					if kid, ok := key.KeyID(); ok && kid != "" {
