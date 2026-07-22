@@ -116,6 +116,14 @@ are out of the supported range. A single such entry — for example a
 post-quantum key published by an identity provider alongside classical RSA/EC
 keys — should not prevent you from using every key you *do* understand.
 
+This is no longer hypothetical. As post-quantum cryptography is deployed,
+identity providers are expected to publish JWK Sets that mix classical RSA/EC
+keys with PQC key types (for example `AKP`, used by ML-DSA) that a given build
+— yours, or a provider's older client — may not yet understand. A JWKS that
+parses cleanly today can gain an entry your build cannot decode the moment the
+provider rotates in a PQC key. The default behavior below is what keeps such a
+set usable when that happens.
+
 `jwk.Parse` offers three modes for a `"keys"` entry that cannot be parsed:
 
 | Mode | Behavior | How to select |
@@ -123,6 +131,16 @@ keys — should not prevent you from using every key you *do* understand.
 | Retain (default) | The entry is kept in the set as a `jwk.UnsupportedKey` placeholder | (no option) |
 | Drop | The entry is discarded | `jwk.WithIgnoreParseError(true)` |
 | Strict | The first unparseable entry fails the whole set | `jwk.WithStrictKeySetParsing(true)` |
+
+**The default protects you; think twice before turning it off.** In retain
+mode an entry your build cannot parse — a PQC key, say — becomes a
+`jwk.UnsupportedKey` placeholder and every key you *do* understand still works.
+Strict mode gives that up: the first unparseable entry fails the whole set.
+Enabling strict mode **globally** via `jwk.Settings(jwk.WithStrictKeySetParsing(true))`
+is the dangerous case — the day a provider you consume adds a PQC key to its
+JWKS, every `jwk.Parse` in your process starts failing, and you lose the
+classical keys you could still have used. Reach for strict mode only when you
+own the JWKS and *want* an unrecognized entry to be a hard error.
 
 Direct JSON unmarshaling into a `jwk.Set` (for example `json.Unmarshal` or
 `Set.UnmarshalJSON`) has no per-call option channel: it retains unparseable
