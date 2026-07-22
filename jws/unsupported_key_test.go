@@ -93,6 +93,134 @@ func TestVerifyRequireKidFalseNamesPlaceholder(t *testing.T) {
 	require.Contains(t, verr.Error(), "FOO", "error should name the unsupported kty")
 }
 
+// parsePlaceholder parses a JWK Set containing a single unparseable
+// entry with retention enabled and returns the resulting placeholder.
+func parsePlaceholder(t *testing.T) jwk.Key {
+	t.Helper()
+	setJSON := []byte(`{"keys":[{"kty":"FOO","kid":"foo1","x":"dGVzdA"}]}`)
+	set, err := jwk.Parse(setJSON, jwk.WithStrictKeySetParsing(false))
+	require.NoError(t, err)
+	key, ok := set.LookupKeyID("foo1")
+	require.True(t, ok)
+	require.True(t, jwk.IsUnsupportedKey(key))
+	return key
+}
+
+// recordingSigner is a custom Signer2 that records whether Sign was
+// ever invoked.
+type recordingSigner struct {
+	alg    jwa.SignatureAlgorithm
+	called *bool
+}
+
+func (s recordingSigner) Algorithm() jwa.SignatureAlgorithm {
+	return s.alg
+}
+
+func (s recordingSigner) Sign(_ any, _ []byte) ([]byte, error) {
+	*s.called = true
+	return []byte("bogus"), nil
+}
+
+// recordingVerifier is a custom Verifier2 that records whether Verify
+// was ever invoked.
+type recordingVerifier struct {
+	called *bool
+}
+
+func (v recordingVerifier) Verify(_ any, _, _ []byte) error {
+	*v.called = true
+	return nil
+}
+
+// placeholderSinkProvider is a custom KeyProvider that sinks a fixed
+// (alg, key) pair, bypassing the built-in key set provider entirely.
+type placeholderSinkProvider struct {
+	alg jwa.SignatureAlgorithm
+	key jwk.Key
+}
+
+func (p placeholderSinkProvider) FetchKeys(_ context.Context, sink jws.KeySink, _ *jws.Signature, _ *jws.Message) error {
+	sink.Key(p.alg, p.key)
+	return nil
+}
+
+// TestSignWithKeyRejectsPlaceholderBeforeCustomSigner pins that
+// jws.Sign with a placeholder passed directly via jws.WithKey fails up
+// front — naming the kid and kty — and that a custom registered signer
+// for the algorithm is never handed the placeholder.
+func TestSignWithKeyRejectsPlaceholderBeforeCustomSigner(t *testing.T) {
+	placeholder := parsePlaceholder(t)
+
+	alg := jwa.NewSignatureAlgorithm("TEST-PLACEHOLDER-SIGN")
+	called := false
+	require.NoError(t, jws.RegisterSigner(alg, recordingSigner{alg: alg, called: &called}))
+	defer func() {
+		jws.UnregisterSigner(alg)
+		jwa.UnregisterSignatureAlgorithm(alg)
+	}()
+
+	_, err := jws.Sign([]byte("hello world"), jws.WithKey(alg, placeholder))
+	require.Error(t, err)
+	require.False(t, called, "custom signer must not be invoked with a placeholder")
+	require.Contains(t, err.Error(), "foo1", "error should name the kid")
+	require.Contains(t, err.Error(), "FOO", "error should name the unsupported kty")
+}
+
+// TestVerifyWithKeyRejectsPlaceholderBeforeCustomVerifier pins that
+// jws.Verify with a placeholder passed directly via jws.WithKey fails
+// up front and that a custom registered verifier for the algorithm is
+// never handed the placeholder.
+func TestVerifyWithKeyRejectsPlaceholderBeforeCustomVerifier(t *testing.T) {
+	placeholder := parsePlaceholder(t)
+
+	alg := jwa.NewSignatureAlgorithm("TEST-PLACEHOLDER-VERIFY")
+	called := false
+	require.NoError(t, jws.RegisterVerifier(alg, recordingVerifier{called: &called}))
+	defer func() {
+		jws.UnregisterVerifier(alg)
+		jwa.UnregisterSignatureAlgorithm(alg)
+	}()
+
+	symKey, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err)
+	signed, err := jws.Sign([]byte("hello world"), jws.WithKey(jwa.HS256(), symKey))
+	require.NoError(t, err)
+
+	_, verr := jws.Verify(signed, jws.WithKey(alg, placeholder))
+	require.Error(t, verr)
+	require.False(t, called, "custom verifier must not be invoked with a placeholder")
+	require.Contains(t, verr.Error(), "foo1", "error should name the kid")
+	require.Contains(t, verr.Error(), "FOO", "error should name the unsupported kty")
+}
+
+// TestVerifyCustomKeyProviderRejectsPlaceholder pins that a placeholder
+// sunk by a custom KeyProvider — a path that bypasses the built-in key
+// set provider and its checks — is rejected before the verifier runs,
+// and that a custom registered verifier is never handed the placeholder.
+func TestVerifyCustomKeyProviderRejectsPlaceholder(t *testing.T) {
+	placeholder := parsePlaceholder(t)
+
+	alg := jwa.NewSignatureAlgorithm("TEST-PLACEHOLDER-PROVIDER")
+	called := false
+	require.NoError(t, jws.RegisterVerifier(alg, recordingVerifier{called: &called}))
+	defer func() {
+		jws.UnregisterVerifier(alg)
+		jwa.UnregisterSignatureAlgorithm(alg)
+	}()
+
+	symKey, err := jwxtest.GenerateSymmetricJwk()
+	require.NoError(t, err)
+	signed, err := jws.Sign([]byte("hello world"), jws.WithKey(jwa.HS256(), symKey))
+	require.NoError(t, err)
+
+	_, verr := jws.Verify(signed, jws.WithKeyProvider(placeholderSinkProvider{alg: alg, key: placeholder}))
+	require.Error(t, verr)
+	require.False(t, called, "custom verifier must not be invoked with a placeholder")
+	require.Contains(t, verr.Error(), "foo1", "error should name the kid")
+	require.Contains(t, verr.Error(), "FOO", "error should name the unsupported kty")
+}
+
 // fixedSetFetcher is a jwk.Fetcher that returns the same JWK Set for
 // any URL, standing in for a remote "jku" JWKS endpoint.
 type fixedSetFetcher struct {

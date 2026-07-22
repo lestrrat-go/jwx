@@ -117,8 +117,7 @@ type keySetProvider struct {
 // filtered out (e.g. wrong usage, no matching algorithm).
 func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _ *Message) (bool, error) {
 	if uk, ok := key.(jwk.UnsupportedKey); ok {
-		kid, _ := uk.KeyID()
-		return false, fmt.Errorf(`key with kid %q has unsupported key type %q and cannot be used for signature verification; an extension module may be required to parse it: %w`, kid, uk.KeyType().String(), uk.Reason())
+		return false, unsupportedKeyError(uk, `signature verification`)
 	}
 
 	if usage, ok := key.KeyUsage(); ok {
