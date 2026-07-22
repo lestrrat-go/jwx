@@ -169,7 +169,6 @@ mode.
 
 The three modes, runnable:
 
-<!-- INCLUDE(examples/jwk_parse_unsupported_example_test.go) -->
 ```go
 package examples_test
 
@@ -226,7 +225,6 @@ func Example_jwk_parse_unsupported() {
 }
 ```
 source: [examples/jwk_parse_unsupported_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwk_parse_unsupported_example_test.go)
-<!-- END INCLUDE -->
 
 ## Parse a key
 
