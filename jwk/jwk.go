@@ -617,15 +617,17 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		setter.setMaxKeys(maxK)
 		defer setter.setMaxKeys(0)
 	}
-	if setter, ok := s.(interface{ setRejectDuplicateKID(bool) }); ok && rejectDupKid {
-		setter.setRejectDuplicateKID(true)
-		defer setter.setRejectDuplicateKID(false)
-	}
-	// Unlike rejectDupKid above, the resolved strict value is always
-	// propagated (not only when true): a per-call
-	// WithStrictKeySetParsing(false) must override a global true, so
-	// UnmarshalJSONFrom needs the resolved value, not just a "turn it
+	// Always propagate the resolved value (not only when true): a
+	// per-call WithRejectDuplicateKID(false) must override a global true,
+	// so UnmarshalJSONFrom needs the resolved value, not just a "turn it
 	// on" signal. A nil reset restores the fall-back-to-global state.
+	if setter, ok := s.(interface{ setRejectDuplicateKID(*bool) }); ok {
+		setter.setRejectDuplicateKID(&rejectDupKid)
+		defer setter.setRejectDuplicateKID(nil)
+	}
+	// Same rationale as rejectDupKid above: the resolved strict value is
+	// always propagated so a per-call WithStrictKeySetParsing(false) can
+	// override a global true.
 	if setter, ok := s.(interface{ setStrictKeySetParsing(*bool) }); ok {
 		setter.setStrictKeySetParsing(&strict)
 		defer setter.setStrictKeySetParsing(nil)
