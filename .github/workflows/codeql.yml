@@ -24,6 +24,10 @@ jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+    # v4 depends on encoding/json/v2, which requires GOEXPERIMENT=jsonv2.
+    # Without it CodeQL's autobuild cannot import the package.
+    env:
+      GOEXPERIMENT: jsonv2
     permissions:
       actions: read
       contents: read
@@ -41,6 +45,14 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    # Autobuild invokes `go build` directly, so the toolchain must match go.mod
+    # (Go 1.26+ for encoding/json/v2) rather than the runner's preinstalled Go.
+    - name: Install Go
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version-file: "go.mod"
+        check-latest: true
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
