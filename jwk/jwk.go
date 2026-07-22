@@ -609,9 +609,14 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 		setter.setRejectDuplicateKID(true)
 		defer setter.setRejectDuplicateKID(false)
 	}
-	if setter, ok := s.(interface{ setStrictKeySetParsing(bool) }); ok && strict {
-		setter.setStrictKeySetParsing(true)
-		defer setter.setStrictKeySetParsing(false)
+	// Unlike rejectDupKid above, the resolved strict value is always
+	// propagated (not only when true): a per-call
+	// WithStrictKeySetParsing(false) must override a global true, so
+	// UnmarshalJSONFrom needs the resolved value, not just a "turn it
+	// on" signal. A nil reset restores the fall-back-to-global state.
+	if setter, ok := s.(interface{ setStrictKeySetParsing(*bool) }); ok {
+		setter.setStrictKeySetParsing(&strict)
+		defer setter.setStrictKeySetParsing(nil)
 	}
 
 	// Dispatch JWK-vs-JWKS up front. Set.UnmarshalJSON / UnmarshalJSONFrom
@@ -692,7 +697,8 @@ func ParseString(s string, options ...ParseOption) (Set, error) {
 // via `jwk.WithThumbprintHash`).
 func AssignKeyID(key Key, options ...AssignKeyIDOption) error {
 	if uk, ok := key.(UnsupportedKey); ok {
-		return fmt.Errorf(`jwk.AssignKeyID: cannot assign a key ID to an unsupported key (kty=%q) that could not be parsed; its thumbprint cannot be computed: %w`, uk.KeyType().String(), uk.Reason())
+		kid, _ := uk.KeyID()
+		return fmt.Errorf(`jwk.AssignKeyID: cannot assign a key ID to an unsupported key (kty=%q, kid=%q) that could not be parsed; its thumbprint cannot be computed: %w`, uk.KeyType().String(), kid, uk.Reason())
 	}
 
 	hash := crypto.SHA256

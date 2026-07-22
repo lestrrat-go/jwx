@@ -140,9 +140,9 @@ type set struct {
 	mu                  sync.RWMutex
 	dc                  DecodeCtx
 	privateParams       map[string]any
-	maxKeys             int  // scratch cap consumed by UnmarshalJSON; 0 means use global default
-	rejectDuplicateKID  bool // scratch flag consumed by UnmarshalJSON; false falls back to global
-	strictKeySetParsing bool // scratch flag consumed by UnmarshalJSON; false falls back to global
+	maxKeys             int   // scratch cap consumed by UnmarshalJSON; 0 means use global default
+	rejectDuplicateKID  bool  // scratch flag consumed by UnmarshalJSON; false falls back to global
+	strictKeySetParsing *bool // scratch tri-state consumed by UnmarshalJSON; nil falls back to global
 }
 
 type PublicKeyer interface {

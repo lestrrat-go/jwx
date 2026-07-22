@@ -164,6 +164,25 @@ func TestUnsupportedKeyStrictMode(t *testing.T) {
 		_, err := jwk.Parse(setJSON)
 		require.Error(t, err)
 	})
+
+	t.Run("per-call false overrides global true", func(t *testing.T) {
+		require.NoError(t, jwk.Settings(jwk.WithStrictKeySetParsing(true)))
+		t.Cleanup(func() {
+			require.NoError(t, jwk.Settings(jwk.WithStrictKeySetParsing(false)))
+		})
+		set, err := jwk.Parse(setJSON, jwk.WithStrictKeySetParsing(false))
+		require.NoError(t, err, `per-call WithStrictKeySetParsing(false) must override the global true`)
+		require.Equal(t, 2, set.Len())
+		k0, ok := set.Key(0)
+		require.True(t, ok)
+		require.True(t, jwk.IsUnsupportedKey(k0), `the unparseable entry must be retained as a placeholder`)
+	})
+
+	t.Run("per-call true overrides global false", func(t *testing.T) {
+		require.NoError(t, jwk.Settings(jwk.WithStrictKeySetParsing(false)))
+		_, err := jwk.Parse(setJSON, jwk.WithStrictKeySetParsing(true))
+		require.Error(t, err, `per-call WithStrictKeySetParsing(true) must override the global false`)
+	})
 }
 
 func TestUnsupportedKeyDropMode(t *testing.T) {
@@ -299,6 +318,9 @@ func TestUnsupportedKeyExport(t *testing.T) {
 	})
 
 	t.Run("AssignKeyID errors on a placeholder", func(t *testing.T) {
-		require.Error(t, jwk.AssignKeyID(k0))
+		err := jwk.AssignKeyID(k0)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), `kty="FOO"`, `error must name the raw kty`)
+		require.Contains(t, err.Error(), `kid="foo1"`, `error must name the entry's kid`)
 	})
 }

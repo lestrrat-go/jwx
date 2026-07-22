@@ -156,7 +156,8 @@ there is no way to prove the unparseable entry holds no private material; pass
 instead.
 
 `jwk.WithStrictKeySetParsing(true)` can also be passed to `jwk.Settings()` to
-apply strict mode process-wide. Note that retention applies
+apply strict mode process-wide; a per-call value passed to `jwk.Parse`
+overrides the global setting in both directions. Note that retention applies
 only to sets: `jwk.ParseKey` (and a bare single JWK passed to `jwk.Parse`) still
 returns a hard error for an unparseable key.
 

@@ -223,7 +223,8 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 	//
 	// When the protected header advertises an `alg`, keys whose type
 	// cannot produce that algorithm are skipped before reaching
-	// selectKey. This bounds verification fan-out to
+	// selectKey (unsupported-key placeholders excepted — see the
+	// comment at the check below). This bounds verification fan-out to
 	// N_keys_of_matching_type instead of N_keys against a heterogeneous
 	// JWKS. The skip is semantics-preserving: validateAlgorithmForKey
 	// in verify_context would reject the incompatible (alg, key) pair
@@ -246,7 +247,13 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 		if !ok {
 			return fmt.Errorf(`failed to get key at index %d`, i)
 		}
-		if allowedKtys != nil && !slices.Contains(allowedKtys, key.KeyType()) {
+		// Unsupported-key placeholders are exempt from the prefilter:
+		// their raw kty is never a registered KeyType, so the filter
+		// would silently skip them and the caller would only see a
+		// generic "no keys worked" error. Letting them reach selectKey
+		// records the per-key rejection (kid, kty, retained parse
+		// reason) in errs instead.
+		if allowedKtys != nil && !slices.Contains(allowedKtys, key.KeyType()) && !jwk.IsUnsupportedKey(key) {
 			continue
 		}
 		if err := kp.selectKey(sink, key, sig, msg); err != nil {

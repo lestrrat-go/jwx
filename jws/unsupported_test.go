@@ -59,4 +59,20 @@ func TestVerifyWithKeySetContainingUnsupportedKey(t *testing.T) {
 		require.Contains(t, err.Error(), "FOO")
 		require.Contains(t, err.Error(), "unsupported key type")
 	})
+
+	t.Run("placeholder rejection is reported when kid is not required", func(t *testing.T) {
+		// Set contains only the placeholder. On the try-all-keys path
+		// (WithRequireKid(false)) the alg-based key-type prefilter must
+		// not silently swallow the placeholder: the error must still
+		// name the kid, the raw kty, and the retained parse reason.
+		phSet, err := jwk.Parse([]byte(`{"keys":[` + unknownEntry + `]}`))
+		require.NoError(t, err)
+		require.Equal(t, 1, phSet.Len())
+
+		_, err = jws.Verify(signedBad, jws.WithKeySet(phSet, jws.WithRequireKid(false)))
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "badkid")
+		require.Contains(t, err.Error(), "FOO")
+		require.Contains(t, err.Error(), "unsupported key type")
+	})
 }

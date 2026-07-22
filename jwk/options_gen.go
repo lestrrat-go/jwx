@@ -299,7 +299,10 @@ func WithRejectDuplicateKID(v bool) GlobalParseOption {
 // *drops* unparseable entries instead of retaining placeholders.
 //
 // Can be set globally via `jwk.Settings()` or per-call on
-// `jwk.Parse()` / `jwk.ParseReader()` / `jwk.ParseString()`.
+// `jwk.Parse()` / `jwk.ParseReader()` / `jwk.ParseString()`. A
+// per-call value takes precedence over the global setting in both
+// directions: per-call false relaxes a global true, and per-call
+// true tightens a global false.
 func WithStrictKeySetParsing(v bool) GlobalParseOption {
 	return &globalParseOption{option.New(identStrictKeySetParsing{}, v)}
 }

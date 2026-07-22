@@ -213,7 +213,12 @@ func (s *set) setRejectDuplicateKID(v bool) {
 	s.rejectDuplicateKID = v
 }
 
-func (s *set) setStrictKeySetParsing(v bool) {
+// setStrictKeySetParsing stores the strict value resolved by Parse
+// (global default already merged with any per-call option). A nil
+// pointer means "not resolved" — UnmarshalJSONFrom then falls back to
+// the global setting. The pointer form lets a per-call false override
+// a global true, which a plain bool scratch field cannot express.
+func (s *set) setStrictKeySetParsing(v *bool) {
 	s.strictKeySetParsing = v
 }
 
@@ -252,7 +257,10 @@ func (s *set) UnmarshalJSONFrom(dec *jsontext.Decoder) error {
 		maxK = int(maxKeys.Load())
 	}
 	rejectDupKid := s.rejectDuplicateKID || rejectDuplicateKID.Load()
-	strict := s.strictKeySetParsing || strictKeySetParsing.Load()
+	strict := strictKeySetParsing.Load()
+	if s.strictKeySetParsing != nil {
+		strict = *s.strictKeySetParsing
+	}
 
 	tok, err := dec.ReadToken()
 	if err != nil {
