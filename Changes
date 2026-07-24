@@ -4,7 +4,7 @@ Changes
 v4 has many incompatibilities with v3. To see the full list of differences between
 v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MICRATION-v4.md)
 
-UNRELEASED
+v4.2.0 24 July 2026
   * [jwk] `jwk.Parse` (and `Set.UnmarshalJSON`) no longer fails an entire
     JWK Set when a single entry in the "keys" array cannot be parsed. By
     default such an entry is now retained as a `jwk.UnsupportedKey`
