@@ -77,7 +77,7 @@ JSON Web Encryption per RFC 7516. Encrypt, decrypt, parse.
 - **Parse(buf []byte, ...ParseOption) (*Message, error)** — parse without decryption
 - **Settings(options ...GlobalOption)** — configure global jwe settings
 - Key types: `Message`, `Recipient`, `Headers`, `KeyProvider`, `KeyEncrypter`, `KeyDecrypter`
-- Options: `WithKey()`, `WithKeySet()`, `WithContentEncryption()`, `WithCompress()`, `WithJSON()`, `WithProtectedHeaders()`
+- Options: `WithKey()`, `WithKeySet()`, `WithContentEncryption()`, `WithCompress()`, `WithJSON()`, `WithProtectedHeaders()`, `WithAuthenticateData()`
 - Global/per-call settings: `WithMaxPBES2Count()`, `WithMinPBES2Count()`, `WithMaxDecompressBufferSize()`, `WithMaxRecipients()` (usable in both `Settings()` and `Decrypt()`); `WithCBCBufferSize()`, `WithDisabledKeyAlgorithms(...jwa.KeyEncryptionAlgorithm)` (global only; the latter blocks listed key algorithms in both Encrypt and Decrypt)
 - Error sentinels: `EncryptError()`, `DecryptError()`, `HPKEError()`, `RecipientError()`, `ParseError()`
 - Internal subpackages: `jwe/internal/{aescbc,cipher,concatkdf,content_crypt,keygen}`, `jwe/jwebb` — building blocks including HPKE extension interfaces (`HPKEKeyEncrypter`, `HPKEKeyDecrypter`), custom HPKE encrypt/decrypt bridges (`KeyEncryptHPKECustom`, `KeyDecryptHPKECustom`), and dynamic algorithm registration (`RegisterHPKEAlgorithm`)
