@@ -246,13 +246,8 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	}
 
 	if aad := m.AuthenticatedData(); len(aad) > 0 {
-		aad = base64.Encode(aad)
-		if encodedProtectedHeaders != nil {
-			aad = concatAAD(encodedProtectedHeaders, aad)
-		}
-
 		buf.Reset()
-		if err := enc.Encode(aad); err != nil {
+		if err := enc.Encode(base64.EncodeToString(aad)); err != nil {
 			return nil, fmt.Errorf(`failed to encode %s field: %w`, AuthenticatedDataKey, err)
 		}
 		fields = append(fields, jsonKV{
