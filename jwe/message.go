@@ -227,20 +227,16 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 		})
 	}
 
-	var encodedProtectedHeaders []byte
 	if h := m.ProtectedHeaders(); h != nil {
 		v, err := h.Encode()
 		if err != nil {
 			return nil, fmt.Errorf(`failed to encode protected headers: %w`, err)
 		}
 
-		encodedProtectedHeaders = v
-		if len(encodedProtectedHeaders) <= 2 { // '{}'
-			encodedProtectedHeaders = nil
-		} else {
+		if len(v) > 2 { // '{}'
 			fields = append(fields, jsonKV{
 				Key:   ProtectedHeadersKey,
-				Value: fmt.Sprintf("%q", encodedProtectedHeaders),
+				Value: fmt.Sprintf("%q", v),
 			})
 		}
 	}
