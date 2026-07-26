@@ -9,6 +9,7 @@ import (
 )
 
 func TestOptionIdent(t *testing.T) {
+	require.Equal(t, "WithAuthenticateData", identAuthenticateData{}.String())
 	require.Equal(t, "WithCBCBufferSize", identCBCBufferSize{}.String())
 	require.Equal(t, "WithCEK", identCEK{}.String())
 	require.Equal(t, "WithCompress", identCompress{}.String())

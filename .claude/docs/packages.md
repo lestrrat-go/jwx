@@ -73,7 +73,7 @@ JSON Web Encryption per RFC 7516. Encrypt, decrypt, parse.
 - **Decrypt(buf []byte, ...DecryptOption) ([]byte, error)** — decrypt message
 - **Parse(buf []byte, ...ParseOption) (*Message, error)** — parse without decryption
 - Key types: `Message`, `Recipient`, `Headers`, `KeyProvider`, `KeyEncrypter`, `KeyDecrypter`
-- Options: `WithKey()`, `WithKeySet()`, `WithContentEncryption()`, `WithCompress()`, `WithJSON()`, `WithProtectedHeaders()`
+- Options: `WithKey()`, `WithKeySet()`, `WithContentEncryption()`, `WithCompress()`, `WithJSON()`, `WithProtectedHeaders()`, `WithAuthenticateData()`
 - Global/per-call settings: `WithMaxPBES2Count()`, `WithMinPBES2Count()`, `WithMaxDecompressBufferSize()`, `WithMaxRecipients()` (usable in both `Settings()` and `Decrypt()`); `WithCBCBufferSize()`, `WithDisabledKeyAlgorithms(...jwa.KeyEncryptionAlgorithm)` (global only; the latter blocks listed key algorithms in both Encrypt and Decrypt)
 - Error sentinels: `EncryptError()`, `DecryptError()`, `RecipientError()`, `ParseError()`
 - Internal subpackages: `jwe/internal/{aescbc,cipher,concatkdf,content_crypt,keygen}`, `jwe/jwebb`

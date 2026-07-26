@@ -5,6 +5,13 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 v3.2.0 UNRELEASED
+  * [jwe] Correct the JSON `"aad"` member so it contains only
+    BASE64URL of the external Additional Authenticated Data, rather than the
+    combined value used as the content-encryption AAD. Add
+    `jwe.WithAuthenticateData` for encrypting JSON JWEs with external AAD;
+    the value is included in the shared AEAD input for all recipients, and
+    compact serialization rejects non-empty external AAD. (#2276, #2278)
+
   * [jwk] Added opt-in retention of unparseable JWK Set entries. Passing
     `jwk.WithStrictKeySetParsing(false)` to `jwk.Parse` (or setting it
     globally via `jwk.Configure`) keeps an entry whose key type is not
