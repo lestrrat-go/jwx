@@ -1,6 +1,8 @@
 package jwe
 
 import (
+	"bytes"
+
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/lestrrat-go/option/v3"
@@ -79,6 +81,16 @@ func WithCritExtension(names ...string) DecryptOption {
 func WithProtectedHeaders(h Headers) EncryptOption {
 	cloned, _ := h.Clone()
 	return &encryptOption{option.New(identProtectedHeaders{}, cloned)}
+}
+
+// WithAuthenticateData specifies the external Additional Authenticated Data
+// to use when encrypting a JSON JWE.
+//
+// The data is copied before it is stored in the option. External Additional
+// Authenticated Data is not supported by compact serialization; pass
+// WithJSON() to select JSON serialization.
+func WithAuthenticateData(aad []byte) EncryptOption {
+	return &encryptOption{option.New(identAuthenticateData{}, bytes.Clone(aad))}
 }
 
 type withKey struct {

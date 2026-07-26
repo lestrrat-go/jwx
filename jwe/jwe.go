@@ -797,13 +797,14 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 
 // encryptContext holds the state during JWE encryption, similar to JWS signContext
 type encryptContext struct {
-	calg        jwa.ContentEncryptionAlgorithm
-	compression jwa.CompressionAlgorithm
-	format      int
-	pbes2Count  int
-	builders    []*recipientBuilder
-	protected   Headers
-	builderBuf  [1]recipientBuilder // inline storage for common single-recipient case
+	calg              jwa.ContentEncryptionAlgorithm
+	compression       jwa.CompressionAlgorithm
+	format            int
+	pbes2Count        int
+	authenticatedData []byte
+	builders          []*recipientBuilder
+	protected         Headers
+	builderBuf        [1]recipientBuilder // inline storage for common single-recipient case
 }
 
 var encryptContextPool = pool.New(allocEncryptContext, freeEncryptContext)
@@ -821,6 +822,7 @@ func freeEncryptContext(ec *encryptContext) *encryptContext {
 	ec.compression = jwa.NoCompress()
 	ec.format = fmtCompact
 	ec.pbes2Count = 0
+	ec.authenticatedData = nil
 	ec.builders = ec.builders[:0]
 	ec.protected = nil
 	ec.builderBuf[0] = recipientBuilder{}
@@ -864,6 +866,8 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 			ec.calg = option.MustGet[jwa.ContentEncryptionAlgorithm](opt)
 		case identCompress{}:
 			ec.compression = option.MustGet[jwa.CompressionAlgorithm](opt)
+		case identAuthenticateData{}:
+			ec.authenticatedData = option.MustGet[[]byte](opt)
 		case identMergeProtectedHeaders{}:
 			mergeProtected = option.MustGet[bool](opt)
 		case identProtectedHeaders{}:
@@ -890,6 +894,10 @@ func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 		if ec.format == fmtCompact {
 			return fmt.Errorf(`cannot use compact serialization when multiple recipients exist (check the number of WithKey() argument, or use WithJSON())`)
 		}
+	}
+
+	if len(ec.authenticatedData) > 0 && ec.format == fmtCompact {
+		return fmt.Errorf(`cannot use compact serialization with external authenticated data (use WithJSON())`)
 	}
 
 	if useRawCEK {
@@ -1082,12 +1090,13 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		}
 	}
 
-	aad, err := protected.Encode()
+	protectedAAD, err := protected.Encode()
 	if err != nil {
 		return nil, fmt.Errorf(`failed to base64 encode protected headers: %w`, err)
 	}
 
-	iv, ciphertext, tag, err := contentcrypt.Encrypt(cek, payload, aad)
+	contentAAD := concatAAD(protectedAAD, base64.Encode(ec.authenticatedData))
+	iv, ciphertext, tag, err := contentcrypt.Encrypt(cek, payload, contentAAD)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to encrypt payload: %w`, err)
 	}
@@ -1097,7 +1106,7 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 	// were copied into protected above), so we can build the compact
 	// serialization directly from the raw parts.
 	if ec.format == fmtCompact {
-		return jwebb.JoinCompact(base64.DefaultEncoder(), aad, recipients[0].EncryptedKey(), iv, ciphertext, tag), nil
+		return jwebb.JoinCompact(base64.DefaultEncoder(), protectedAAD, recipients[0].EncryptedKey(), iv, ciphertext, tag), nil
 	}
 
 	msg := msgPool.Get()
@@ -1117,6 +1126,11 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 	}
 	if err := msg.Set(TagKey, tag); err != nil {
 		return nil, fmt.Errorf(`failed to set %s: %w`, TagKey, err)
+	}
+	if len(ec.authenticatedData) > 0 {
+		if err := msg.Set(AuthenticatedDataKey, ec.authenticatedData); err != nil {
+			return nil, fmt.Errorf(`failed to set %s: %w`, AuthenticatedDataKey, err)
+		}
 	}
 
 	switch ec.format {
