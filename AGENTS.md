@@ -199,7 +199,9 @@ Use `github.com/stretchr/testify/require` for assertions (not `assert`).
 
 ## Build Tags
 
-No build tags in v4. Optional features (signature algorithms, backend replacements) are provided as extension modules under [`github.com/jwx-go`](https://github.com/jwx-go). See [Extension Modules](docs/10-extensions.md) for the full list.
+No feature build tags in v4. Optional features (signature algorithms, backend replacements) are provided as extension modules under [`github.com/jwx-go`](https://github.com/jwx-go). See [Extension Modules](docs/10-extensions.md) for the full list.
+
+The one exception is a Go-version compatibility shim: `internal/json/skipfunc_pre_go127.go` and `internal/json/skipfunc_go127.go` pick the json/v2 "skip this value" sentinel, which Go 1.27 renamed from `json/v2.SkipFunc` to `errors.ErrUnsupported`. Do not add feature build tags alongside it.
 
 ## Quick Reference: Common Modifications
 

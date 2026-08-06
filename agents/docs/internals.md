@@ -107,7 +107,14 @@ rejects the registration.
 
 ## JSON Backend
 
-Uses `encoding/json/v2` exclusively (no build-tag switching).
+Uses `encoding/json/v2` exclusively (no build-tag switching between backends).
+
+One Go-version build tag does live inside `internal/json`: the sentinel a custom
+unmarshaler returns to decline a value is `json/v2.SkipFunc` up to Go 1.26 and
+`errors.ErrUnsupported` from Go 1.27 on. `skipfunc_pre_go127.go` /
+`skipfunc_go127.go` bind it to `errSkipFunc` so the rest of the package does not
+have to care. This is a compatibility shim, not a backend switch — delete it
+once the module requires Go 1.27.
 
 Internal `internal/json` package provides the abstraction. Custom field registry (`json.Registry`) enables type-safe deserialization of extension fields.
 

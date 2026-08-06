@@ -36,7 +36,12 @@ Environment variables:
 
 ## Build Tags for Tests
 
-No build tags in v4. Optional features (signature algorithms, base64 backend) are activated via side-effect imports of [extension modules](../docs/10-extensions.md).
+No feature build tags in v4. Optional features (signature algorithms, base64 backend) are activated via side-effect imports of [extension modules](../docs/10-extensions.md).
+
+The only build tags in the tree are the Go-version constraints on
+`internal/json/skipfunc_pre_go127.go` / `skipfunc_go127.go`. Tests never set
+them: both Go 1.26 (with `GOEXPERIMENT=jsonv2`) and Go 1.27 build and pass
+as-is.
 
 ## Fuzz Tests
 
