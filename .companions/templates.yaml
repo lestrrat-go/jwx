@@ -26,15 +26,18 @@ templates:
     dest: .github/workflows/assign-pr.yml
   auto-assign-pr.yml:
     dest: .github/auto-assign-pr.yml
-  # Fuzz templates skip these for distinct reasons:
+  # Both fuzz templates sweep every package returned by `go list ./...`, so
+  # subpackage targets run without a per-module matrix, and a module with no
+  # Fuzz* target anywhere fails the job loudly instead of passing vacuously.
+  # A module listed in `skip` therefore has NO fuzz coverage at all — only add
+  # one here when that is intended, and say why:
   #   benchmarks  — no application code, only benchmark suites
   #   examples    — example_test.go only, no Fuzz* targets
   #   jwkfetch    — no Fuzz* targets defined
   #   jwxmigrate  — no Fuzz* targets defined
-  #   x448        — has Fuzz* targets in subpackages (dhkem, hpke); uses a bespoke matrix workflow, not the standard template
   fuzz.yml:
     dest: .github/workflows/fuzz.yml
-    skip: [benchmarks, examples, jwkfetch, jwxmigrate, x448]
+    skip: [benchmarks, examples, jwkfetch, jwxmigrate]
   fuzz-pr.yml:
     dest: .github/workflows/fuzz-pr.yml
-    skip: [benchmarks, examples, jwkfetch, jwxmigrate, x448]
+    skip: [benchmarks, examples, jwkfetch, jwxmigrate]

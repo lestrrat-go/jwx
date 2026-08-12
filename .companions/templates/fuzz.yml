@@ -20,8 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     name: "Fuzz"
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
           cache: false
@@ -33,29 +33,35 @@ jobs:
             fuzz-
       - name: Run fuzz tests
         run: |
+          # pipefail is required: `go test ... | tee` otherwise reports tee's
+          # exit status, so a fuzz failure would be swallowed and the job
+          # would report success.
+          set -o pipefail
           FUZZTIME="${{ github.event.inputs.fuzz-time || '5m' }}"
           mkdir -p /tmp/fuzz-output
-          targets=$(go test . -list '^Fuzz' -run '^$' | grep '^Fuzz')
-          if [ -z "$targets" ]; then
-            echo "no fuzz targets found"
+          found=0
+          for pkg in $(go list ./...); do
+            targets=$(go test "$pkg" -list '^Fuzz' -run '^$' | grep '^Fuzz' || true)
+            if [ -z "$targets" ]; then
+              continue
+            fi
+            found=1
+            for target in $targets; do
+              echo "::group::${pkg} ${target}"
+              go test "$pkg" -run '^$' -fuzz "^${target}\$" -fuzztime "${FUZZTIME}" 2>&1 \
+                | tee -a /tmp/fuzz-output/log.txt
+              echo "::endgroup::"
+            done
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "::error::no Fuzz* targets found in any package of this module"
             exit 1
           fi
-          for target in $targets; do
-            echo "::group::${target}"
-            go test . -run '^$' -fuzz "^${target}\$" -fuzztime "${FUZZTIME}" 2>&1 \
-              | tee -a /tmp/fuzz-output/log.txt
-            echo "::endgroup::"
-          done
       - name: Collect failing corpus
         if: failure()
         run: |
           mkdir -p /tmp/fuzz-failures
-          grep -oP 'Failing input written to \K\S+' /tmp/fuzz-output/log.txt \
-            | while read -r f; do
-                if [ -f "$f" ]; then
-                  cp --parents "$f" /tmp/fuzz-failures/
-                fi
-              done
+          find . -type d -path '*/testdata/fuzz' -exec cp -r --parents {} /tmp/fuzz-failures/ \;
       - name: Upload failing corpus
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
