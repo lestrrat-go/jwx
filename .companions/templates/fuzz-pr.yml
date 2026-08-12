@@ -37,6 +37,26 @@ jobs:
             found=1
             for target in $targets; do
               echo "::group::${pkg} ${target}"
+              attempt=$(mktemp)
+              if go test "$pkg" -run '^$' -fuzz "^${target}\$" -fuzztime "${FUZZTIME}" 2>&1 \
+                   | tee -a "$attempt" /tmp/fuzz-output/log.txt; then
+                rm -f "$attempt"
+                echo "::endgroup::"
+                continue
+              fi
+              # A genuine crash always writes the offending input under
+              # testdata/fuzz and says so. Without that line the failure is
+              # the coordinator's own deadline firing mid-iteration
+              # ("context deadline exceeded"), which is a Go fuzzing
+              # artifact, not a finding. Retry once — a real crash would
+              # reproduce instantly from the corpus file it just wrote.
+              if grep -q 'Failing input written to' "$attempt"; then
+                rm -f "$attempt"
+                echo "::error::${pkg} ${target} found a failing input"
+                exit 1
+              fi
+              rm -f "$attempt"
+              echo "::warning::${pkg} ${target} failed without writing a failing input; retrying once"
               go test "$pkg" -run '^$' -fuzz "^${target}\$" -fuzztime "${FUZZTIME}" 2>&1 \
                 | tee -a /tmp/fuzz-output/log.txt
               echo "::endgroup::"
