@@ -89,3 +89,47 @@ jobs:
           fi
       - name: Check difference between generation code and commit code
         run: make check_diffs
+
+  # Guards the Go 1.27 compatibility shim in internal/json. Nothing else in CI
+  # compiles skipfunc_go127.go, because every other workflow takes its toolchain
+  # from go.mod (the 1.26 line).
+  #
+  # This is a separate job rather than a go-version matrix on "build" above,
+  # because the two toolchains do not run the same steps. `make generate`,
+  # `make tidy`, `make check_diffs` and the coverage report each need exactly
+  # one toolchain and produce nothing useful on a second, and `-vet=off` below
+  # must not apply to the go.mod toolchain. A matrix would need `if:` guards on
+  # most of the steps, and it would force `build` to hardcode a Go version
+  # instead of reading go.mod, so CI would no longer test what go.mod declares.
+  # Once go.mod moves to 1.27 the shim and `-vet=off` both go away, the two
+  # jobs become identical, and a matrix becomes the better shape.
+  build-next:
+    runs-on: ubuntu-latest
+    name: "Test (Go 1.27)"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Cache Go modules
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go1.27-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go1.27-
+      - name: Install Go 1.27
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          # Switch to "1.27.x" once Go 1.27 is released.
+          go-version: "1.27.0-rc.3"
+      - name: Install jose
+        run: sudo apt-get install -y --no-install-recommends jose
+      # -vet=off is required, not a shortcut. go.mod declares go 1.26.0, and
+      # under Go 1.27 the encoding/json/v2 and jsontext symbols carry a
+      # since-go1.27 API version, so vet's stdversion analyzer rejects every
+      # file that uses them ("requires go1.27 or later (file is go1.26)").
+      # The Go 1.26 job above runs the full vet suite. Drop this flag when
+      # go.mod moves to 1.27.
+      - name: Test
+        run: make test-cmd TESTOPTS=-vet=off
