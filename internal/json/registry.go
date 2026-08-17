@@ -70,7 +70,9 @@ func (dec *TypedDecoder[T]) Decode(data []byte) (any, error) {
 var useNumberUnmarshalers = jsonv2.WithUnmarshalers(
 	jsonv2.UnmarshalFromFunc(func(dec *jsontext.Decoder, val *any) error {
 		if dec.PeekKind() != '0' {
-			return jsonv2.SkipFunc
+			// the sentinel is spelled differently before and after go1.27;
+			// see skipfunc_go127.go / skipfunc_pre_go127.go
+			return errSkipFunc
 		}
 		raw, err := dec.ReadValue()
 		if err != nil {

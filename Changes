@@ -11,6 +11,12 @@ UNRELEASED
     `jwe.WithAuthenticateData` for encrypting JSON JWEs with external AAD;
     the value is included in the shared AEAD input for all recipients, and
     compact serialization rejects non-empty external AAD. (#2275, #2277)
+  * Fix the build under Go 1.27. Go 1.27 removed `encoding/json/v2.SkipFunc`
+    and gave its role to `errors.ErrUnsupported`, which broke compilation of
+    `internal/json` for anyone on the new toolchain. The sentinel is now
+    selected by a Go-version build tag, so both Go 1.26 (with
+    `GOEXPERIMENT=jsonv2`) and Go 1.27 build from the same source. No public
+    API or behavior change.
 
 v4.2.0 24 July 2026
   * [jwk] `jwk.Parse` (and `Set.UnmarshalJSON`) no longer fails an entire

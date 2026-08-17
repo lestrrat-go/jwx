@@ -36,7 +36,29 @@ Environment variables:
 
 ## Build Tags for Tests
 
-No build tags in v4. Optional features (signature algorithms, base64 backend) are activated via side-effect imports of [extension modules](../docs/10-extensions.md).
+No feature build tags in v4. Optional features (signature algorithms, base64 backend) are activated via side-effect imports of [extension modules](../docs/10-extensions.md).
+
+The only build tags in the tree are the Go-version constraints on
+`internal/json/skipfunc_pre_go127.go` / `skipfunc_go127.go`. Tests never set
+them; the toolchain selects the file.
+
+## Go 1.27
+
+Both Go 1.26 (with `GOEXPERIMENT=jsonv2`) and Go 1.27 build and pass from the
+same source, but Go 1.27 requires `-vet=off`:
+
+```bash
+make test-cmd TESTOPTS=-vet=off   # Go 1.27
+```
+
+`go.mod` declares `go 1.26.0`, so under Go 1.27 vet's `stdversion` analyzer
+rejects every file that uses `encoding/json/v2` or `jsontext` (`requires go1.27
+or later (file is go1.26)`). `go vet ./...` and `make lint` fail on Go 1.27 for
+the same reason. Use Go 1.26 for vet and lint until `go.mod` moves to 1.27.
+
+`.github/workflows/ci.yml` covers both: the `Test` job uses the go.mod toolchain
+with vet enabled, and `Test (Go 1.27)` runs the same suite with vet disabled.
+Every other workflow takes its toolchain from `go.mod`.
 
 ## Fuzz Tests
 
