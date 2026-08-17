@@ -13,7 +13,7 @@ require (
 	github.com/segmentio/asm v1.2.1
 	github.com/stretchr/testify v1.11.1
 	github.com/valyala/fastjson v1.6.10
-	golang.org/x/crypto v0.54.0
+	golang.org/x/crypto v0.55.0
 )
 
 require (
