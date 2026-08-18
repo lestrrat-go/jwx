@@ -82,15 +82,15 @@ def go_dependencies():
         name = "com_github_stretchr_objx",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/stretchr/objx",
-        sum = "h1:xuMeJ0Sdp5ZMRXx/aWO6RZxdr3beISkG5/G/aIRr3pY=",
-        version = "v0.5.2",
+        sum = "h1:jmXUvGomnU1o3W/V5h2VEradbpJDwGrzugQQvL0POH4=",
+        version = "v0.5.3",
     )
     go_repository(
         name = "com_github_stretchr_testify",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/stretchr/testify",
-        sum = "h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu7U=",
-        version = "v1.11.1",
+        sum = "h1:K6Mr6jO9JICuend/5xzTM03ydSV3vdNRYAdPSukj8uI=",
+        version = "v1.12.0",
     )
     go_repository(
         name = "in_gopkg_check_v1",
