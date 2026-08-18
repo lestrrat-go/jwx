@@ -4,7 +4,7 @@ Changes
 v4 has many incompatibilities with v3. To see the full list of differences between
 v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MICRATION-v4.md)
 
-UNRELEASED
+v4.3.0 18 August 2026
   * [jwe] Correct the JSON `"aad"` member so it contains only
     BASE64URL of the external Additional Authenticated Data, rather than the
     combined value used as the content-encryption AAD. Add
