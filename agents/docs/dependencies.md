@@ -17,6 +17,7 @@ Composition Layer
 Processing Layer
   jws → jwa, jwk, cert, internal/{base64,json,pool,tokens}
        → jws/jwsbb, jws/internal/jwsbb
+       → crypto/mldsa (go1.27 only, via mldsa.go)
   jwe → jwa, jwk, cert, transform, internal/{base64,json,pool,tokens}
        → jwe/internal/{aescbc,cipher,concatkdf,content_crypt,keygen}
        → jwe/jwebb
@@ -24,6 +25,7 @@ Processing Layer
 Core Layer
   jwk → jwa, cert, transform, internal/{base64,json,ecutil}
        → jwk/ecdsa, jwk/jwkbb
+       → crypto/mldsa (go1.27 only, via mldsa.go)
   jwx (root) → internal/json
 
 Leaf Packages (no internal deps)
@@ -52,7 +54,7 @@ Leaf Packages (no internal deps)
 
 | Dependency | Used by | Purpose |
 |------------|---------|---------|
-| `lestrrat-go/dsig` | jws/jwsbb | Digital signature primitives (HMAC, RSA, ECDSA, EdDSA) |
+| `lestrrat-go/dsig` | jws, jws/jwsbb | Digital signature primitives (HMAC, RSA, ECDSA, EdDSA). `jws` registers ML-DSA as a Custom-family dsig algorithm on Go 1.27. |
 | `lestrrat-go/option/v3` | all packages | Functional options pattern |
 | `valyala/fastjson` | jws/internal/jwsbb, jwk/jwkbb | Fast JSON header / object peek |
 | `golang.org/x/crypto` | jwe | Extended crypto (PBKDF2, etc.) |

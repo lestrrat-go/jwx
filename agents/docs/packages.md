@@ -25,7 +25,8 @@ Algorithm identifiers per RFC 7518. Registry pattern with thread-safe lookup.
 - Per-type API: `New{Type}()`, `Lookup{Type}(name) (T, bool)`, `Register{Type}()`, `Unregister{Type}()`, `{Type}s() []T`
   `Register{Type}()` is process-global; attempts to replace builtin identifiers such as `RS256` return an error.
 - Constructor functions: `ES256()`, `RS256()`, `A128GCM()`, `P256()`, `Ed25519()`, etc.
-- Files: `jwa.go` + generated `*_gen.go`
+- **MLDSA44()**, **MLDSA65()**, **MLDSA87()** — ML-DSA signature algorithms (FIPS 204). Go 1.27 and later only; `jwa/mldsa.go` is `//go:build go1.27` because `crypto/mldsa` lands in Go 1.27. Registered as builtins from `init()`, not from `objects.yml`.
+- Files: `jwa.go`, `mldsa.go` (go1.27) + generated `*_gen.go`
 - Imports: internal/tokens
 
 ## jwk/
@@ -45,7 +46,7 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 - Key interfaces: `Key`, `Set`, `RSAPublicKey`, `RSAPrivateKey`, `ECDSAPublicKey`, `ECDSAPrivateKey`, `OKPPublicKey`, `OKPPrivateKey`, `SymmetricKey`, `AKPPublicKey`, `AKPPrivateKey` (post-quantum, used by mldsa/mlkem extensions), `UnsupportedKey` (placeholder for an unparseable JWK Set entry; embeds `Key`, adds `Reason() error`, sealed by an unexported marker method so only this package's placeholder implements it; only `kid`/`kty`/`alg` accessible best-effort, other accessors report absent; crypto ops error, `Validate()` failure satisfies `IsKeyValidationError`, `MarshalJSON` re-emits the original entry JSON; check with `IsUnsupportedKey(Key) bool`)
 - Extension: `RegisterCustomField[T]()`, `RegisterCustomDecoder[T]()`, `RegisterKeyParser()`, `RegisterKeyImporter()`, `RegisterKeyExporter()`
 - Error sentinels: `ImportError()`, `ParseError()`, `WhitelistError()`, `ContinueError()`
-- Files: `jwk.go`, `set.go`, `parser.go`, `convert.go`, `fetch.go`, `interface.go`, `errors.go`, `x509.go`, `filter.go`, `rsa.go`, `ecdsa.go`, `okp.go`, `symmetric.go`, `akp.go`, `unsupported.go`, `accessors.go`, `io.go`
+- Files: `jwk.go`, `set.go`, `parser.go`, `convert.go`, `fetch.go`, `interface.go`, `errors.go`, `x509.go`, `filter.go`, `rsa.go`, `ecdsa.go`, `okp.go`, `symmetric.go`, `akp.go`, `mldsa.go` (go1.27; `crypto/mldsa` importers/exporters for AKP keys), `unsupported.go`, `accessors.go`, `io.go`
 - Sub-packages: `jwk/ecdsa` — elliptic curve registration (`RegisterCurve(alg, curve, PointValidator)`, `CurveFromAlgorithm`, `AlgorithmFromCurve`, `ValidatorFromCurve`, `PointValidator` interface, `PointValidatorFunc` adapter); `jwk/jwkbb` — X.509/PEM encoding building blocks. Block-type-keyed decoder registry (`X509Decoder[T]` / `X509DecodeFunc[T]` / `RegisterX509Decoder[T](blockType, d) error` / `UnregisterX509Decoder(blockType)`) with `DecodeX509(block *pem.Block) (any, error)` as the dispatch entry point. Type-keyed encoder registry (`X509Encoder[T]` / `X509EncodeFunc[T]` / `RegisterX509Encoder[T](e) error` / `UnregisterX509Encoder[T]()`) with `EncodePEM(keys ...any) ([]byte, error)` as the dispatch entry point — dispatches each key by its runtime Go type and concatenates PEM blocks. Block type constants: `PrivateKeyBlockType`, `PublicKeyBlockType`, `ECPrivateKeyBlockType`, `RSAPublicKeyBlockType`, `RSAPrivateKeyBlockType`, `CertificateBlockType`. Decode from `jwk.ParseKey` with `jwk.WithX509(true)`. Also a fastjson-backed `Header` (sealed) for fast field probing of JWK / JWKS bytes: `HeaderParse`, `HeaderHas`, `HeaderGetString`, `HeaderGetStringBytes`, sentinel `ErrHeaderNotFound()`; mirrors the `jws/jwsbb` Header API and is experimental. `jwk/jwkunsafe` — low-level key constructors (`NewKey`, `NewPublicKey`) for extension modules
 - Imports: jwa, cert, transform, internal/{base64,json,ecutil}
 
@@ -64,8 +65,9 @@ JSON Web Signatures per RFC 7515. Sign, verify, parse.
 - Registration: `RegisterSigner()`, `RegisterVerifier()`, `AlgorithmsForKey()`, `RegisterAlgorithmForKeyType()`, `RegisterAlgorithmForCurve()`
 - Error sentinels: `SignError()`, `VerifyError()`, `VerificationError()`, `ParseError()`
 - Sub-package: `jws/jwsbb` — compact serialization, signing, verification building blocks. The fastjson-backed `Header` probe (`HeaderParse`/`HeaderGet*`/`HeaderHas`) is a thin facade over `jws/internal/jwsbb`, which holds the implementation plus jwx-internal-only helpers not re-exported by the facade (e.g. `HeaderForEachKey`, the header-key enumerator used by `VerifyCompactFast`'s minimal-shape gate)
-- Files: `jws.go`, `message.go`, `signer.go`, `verifier.go`, `headers.go`, `interface.go`, `errors.go`, `options.go`, `key_provider.go`, `sign_context.go`, `verify_context.go`, `streaming_detached.go`
-- Imports: jwa, jwk, cert, internal/{base64,json,pool,tokens}
+- ML-DSA (go1.27): `mldsa.go` registers the three FIPS 204 algorithms with `dsig`/`jwsbb` and installs a `Signer`/`Verifier` pair for each. Both accept a raw `crypto/mldsa` key or an AKP `jwk.Key`, and both reject a key whose parameter set disagrees with the algorithm.
+- Files: `jws.go`, `message.go`, `signer.go`, `verifier.go`, `headers.go`, `interface.go`, `errors.go`, `options.go`, `key_provider.go`, `sign_context.go`, `verify_context.go`, `streaming_detached.go`, `mldsa.go` (go1.27)
+- Imports: jwa, jwk, cert, dsig, internal/{base64,json,pool,tokens}
 
 ## jwe/
 

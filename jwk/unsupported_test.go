@@ -83,11 +83,12 @@ func TestUnsupportedKeyRetention(t *testing.T) {
 	})
 
 	t.Run("AKP key with unregistered alg is retained (issue #2263)", func(t *testing.T) {
-		// The mldsa extension is deliberately NOT imported, so ML-DSA-65
-		// is not a registered algorithm. Core recognizes the AKP kty but
-		// fails during unmarshal on the alg lookup — the exact v4 failure
-		// mode from issue #2263.
-		akpEntry := []byte(`{"kty":"AKP","alg":"ML-DSA-65","use":"sig","kid":"mldsa","pub":"dGVzdA"}`)
+		// ML-KEM-768 is an AKP algorithm that core never registers, and the
+		// mlkem extension is deliberately NOT imported. Core recognizes the
+		// AKP kty but fails during unmarshal on the alg lookup — the exact v4
+		// failure mode from issue #2263. ML-DSA cannot stand in here: it is a
+		// registered algorithm from Go 1.27 on.
+		akpEntry := []byte(`{"kty":"AKP","alg":"ML-KEM-768","use":"enc","kid":"mlkem","pub":"dGVzdA"}`)
 		setJSON := makeSetJSON(akpEntry, validRSAJWK(t, "rsa1"))
 
 		set, err := jwk.Parse(setJSON)
@@ -104,7 +105,7 @@ func TestUnsupportedKeyRetention(t *testing.T) {
 		require.JSONEq(t, string(akpEntry), string(ukJSON))
 		kid, ok := uk.KeyID()
 		require.True(t, ok)
-		require.Equal(t, "mldsa", kid)
+		require.Equal(t, "mlkem", kid)
 	})
 
 	t.Run("corrupt known-type entry becomes a placeholder", func(t *testing.T) {

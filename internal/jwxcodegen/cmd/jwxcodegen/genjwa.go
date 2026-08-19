@@ -622,6 +622,15 @@ func generateAlgTestElementList(o *codegen.Output, t Algorithm) {
 		o.L("continue")
 		o.L("}")
 	}
+	if t.Name == "SignatureAlgorithm" {
+		o.L("// ML-DSA is registered only when the toolchain provides crypto/mldsa,")
+		o.L("// which is Go 1.27 and later, so it cannot live in objects.yml. Its own")
+		o.L("// coverage is in mldsa_test.go.")
+		o.L("switch v.String() {")
+		o.L("case `ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87`:")
+		o.L("continue")
+		o.L("}")
+	}
 	o.L("_, ok := expected[v]")
 	o.L("require.True(t, ok, `%%q should be in the list for %s`, v)", t.Name)
 	o.L("delete(expected, v)")

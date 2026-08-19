@@ -34,6 +34,15 @@ func init() {
 			continue
 		}
 
+		// Give the algorithm a default only if nothing has claimed it yet.
+		// Another file in this package may have registered a purpose-built
+		// signer already — ML-DSA does on Go 1.27 — and Go orders init()
+		// across files by filename, which is not something a registration
+		// should depend on.
+		if _, ok := signerDB.Load(alg); ok {
+			continue
+		}
+
 		if err := RegisterSigner(alg, defaultSigner{alg: alg}); err != nil {
 			panic(fmt.Sprintf("RegisterSigner failed: %v", err))
 		}
