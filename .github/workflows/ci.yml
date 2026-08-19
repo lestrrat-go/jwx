@@ -125,6 +125,17 @@ jobs:
           check-latest: true
       - name: Install jose
         run: sudo apt-get install -y --no-install-recommends jose
+      # Go 1.27 ships encoding/json/v2 in the standard library, so this job must
+      # NOT name the jsonv2 experiment; doing so rebuilds the standard library
+      # under a non-default configuration. The Makefile probes the toolchain to
+      # decide, and this step guards that probe against regressing.
+      - name: Verify the jsonv2 experiment is not set
+        run: |
+          exp=$(make print-goexperiment)
+          if [ -n "$exp" ]; then
+            echo "::error::expected an empty GOEXPERIMENT on Go 1.27, got '$exp'"
+            exit 1
+          fi
       # -vet=off is required, not a shortcut. go.mod declares go 1.26.0, and
       # under Go 1.27 the encoding/json/v2 and jsontext symbols carry a
       # since-go1.27 API version, so vet's stdversion analyzer rejects every

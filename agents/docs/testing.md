@@ -53,8 +53,11 @@ before concluding ML-DSA is untested.
 
 ## Go 1.27
 
-Both Go 1.26 (with `GOEXPERIMENT=jsonv2`) and Go 1.27 build and pass from the
-same source, but Go 1.27 requires `-vet=off`:
+Both Go 1.26 and Go 1.27 build and pass from the same source. Go 1.26 needs
+`GOEXPERIMENT=jsonv2`; Go 1.27 ships `encoding/json/v2` in the standard library
+and must NOT set it. The Makefile probes the toolchain and exports the variable
+only when it is needed, so `make` handles this either way. Go 1.27 does still
+require `-vet=off`:
 
 ```bash
 make test-cmd TESTOPTS=-vet=off   # Go 1.27

@@ -2,7 +2,13 @@
 
 set -euo pipefail
 
-export GOEXPERIMENT=jsonv2
+# encoding/json/v2 sits behind GOEXPERIMENT=jsonv2 on Go 1.26 and is part of the
+# standard library from Go 1.27 on, where naming the experiment would rebuild
+# the standard library under a non-default configuration for no benefit. Probe
+# the toolchain instead of hardcoding a version.
+if ! GOEXPERIMENT= go list encoding/json/v2 >/dev/null 2>&1; then
+	export GOEXPERIMENT=jsonv2
+fi
 
 JWX_ROOT=$(cd "$(dirname "$0")/.."; pwd -P)
 COMPANIONS_YAML="$JWX_ROOT/companions.yaml"
