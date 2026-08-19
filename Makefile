@@ -1,6 +1,15 @@
-.PHONY: generate realclean cover viewcover test lint check_diffs imports tidy jwx fuzz fuzz-jwt fuzz-jws fuzz-jwe fuzz-jwk companion-test
+.PHONY: generate realclean cover viewcover test lint check_diffs imports tidy jwx fuzz fuzz-jwt fuzz-jws fuzz-jwe fuzz-jwk companion-test print-goexperiment
 
+# encoding/json/v2 sits behind GOEXPERIMENT=jsonv2 on Go 1.26 and is part of
+# the standard library from Go 1.27 on. Probe the toolchain rather than
+# hardcoding a version, and leave GOEXPERIMENT alone when the experiment is not
+# needed: naming an experiment the toolchain already ships for real forces the
+# standard library to be rebuilt under a non-default configuration.
+# GOEXPERIMENT is cleared for the probe so a recursive $(MAKE) re-probes
+# honestly instead of seeing the value this file exported.
+ifneq ($(shell GOEXPERIMENT= go list encoding/json/v2 >/dev/null 2>&1 || echo needed),)
 export GOEXPERIMENT := jsonv2
+endif
 
 generate:
 	@go generate
@@ -39,6 +48,11 @@ lint:
 
 check_diffs:
 	./scripts/check-diff.sh
+
+# Reports the GOEXPERIMENT this Makefile settled on for the current toolchain.
+# CI uses it to assert that the Go 1.27 job does not name the jsonv2 experiment.
+print-goexperiment:
+	@echo "$(GOEXPERIMENT)"
 
 imports:
 	goimports -w ./
