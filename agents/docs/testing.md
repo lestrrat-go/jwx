@@ -72,6 +72,12 @@ the same reason. Use Go 1.26 for vet and lint until `go.mod` moves to 1.27.
 with vet enabled, and `Test (Go 1.27)` runs the same suite with vet disabled.
 Every other workflow takes its toolchain from `go.mod`.
 
+Each of those two jobs also asserts the experiment its toolchain expects, via
+`make print-goexperiment`. `Test` requires `jsonv2` and `Test (Go 1.27)`
+requires the empty string, so a broken probe cannot quietly flip either one.
+When `go.mod` moves to 1.27, the `Test` job's expectation becomes the empty
+string and `Test (Go 1.27)` goes away with the rest of the shim.
+
 ## Fuzz Tests
 
 ```bash

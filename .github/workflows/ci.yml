@@ -30,6 +30,18 @@ jobs:
         with:
           go-version-file: "go.mod"
           check-latest: true
+      # Mirror of the guard in the Go 1.27 job below. go.mod declares go 1.26.0,
+      # where encoding/json/v2 is still behind GOEXPERIMENT=jsonv2, so this job
+      # must name the experiment. Asserting both halves means neither the probe
+      # in the Makefile nor a toolchain change can quietly flip one of them.
+      # When go.mod moves to 1.27, this expectation becomes the empty string.
+      - name: Verify the jsonv2 experiment is set
+        run: |
+          exp=$(make print-goexperiment)
+          if [ "$exp" != "jsonv2" ]; then
+            echo "::error::expected GOEXPERIMENT=jsonv2 on the go.mod toolchain, got '$exp'"
+            exit 1
+          fi
       - name: Install stringer
         run: go install golang.org/x/tools/cmd/stringer@v0.42.0
       - name: Install jose
@@ -125,10 +137,11 @@ jobs:
           check-latest: true
       - name: Install jose
         run: sudo apt-get install -y --no-install-recommends jose
-      # Go 1.27 ships encoding/json/v2 in the standard library, so this job must
-      # NOT name the jsonv2 experiment; doing so rebuilds the standard library
-      # under a non-default configuration. The Makefile probes the toolchain to
-      # decide, and this step guards that probe against regressing.
+      # Mirror of the guard in the "build" job above. Go 1.27 ships
+      # encoding/json/v2 in the standard library, so this job must NOT name the
+      # jsonv2 experiment; doing so rebuilds the standard library under a
+      # non-default configuration. The Makefile probes the toolchain to decide,
+      # and this step guards that probe against regressing.
       - name: Verify the jsonv2 experiment is not set
         run: |
           exp=$(make print-goexperiment)
