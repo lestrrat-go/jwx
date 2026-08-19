@@ -326,6 +326,13 @@ func TestSignatureAlgorithm(t *testing.T) {
 			jwa.RS512():        {},
 		}
 		for _, v := range jwa.SignatureAlgorithms() {
+			// ML-DSA is registered only when the toolchain provides crypto/mldsa,
+			// which is Go 1.27 and later, so it cannot live in objects.yml. Its own
+			// coverage is in mldsa_test.go.
+			switch v.String() {
+			case `ML-DSA-44`, `ML-DSA-65`, `ML-DSA-87`:
+				continue
+			}
 			_, ok := expected[v]
 			require.True(t, ok, `%q should be in the list for SignatureAlgorithm`, v)
 			delete(expected, v)

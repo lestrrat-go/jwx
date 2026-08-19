@@ -8,7 +8,7 @@ In v4, optional features are provided as standalone modules under [`github.com/j
 
 | Module | Algorithm | Key Package |
 |:-------|:----------|:------------|
-| [`github.com/jwx-go/mldsa/v4`](https://github.com/jwx-go/mldsa) | ML-DSA-44, ML-DSA-65, ML-DSA-87 | [`filippo.io/mldsa`](https://pkg.go.dev/filippo.io/mldsa) |
+| [`github.com/jwx-go/mldsa/v4`](https://github.com/jwx-go/mldsa) | ML-DSA-44, ML-DSA-65, ML-DSA-87 — **only needed on Go 1.26**; jwx has native ML-DSA from Go 1.27 on | [`filippo.io/mldsa`](https://pkg.go.dev/filippo.io/mldsa) |
 | [`github.com/jwx-go/ed448/v4`](https://github.com/jwx-go/ed448) | EdDSA (Ed448) | [`github.com/cloudflare/circl/sign/ed448`](https://pkg.go.dev/github.com/cloudflare/circl/sign/ed448) |
 | [`github.com/jwx-go/es256k/v4`](https://github.com/jwx-go/es256k) | ES256K (secp256k1) | [`github.com/decred/dcrd/dcrec/secp256k1/v4`](https://pkg.go.dev/github.com/decred/dcrd/dcrec/secp256k1/v4) |
 | [`github.com/jwx-go/compsig/v4`](https://github.com/jwx-go/compsig) | ML-DSA composite signatures (ML-DSA-44/65/87 paired with ES256/ES384/Ed25519/Ed448) per draft-ietf-jose-pq-composite-sigs — **experimental, draft-spec** | [`filippo.io/mldsa`](https://pkg.go.dev/filippo.io/mldsa) + stdlib/circl |
@@ -59,7 +59,15 @@ ML-DSA is a post-quantum digital signature scheme standardized in [FIPS 204](htt
 
 ML-DSA keys use the `"AKP"` (Algorithm Key Pair) JWK key type. Unlike traditional key types (RSA, EC), AKP keys **require** the `"alg"` field because the key type alone does not determine the algorithm.
 
-To use ML-DSA, import [`github.com/jwx-go/mldsa/v4`](https://github.com/jwx-go/mldsa) for its side effects. Raw keys come from [`filippo.io/mldsa`](https://pkg.go.dev/filippo.io/mldsa).
+## Which implementation you get
+
+From **Go 1.27** on, ML-DSA is built into jwx itself. `crypto/mldsa` is part of the standard library at that version, so `jwa.MLDSA44()`, `jwa.MLDSA65()`, and `jwa.MLDSA87()` are registered automatically and raw `*mldsa.PrivateKey` / `*mldsa.PublicKey` values from `crypto/mldsa` work with `jws.Sign`, `jws.Verify`, `jwk.Import`, and `jwk.Export`. No import and no extension module are required.
+
+On **Go 1.26**, jwx registers no ML-DSA algorithms, and ML-DSA needs [`github.com/jwx-go/mldsa/v4`](https://github.com/jwx-go/mldsa) imported for its side effects, with raw keys from [`filippo.io/mldsa`](https://pkg.go.dev/filippo.io/mldsa).
+
+Do not import the extension module on Go 1.27: both register the same three algorithm names, and the duplicate registration panics at startup. The extension is scheduled for deprecation once Go 1.26 support is dropped.
+
+The examples below are written against the Go 1.26 extension module. On Go 1.27, drop the `jwx-go/mldsa` import, replace `filippo.io/mldsa` with `crypto/mldsa`, and use `jwa.MLDSA65()` in place of `jwxmldsa.MLDSA65()`.
 
 ## Signing and Verifying
 

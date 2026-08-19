@@ -38,9 +38,18 @@ Environment variables:
 
 No feature build tags in v4. Optional features (signature algorithms, base64 backend) are activated via side-effect imports of [extension modules](../docs/10-extensions.md).
 
-The only build tags in the tree are the Go-version constraints on
-`internal/json/skipfunc_pre_go127.go` / `skipfunc_go127.go`. Tests never set
-them; the toolchain selects the file.
+The only build tags in the tree are Go-version constraints, and tests never set
+them; the toolchain selects the files. Two groups exist: the json/v2 sentinel
+shim (`internal/json/skipfunc_pre_go127.go` / `skipfunc_go127.go`), and native
+ML-DSA (`jwa/mldsa.go`, `jwk/mldsa.go`, `jws/mldsa.go` plus their tests, all
+`//go:build go1.27`).
+
+ML-DSA coverage therefore runs only on Go 1.27: `jwa/mldsa_test.go`,
+`jwk/mldsa_test.go` (import/export, JWK round-trip, thumbprint, and known-answer
+vectors pinned from a fixed seed), `jws/mldsa_test.go` (sign/verify, parameter-set
+confusion, signer-opts handling), and `jws/mldsa_fuzz_test.go`. On Go 1.26 these
+files do not compile in, so the suite is silently smaller — check the toolchain
+before concluding ML-DSA is untested.
 
 ## Go 1.27
 
@@ -70,6 +79,19 @@ make fuzz-jwe          # FuzzParse, FuzzEncryptAndDecrypt
 make fuzz-jwk          # FuzzParseKey, FuzzParse, FuzzParseKeyRoundtrip
 FUZZTIME=5m make fuzz  # Override fuzz duration
 ```
+
+`jws/mldsa_fuzz_test.go` adds `FuzzMLDSASignAndVerify` and
+`FuzzMLDSAJWKRoundTrip`. Neither is wired into `make fuzz-jws`, because both are
+`//go:build go1.27` and naming a missing target would break `make fuzz` on Go
+1.26. Run them directly on a Go 1.27 toolchain:
+
+```bash
+go test ./jws/ -run "^$" -fuzz FuzzMLDSASignAndVerify -fuzztime 30s
+```
+
+Their `f.Add` seeds still execute during a normal `go test` run on Go 1.27, so
+the seed corpus is covered by `make test` there. Wire both into `make fuzz-jws`
+once `go.mod` moves to 1.27.
 
 ## Test Helpers (internal/jwxtest)
 
