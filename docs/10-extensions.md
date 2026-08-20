@@ -65,11 +65,73 @@ From **Go 1.27** on, ML-DSA is built into jwx itself. `crypto/mldsa` is part of 
 
 On **Go 1.26**, jwx registers no ML-DSA algorithms, and ML-DSA needs [`github.com/jwx-go/mldsa/v4`](https://github.com/jwx-go/mldsa) imported for its side effects, with raw keys from [`filippo.io/mldsa`](https://pkg.go.dev/filippo.io/mldsa).
 
-Do not import the extension module on Go 1.27: both register the same three algorithm names, and the duplicate registration panics at startup. The extension is scheduled for deprecation once Go 1.26 support is dropped.
+Importing the extension module on Go 1.27 is harmless. From `jwx-go/mldsa` v4.0.5 on it detects jwx's registration and bridges `filippo.io/mldsa` keys onto it instead of registering the algorithms a second time, so code mid-migration keeps working. Earlier versions of the extension panic at startup on that combination, because the duplicate registration is rejected. The extension is scheduled for deprecation once Go 1.26 support is dropped.
 
-The examples below are written against the Go 1.26 extension module. On Go 1.27, drop the `jwx-go/mldsa` import, replace `filippo.io/mldsa` with `crypto/mldsa`, and use `jwa.MLDSA65()` in place of `jwxmldsa.MLDSA65()`.
+Each example below is shown twice, once per toolchain. The Go 1.27 version is the one to write in new code.
 
 ## Signing and Verifying
+
+### Go 1.27 and later
+
+```go
+package examples_test
+
+import (
+	"crypto/mldsa"
+	"fmt"
+
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jws"
+)
+
+func Example_mldsa_sign_verify() {
+	// ML-DSA is a post-quantum digital signature scheme (FIPS 204). On Go
+	// 1.27 it comes from the standard library's crypto/mldsa, which jwx
+	// supports natively: no extension module, no side-effect import, and
+	// nothing to register.
+
+	// Generate an ML-DSA-65 key pair. ML-DSA comes in three parameter sets:
+	//   - ML-DSA-44 (NIST Level 2, smallest/fastest)
+	//   - ML-DSA-65 (NIST Level 3, balanced)
+	//   - ML-DSA-87 (NIST Level 5, highest security)
+	// Each parameter set determines the key and signature sizes.
+	// GenerateKey takes a crypto/mldsa.Parameters to select the variant.
+	sk, err := mldsa.GenerateKey(mldsa.MLDSA65())
+	if err != nil {
+		fmt.Printf("failed to generate ML-DSA key: %s\n", err)
+		return
+	}
+
+	payload := []byte("Hello, post-quantum world!")
+
+	// jws.Sign accepts a raw *crypto/mldsa.PrivateKey directly. The
+	// algorithm must match the key's parameter set; a mismatched algorithm,
+	// such as MLDSA44() with an ML-DSA-65 key, is rejected.
+	signed, err := jws.Sign(payload, jws.WithKey(jwa.MLDSA65(), sk))
+	if err != nil {
+		fmt.Printf("failed to sign payload: %s\n", err)
+		return
+	}
+
+	// Verification uses the public key extracted from the private key via
+	// PublicKey(). Like signing, a raw *crypto/mldsa.PublicKey is accepted
+	// directly.
+	// You could also pass the private key itself — the verifier extracts
+	// the public key internally.
+	verified, err := jws.Verify(signed, jws.WithKey(jwa.MLDSA65(), sk.PublicKey()))
+	if err != nil {
+		fmt.Printf("failed to verify signature: %s\n", err)
+		return
+	}
+
+	fmt.Printf("%s\n", verified)
+	// OUTPUT:
+	// Hello, post-quantum world!
+}
+```
+source: [examples/mldsa_sign_verify_go127_example_test.go](https://github.com/jwx-go/examples/blob/v4/mldsa_sign_verify_go127_example_test.go)
+
+### Go 1.26
 
 ```go
 package examples_test
@@ -83,17 +145,17 @@ import (
 )
 
 func Example_mldsa_sign_verify() {
-	// ML-DSA is a post-quantum digital signature scheme (FIPS 204).
-	// To use it with jwx, import github.com/jwx-go/mldsa/v4 for its
-	// side effects — the init() function registers ML-DSA algorithms,
-	// key importers/exporters, and JWS signers/verifiers automatically.
+	// ML-DSA is a post-quantum digital signature scheme (FIPS 204). On Go
+	// 1.26 it comes from github.com/jwx-go/mldsa/v4, imported for its side
+	// effects: init() registers the algorithms, the key importers and
+	// exporters, and the JWS signers and verifiers.
 
 	// Generate an ML-DSA-65 key pair. ML-DSA comes in three parameter sets:
 	//   - ML-DSA-44 (NIST Level 2, smallest/fastest)
 	//   - ML-DSA-65 (NIST Level 3, balanced)
 	//   - ML-DSA-87 (NIST Level 5, highest security)
 	// Each parameter set determines the key and signature sizes.
-	// mldsa.GenerateKey takes a *mldsa.Parameters to select the variant.
+	// GenerateKey takes a *filippo.io/mldsa.Parameters to select the variant.
 	sk, err := mldsa.GenerateKey(mldsa.MLDSA65())
 	if err != nil {
 		fmt.Printf("failed to generate ML-DSA key: %s\n", err)
@@ -102,11 +164,9 @@ func Example_mldsa_sign_verify() {
 
 	payload := []byte("Hello, post-quantum world!")
 
-	// jws.Sign accepts raw *mldsa.PrivateKey directly — the mldsa package's
-	// init() registers a JWS signer that handles the conversion internally.
-	// The algorithm (jwxmldsa.MLDSA65()) must match the key's parameter set;
-	// using a mismatched algorithm (e.g., MLDSA44() with an ML-DSA-65 key)
-	// will fail.
+	// jws.Sign accepts a raw *filippo.io/mldsa.PrivateKey directly. The
+	// algorithm must match the key's parameter set; a mismatched algorithm,
+	// such as MLDSA44() with an ML-DSA-65 key, is rejected.
 	signed, err := jws.Sign(payload, jws.WithKey(jwxmldsa.MLDSA65(), sk))
 	if err != nil {
 		fmt.Printf("failed to sign payload: %s\n", err)
@@ -114,7 +174,8 @@ func Example_mldsa_sign_verify() {
 	}
 
 	// Verification uses the public key extracted from the private key via
-	// PublicKey(). Like signing, raw *mldsa.PublicKey is accepted directly.
+	// PublicKey(). Like signing, a raw *filippo.io/mldsa.PublicKey is accepted
+	// directly.
 	// You could also pass the private key itself — the verifier extracts
 	// the public key internally.
 	verified, err := jws.Verify(signed, jws.WithKey(jwxmldsa.MLDSA65(), sk.PublicKey()))
@@ -128,9 +189,108 @@ func Example_mldsa_sign_verify() {
 	// Hello, post-quantum world!
 }
 ```
-source: [examples/mldsa_sign_verify_example_test.go](https://github.com/jwx-go/examples/blob/v4/mldsa_sign_verify_example_test.go)
+source: [examples/mldsa_sign_verify_pre_go127_example_test.go](https://github.com/jwx-go/examples/blob/v4/mldsa_sign_verify_pre_go127_example_test.go)
 
 ## Working with JWK
+
+### Go 1.27 and later
+
+```go
+package examples_test
+
+import (
+	"crypto/mldsa"
+	"encoding/json"
+	"fmt"
+
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwk"
+	"github.com/lestrrat-go/jwx/v4/jws"
+)
+
+func Example_mldsa_jwk() {
+	// ML-DSA keys can be represented as JWK using the "AKP" (Algorithm Key Pair)
+	// key type. Unlike traditional key types (RSA, EC) where the algorithm is
+	// optional, AKP keys REQUIRE the "alg" field because the key type alone
+	// does not determine the algorithm — the parameter set (ML-DSA-44/65/87)
+	// must be specified explicitly.
+
+	// Generate a raw ML-DSA-44 key pair.
+	sk, err := mldsa.GenerateKey(mldsa.MLDSA44())
+	if err != nil {
+		fmt.Printf("failed to generate ML-DSA key: %s\n", err)
+		return
+	}
+
+	// jwk.Import converts the raw *crypto/mldsa.PrivateKey into a jwk.Key.
+	// The resulting JWK will have kty="AKP", alg="ML-DSA-44", and both
+	// "pub" and "priv" fields populated.
+	privJWK, err := jwk.Import[jwk.Key](sk)
+	if err != nil {
+		fmt.Printf("failed to import key to JWK: %s\n", err)
+		return
+	}
+
+	fmt.Printf("kty: %s\n", privJWK.KeyType())
+
+	alg, ok := privJWK.Algorithm()
+	if !ok {
+		fmt.Println("missing algorithm")
+		return
+	}
+	fmt.Printf("alg: %s\n", alg)
+
+	// JWK keys can be serialized to JSON for storage or transmission.
+	// The JSON representation follows the AKP key format with base64url-encoded
+	// "pub" (public key bytes) and "priv" (seed bytes) fields.
+	serialized, err := json.Marshal(privJWK)
+	if err != nil {
+		fmt.Printf("failed to serialize JWK: %s\n", err)
+		return
+	}
+
+	// Parse back from JSON. jwk.ParseKey resolves "ML-DSA-44" in the "alg"
+	// field and reconstructs the key correctly.
+	parsed, err := jwk.ParseKey(serialized)
+	if err != nil {
+		fmt.Printf("failed to parse JWK: %s\n", err)
+		return
+	}
+
+	// The parsed JWK key is fully functional — it can be used for signing
+	// just like the original. This demonstrates that JWK serialization
+	// round-trips correctly for ML-DSA keys.
+	payload := []byte("round-trip test")
+	signed, err := jws.Sign(payload, jws.WithKey(jwa.MLDSA44(), parsed))
+	if err != nil {
+		fmt.Printf("failed to sign with parsed JWK: %s\n", err)
+		return
+	}
+
+	// Derive the public JWK from the private JWK for verification.
+	// PublicKey() strips the "priv" field, leaving only "pub".
+	pubJWK, err := parsed.PublicKey()
+	if err != nil {
+		fmt.Printf("failed to derive public key: %s\n", err)
+		return
+	}
+
+	verified, err := jws.Verify(signed, jws.WithKey(jwa.MLDSA44(), pubJWK))
+	if err != nil {
+		fmt.Printf("failed to verify with public JWK: %s\n", err)
+		return
+	}
+
+	fmt.Printf("%s\n", verified)
+	// OUTPUT:
+	// kty: AKP
+	// alg: ML-DSA-44
+	// round-trip test
+}
+```
+source: [examples/mldsa_jwk_go127_example_test.go](https://github.com/jwx-go/examples/blob/v4/mldsa_jwk_go127_example_test.go)
+
+### Go 1.26
 
 ```go
 package examples_test
@@ -152,16 +312,14 @@ func Example_mldsa_jwk() {
 	// does not determine the algorithm — the parameter set (ML-DSA-44/65/87)
 	// must be specified explicitly.
 
-	// Generate a raw ML-DSA-44 key pair using the filippo.io/mldsa package.
+	// Generate a raw ML-DSA-44 key pair.
 	sk, err := mldsa.GenerateKey(mldsa.MLDSA44())
 	if err != nil {
 		fmt.Printf("failed to generate ML-DSA key: %s\n", err)
 		return
 	}
 
-	// jwk.Import converts the raw *mldsa.PrivateKey into a jwk.Key.
-	// The mldsa package registers a key importer during init(), so jwx
-	// knows how to handle *mldsa.PrivateKey without any extra setup.
+	// jwk.Import converts the raw *filippo.io/mldsa.PrivateKey into a jwk.Key.
 	// The resulting JWK will have kty="AKP", alg="ML-DSA-44", and both
 	// "pub" and "priv" fields populated.
 	privJWK, err := jwk.Import[jwk.Key](sk)
@@ -182,20 +340,14 @@ func Example_mldsa_jwk() {
 	// JWK keys can be serialized to JSON for storage or transmission.
 	// The JSON representation follows the AKP key format with base64url-encoded
 	// "pub" (public key bytes) and "priv" (seed bytes) fields.
-	//
-	// Note: core jwk validation for AKP keys only checks that "alg" is set
-	// and that "pub"/"priv" are non-empty. Parameter-set-specific length
-	// checks are performed by the companion module when it reconstructs or
-	// uses the key.
 	serialized, err := json.Marshal(privJWK)
 	if err != nil {
 		fmt.Printf("failed to serialize JWK: %s\n", err)
 		return
 	}
 
-	// Parse back from JSON. Because the mldsa package registered the ML-DSA
-	// signature algorithms at init time, jwk.ParseKey can resolve "ML-DSA-44"
-	// in the "alg" field and reconstruct the key correctly.
+	// Parse back from JSON. jwk.ParseKey resolves "ML-DSA-44" in the "alg"
+	// field and reconstructs the key correctly.
 	parsed, err := jwk.ParseKey(serialized)
 	if err != nil {
 		fmt.Printf("failed to parse JWK: %s\n", err)
@@ -233,25 +385,27 @@ func Example_mldsa_jwk() {
 	// round-trip test
 }
 ```
-source: [examples/mldsa_jwk_example_test.go](https://github.com/jwx-go/examples/blob/v4/mldsa_jwk_example_test.go)
+source: [examples/mldsa_jwk_pre_go127_example_test.go](https://github.com/jwx-go/examples/blob/v4/mldsa_jwk_pre_go127_example_test.go)
 
 ## Exporting Keys
+
+### Go 1.27 and later
 
 ```go
 package examples_test
 
 import (
+	"crypto/mldsa"
 	"fmt"
 
-	"filippo.io/mldsa"
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwk"
 )
 
 func Example_mldsa_export() {
 	// jwk.Export converts a jwk.Key back to a raw key type. For ML-DSA keys,
-	// this returns *mldsa.PrivateKey or *mldsa.PublicKey depending on whether
-	// the JWK contains the "priv" field.
+	// this returns *crypto/mldsa.PrivateKey or *crypto/mldsa.PublicKey,
+	// depending on whether the JWK contains the "priv" field.
 	//
 	// This is useful when you receive an ML-DSA key in JWK format (e.g., from
 	// a JWKS endpoint or configuration file) and need the raw key for operations
@@ -272,10 +426,10 @@ func Example_mldsa_export() {
 	}
 
 	// Export back to a raw key. jwk.Export[any] lets the registered exporter
-	// choose the most appropriate concrete type. For AKP keys with an ML-DSA
-	// algorithm, the mldsa package's exporter returns *mldsa.PrivateKey.
-	// The exporter reconstructs the key from the stored seed ("priv" field)
-	// and verifies that the derived public key matches the "pub" field.
+	// choose the concrete type, which for an AKP key with an ML-DSA algorithm
+	// is *crypto/mldsa.PrivateKey. The exporter reconstructs the key from
+	// the stored seed ("priv" field) and verifies that the derived public key
+	// matches the "pub" field.
 	exported, err := jwk.Export[any](privJWK)
 	if err != nil {
 		fmt.Printf("failed to export key: %s\n", err)
@@ -297,7 +451,72 @@ func Example_mldsa_export() {
 	// keys match: true
 }
 ```
-source: [examples/mldsa_export_example_test.go](https://github.com/jwx-go/examples/blob/v4/mldsa_export_example_test.go)
+source: [examples/mldsa_export_go127_example_test.go](https://github.com/jwx-go/examples/blob/v4/mldsa_export_go127_example_test.go)
+
+### Go 1.26
+
+```go
+package examples_test
+
+import (
+	"fmt"
+
+	"filippo.io/mldsa"
+	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwk"
+)
+
+func Example_mldsa_export() {
+	// jwk.Export converts a jwk.Key back to a raw key type. For ML-DSA keys,
+	// this returns *filippo.io/mldsa.PrivateKey or
+	// *filippo.io/mldsa.PublicKey, depending on whether the JWK contains the
+	// "priv" field.
+	//
+	// This is useful when you receive an ML-DSA key in JWK format (e.g., from
+	// a JWKS endpoint or configuration file) and need the raw key for operations
+	// outside of jwx.
+
+	// Generate an ML-DSA-87 key pair — the highest security level (NIST Level 5).
+	sk, err := mldsa.GenerateKey(mldsa.MLDSA87())
+	if err != nil {
+		fmt.Printf("failed to generate ML-DSA key: %s\n", err)
+		return
+	}
+
+	// Import the raw key into JWK format.
+	privJWK, err := jwk.Import[jwk.Key](sk)
+	if err != nil {
+		fmt.Printf("failed to import key: %s\n", err)
+		return
+	}
+
+	// Export back to a raw key. jwk.Export[any] lets the registered exporter
+	// choose the concrete type, which for an AKP key with an ML-DSA algorithm
+	// is *filippo.io/mldsa.PrivateKey. The exporter reconstructs the key from
+	// the stored seed ("priv" field) and verifies that the derived public key
+	// matches the "pub" field.
+	exported, err := jwk.Export[any](privJWK)
+	if err != nil {
+		fmt.Printf("failed to export key: %s\n", err)
+		return
+	}
+
+	exportedSK, ok := exported.(*mldsa.PrivateKey)
+	if !ok {
+		fmt.Printf("unexpected key type: %T\n", exported)
+		return
+	}
+
+	// The exported key is identical to the original — the import/export
+	// cycle is lossless.
+	fmt.Printf("key type: %s\n", jwa.AKP())
+	fmt.Printf("keys match: %t\n", sk.Equal(exportedSK))
+	// OUTPUT:
+	// key type: AKP
+	// keys match: true
+}
+```
+source: [examples/mldsa_export_pre_go127_example_test.go](https://github.com/jwx-go/examples/blob/v4/mldsa_export_pre_go127_example_test.go)
 
 ---
 
