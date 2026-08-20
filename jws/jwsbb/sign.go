@@ -66,7 +66,7 @@ func SignWithOpts(key any, alg string, payload []byte, opts crypto.SignerOpts, r
 		return dispatchECDSASign(key, dsigAlg, payload, rr)
 	case dsig.EdDSAFamily:
 		return dispatchEdDSASign(key, alg, dsigAlg, payload, rr)
-	case dsig.Custom:
+	case dsig.Custom, dsig.MLDSAFamily:
 		return dsig.SignWithOpts(key, dsigAlg, payload, opts, rr)
 	default:
 		return nil, fmt.Errorf(`jwsbb.SignWithOpts: unsupported dsig algorithm family %q`, dsigInfo.Family)

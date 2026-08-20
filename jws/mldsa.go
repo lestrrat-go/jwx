@@ -4,12 +4,9 @@ package jws
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/mldsa"
 	"fmt"
-	"io"
 
-	"github.com/lestrrat-go/dsig"
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/lestrrat-go/jwx/v4/jws/jwsbb"
@@ -18,7 +15,8 @@ import (
 // ML-DSA (FIPS 204) signing and verification. This file is gated on Go 1.27
 // because that is when crypto/mldsa joins the standard library; on Go 1.26 the
 // algorithms are not registered at all, so jws.Sign and jws.Verify report them
-// as unsupported rather than failing later with a confusing key error.
+// as unsupported, instead of the confusing key error that would surface
+// later.
 func init() {
 	for _, entry := range []struct {
 		alg    jwa.SignatureAlgorithm
@@ -30,15 +28,9 @@ func init() {
 	} {
 		name := entry.params.String()
 
-		if err := dsig.RegisterAlgorithm(name, dsig.AlgorithmInfo{
-			Family: dsig.Custom,
-			Meta:   &mldsaDsigAlgorithm{params: entry.params},
-		}); err != nil {
-			panic(fmt.Sprintf("jws: failed to register dsig algorithm %s: %s", name, err))
-		}
-		if err := jwsbb.RegisterDsigAlgorithm(name, name); err != nil {
-			panic(fmt.Sprintf("jws: failed to map dsig algorithm %s: %s", name, err))
-		}
+		// dsig owns the algorithm itself from v1.4.0 on, including the
+		// parameter-set check. It uses the same names as JOSE, so jwsbb's
+		// fallback resolves them with no mapping registered here.
 		if err := RegisterSigner(entry.alg, &mldsaSigner{algName: name, params: entry.params}); err != nil {
 			panic(fmt.Sprintf("jws: failed to register signer for %s: %s", name, err))
 		}
@@ -71,93 +63,6 @@ func mldsaParamsForAlg(alg string) (mldsa.Parameters, error) {
 		}
 	}
 	return mldsa.Parameters{}, fmt.Errorf(`unknown ML-DSA algorithm %q`, alg)
-}
-
-// mldsaDsigAlgorithm adapts crypto/mldsa to the dsig Custom family. It handles
-// raw crypto/mldsa keys only; unwrapping a jwk.Key is the job of the
-// jws.Signer / jws.Verifier layer above.
-type mldsaDsigAlgorithm struct {
-	params mldsa.Parameters
-}
-
-func (a *mldsaDsigAlgorithm) Sign(key any, payload []byte, _ io.Reader) ([]byte, error) {
-	sk, ok := key.(*mldsa.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf(`mldsa dsig.Sign: expected *mldsa.PrivateKey, got %T`, key)
-	}
-	if err := requireMLDSAParamsMatch(sk.PublicKey().Parameters(), a.params); err != nil {
-		return nil, fmt.Errorf(`mldsa dsig.Sign: %w`, err)
-	}
-	return sk.Sign(nil, payload, nil)
-}
-
-// SignWithOpts implements dsig.SignerWithOpts. A non-nil opts must be of
-// concrete type *mldsa.Options; its Context field is forwarded to crypto/mldsa,
-// which lets callers supply the per-algorithm domain-separation context that
-// composite signature schemes require. Any other non-nil opts type is an error
-// rather than being coerced to nil: a silent coerce would let a caller believe
-// their Context was in force while the signature was actually made with an
-// empty context, which is a signature-substitution vector.
-func (a *mldsaDsigAlgorithm) SignWithOpts(key any, payload []byte, opts crypto.SignerOpts, _ io.Reader) ([]byte, error) {
-	sk, ok := key.(*mldsa.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf(`mldsa dsig.SignWithOpts: expected *mldsa.PrivateKey, got %T`, key)
-	}
-	if err := requireMLDSAParamsMatch(sk.PublicKey().Parameters(), a.params); err != nil {
-		return nil, fmt.Errorf(`mldsa dsig.SignWithOpts: %w`, err)
-	}
-	if opts != nil {
-		if _, ok := opts.(*mldsa.Options); !ok {
-			return nil, fmt.Errorf(`mldsa dsig.SignWithOpts: expected *mldsa.Options, got %T`, opts)
-		}
-	}
-	return sk.Sign(nil, payload, opts)
-}
-
-func (a *mldsaDsigAlgorithm) Verify(key any, payload, signature []byte) error {
-	pk, err := mldsaDsigPublicKey(key)
-	if err != nil {
-		return fmt.Errorf(`mldsa dsig.Verify: %w`, err)
-	}
-	if err := requireMLDSAParamsMatch(pk.Parameters(), a.params); err != nil {
-		return fmt.Errorf(`mldsa dsig.Verify: %w`, err)
-	}
-	return mldsa.Verify(pk, payload, signature, nil)
-}
-
-// VerifyWithOpts implements dsig.VerifierWithOpts. A non-nil opts must be of
-// concrete type *mldsa.Options; see SignWithOpts for why any other type is
-// rejected instead of coerced.
-func (a *mldsaDsigAlgorithm) VerifyWithOpts(key any, payload, signature []byte, opts crypto.SignerOpts) error {
-	pk, err := mldsaDsigPublicKey(key)
-	if err != nil {
-		return fmt.Errorf(`mldsa dsig.VerifyWithOpts: %w`, err)
-	}
-	if err := requireMLDSAParamsMatch(pk.Parameters(), a.params); err != nil {
-		return fmt.Errorf(`mldsa dsig.VerifyWithOpts: %w`, err)
-	}
-	var mldsaOpts *mldsa.Options
-	if opts != nil {
-		var ok bool
-		mldsaOpts, ok = opts.(*mldsa.Options)
-		if !ok {
-			return fmt.Errorf(`mldsa dsig.VerifyWithOpts: expected *mldsa.Options, got %T`, opts)
-		}
-	}
-	return mldsa.Verify(pk, payload, signature, mldsaOpts)
-}
-
-// mldsaDsigPublicKey narrows the key types the dsig verify surface accepts to a
-// *mldsa.PublicKey.
-func mldsaDsigPublicKey(key any) (*mldsa.PublicKey, error) {
-	switch k := key.(type) {
-	case *mldsa.PublicKey:
-		return k, nil
-	case *mldsa.PrivateKey:
-		return k.PublicKey(), nil
-	default:
-		return nil, fmt.Errorf(`expected *mldsa.PublicKey or *mldsa.PrivateKey, got %T`, key)
-	}
 }
 
 type mldsaSigner struct {

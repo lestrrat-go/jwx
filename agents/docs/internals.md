@@ -120,16 +120,20 @@ Internal `internal/json` package provides the abstraction. Custom field registry
 
 ## Native ML-DSA (Go 1.27)
 
-`crypto/mldsa` joins the standard library in Go 1.27, so jwx implements ML-DSA
-itself from that version rather than deferring to `github.com/jwx-go/mldsa/v4`.
-The code sits behind `//go:build go1.27` in three files, each registering into
-its own package from `init()`:
+`crypto/mldsa` joins the standard library in Go 1.27, so jwx supports ML-DSA
+natively from that version on. Before it, ML-DSA needed
+`github.com/jwx-go/mldsa/v4`.
+
+The signature primitives live in `lestrrat-go/dsig` v1.4.0 and later, which owns
+the three algorithm names, the `dsig.MLDSAFamily` family, and the parameter-set
+check. jwx supplies the JOSE half. The code sits behind `//go:build go1.27` in
+three files, each registering into its own package from `init()`:
 
 | File | Registers |
 |------|-----------|
 | `jwa/mldsa.go` | The three `SignatureAlgorithm` values, marked builtin. Not in `objects.yml`, because that would advertise them on Go 1.26 too. |
 | `jwk/mldsa.go` | Key importers for `*mldsa.PrivateKey` / `*mldsa.PublicKey`, and a key exporter per `AKP:ML-DSA-<n>` kind. |
-| `jws/mldsa.go` | The `dsig` Custom-family algorithm, the `jwsbb` name mapping, and a `Signer`/`Verifier` per parameter set. |
+| `jws/mldsa.go` | A `Signer`/`Verifier` per parameter set, each unwrapping an AKP `jwk.Key` before delegating to `jwsbb`. dsig uses the JOSE algorithm names, so `jwsbb`'s fallback resolves them with no mapping registered. |
 
 Cross-package ordering is safe because `jws` imports `jwk` and `jwa`, so their
 `init()` functions have already run. Ordering *within* `jws` is not safe to
