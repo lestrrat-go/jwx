@@ -41,10 +41,11 @@ No feature build tags in v4. Optional features (signature algorithms, base64 bac
 The only build tags in the tree are Go-version constraints, and tests never set
 them; the toolchain selects the files. Two groups exist: the json/v2 sentinel
 shim (`internal/json/skipfunc_pre_go127.go` / `skipfunc_go127.go`), and native
-ML-DSA (`jwa/mldsa.go`, `jwk/mldsa.go`, `jws/mldsa.go` plus their tests, all
-`//go:build go1.27`).
+ML-DSA (`jwa/signature_go127_gen.go`, `jwk/mldsa.go`, `jws/mldsa.go` plus their
+tests, all `//go:build go1.27`).
 
 ML-DSA coverage therefore runs only on Go 1.27: `jwa/mldsa_test.go`,
+`jwa/signature_go127_gen_test.go` (generated; DO NOT EDIT),
 `jwk/mldsa_test.go` (import/export, JWK round-trip, thumbprint, and known-answer
 vectors pinned from a fixed seed), `jws/mldsa_test.go` (sign/verify, parameter-set
 confusion, signer-opts handling), and `jws/mldsa_fuzz_test.go`. On Go 1.26 these
