@@ -52,7 +52,7 @@ func VerifyWithOpts(key any, alg string, payload, signature []byte, opts crypto.
 		return dispatchECDSAVerify(key, dsigAlg, payload, signature)
 	case dsig.EdDSAFamily:
 		return dispatchEdDSAVerify(key, alg, dsigAlg, payload, signature)
-	case dsig.Custom:
+	case dsig.Custom, dsig.MLDSAFamily:
 		return dsig.VerifyWithOpts(key, dsigAlg, payload, signature, opts)
 	default:
 		return fmt.Errorf(`jwsbb.VerifyWithOpts: unsupported dsig algorithm family %q`, dsigInfo.Family)

@@ -13,7 +13,7 @@ const (
 	mldsa87 = "ML-DSA-87"
 )
 
-// ML-DSA is registered here rather than in objects.yml because the algorithms
+// ML-DSA is registered here, not in objects.yml, because the algorithms
 // exist only when the toolchain provides crypto/mldsa, which lands in Go 1.27.
 // Advertising them on Go 1.26 would let LookupSignatureAlgorithm succeed for an
 // algorithm that no signer or verifier can service.

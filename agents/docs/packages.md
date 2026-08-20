@@ -65,7 +65,7 @@ JSON Web Signatures per RFC 7515. Sign, verify, parse.
 - Registration: `RegisterSigner()`, `RegisterVerifier()`, `AlgorithmsForKey()`, `RegisterAlgorithmForKeyType()`, `RegisterAlgorithmForCurve()`
 - Error sentinels: `SignError()`, `VerifyError()`, `VerificationError()`, `ParseError()`
 - Sub-package: `jws/jwsbb` — compact serialization, signing, verification building blocks. The fastjson-backed `Header` probe (`HeaderParse`/`HeaderGet*`/`HeaderHas`) is a thin facade over `jws/internal/jwsbb`, which holds the implementation plus jwx-internal-only helpers not re-exported by the facade (e.g. `HeaderForEachKey`, the header-key enumerator used by `VerifyCompactFast`'s minimal-shape gate)
-- ML-DSA (go1.27): `mldsa.go` registers the three FIPS 204 algorithms with `dsig`/`jwsbb` and installs a `Signer`/`Verifier` pair for each. Both accept a raw `crypto/mldsa` key or an AKP `jwk.Key`, and both reject a key whose parameter set disagrees with the algorithm.
+- ML-DSA (go1.27): `mldsa.go` installs a `Signer`/`Verifier` pair per parameter set. Both accept a raw `crypto/mldsa` key or an AKP `jwk.Key`, and both reject a key whose parameter set disagrees with the algorithm. The signature primitives come from `lestrrat-go/dsig` v1.4.0, which owns the algorithm registration.
 - Files: `jws.go`, `message.go`, `signer.go`, `verifier.go`, `headers.go`, `interface.go`, `errors.go`, `options.go`, `key_provider.go`, `sign_context.go`, `verify_context.go`, `streaming_detached.go`, `mldsa.go` (go1.27)
 - Imports: jwa, jwk, cert, dsig, internal/{base64,json,pool,tokens}
 

@@ -3,11 +3,14 @@
 package jws_test
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/mldsa"
 	"encoding/base64"
 	"encoding/json"
 	"testing"
+
+	"github.com/lestrrat-go/dsig"
 
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwk"
@@ -178,7 +181,7 @@ func TestMLDSAParamSetConfusion(t *testing.T) {
 			require.Error(t, err)
 			require.ErrorContains(t, err, "parameter set mismatch")
 			// The mismatch must be caught before key construction, so the
-			// error names the real cause rather than a downstream symptom.
+			// error names the real cause, not a downstream symptom.
 			require.NotContains(t, err.Error(), "failed to construct ML-DSA private key")
 		})
 
@@ -296,7 +299,7 @@ func TestMLDSASignerOptsTypeMismatch(t *testing.T) {
 		require.NoError(t, jwsbb.VerifyWithOpts(pk, alg, msg, sig, opts))
 
 		// A different context must not verify, or the context would be
-		// decorative rather than binding.
+		// decorative, and it is binding.
 		wrong := &mldsa.Options{Context: "different"}
 		require.Error(t, jwsbb.VerifyWithOpts(pk, alg, msg, sig, wrong))
 	})
@@ -390,4 +393,35 @@ func TestMLDSASignRejectsPubMismatch(t *testing.T) {
 	_, err = jws.Sign([]byte("pub mismatch"), jws.WithKey(jwa.MLDSA65(), privJWK))
 	require.Error(t, err)
 	require.ErrorContains(t, err, `does not match the public key derived from "priv"`)
+}
+
+// TestMLDSAComesFromDsig pins that dsig owns the algorithm. jwx registered it
+// as a Custom-family algorithm before dsig v1.4.0, which made jws report
+// ML-DSA as an algorithm the library could not reason about.
+func TestMLDSAComesFromDsig(t *testing.T) {
+	t.Parallel()
+
+	for _, name := range []string{"ML-DSA-44", "ML-DSA-65", "ML-DSA-87"} {
+		info, ok := dsig.GetAlgorithmInfo(name)
+		require.True(t, ok, "%s must be registered with dsig", name)
+		require.Equal(t, dsig.MLDSAFamily, info.Family)
+		require.NotEqual(t, dsig.Custom, info.Family)
+	}
+}
+
+// TestMLDSAStreamingRefusalNamesMLDSA pins the message a caller sees when they
+// try to stream a detached payload. While ML-DSA sat in the Custom family the
+// refusal said jwx could not know whether the algorithm pre-hashes, which was
+// untrue of an algorithm jwx ships.
+func TestMLDSAStreamingRefusalNamesMLDSA(t *testing.T) {
+	t.Parallel()
+
+	sk, err := mldsa.GenerateKey(mldsa.MLDSA65())
+	require.NoError(t, err)
+
+	_, err = jws.Sign(nil, jws.WithKey(jwa.MLDSA65(), sk),
+		jws.WithDetachedPayloadReader(bytes.NewReader([]byte("payload"))))
+	require.Error(t, err)
+	require.ErrorContains(t, err, "ML-DSA signs the full message")
+	require.NotContains(t, err.Error(), "cannot know whether the algorithm pre-hashes")
 }
