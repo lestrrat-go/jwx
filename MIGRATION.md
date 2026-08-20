@@ -32,7 +32,7 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 ## Prerequisites
 
 - Go 1.26.0 or later
-- Set `GOEXPERIMENT=jsonv2` in your build environment
+- On Go 1.26 only: set `GOEXPERIMENT=jsonv2` in your build environment. Go 1.27 ships `encoding/json/v2` in the standard library, so leave `GOEXPERIMENT` unset there.
 - Update `go.mod`: change module requirement to `github.com/lestrrat-go/jwx/v4`
 
 ## Quick Reference
@@ -559,10 +559,11 @@ These changes cannot be mechanically transformed and need human judgment:
    require github.com/lestrrat-go/jwx/v4 v4.x.x
    ```
 
-2. Set environment variable:
+2. Set environment variable, **on Go 1.26 only**:
    ```bash
    export GOEXPERIMENT=jsonv2
    ```
+   Go 1.27 ships `encoding/json/v2` in the standard library. Leave `GOEXPERIMENT` unset there: naming an experiment the toolchain already ships rebuilds the standard library under a non-default configuration for no benefit.
 
 3. Remove build tags from commands:
    ```bash

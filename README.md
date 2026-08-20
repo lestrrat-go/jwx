@@ -7,7 +7,9 @@ If you are using this module in your product or your company, please add your pr
 # Requirements
 
 * Go 1.26 or later
-* `GOEXPERIMENT=jsonv2`
+* `GOEXPERIMENT=jsonv2`, **on Go 1.26 only**
+
+v4 uses `encoding/json/v2`, which sits behind `GOEXPERIMENT=jsonv2` on Go 1.26 and is part of the standard library from Go 1.27 on. On Go 1.27 leave `GOEXPERIMENT` unset: naming an experiment the toolchain already ships rebuilds the standard library under a non-default configuration for no benefit.
 
 # Install
 
@@ -186,7 +188,7 @@ Additionally supported via the main module or [extension modules](docs/10-extens
 | Specification | Support |
 |---------------|---------|
 | [FIPS 203](https://csrc.nist.gov/pubs/fips/203/final) (ML-KEM) | JWE key encapsulation via [`github.com/jwx-go/mlkem`](https://github.com/jwx-go/mlkem): ML-KEM-768, ML-KEM-1024, hybrid variants (draft-ietf-jose-pqc-kem) |
-| [FIPS 204](https://csrc.nist.gov/pubs/fips/204/final) (ML-DSA) | JWS signatures via [`github.com/jwx-go/mldsa`](https://github.com/jwx-go/mldsa) |
+| [FIPS 204](https://csrc.nist.gov/pubs/fips/204/final) (ML-DSA) | JWS signatures: native from Go 1.27 on, via [`github.com/jwx-go/mldsa`](https://github.com/jwx-go/mldsa) on Go 1.26 ([details](docs/10-extensions.md#which-implementation-you-get)) |
 
 
 ## History

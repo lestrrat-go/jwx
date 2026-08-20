@@ -14,15 +14,18 @@
 //
 // # Requirements
 //
-// v4 uses the experimental encoding/json/v2 API, so consumers must build
-// with:
+// v4 requires Go 1.26.0 or later (see go.mod for the exact minimum) and uses
+// the encoding/json/v2 API. Whether that needs extra build configuration
+// depends on the toolchain:
 //
-//   - Go 1.26.0 or later (see go.mod for the exact minimum)
-//   - GOEXPERIMENT=jsonv2 set in the environment for every `go build`,
-//     `go test`, `go run`, and `go generate` invocation
-//
-// Without GOEXPERIMENT=jsonv2 the Go toolchain reports
-// `build constraints exclude all Go files` and the module will not build.
+//   - Go 1.27 and later ship encoding/json/v2 in the standard library. Build
+//     normally and leave GOEXPERIMENT unset. Naming an experiment the
+//     toolchain already ships rebuilds the standard library under a
+//     non-default configuration for no benefit.
+//   - Go 1.26 keeps encoding/json/v2 behind GOEXPERIMENT=jsonv2, which must be
+//     set for every `go build`, `go test`, `go run`, and `go generate`
+//     invocation. Without it the toolchain reports `build constraints exclude
+//     all Go files` and the module will not build.
 //
 // Examples are stored in a separate Go module (to avoid adding
 // dependencies to this module), and thus does not appear in the
