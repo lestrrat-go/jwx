@@ -19,7 +19,7 @@ This project requires **Go 1.26.0** or later. Check `go.mod` for the exact versi
 
 ## GOEXPERIMENT
 
-v4 depends on `encoding/json/v2`, which is behind `GOEXPERIMENT=jsonv2` on Go 1.26 and part of the standard library from Go 1.27 on. The Makefile probes the toolchain and exports the variable only when it is needed, so `make` targets work on both.
+v4 depends on `encoding/json/v2`, which is behind `GOEXPERIMENT=jsonv2` on Go 1.26 and part of the standard library from Go 1.27 on. The Makefile probes the toolchain and rewrites `GOEXPERIMENT` to match it, adding `jsonv2` on Go 1.26 and removing it on Go 1.27, so `make` targets work on both even when your shell already exports the variable. Experiments other than `jsonv2` are left alone. `scripts/test-companion.sh` carries the same probe.
 
 A direct `go build`, `go test`, or `go run` invocation on **Go 1.26** must set it:
 

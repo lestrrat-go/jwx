@@ -6,8 +6,26 @@ set -euo pipefail
 # standard library from Go 1.27 on, where naming the experiment would rebuild
 # the standard library under a non-default configuration for no benefit. Probe
 # the toolchain instead of hardcoding a version.
-if ! GOEXPERIMENT= go list encoding/json/v2 >/dev/null 2>&1; then
-	export GOEXPERIMENT=jsonv2
+#
+# Both branches rewrite GOEXPERIMENT instead of only setting it, because the
+# caller may have exported it. On Go 1.27 an inherited jsonv2 would otherwise
+# survive and trigger the very rebuild this probe exists to avoid. Experiments
+# other than jsonv2 are preserved. Mirrors the probe at the top of the Makefile.
+goexperiment_rest=""
+if [ -n "${GOEXPERIMENT:-}" ]; then
+	IFS=',' read -ra goexperiment_parts <<<"$GOEXPERIMENT"
+	for part in "${goexperiment_parts[@]}"; do
+		if [ -z "$part" ] || [ "$part" = jsonv2 ]; then
+			continue
+		fi
+		goexperiment_rest="${goexperiment_rest:+$goexperiment_rest,}$part"
+	done
+fi
+
+if GOEXPERIMENT= go list encoding/json/v2 >/dev/null 2>&1; then
+	export GOEXPERIMENT="$goexperiment_rest"
+else
+	export GOEXPERIMENT="${goexperiment_rest:+$goexperiment_rest,}jsonv2"
 fi
 
 JWX_ROOT=$(cd "$(dirname "$0")/.."; pwd -P)

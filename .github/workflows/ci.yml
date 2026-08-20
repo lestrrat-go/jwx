@@ -149,6 +149,14 @@ jobs:
             echo "::error::expected an empty GOEXPERIMENT on Go 1.27, got '$exp'"
             exit 1
           fi
+          # The probe must also drop a jsonv2 the caller already exported. A
+          # developer who set it for Go 1.26 keeps it in their environment
+          # across the toolchain upgrade, and it would otherwise survive here.
+          exp=$(GOEXPERIMENT=jsonv2 make print-goexperiment)
+          if [ -n "$exp" ]; then
+            echo "::error::expected the probe to drop an inherited jsonv2 on Go 1.27, got '$exp'"
+            exit 1
+          fi
       # -vet=off is required, not a shortcut. go.mod declares go 1.26.0, and
       # under Go 1.27 the encoding/json/v2 and jsontext symbols carry a
       # since-go1.27 API version, so vet's stdversion analyzer rejects every
