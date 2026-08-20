@@ -4,6 +4,23 @@ Changes
 v4 has many incompatibilities with v3. To see the full list of differences between
 v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MICRATION-v4.md)
 
+v4.4.0 20 August 2026
+  * [jwa][jwk][jws] ML-DSA (FIPS 204) is now implemented natively when jwx is
+    built with Go 1.27 or later, where `crypto/mldsa` is part of the standard
+    library. `jwa.MLDSA44()`, `jwa.MLDSA65()` and `jwa.MLDSA87()` are
+    registered automatically, and `*mldsa.PrivateKey` / `*mldsa.PublicKey`
+    values from `crypto/mldsa` work directly with `jws.Sign`, `jws.Verify`,
+    `jwk.Import` and `jwk.Export`. No extension module and no side-effect
+    import are required.
+
+    On Go 1.26 the algorithms are not registered at all, so `jws.Sign` and
+    `jws.Verify` report them as unsupported instead of failing later with a
+    confusing key error. ML-DSA on Go 1.26 still needs
+    `github.com/jwx-go/mldsa/v4`. That extension remains safe to import on
+    Go 1.27 from its v4.0.5 release on, which detects the native
+    registration and bridges `filippo.io/mldsa` keys onto it. (#2309, #2310,
+    #2311)
+
 v4.3.0 18 August 2026
   * [jwe] Correct the JSON `"aad"` member so it contains only
     BASE64URL of the external Additional Authenticated Data, rather than the
