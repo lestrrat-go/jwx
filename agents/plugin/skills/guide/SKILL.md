@@ -34,7 +34,7 @@ When the user's question goes beyond the patterns in this skill (custom claim ty
 ## Prerequisites
 
 - **Go 1.26+** is required. v4 uses generics features and stdlib additions (`errors.AsType[T]`) that are new in 1.26.
-- **`GOEXPERIMENT=jsonv2`** must be set for every `go build`/`go test`/`go run` because v4 depends on `encoding/json/v2`. Without it, builds fail with `build constraints exclude all Go files`.
+- **`GOEXPERIMENT=jsonv2`** must be set on Go 1.26 for every `go build`/`go test`/`go run`, because v4 depends on `encoding/json/v2`. Without it → builds fail with `build constraints exclude all Go files`. NEVER set it on Go 1.27+ → `encoding/json/v2` is in the standard library there, and naming the experiment rebuilds the standard library under a non-default configuration.
 
 Sub-package map:
 
@@ -245,6 +245,8 @@ For algorithm and HPKE modules: **import for side effects** (`import _ "..."`). 
 ### What to do when the user asks about post-quantum or non-default algorithms
 
 Default jwx supports the common RFC 7518 algorithms (RS*, PS*, ES*, HS*, EdDSA, A*GCM, RSA-OAEP-*, etc.) out of the box. For everything in the tables above, the user must add the companion module to their `go.mod` *and* import it for side effects. If a user reports an `algorithm not registered` or similar error for ES256K/Ed448/ML-DSA/ML-KEM/X448, they almost certainly missed the side-effect import.
+
+ML-DSA is the one exception, and it depends on the toolchain. From Go 1.27 on, `crypto/mldsa` is in the standard library, so jwx registers `jwa.MLDSA44()`/`MLDSA65()`/`MLDSA87()` natively and no companion module or side-effect import is needed. On Go 1.26 the algorithms are not registered at all, and `github.com/jwx-go/mldsa/v4` is still required. Canonical owner: `docs/10-extensions.md`, section "Which implementation you get".
 
 ## Errors
 

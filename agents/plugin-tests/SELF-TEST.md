@@ -49,8 +49,13 @@ WORKDIR="$(mktemp -d)"
 cd "$WORKDIR"
 go mod init example.com/jwx-self-test/case-N
 # write main.go with all required imports + func main() so it links
-GOEXPERIMENT=jsonv2 go mod tidy
-GOEXPERIMENT=jsonv2 go build ./...
+# encoding/json/v2 is behind GOEXPERIMENT=jsonv2 on Go 1.26 and in the standard
+# library from Go 1.27 on. Probe the toolchain instead of hardcoding a version.
+if ! GOEXPERIMENT= go list encoding/json/v2 >/dev/null 2>&1; then
+	export GOEXPERIMENT=jsonv2
+fi
+go mod tidy
+go build ./...
 ```
 
 The test passes a case only when `go build` exits 0. A successful build proves:

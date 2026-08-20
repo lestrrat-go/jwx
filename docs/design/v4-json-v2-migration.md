@@ -45,9 +45,11 @@ MarshalJSON templates changed:
 
 ### Build requirements
 
-During development: `GOEXPERIMENT=jsonv2` must be set for all `go build`, `go test`, `go generate` commands. The Makefile exports this automatically.
+On Go 1.26: `GOEXPERIMENT=jsonv2` must be set for all `go build`, `go test`, `go generate` commands. The Makefile probes the toolchain and exports it only when it is needed.
 
-v4 will ship when json/v2 graduates to default in a future Go release.
+On Go 1.27 and later: `encoding/json/v2` is part of the standard library, and `GOEXPERIMENT` must be left unset.
+
+This section is the only part of this document that tracks current state; the rest records the v3 → v4 decision as it was made. `AGENTS.md` is the canonical owner of the build requirement.
 
 ## Migration guide (v3 → v4)
 
