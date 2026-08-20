@@ -131,7 +131,7 @@ three files, each registering into its own package from `init()`:
 
 | File | Registers |
 |------|-----------|
-| `jwa/mldsa.go` | The three `SignatureAlgorithm` values, marked builtin. Not in `objects.yml`, because that would advertise them on Go 1.26 too. |
+| `jwa/signature_go127_gen.go` | The three `SignatureAlgorithm` values, marked builtin. Generated from `jwa/objects.yml` by the `build_constraint` field described below. |
 | `jwk/mldsa.go` | Key importers for `*mldsa.PrivateKey` / `*mldsa.PublicKey`, and a key exporter per `AKP:ML-DSA-<n>` kind. |
 | `jws/mldsa.go` | A `Signer`/`Verifier` per parameter set, each unwrapping an AKP `jwk.Key` before delegating to `jwsbb`. dsig uses the JOSE algorithm names, so `jwsbb`'s fallback resolves them with no mapping registered. |
 
@@ -142,12 +142,23 @@ assume: Go runs `init()` across a package's files in filename order, and
 registered by `mldsa.go`. That loop therefore skips algorithms that already have
 a signer instead of clobbering them.
 
-The generated `jwa/signature_gen_test.go` list check skips the three ML-DSA
-names, the same way it already skips `secp256k1`. That skip lives in
-`generateAlgTestElementList` in `genjwa.go` — do not patch the generated file.
+### `build_constraint` in jwa/objects.yml
 
-Delete all of this only when ML-DSA can move into `objects.yml`, which is when
-`go.mod` requires Go 1.27.
+An element may carry `build_constraint: go1.27`. `genjwa` then keeps it out of
+the type's main file and emits it into `{base}_{constraint}_gen.go` with a
+matching `//go:build` line, carrying only the accessors and an `init()` that
+registers them. The type, the `Register*` functions, and the shared state stay
+in the main file, which every toolchain compiles.
+
+The generated test splits the same way. Per-element assertions go to
+`{base}_{constraint}_gen_test.go`, and the whole-list check in the main test
+file skips the constrained values, since whether they are registered depends on
+the toolchain. Behavior that the skip hides, such as being listed at all, is
+covered by hand in `jwa/mldsa_test.go`.
+
+When `go.mod` requires Go 1.27, drop `build_constraint` from the three ML-DSA
+elements and they fold back into the main generated file. The `jwk` and `jws`
+files lose their build tags at the same point.
 
 ## Base64 Backend
 

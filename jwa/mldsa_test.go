@@ -3,47 +3,29 @@
 package jwa_test
 
 import (
-	"encoding/json"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/stretchr/testify/require"
 )
 
+// Lookup, unmarshal, stringification, and the symmetric flag are covered by
+// signature_go127_gen_test.go. What is left here is the behavior the generated
+// tests skip for build-constrained algorithms, plus the builtin guarantee.
 func TestMLDSASignatureAlgorithms(t *testing.T) {
 	t.Parallel()
 
-	t.Run("names", func(t *testing.T) {
-		t.Parallel()
-		require.Equal(t, "ML-DSA-44", jwa.MLDSA44().String())
-		require.Equal(t, "ML-DSA-65", jwa.MLDSA65().String())
-		require.Equal(t, "ML-DSA-87", jwa.MLDSA87().String())
-	})
+	algs := []jwa.SignatureAlgorithm{jwa.MLDSA44(), jwa.MLDSA65(), jwa.MLDSA87()}
 
-	t.Run("registered for lookup", func(t *testing.T) {
+	t.Run("not deprecated", func(t *testing.T) {
 		t.Parallel()
-		for _, name := range []string{"ML-DSA-44", "ML-DSA-65", "ML-DSA-87"} {
-			alg, ok := jwa.LookupSignatureAlgorithm(name)
-			require.True(t, ok, "%s must be registered", name)
-			require.Equal(t, name, alg.String())
-		}
-	})
-
-	t.Run("asymmetric and not deprecated", func(t *testing.T) {
-		t.Parallel()
-		for _, alg := range []jwa.SignatureAlgorithm{jwa.MLDSA44(), jwa.MLDSA65(), jwa.MLDSA87()} {
-			require.False(t, alg.IsSymmetric(), "%s must not be symmetric", alg)
+		for _, alg := range algs {
 			require.False(t, alg.IsDeprecated(), "%s must not be deprecated", alg)
 		}
 	})
 
-	t.Run("unmarshal from JSON", func(t *testing.T) {
-		t.Parallel()
-		var dst jwa.SignatureAlgorithm
-		require.NoError(t, json.Unmarshal([]byte(`"ML-DSA-65"`), &dst))
-		require.Equal(t, jwa.MLDSA65(), dst)
-	})
-
+	// The generated whole-list check skips these names, since whether they are
+	// present depends on the toolchain.
 	t.Run("listed among signature algorithms", func(t *testing.T) {
 		t.Parallel()
 		var found int
@@ -57,8 +39,8 @@ func TestMLDSASignatureAlgorithms(t *testing.T) {
 	})
 
 	// Built-in algorithms are protected from removal, so an extension cannot
-	// unregister ML-DSA out from under the signer and verifier that core
-	// registered for it.
+	// unregister ML-DSA out from under the signer and verifier registered for
+	// it.
 	t.Run("unregister is refused", func(t *testing.T) {
 		t.Parallel()
 		jwa.UnregisterSignatureAlgorithm(jwa.MLDSA44())

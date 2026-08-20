@@ -144,6 +144,24 @@ algorithms:
         value: Ed25519
         returnval_comment: EdDSA signature algorithm using Ed25519 (RFC 9864)
         comment: The function name is tentative and may change in future releases.
+      # ML-DSA is available only from Go 1.27, which is when crypto/mldsa joins
+      # the standard library. build_constraint puts these in their own file so
+      # earlier toolchains neither declare nor register them.
+      - name: MLDSA44
+        value: ML-DSA-44
+        build_constraint: go1.27
+        returnval_comment: the ML-DSA-44 signature algorithm (FIPS 204, NIST security level 2)
+        comment: Available only when jwx is built with Go 1.27 or later.
+      - name: MLDSA65
+        value: ML-DSA-65
+        build_constraint: go1.27
+        returnval_comment: the ML-DSA-65 signature algorithm (FIPS 204, NIST security level 3)
+        comment: Available only when jwx is built with Go 1.27 or later.
+      - name: MLDSA87
+        value: ML-DSA-87
+        build_constraint: go1.27
+        returnval_comment: the ML-DSA-87 signature algorithm (FIPS 204, NIST security level 5)
+        comment: Available only when jwx is built with Go 1.27 or later.
       - name: PS256
         value: PS256
         returnval_comment: RSASSA-PSS signature algorithm using SHA-256 and MGF1-SHA256
