@@ -25,8 +25,8 @@ Algorithm identifiers per RFC 7518. Registry pattern with thread-safe lookup.
 - Per-type API: `New{Type}()`, `Lookup{Type}(name) (T, bool)`, `Register{Type}()`, `Unregister{Type}()`, `{Type}s() []T`
   `Register{Type}()` is process-global; attempts to replace builtin identifiers such as `RS256` return an error.
 - Constructor functions: `ES256()`, `RS256()`, `A128GCM()`, `P256()`, `Ed25519()`, etc.
-- **MLDSA44()**, **MLDSA65()**, **MLDSA87()** — ML-DSA signature algorithms (FIPS 204). Go 1.27 and later only; `jwa/mldsa.go` is `//go:build go1.27` because `crypto/mldsa` lands in Go 1.27. Registered as builtins from `init()`, not from `objects.yml`.
-- Files: `jwa.go`, `mldsa.go` (go1.27) + generated `*_gen.go`
+- **MLDSA44()**, **MLDSA65()**, **MLDSA87()** — ML-DSA signature algorithms (FIPS 204). Go 1.27 and later only; `jwa/signature_go127_gen.go` is `//go:build go1.27` because `crypto/mldsa` lands in Go 1.27. Generated from the three `build_constraint: go1.27` entries in `objects.yml`, and registered as builtins from that file's `init()`.
+- Files: `jwa.go` + generated `*_gen.go` (including `signature_go127_gen.go`, go1.27)
 - Imports: internal/tokens
 
 ## jwk/
