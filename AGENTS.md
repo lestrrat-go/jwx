@@ -208,7 +208,7 @@ No feature build tags in v4. Optional features (signature algorithms, backend re
 Two exceptions exist, both keyed on the Go version rather than on a feature. Do not add feature build tags alongside them.
 
 1. A json/v2 compatibility shim. `internal/json/skipfunc_pre_go127.go` and `internal/json/skipfunc_go127.go` pick the "skip this value" sentinel, which Go 1.27 renamed from `json/v2.SkipFunc` to `errors.ErrUnsupported`.
-2. Native ML-DSA. `jwa/mldsa.go`, `jwk/mldsa.go`, and `jws/mldsa.go` are all `//go:build go1.27`, because `crypto/mldsa` joins the standard library in Go 1.27. On Go 1.26 the algorithms are not registered at all, so `jws.Sign` and `jws.Verify` report them as unsupported instead of failing later with a confusing key error. ML-DSA on Go 1.26 still needs [`github.com/jwx-go/mldsa/v4`](https://github.com/jwx-go/mldsa).
+2. Native ML-DSA. `jwa/signature_go127_gen.go` (generated from `jwa/objects.yml`), `jwk/mldsa.go`, and `jws/mldsa.go` are all `//go:build go1.27`, because `crypto/mldsa` joins the standard library in Go 1.27. On Go 1.26 the algorithms are not registered at all, so `jws.Sign` and `jws.Verify` report them as unsupported instead of failing later with a confusing key error. ML-DSA on Go 1.26 still needs [`github.com/jwx-go/mldsa/v4`](https://github.com/jwx-go/mldsa).
 
 ## Quick Reference: Common Modifications
 
