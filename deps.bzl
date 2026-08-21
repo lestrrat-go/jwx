@@ -89,8 +89,8 @@ def go_dependencies():
         name = "com_github_stretchr_testify",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/stretchr/testify",
-        sum = "h1:K6Mr6jO9JICuend/5xzTM03ydSV3vdNRYAdPSukj8uI=",
-        version = "v1.12.0",
+        sum = "h1:EuwCh5fleGS7H32xRwO3wRGT7DxrDhLAT6FF8MpWDWE=",
+        version = "v1.12.1",
     )
     go_repository(
         name = "in_gopkg_check_v1",
@@ -105,6 +105,13 @@ def go_dependencies():
         importpath = "gopkg.in/yaml.v3",
         sum = "h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=",
         version = "v3.0.1",
+    )
+    go_repository(
+        name = "in_yaml_go_yaml_v3",
+        build_file_proto_mode = "disable_global",
+        importpath = "go.yaml.in/yaml/v3",
+        sum = "h1:N6y/pJk8buWs9NY5ERU2HSMfm+IuD/OtfdAnq6kESPw=",
+        version = "v3.0.5",
     )
     go_repository(
         name = "org_golang_x_crypto",
