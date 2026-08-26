@@ -35,6 +35,7 @@ go_library(
         "//jwa",
         "//jwk",
         "//jws/internal/keytype",
+        "//jws/internal/keyalg",
         "//jws/jwsbb",
         "//jws/legacy",
         "//transform",

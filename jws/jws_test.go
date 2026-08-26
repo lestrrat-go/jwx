@@ -1376,6 +1376,11 @@ func TestJKU(t *testing.T) {
 	})
 }
 
+// TestAlgorithmsForKey and the other AlgorithmsForKey tests in this file
+// deliberately exercise the deprecated wrapper, which is now a one-line
+// delegation to jws/internal/keyalg. They stay here so the wrapper keeps
+// its coverage for as long as it exists. New tests for classification
+// behavior belong next to keyalg.Candidates instead.
 func TestAlgorithmsForKey(t *testing.T) {
 	rsaprivkey, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaPrivateKey should succeed`)

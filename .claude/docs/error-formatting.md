@@ -31,7 +31,7 @@ if errors.Is(err, jwt.TokenExpiredError()) { ... }
 | `jws` | `ParseError()` | Parse failed |
 | `jws` | `ErrCritPresent()` | `VerifyCompactFast` refused a `crit`-bearing protected header (use `jws.Verify`) |
 | `jws` | `ErrB64Present()` | `VerifyCompactFast` refused a `b64`-bearing protected header (use `jws.Verify`) |
-| `jws` | `ErrUnclassifiableKey()` | `AlgorithmsForKey` couldn't classify the key shape (Import failed, kty not registered, or key-agreement-only key like ecdh) |
+| `jws` | `ErrUnclassifiableKey()` | Key classification failed at option time in `Sign`/`Verify` (Import failed, kty not registered, or key-agreement-only key like ecdh). Sentinel defined in `jws/internal/keyalg`; `jws.ErrUnclassifiableKey()` re-exports it |
 | `jwe` | `EncryptError()` | Encryption failed |
 | `jwe` | `DecryptError()` | Decryption failed |
 | `jwe` | `RecipientError()` | Recipient processing error |
