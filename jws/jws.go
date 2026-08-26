@@ -618,8 +618,14 @@ func RegisterAlgorithmForCurve(crv jwa.EllipticCurveAlgorithm, alg jwa.Signature
 //
 // This function keeps working for the rest of the v4 series and will be
 // removed in the next major version. Until then it receives no fixes.
-// Known gaps in what it reports stay as they are, and what it returns
-// today is what it will keep returning.
+// Known gaps in what it reports stay as they are, and the rule it uses to
+// turn a key into a list of algorithms will not change.
+//
+// That is a promise about the rule, not about the list. What comes back
+// still depends on what has been registered, so importing an extension
+// module that calls [RegisterAlgorithmForKeyType] or
+// [RegisterAlgorithmForCurve] widens the result here just as it widens
+// what [Sign] and [Verify] accept.
 //
 // Precision is explicitly not promised either. The returned list may be
 // wider than RFC 7518 permits for that specific key.
@@ -628,13 +634,15 @@ func RegisterAlgorithmForCurve(crv jwa.EllipticCurveAlgorithm, alg jwa.Signature
 // both to [Sign] or [Verify] and check the error. Report problems against
 // those functions instead of this one.
 func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
-	// The godoc above promises v4 callers that this result does not move,
-	// so delegating is correct only while keyalg.Candidates returns
-	// exactly what this function returned before it was deprecated. That
-	// holds today. If Candidates is ever changed — narrowing EC keys to
-	// the algorithm their curve permits being the likely first case —
-	// give this function a frozen copy of the old behavior instead of
-	// letting the new behavior reach it.
+	// The godoc above promises v4 callers that the classification rule
+	// does not move, so delegating is correct only while
+	// keyalg.Candidates classifies keys exactly as this function did
+	// before it was deprecated. That holds today. If Candidates is ever
+	// changed — narrowing EC keys to the algorithm their curve permits
+	// being the likely first case — give this function a frozen copy of
+	// the old rule instead of letting the new one reach it. Registration
+	// changing the result is not such a change: the tables were always an
+	// input to the rule, not part of it.
 	return keyalg.Candidates(key)
 }
 
