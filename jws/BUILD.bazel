@@ -34,6 +34,7 @@ go_library(
         "//jwa",
         "//jwk",
         "//jws/internal/jwsbb",
+        "//jws/internal/keyalg",
         "//jws/jwsbb",
         "@com_github_lestrrat_go_dsig//:dsig",
         "@com_github_lestrrat_go_option_v3//:option",
