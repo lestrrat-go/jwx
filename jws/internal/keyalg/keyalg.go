@@ -1,18 +1,17 @@
-// Package keyalg answers "which signature algorithms could this key be
-// used with", and owns the process-global registration tables that back
-// the question.
+// Package keyalg works out which signature algorithms a key can be used
+// with, and owns the registration tables it reads to decide.
 //
-// The answer is deliberately advisory. It exists so that jws.Verify can
-// pick candidate algorithms for a JWKS key that carries no "alg" member,
-// and so that option-time validation can reject a key that plainly does
-// not go with the requested algorithm. It is NOT a key/algorithm
-// compatibility check, and the list it returns may be wider than any one
-// RFC permits for a specific key.
+// The answer is a guess, on purpose. jws.Verify uses it to pick
+// algorithms to try when a JWKS key has no "alg" field, and option
+// handling uses it to catch a key that clearly does not go with the
+// algorithm asked for. It is not a check for whether a key and an
+// algorithm are a valid pair, and the list can be wider than any one RFC
+// allows for a given key.
 //
-// This package is jwx-internal. The jws package still exposes
-// AlgorithmsForKey as a thin wrapper over [Candidates], but that function
-// was never meant to be consumed by end users and is deprecated. All
-// in-tree callers use this package directly.
+// This package is internal to jwx. The jws package still has
+// AlgorithmsForKey, a one-line wrapper over [Candidates], but that is
+// deprecated and was never meant for callers outside jwx. Everything in
+// the tree calls this package instead.
 package keyalg
 
 import (

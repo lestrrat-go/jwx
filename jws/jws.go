@@ -609,40 +609,31 @@ func RegisterAlgorithmForCurve(crv jwa.EllipticCurveAlgorithm, alg jwa.Signature
 // strings. The wrapping error keeps the concrete %T or %q diagnostic in
 // its message for human readers.
 //
-// Deprecated: Do not use. AlgorithmsForKey is jwx's internal algorithm
-// inference helper. It was never meant to be consumed by end users, and is
-// exported only for historical reasons. It reports the algorithms a key
-// could plausibly be used with, so that verification can pick candidates
-// for a JWKS key carrying no "alg" member. It is NOT a key/algorithm
-// compatibility check and must not be used as one.
+// Deprecated: Do not use. This is an internal helper that jwx uses to
+// guess which algorithms to try when a JWKS key has no "alg" field. It is
+// exported only because it always has been, and was never meant for
+// callers outside jwx. It does not tell you whether a key and an
+// algorithm go together, so do not use it as that kind of check. The list
+// it hands back can be wider than RFC 7518 allows for the key you passed.
 //
-// This function keeps working for the rest of the v4 series and will be
-// removed in the next major version. Until then it receives no fixes.
-// Known gaps in what it reports stay as they are, and the rule it uses to
-// turn a key into a list of algorithms will not change.
+// It keeps working until the next major version, then it goes away. It
+// will not be fixed in the meantime, and the way it picks algorithms will
+// not change. The list itself can still grow. An extension module that
+// calls [RegisterAlgorithmForKeyType] or [RegisterAlgorithmForCurve] adds
+// to what this reports, the same way it adds to what [Sign] and [Verify]
+// accept.
 //
-// That is a promise about the rule, not about the list. What comes back
-// still depends on what has been registered, so importing an extension
-// module that calls [RegisterAlgorithmForKeyType] or
-// [RegisterAlgorithmForCurve] widens the result here just as it widens
-// what [Sign] and [Verify] accept.
-//
-// Precision is explicitly not promised either. The returned list may be
-// wider than RFC 7518 permits for that specific key.
-//
-// If you need to know whether a key and an algorithm go together, hand
-// both to [Sign] or [Verify] and check the error. Report problems against
-// those functions instead of this one.
+// To find out whether a key works with an algorithm, pass both to [Sign]
+// or [Verify] and check the error.
 func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
-	// The godoc above promises v4 callers that the classification rule
-	// does not move, so delegating is correct only while
-	// keyalg.Candidates classifies keys exactly as this function did
-	// before it was deprecated. That holds today. If Candidates is ever
-	// changed — narrowing EC keys to the algorithm their curve permits
-	// being the likely first case — give this function a frozen copy of
-	// the old rule instead of letting the new one reach it. Registration
-	// changing the result is not such a change: the tables were always an
-	// input to the rule, not part of it.
+	// The godoc says the way this picks algorithms will not change, so
+	// calling keyalg only works while keyalg picks them the same way this
+	// function did before it was deprecated. It does today. If Candidates
+	// ever changes (narrowing EC keys to the one algorithm their curve
+	// allows is the likely first case), copy the old code back in here
+	// instead of letting the change through. An extension registering a
+	// new algorithm is not that kind of change, because the tables have
+	// always been an input.
 	return keyalg.Candidates(key)
 }
 
