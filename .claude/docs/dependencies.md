@@ -17,7 +17,7 @@ Composition Layer
 
 Processing Layer
   jws → jwa, jwk, cert, internal/{base64,json,pool,tokens}
-       → jws/jwsbb
+       → jws/jwsbb, jws/internal/keyalg
   jwe → jwa, jwk, cert, transform, internal/{base64,json,pool,tokens}
        → jwe/internal/{aescbc,cipher,concatkdf,content_crypt,keygen}
        → jwe/jwebb
@@ -45,6 +45,7 @@ Leaf Packages (no internal deps)
 | `jwk/ecdsa` | jwa |
 | `jwk/jwkbb` | (external only: blackmagic, valyala/fastjson) |
 | `jws` | jwa, jwk, cert |
+| `jws/internal/keyalg` | jwa, jwk |
 | `jwe` | jwa, jwk, cert, transform |
 | `jwt` | jwa, jws, jwe, jwk, transform |
 | `jwt/openid` | jwt |

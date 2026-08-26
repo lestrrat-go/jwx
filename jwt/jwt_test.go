@@ -150,15 +150,22 @@ func TestJWTParseVerify(t *testing.T) {
 	for _, key := range keys {
 		t.Run(fmt.Sprintf("Key=%T", key), func(t *testing.T) {
 			t.Parallel()
-			algs, err := jws.AlgorithmsForKey(key)
-			require.NoError(t, err, `jwas.AlgorithmsForKey should succeed`)
 
+			// The algorithm lists are spelled out here rather than
+			// queried from jws.AlgorithmsForKey, which is deprecated
+			// and not meant to be used outside jwx. The ECDSA row is
+			// the same for all three curves because jws binds ES*
+			// algorithms by hash, not by curve.
+			var algs []jwa.SignatureAlgorithm
 			var dummyRawKey any
+			var err error
 			switch pk := key.(type) {
 			case *rsa.PrivateKey:
+				algs = []jwa.SignatureAlgorithm{jwa.RS256(), jwa.RS384(), jwa.RS512(), jwa.PS256(), jwa.PS384(), jwa.PS512()}
 				dummyRawKey, err = jwxtest.GenerateRsaKey()
 				require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)
 			case *ecdsa.PrivateKey:
+				algs = []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()}
 				alg, err := ourecdsa.AlgorithmFromCurve(pk.Curve)
 				if err != nil {
 					require.Fail(t, `unsupported elliptic.Curve: %w`, alg)
@@ -166,9 +173,11 @@ func TestJWTParseVerify(t *testing.T) {
 				dummyRawKey, err = jwxtest.GenerateEcdsaKey(alg)
 				require.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`)
 			case ed25519.PrivateKey:
+				algs = []jwa.SignatureAlgorithm{jwa.EdDSA(), jwa.EdDSAEd25519()}
 				dummyRawKey, err = jwxtest.GenerateEd25519Key()
 				require.NoError(t, err, `jwxtest.GenerateEd25519Key should succeed`)
 			case []byte:
+				algs = []jwa.SignatureAlgorithm{jwa.HS256(), jwa.HS384(), jwa.HS512()}
 				dummyRawKey = jwxtest.GenerateSymmetricKey()
 			default:
 				require.Fail(t, fmt.Sprintf("Unhandled key type %T", key))
