@@ -10,6 +10,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwk"
+	"github.com/lestrrat-go/jwx/v4/jws/internal/keyalg"
 )
 
 // KeyProvider is responsible for providing key(s) to sign or verify a payload.
@@ -144,7 +145,7 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _
 	}
 
 	if kp.inferAlgorithm {
-		algs, err := AlgorithmsForKey(key)
+		algs, err := keyalg.Candidates(key)
 		if err != nil {
 			return false, fmt.Errorf(`failed to get a list of signature methods for key type %s: %w`, key.KeyType(), err)
 		}
@@ -252,13 +253,13 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 	//
 	// The allowed-KeyType set is computed once per FetchKeys call so
 	// the per-key check is a cheap KeyType equality over a tiny slice
-	// (typically 1 element), not a full AlgorithmsForKey recomputation.
+	// (typically 1 element), not a full keyalg.Candidates recomputation.
 	// When allowedKtys is nil (no header alg, or alg has no registered
 	// key type), the filter is skipped and existing behavior is
 	// preserved.
 	var allowedKtys []jwa.KeyType
 	if hdrAlg, ok := sig.ProtectedHeaders().Algorithm(); ok {
-		allowedKtys = keyTypesForAlgorithm(hdrAlg)
+		allowedKtys = keyalg.KeyTypesFor(hdrAlg)
 	}
 	emitted := false
 	var errs []error
@@ -293,21 +294,6 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 		return fmt.Errorf(`no key in the key set was usable: %w`, errors.Join(errs...))
 	}
 	return nil
-}
-
-// keyTypesForAlgorithm returns the registered key types that can
-// produce the given signature algorithm. The inverse map is maintained
-// at registration time so this is an O(1) lookup. Returns nil if no
-// key type is registered for alg (e.g. an unknown algorithm from an
-// extension that isn't loaded), which signals callers to skip the
-// prefilter and fall through to their existing behavior.
-func keyTypesForAlgorithm(alg jwa.SignatureAlgorithm) []jwa.KeyType {
-	muAlgorithmMaps.RLock()
-	defer muAlgorithmMaps.RUnlock()
-	// Copy so the caller can safely iterate without holding the
-	// lock; RegisterAlgorithmForKeyType may append concurrently
-	// after we return. Typical length is 1.
-	return slices.Clone(algorithmToKeyTypes[alg])
 }
 
 type jkuProvider struct {
@@ -359,7 +345,7 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 		}
 	}
 
-	algs, err := AlgorithmsForKey(key)
+	algs, err := keyalg.Candidates(key)
 	if err != nil {
 		return fmt.Errorf(`failed to get a list of signature methods for key type %s: %w`, key.KeyType(), err)
 	}

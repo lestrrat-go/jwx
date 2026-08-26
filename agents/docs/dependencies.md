@@ -16,7 +16,7 @@ Composition Layer
 
 Processing Layer
   jws → jwa, jwk, cert, internal/{base64,json,pool,tokens}
-       → jws/jwsbb, jws/internal/jwsbb
+       → jws/jwsbb, jws/internal/jwsbb, jws/internal/keyalg
        → crypto/mldsa (go1.27 only, via mldsa.go)
   jwe → jwa, jwk, cert, transform, internal/{base64,json,pool,tokens}
        → jwe/internal/{aescbc,cipher,concatkdf,content_crypt,keygen}
@@ -46,6 +46,7 @@ Leaf Packages (no internal deps)
 | `jwk/ecdsa` | jwa |
 | `jwk/jwkbb` | (no internal jwx deps; uses valyala/fastjson) |
 | `jws` | jwa, jwk, cert |
+| `jws/internal/keyalg` | jwa, jwk |
 | `jwe` | jwa, jwk, cert, transform |
 | `jwt` | jwa, jws, jwe, jwk, transform |
 | `jwt/openid` | jwt |
