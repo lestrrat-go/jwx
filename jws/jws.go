@@ -616,12 +616,18 @@ func RegisterAlgorithmForCurve(crv jwa.EllipticCurveAlgorithm, alg jwa.Signature
 // for a JWKS key carrying no "alg" member. It is NOT a key/algorithm
 // compatibility check and must not be used as one.
 //
-// Precision is explicitly not promised. The returned list may be wider
-// than RFC 7518 permits for that specific key, and it may widen or narrow
-// in any release without that being treated as a breaking change.
+// This function keeps working for the rest of the v4 series and will be
+// removed in the next major version. Until then it receives no fixes.
+// Known gaps in what it reports stay as they are, and no bug will be
+// addressed on its behalf; its result follows jwx's internal classifier
+// and may shift whenever that changes.
+//
+// Precision is explicitly not promised either. The returned list may be
+// wider than RFC 7518 permits for that specific key.
 //
 // If you need to know whether a key and an algorithm go together, hand
-// both to [Sign] or [Verify] and check the error.
+// both to [Sign] or [Verify] and check the error. Report problems against
+// those functions instead of this one.
 func AlgorithmsForKey(key any) ([]jwa.SignatureAlgorithm, error) {
 	return keyalg.Candidates(key)
 }
