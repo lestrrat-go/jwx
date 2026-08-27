@@ -87,7 +87,7 @@ func TestVerifyWithKeySetContainingUnsupportedKey(t *testing.T) {
 func TestUnsupportedKeyRejectionNotMaskedBySkippedKeys(t *testing.T) {
 	const payload = "Lorem ipsum"
 
-	ecPriv, err := jwxtest.GenerateEcdsaJwk()
+	ecPriv, err := jwxtest.GenerateEcdsaJwk(jwa.P256())
 	require.NoError(t, err)
 	require.NoError(t, ecPriv.Set(jwk.KeyIDKey, "eckey"))
 	signed, err := jws.Sign([]byte(payload), jws.WithKey(jwa.ES256(), ecPriv))

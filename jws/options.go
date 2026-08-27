@@ -120,6 +120,12 @@ func (w *withKey) SetProtectedDefault(v Headers) Headers {
 // The algorithm specified in the `alg` parameter MUST be able to support
 // the type of key you provided, otherwise an error is returned.
 //
+// For the ES256/ES384/ES512 algorithms, the key's elliptic curve must match
+// the curve RFC 7518 Section 3.4 binds the algorithm to (ES256/P-256,
+// ES384/P-384, ES512/P-521). `jws.Sign()` rejects a mismatched pairing at
+// sign time; `jws.Verify()` is unaffected and keeps inferring algorithms
+// from a key's curve exactly as before.
+//
 // Any of the following is accepted for the `key` parameter:
 // * A "raw" key (e.g. rsa.PrivateKey, ecdsa.PrivateKey, etc)
 // * A crypto.Signer

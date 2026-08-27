@@ -12,6 +12,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/asn1"
 	"errors"
 	"fmt"
@@ -26,6 +27,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/lestrrat-go/dsig"
 
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
@@ -62,7 +65,7 @@ func TestSanity(t *testing.T) {
 		key2, err := jwxtest.GenerateRsaJwk()
 		require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 		require.NoError(t, key2.Set(jwk.KeyIDKey, "key2"), `key2.Set should succeed`)
-		key3, err := jwxtest.GenerateEcdsaJwk()
+		key3, err := jwxtest.GenerateEcdsaJwk(jwa.P256())
 		require.NoError(t, err, `jwxtest.GenerateEcdsaJwk should succeed`)
 		require.NoError(t, key3.Set(jwk.KeyIDKey, "key3"), `key3.Set should succeed`)
 
@@ -105,7 +108,7 @@ func TestSanity(t *testing.T) {
 			key2, err := jwxtest.GenerateRsaJwk()
 			require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 			require.NoError(t, key2.Set(jwk.KeyIDKey, "key2"), `key2.Set should succeed`)
-			key3, err := jwxtest.GenerateEcdsaJwk()
+			key3, err := jwxtest.GenerateEcdsaJwk(jwa.P256())
 			require.NoError(t, err, `jwxtest.GenerateEcdsaJwk should succeed`)
 			require.NoError(t, key3.Set(jwk.KeyIDKey, "key3"), `key3.Set should succeed`)
 
@@ -416,18 +419,29 @@ func TestRoundtrip(t *testing.T) {
 	})
 	t.Run("ECDSA", func(t *testing.T) {
 		t.Parallel()
-		key, err := jwxtest.GenerateEcdsaKey(jwa.P521())
-		require.NoError(t, err, "ECDSA key generated")
-		jwkKey, _ := jwk.Import[jwk.Key](key.PublicKey)
-		keys := map[string]any{
-			"Verify(ecdsa.PublicKey)":  key.PublicKey,
-			"Verify(*ecdsa.PublicKey)": &key.PublicKey,
-			"Verify(jwk.Key)":          jwkKey,
+		// One key per algorithm: RFC 7518 Section 3.4 binds each ES*
+		// algorithm to exactly one curve, so a single key can no longer
+		// be reused across ES256/ES384/ES512.
+		algsAndCurves := []struct {
+			alg jwa.SignatureAlgorithm
+			crv jwa.EllipticCurveAlgorithm
+		}{
+			{jwa.ES256(), jwa.P256()},
+			{jwa.ES384(), jwa.P384()},
+			{jwa.ES512(), jwa.P521()},
 		}
-		for _, alg := range []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()} {
-			t.Run(alg.String(), func(t *testing.T) {
+		for _, ac := range algsAndCurves {
+			t.Run(ac.alg.String(), func(t *testing.T) {
 				t.Parallel()
-				testRoundtrip(t, payload, alg, key, keys)
+				key, err := jwxtest.GenerateEcdsaKey(ac.crv)
+				require.NoError(t, err, "ECDSA key generated")
+				jwkKey, _ := jwk.Import[jwk.Key](key.PublicKey)
+				keys := map[string]any{
+					"Verify(ecdsa.PublicKey)":  key.PublicKey,
+					"Verify(*ecdsa.PublicKey)": &key.PublicKey,
+					"Verify(jwk.Key)":          jwkKey,
+				}
+				testRoundtrip(t, payload, ac.alg, key, keys)
 			})
 		}
 	})
@@ -1405,7 +1419,7 @@ func TestAlgorithmsForKey(t *testing.T) {
 	rsapubkey, err := rsaprivkey.PublicKey()
 	require.NoError(t, err, `jwk (RSA) PublicKey() should succeed`)
 
-	ecdsaprivkey, err := jwxtest.GenerateEcdsaJwk()
+	ecdsaprivkey, err := jwxtest.GenerateEcdsaJwk(jwa.P256())
 	require.NoError(t, err, `jwxtest.GenerateEcdsaPrivateKey should succeed`)
 	ecdsapubkey, err := ecdsaprivkey.PublicKey()
 	require.NoError(t, err, `jwk (ECDSA) PublicKey() should succeed`)
@@ -2417,4 +2431,140 @@ func TestVerifyHonorsContextCancellation(t *testing.T) {
 	require.Error(t, err, `Verify must observe a pre-cancelled ctx`)
 	require.ErrorIs(t, err, context.Canceled,
 		`cancellation must propagate as context.Canceled`)
+}
+
+// assertECDSACurveSignOutcome asserts the shared expectation for a
+// jws.Sign call made with a (curve, algorithm) pair: success when they
+// match RFC 7518 Section 3.4, and an "ECDSA curve mismatch" jws.SignError
+// otherwise.
+func assertECDSACurveSignOutcome(t *testing.T, err error, match bool) {
+	t.Helper()
+	if match {
+		require.NoError(t, err)
+		return
+	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "ECDSA curve mismatch")
+	require.True(t, errors.Is(err, jws.SignError()), `errors.Is(err, jws.SignError()) should be true, got %v`, err)
+}
+
+// TestSignRejectsECDSACurveMismatch covers all six wrong (curve, alg)
+// combinations of P-256/P-384/P-521 x ES256/ES384/ES512 across every sign
+// path that produces an ECDSA JWS signature: jws.Sign with a raw key, with
+// an imported jwk.Key, with the streaming detached-payload path, and with a
+// crypto.Signer wrapper. The three matching pairs must still succeed and
+// round-trip through jws.Verify.
+func TestSignRejectsECDSACurveMismatch(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`Lorem Ipsum Dolor Sit Amet`)
+
+	curves := []jwa.EllipticCurveAlgorithm{jwa.P256(), jwa.P384(), jwa.P521()}
+	keys := make(map[jwa.EllipticCurveAlgorithm]*ecdsa.PrivateKey, len(curves))
+	for _, crv := range curves {
+		key, err := jwxtest.GenerateEcdsaKey(crv)
+		require.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed for %s`, crv)
+		keys[crv] = key
+	}
+
+	algs := []struct {
+		alg jwa.SignatureAlgorithm
+		crv jwa.EllipticCurveAlgorithm
+	}{
+		{jwa.ES256(), jwa.P256()},
+		{jwa.ES384(), jwa.P384()},
+		{jwa.ES512(), jwa.P521()},
+	}
+
+	for _, a := range algs {
+		for _, crv := range curves {
+			match := a.crv == crv
+			key := keys[crv]
+			t.Run(fmt.Sprintf("%s/%s", a.alg, crv), func(t *testing.T) {
+				t.Parallel()
+
+				t.Run("raw *ecdsa.PrivateKey", func(t *testing.T) {
+					t.Parallel()
+					_, err := jws.Sign(payload, jws.WithKey(a.alg, key))
+					assertECDSACurveSignOutcome(t, err, match)
+				})
+
+				t.Run("jwk.Key", func(t *testing.T) {
+					t.Parallel()
+					jwkKey, err := jwk.Import[jwk.Key](key)
+					require.NoError(t, err, `jwk.Import should succeed`)
+					_, err = jws.Sign(payload, jws.WithKey(a.alg, jwkKey))
+					assertECDSACurveSignOutcome(t, err, match)
+				})
+
+				t.Run("streaming detached", func(t *testing.T) {
+					t.Parallel()
+					_, err := jws.Sign(nil,
+						jws.WithKey(a.alg, key),
+						jws.WithDetachedPayloadReader(bytes.NewReader(payload)),
+					)
+					assertECDSACurveSignOutcome(t, err, match)
+				})
+
+				t.Run("crypto.Signer", func(t *testing.T) {
+					t.Parallel()
+					signer := &dummyECDSACryptoSigner{raw: key}
+					_, err := jws.Sign(payload, jws.WithKey(a.alg, signer))
+					assertECDSACurveSignOutcome(t, err, match)
+				})
+
+				if !match {
+					return
+				}
+				t.Run("round-trips through jws.Verify", func(t *testing.T) {
+					t.Parallel()
+					signed, err := jws.Sign(payload, jws.WithKey(a.alg, key))
+					require.NoError(t, err, `jws.Sign should succeed`)
+					verified, err := jws.Verify(signed, jws.WithKey(a.alg, &key.PublicKey))
+					require.NoError(t, err, `jws.Verify should succeed`)
+					require.Equal(t, payload, verified)
+				})
+			})
+		}
+	}
+}
+
+// TestVerifyKeepsPermissiveECDSAInference guards against a future accidental
+// tightening of the verify path. It deliberately does not depend on
+// jws.Sign to produce a mismatched-curve JWS -- after
+// TestSignRejectsECDSACurveMismatch that is no longer possible -- and
+// instead builds one by hand: a P-256 key signs a digest hashed and
+// serialized as if it were ES384, exactly the self-consistent but
+// non-conformant shape jws.Sign used to be able to emit. jws.Verify's
+// key -> algorithm handling must accept it exactly as it does today.
+func TestVerifyKeepsPermissiveECDSAInference(t *testing.T) {
+	t.Parallel()
+
+	privkey, err := jwxtest.GenerateEcdsaKey(jwa.P256())
+	require.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`)
+
+	payload := []byte(`Lorem Ipsum Dolor Sit Amet`)
+
+	hdr := jws.NewHeaders()
+	require.NoError(t, hdr.Set(jws.AlgorithmKey, jwa.ES384()), `hdr.Set should succeed`)
+	hdrJSON, err := json.Marshal(hdr)
+	require.NoError(t, err, `json.Marshal should succeed`)
+
+	hdrEncoded := base64.EncodeToString(hdrJSON)
+	payloadEncoded := base64.EncodeToString(payload)
+	signingInput := hdrEncoded + "." + payloadEncoded
+
+	h := sha512.New384()
+	_, err = h.Write([]byte(signingInput))
+	require.NoError(t, err)
+	digest := h.Sum(nil)
+
+	sig, err := dsig.SignDigest(privkey, dsig.ECDSAWithP384AndSHA384, digest, nil)
+	require.NoError(t, err, `dsig.SignDigest should succeed`)
+
+	compact := []byte(signingInput + "." + base64.EncodeToString(sig))
+
+	verified, err := jws.Verify(compact, jws.WithKey(jwa.ES384(), &privkey.PublicKey))
+	require.NoError(t, err, `jws.Verify should stay permissive about the ECDSA curve/algorithm pairing`)
+	require.Equal(t, payload, verified)
 }
