@@ -2,11 +2,15 @@ load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "jwsbb",
-    srcs = ["header.go"],
+    srcs = [
+        "ecdsacurve.go",
+        "header.go",
+    ],
     importpath = "github.com/lestrrat-go/jwx/v4/jws/internal/jwsbb",
     visibility = ["//jws:__subpackages__"],
     deps = [
         "//internal/base64",
+        "@com_github_lestrrat_go_dsig//:dsig",
         "@com_github_valyala_fastjson//:fastjson",
     ],
 )
@@ -19,9 +23,13 @@ alias(
 
 go_test(
     name = "jwsbb_test",
-    srcs = ["header_test.go"],
+    srcs = [
+        "ecdsacurve_test.go",
+        "header_test.go",
+    ],
     deps = [
         ":jwsbb",
+        "@com_github_lestrrat_go_dsig//:dsig",
         "@com_github_stretchr_testify//require",
     ],
 )

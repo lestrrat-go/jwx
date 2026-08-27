@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "accessors.go",
         "builder_gen.go",
+        "doc.go",
         "errors.go",
         "fastpath.go",
         "http.go",

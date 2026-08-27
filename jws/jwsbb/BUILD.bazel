@@ -31,11 +31,14 @@ go_test(
     srcs = [
         "header_test.go",
         "jwsbb_test.go",
+        "sign_test.go",
     ],
     deps = [
         ":jwsbb",
         "//internal/base64",
         "//internal/pool",
+        "//jwa",
+        "@com_github_lestrrat_go_dsig//:dsig",
         "@com_github_stretchr_testify//require",
     ],
 )
