@@ -10,6 +10,7 @@ import (
 
 	"github.com/lestrrat-go/dsig"
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
+	impl "github.com/lestrrat-go/jwx/v3/jws/internal/jwsbb"
 )
 
 // Sign generates a JWS signature using the specified key and algorithm.
@@ -39,7 +40,7 @@ func Sign(key any, alg string, payload []byte, rr io.Reader) ([]byte, error) {
 	case dsig.RSA:
 		return dispatchRSASign(key, dsigAlg, payload, rr)
 	case dsig.ECDSA:
-		return dispatchECDSASign(key, dsigAlg, payload, rr)
+		return dispatchECDSASign(key, alg, dsigAlg, payload, rr)
 	case dsig.EdDSAFamily:
 		return dispatchEdDSASign(key, alg, dsigAlg, payload, rr)
 	case dsig.Custom:
@@ -76,11 +77,14 @@ func dispatchRSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([]b
 	return dsig.Sign(privkey, dsigAlg, payload, rr)
 }
 
-func dispatchECDSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([]byte, error) {
+func dispatchECDSASign(key any, jwsAlg, dsigAlg string, payload []byte, rr io.Reader) ([]byte, error) {
 	// Try crypto.Signer first (dsig can handle it directly)
 	if signer, ok := key.(crypto.Signer); ok {
 		// Verify it's an ECDSA key
-		if _, ok := signer.Public().(*ecdsa.PublicKey); ok {
+		if pub, ok := signer.Public().(*ecdsa.PublicKey); ok {
+			if err := impl.RequireECDSACurve(jwsAlg, dsigAlg, pub); err != nil {
+				return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
+			}
 			return dsig.Sign(signer, dsigAlg, payload, rr)
 		}
 	}
@@ -89,6 +93,10 @@ func dispatchECDSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([
 	var privkey *ecdsa.PrivateKey
 	if err := keyconv.ECDSAPrivateKey(&privkey, key); err != nil {
 		return nil, fmt.Errorf(`jwsbb.Sign: invalid key type %T. *ecdsa.PrivateKey is required: %w`, key, err)
+	}
+
+	if err := impl.RequireECDSACurve(jwsAlg, dsigAlg, &privkey.PublicKey); err != nil {
+		return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
 	}
 
 	return dsig.Sign(privkey, dsigAlg, payload, rr)

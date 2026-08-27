@@ -675,7 +675,7 @@ func TestCustomField(t *testing.T) {
 func TestGH554(t *testing.T) {
 	const keyID = `very-secret-key`
 	const plaintext = `hello world!`
-	privkey, err := jwxtest.GenerateEcdsaJwk()
+	privkey, err := jwxtest.GenerateEcdsaJwk(jwa.P256())
 	require.NoError(t, err, `jwxtest.GenerateEcdsaJwk() should succeed`)
 
 	_ = privkey.Set(jwk.KeyIDKey, keyID)

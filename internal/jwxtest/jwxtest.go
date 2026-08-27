@@ -60,8 +60,8 @@ func GenerateEcdsaKey(alg jwa.EllipticCurveAlgorithm) (*ecdsa.PrivateKey, error)
 	return ecdsa.GenerateKey(crv, rand.Reader)
 }
 
-func GenerateEcdsaJwk() (jwk.Key, error) {
-	key, err := GenerateEcdsaKey(jwa.P521())
+func GenerateEcdsaJwk(alg jwa.EllipticCurveAlgorithm) (jwk.Key, error) {
+	key, err := GenerateEcdsaKey(alg)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to generate ECDSA private key: %w`, err)
 	}
@@ -74,8 +74,8 @@ func GenerateEcdsaJwk() (jwk.Key, error) {
 	return k, nil
 }
 
-func GenerateEcdsaPublicJwk() (jwk.Key, error) {
-	key, err := GenerateEcdsaJwk()
+func GenerateEcdsaPublicJwk(alg jwa.EllipticCurveAlgorithm) (jwk.Key, error) {
+	key, err := GenerateEcdsaJwk(alg)
 	if err != nil {
 		return nil, fmt.Errorf(`failed to generate jwk.ECDSAPrivateKey: %w`, err)
 	}

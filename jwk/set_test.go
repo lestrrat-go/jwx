@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/stretchr/testify/require"
 )
@@ -15,7 +16,7 @@ func TestSet(t *testing.T) {
 
 	keygens := []func() (jwk.Key, error){
 		jwxtest.GenerateRsaJwk,
-		jwxtest.GenerateEcdsaJwk,
+		func() (jwk.Key, error) { return jwxtest.GenerateEcdsaJwk(jwa.P256()) },
 		jwxtest.GenerateSymmetricJwk,
 	}
 
