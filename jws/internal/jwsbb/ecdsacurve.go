@@ -40,8 +40,12 @@ func RequireECDSACurve(joseAlg, dsigAlg string, key any) error {
 	if pub.Curve == want {
 		return nil
 	}
-	gotParams, wantParams := pub.Curve.Params(), want.Params()
-	if gotParams != nil && wantParams != nil && gotParams.Name == wantParams.Name {
+	gotParams := pub.Curve.Params()
+	if gotParams == nil {
+		return nil
+	}
+	wantParams := want.Params()
+	if wantParams != nil && gotParams.Name == wantParams.Name {
 		return nil
 	}
 

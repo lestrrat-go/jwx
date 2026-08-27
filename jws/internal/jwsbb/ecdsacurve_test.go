@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"io"
+	"math/big"
 	"testing"
 
 	"github.com/lestrrat-go/dsig"
@@ -13,6 +14,27 @@ import (
 
 	jwsbb "github.com/lestrrat-go/jwx/v4/jws/internal/jwsbb"
 )
+
+// nilParamsCurve is an elliptic.Curve whose Params() returns nil, standing in
+// for a custom curve implementation that does not fill in CurveParams.
+// Stdlib curves never do this; this exercises the documented fail-open
+// contract of RequireECDSACurve for that case.
+type nilParamsCurve struct{}
+
+func (nilParamsCurve) Params() *elliptic.CurveParams { return nil }
+func (nilParamsCurve) IsOnCurve(x, y *big.Int) bool   { return false }
+func (nilParamsCurve) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
+	return nil, nil
+}
+func (nilParamsCurve) Double(x1, y1 *big.Int) (x, y *big.Int) {
+	return nil, nil
+}
+func (nilParamsCurve) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int) {
+	return nil, nil
+}
+func (nilParamsCurve) ScalarBaseMult(k []byte) (x, y *big.Int) {
+	return nil, nil
+}
 
 // nonECDSASigner is a crypto.Signer whose Public() does not return an ECDSA
 // public key. RequireECDSACurve must treat it the same as a key with no
@@ -138,6 +160,21 @@ func TestRequireECDSACurve(t *testing.T) {
 		// fails, but the curve name ("P-256") still matches.
 		key := &ecdsa.PublicKey{
 			Curve: elliptic.P256().Params(),
+			X:     p256Key.PublicKey.X,
+			Y:     p256Key.PublicKey.Y,
+		}
+		err := jwsbb.RequireECDSACurve("ES256", dsig.ECDSAWithP256AndSHA256, key)
+		require.NoError(t, err)
+	})
+
+	t.Run("key with a curve reporting nil Params returns nil error", func(t *testing.T) {
+		t.Parallel()
+		// RequireECDSACurve's doc comment promises nil, never an error,
+		// whenever the binding cannot be established. A curve implementation
+		// that returns nil from Params() falls into that case, even though
+		// no stdlib curve does this in practice.
+		key := &ecdsa.PublicKey{
+			Curve: nilParamsCurve{},
 			X:     p256Key.PublicKey.X,
 			Y:     p256Key.PublicKey.Y,
 		}
