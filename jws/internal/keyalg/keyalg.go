@@ -112,10 +112,18 @@ func KeyTypesFor(alg jwa.SignatureAlgorithm) []jwa.KeyType {
 // purposes, as this is the only usage where one may need to dynamically
 // figure out which method to use.
 //
-// When the key's curve can be determined (via [jwk.Key] Crv() method or
-// inferred from the raw Go type), curve-specific algorithms registered via
+// When the key's curve is known, algorithms registered for that curve via
 // [RegisterForCurve] are combined with key-type-level algorithms to
-// produce a more precise result.
+// produce a more precise result. The curve is known for a [jwk.Key] that
+// has a Crv() method, for raw ed25519 keys, and for any raw key that
+// reaches the [jwk.Import] fallback below.
+//
+// ECDSA is the exception. A raw [ecdsa.PublicKey] or [ecdsa.PrivateKey] is
+// classified by key type alone and its Curve field is never read. No
+// builtin registration binds P-256, P-384, or P-521 to an algorithm
+// either, so every EC key reports the full ES* list no matter which curve
+// it sits on. RFC 7518 Section 3.4 is stricter than that; jws.Sign
+// enforces it only when the caller passes jws.WithStrictECDSA(true).
 //
 // Accepted key shapes (resolved in order):
 //
