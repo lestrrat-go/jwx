@@ -23,7 +23,6 @@ go_library(
     visibility = ["//jwe:__subpackages__"],
     deps = [
         "//internal/base64",
-        "//internal/ecutil",
         "//internal/keyconv",
         "//internal/pool",
         "//internal/tokens",
@@ -44,6 +43,7 @@ go_test(
         "hpke_ext_test.go",
         "jwebb_test.go",
         "keywrap_test.go",
+        "mlkem_ext_test.go",
     ],
     embed = [":jwebb"],
     deps = [

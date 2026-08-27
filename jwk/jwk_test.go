@@ -839,7 +839,7 @@ func TestRoundtrip(t *testing.T) {
 	}
 
 	generateECDSA := func(use, keyID string) (jwk.Key, error) {
-		k, err := jwxtest.GenerateEcdsaJwk()
+		k, err := jwxtest.GenerateEcdsaJwk(jwa.P256())
 		if err != nil {
 			return nil, err
 		}
@@ -1040,8 +1040,8 @@ func TestAssignKeyID(t *testing.T) {
 		generators := []func() (jwk.Key, error){
 			jwxtest.GenerateRsaJwk,
 			jwxtest.GenerateRsaPublicJwk,
-			jwxtest.GenerateEcdsaJwk,
-			jwxtest.GenerateEcdsaPublicJwk,
+			func() (jwk.Key, error) { return jwxtest.GenerateEcdsaJwk(jwa.P256()) },
+			func() (jwk.Key, error) { return jwxtest.GenerateEcdsaPublicJwk(jwa.P256()) },
 			jwxtest.GenerateSymmetricJwk,
 			jwxtest.GenerateEd25519Jwk,
 		}
@@ -1889,7 +1889,7 @@ func TestTypedFields(t *testing.T) {
 	{
 		k1, e1 := jwxtest.GenerateRsaJwk()
 		require.NoError(t, e1, `jwxtest.GenerateRsaJwk should succeed`)
-		k2, e2 := jwxtest.GenerateEcdsaJwk()
+		k2, e2 := jwxtest.GenerateEcdsaJwk(jwa.P256())
 		require.NoError(t, e2, `jwxtest.GenerateEcdsaJwk should succeed`)
 		k3, e3 := jwxtest.GenerateSymmetricJwk()
 		require.NoError(t, e3, `jwxtest.GenerateSymmetricJwk should succeed`)
@@ -2056,7 +2056,7 @@ func TestSetWithPrivateParams(t *testing.T) {
 	k1, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err, `jwxtest.GenerateRsaJwk should succeed`)
 
-	k2, err := jwxtest.GenerateEcdsaJwk()
+	k2, err := jwxtest.GenerateEcdsaJwk(jwa.P256())
 	require.NoError(t, err, `jwxtest.GenerateEcdsaJwk should succeed`)
 
 	k3, err := jwxtest.GenerateSymmetricJwk()
@@ -2327,7 +2327,7 @@ func TestValidation(t *testing.T) {
 	}
 
 	{
-		key, err := jwxtest.GenerateEcdsaJwk()
+		key, err := jwxtest.GenerateEcdsaJwk(jwa.P256())
 		require.NoError(t, err, `jwx.GenerateEcdsaJwk should succeed`)
 		require.NoError(t, key.Validate(), `key.Validate should succeed`)
 

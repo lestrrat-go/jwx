@@ -16,6 +16,7 @@ type signContext struct {
 	format        int
 	detached      bool
 	validateKey   bool
+	strictECDSA   bool
 	payload       []byte
 	payloadReader io.Reader
 	encoder       Base64Encoder
@@ -41,6 +42,7 @@ func freeSignContext(ctx *signContext) *signContext {
 	ctx.sigbuilders = ctx.sigbuilders[:0]
 	ctx.detached = false
 	ctx.validateKey = false
+	ctx.strictECDSA = false
 	ctx.encoder = base64.DefaultEncoder()
 	ctx.none = nil
 	ctx.payload = nil
@@ -121,6 +123,8 @@ func (sc *signContext) ProcessOptions(options []SignOption) error {
 			sc.detached = true
 		case identValidateKey{}:
 			sc.validateKey = option.MustGet[bool](opt)
+		case identStrictECDSA{}:
+			sc.strictECDSA = option.MustGet[bool](opt)
 		case identBase64Encoder{}:
 			sc.encoder = option.MustGet[Base64Encoder](opt)
 		default:

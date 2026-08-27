@@ -32,7 +32,7 @@ func TestSign(t *testing.T) {
 func TestSignMulti(t *testing.T) {
 	rsakey, err := jwxtest.GenerateRsaKey()
 	require.NoError(t, err, "RSA key generated")
-	dsakey, err := jwxtest.GenerateEcdsaKey(jwa.P521())
+	dsakey, err := jwxtest.GenerateEcdsaKey(jwa.P256())
 	require.NoError(t, err, "ECDSA key generated")
 
 	s1hdr := jws.NewHeaders()

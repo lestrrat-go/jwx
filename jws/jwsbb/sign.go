@@ -107,6 +107,11 @@ func dispatchRSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([]b
 	return dsig.Sign(privkey, dsigAlg, payload, rr)
 }
 
+// dispatchECDSASign does not enforce the RFC 7518 Section 3.4 binding
+// between an ES* algorithm and its curve. That check lives one layer up, in
+// jws, behind jws.WithStrictECDSA, because it is opt-in: signing a P-521 key
+// under ES256 is non-conformant but has always been allowed here, and jwsbb
+// is the raw building-block layer where the caller owns that decision.
 func dispatchECDSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([]byte, error) {
 	// See dispatchRSASign: reject malformed ed25519 keys before the
 	// crypto.Signer probe to avoid a cross-family Public() panic.

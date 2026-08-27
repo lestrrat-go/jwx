@@ -257,8 +257,10 @@ func TestJWTParseVerify(t *testing.T) {
 			// The algorithm lists are spelled out here rather than
 			// queried from jws.AlgorithmsForKey, which is deprecated
 			// and not meant to be consumed outside jwx. The ECDSA row
-			// is the same for all three curves because jws binds ES*
-			// algorithms by hash, not by curve.
+			// is a single algorithm picked to match the key's curve:
+			// jws binds each ES* algorithm to exactly one curve per RFC
+			// 7518 Section 3.4, so signing under a mismatched ES*
+			// algorithm is now rejected at sign time.
 			var algs []jwa.SignatureAlgorithm
 			var dummyRawKey any
 			var err error
@@ -268,12 +270,23 @@ func TestJWTParseVerify(t *testing.T) {
 				dummyRawKey, err = jwxtest.GenerateRsaKey()
 				require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)
 			case *ecdsa.PrivateKey:
-				algs = []jwa.SignatureAlgorithm{jwa.ES256(), jwa.ES384(), jwa.ES512()}
-				alg, err := ourecdsa.AlgorithmFromCurve(pk.Curve)
+				crv, err := ourecdsa.AlgorithmFromCurve(pk.Curve)
 				if err != nil {
-					require.Fail(t, `unsupported elliptic.Curve: %w`, alg)
+					require.Fail(t, `unsupported elliptic.Curve: %w`, crv)
 				}
-				dummyRawKey, err = jwxtest.GenerateEcdsaKey(alg)
+				var alg jwa.SignatureAlgorithm
+				switch crv {
+				case jwa.P256():
+					alg = jwa.ES256()
+				case jwa.P384():
+					alg = jwa.ES384()
+				case jwa.P521():
+					alg = jwa.ES512()
+				default:
+					require.Fail(t, fmt.Sprintf(`unsupported ECDSA curve algorithm %s`, crv))
+				}
+				algs = []jwa.SignatureAlgorithm{alg}
+				dummyRawKey, err = jwxtest.GenerateEcdsaKey(crv)
 				require.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`)
 			case ed25519.PrivateKey:
 				algs = []jwa.SignatureAlgorithm{jwa.EdDSA(), jwa.EdDSAEd25519()}
@@ -630,7 +643,7 @@ func TestGH52(t *testing.T) {
 	}
 
 	t.Parallel()
-	priv, err := jwxtest.GenerateEcdsaKey(jwa.P521())
+	priv, err := jwxtest.GenerateEcdsaKey(jwa.P256())
 	require.NoError(t, err)
 
 	pub := &priv.PublicKey
@@ -651,6 +664,40 @@ func TestGH52(t *testing.T) {
 		}(t, priv, i)
 	}
 	wg.Wait()
+}
+
+// TestSignECDSACurveMismatch covers how jwt.Sign treats a key whose curve
+// disagrees with the ES* algorithm. jwt exposes no option of its own for
+// this, so the only way in is jwt.WithSignOption wrapping
+// jws.WithStrictECDSA. Passing it also takes jwt.Sign off its fast path
+// (which requires exactly one jwt.WithKey option and no others), so both
+// subtests below reach jws.Sign by different routes.
+func TestSignECDSACurveMismatch(t *testing.T) {
+	t.Parallel()
+
+	priv, err := jwxtest.GenerateEcdsaKey(jwa.P521())
+	require.NoError(t, err)
+
+	t.Run("fast path signs a mismatched pair by default", func(t *testing.T) {
+		t.Parallel()
+
+		signed, err := jwt.Sign(jwt.New(), jwt.WithKey(jwa.ES256(), priv))
+		require.NoError(t, err, `jwt.Sign should stay permissive by default`)
+
+		_, err = jws.Verify(signed, jws.WithKey(jwa.ES256(), &priv.PublicKey))
+		require.NoError(t, err, `the JWS jwt.Sign produced should still verify`)
+	})
+
+	t.Run("jws.WithStrictECDSA rejects a mismatched pair", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := jwt.Sign(jwt.New(),
+			jwt.WithKey(jwa.ES256(), priv),
+			jwt.WithSignOption(jws.WithStrictECDSA(true)),
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "ECDSA curve mismatch")
+	})
 }
 
 func TestUnmarshalJSON(t *testing.T) {
@@ -859,7 +906,7 @@ func TestParseRequest(t *testing.T) {
 	const u = "https://github.com/lestrrat-gow/jwx/jwt"
 	const xauth = "X-Authorization"
 
-	privkey, _ := jwxtest.GenerateEcdsaJwk()
+	privkey, _ := jwxtest.GenerateEcdsaJwk(jwa.P256())
 	require.NoError(t, privkey.Set(jwk.AlgorithmKey, jwa.ES256()), `privkey.Set should succeed`)
 	require.NoError(t, privkey.Set(jwk.KeyIDKey, `my-awesome-key`), `privkey.Set should succeed`)
 	pubkey, err := jwk.PublicKeyOf(privkey)
@@ -1163,7 +1210,7 @@ func TestParseRequest(t *testing.T) {
 		// strconv.Quote escapes control bytes but not '%', so a header
 		// key such as "X-With-%s-Verb" would turn into a format verb
 		// and mangle the output with "%!s(MISSING)".
-		privkey, _ := jwxtest.GenerateEcdsaJwk()
+		privkey, _ := jwxtest.GenerateEcdsaJwk(jwa.P256())
 		require.NoError(t, privkey.Set(jwk.AlgorithmKey, jwa.ES256()))
 		pub, err := jwk.PublicKeyOf(privkey)
 		require.NoError(t, err)
@@ -2124,7 +2171,7 @@ func TestGH1484(t *testing.T) {
 // Pedantic mode applies to the verify path only (ParseInsecure is incompatible
 // with structural strictness by design).
 func TestParsePedanticEnforcesCtyJWTNesting(t *testing.T) {
-	privkey, err := jwxtest.GenerateEcdsaJwk()
+	privkey, err := jwxtest.GenerateEcdsaJwk(jwa.P256())
 	require.NoError(t, err)
 	require.NoError(t, privkey.Set(jwk.AlgorithmKey, jwa.ES256()))
 	pubkey, err := jwk.PublicKeyOf(privkey)
@@ -2181,7 +2228,7 @@ func TestParseInsecureUnwrapsNestedJWS(t *testing.T) {
 	innerKey, err := jwxtest.GenerateRsaJwk()
 	require.NoError(t, err)
 	require.NoError(t, innerKey.Set(jwk.AlgorithmKey, jwa.RS256()))
-	outerKey, err := jwxtest.GenerateEcdsaJwk()
+	outerKey, err := jwxtest.GenerateEcdsaJwk(jwa.P256())
 	require.NoError(t, err)
 	require.NoError(t, outerKey.Set(jwk.AlgorithmKey, jwa.ES256()))
 

@@ -2,14 +2,19 @@ package jws
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"fmt"
 	"slices"
 
+	"github.com/lestrrat-go/dsig"
+
 	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v4/internal/pool"
 	"github.com/lestrrat-go/jwx/v4/internal/tokens"
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwk"
+	jwsbbi "github.com/lestrrat-go/jwx/v4/jws/internal/jwsbb"
 	"github.com/lestrrat-go/jwx/v4/jws/jwsbb"
 )
 
@@ -85,8 +90,61 @@ type buildResult struct {
 	b64      bool   // whether payload was base64-encoded
 }
 
+// requireECDSACurve enforces the RFC 7518 Section 3.4 binding between an ES*
+// algorithm and the curve its key must sit on. It is only reached when the
+// caller asked for it with jws.WithStrictECDSA(true).
+//
+// Anything that is not an ECDSA signature passes straight through, as does an
+// ECDSA-family algorithm outside the three JOSE built-ins (an extension on its
+// own curve, such as ES256K) and a key whose curve cannot be read. Deciding
+// those cases is not this check's job; only positive evidence of a mismatch is
+// an error.
+func requireECDSACurve(alg jwa.SignatureAlgorithm, key any) error {
+	dsigAlg, ok := jwsbb.GetDsigAlgorithm(alg.String())
+	if !ok {
+		return nil
+	}
+
+	info, ok := dsig.GetAlgorithmInfo(dsigAlg)
+	if !ok || info.Family != dsig.ECDSA {
+		return nil
+	}
+
+	rawKey, ok := unwrapECDSASignKey(key)
+	if !ok {
+		return nil
+	}
+
+	return jwsbbi.RequireECDSACurve(alg.String(), dsigAlg, rawKey)
+}
+
+// unwrapECDSASignKey returns the key jwsbbi.RequireECDSACurve should inspect.
+// That function reads the curve off a raw key or a crypto.Signer, so a
+// jwk.Key has to be unwrapped first.
+//
+// The bool is false when key is a jwk.Key holding something other than an
+// ECDSA private key, which leaves the curve unreadable. The caller skips the
+// check in that case and lets the signer reject the key on its own terms.
+func unwrapECDSASignKey(key any) (any, bool) {
+	if _, ok := key.(jwk.Key); !ok {
+		return key, true
+	}
+
+	privkey, err := keyconv.KeyAs[*ecdsa.PrivateKey](key)
+	if err != nil {
+		return nil, false
+	}
+	return privkey, true
+}
+
 func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (buildResult, error) {
 	var br buildResult
+
+	if sc.strictECDSA {
+		if err := requireECDSACurve(sb.alg, sb.key); err != nil {
+			return br, makeSignError(prefixJwsSign, `%w`, err)
+		}
+	}
 
 	// Fast path: when header JSON is precomputed (no custom headers, no kid)
 	// and we're producing compact serialization, skip NewHeaders(), Set(),
