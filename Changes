@@ -5,13 +5,16 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 UNRELEASED
-  * [jws] `jws.Sign` and `jwt.Sign` now reject signing with an ES256, ES384,
-    or ES512 key whose elliptic curve does not match the algorithm, per RFC
-    7518 Section 3.4 (ES256/P-256, ES384/P-384, ES512/P-521). Previously,
-    for example, signing with a P-521 key under `jwa.ES256()` would succeed
-    and produce a JWS that other JOSE implementations reject. This is a
-    breaking change for any signing call that pairs a mismatched curve and
-    algorithm; verification of existing JWS messages is unaffected. (#2323)
+  * [jws] Added `jws.WithStrictECDSA(bool)`, a `jws.Sign` option that rejects
+    anything RFC 7518 forbids for an ECDSA signature. Today that is Section
+    3.4's binding of ES256 to P-256, ES384 to P-384, and ES512 to P-521, so
+    signing a P-521 key under `jwa.ES256()` fails instead of producing a JWS
+    that other JOSE implementations reject.
+
+    The default is unchanged: without the option, a mismatched curve and
+    algorithm still sign exactly as before. `jws.Verify` is unaffected either
+    way. `jwt.Sign` callers can reach the option through
+    `jwt.WithSignOption(jws.WithStrictECDSA(true))`. (#2323)
 
 v3.2.0 27 Jul 2026
   * [jwe] Correct the JSON `"aad"` member so it contains only

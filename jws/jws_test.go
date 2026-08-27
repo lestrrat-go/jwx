@@ -2464,9 +2464,9 @@ func TestVerifyHonorsContextCancellation(t *testing.T) {
 }
 
 // assertECDSACurveSignOutcome asserts the shared expectation for a
-// jws.Sign call made with a (curve, algorithm) pair: success when they
-// match RFC 7518 Section 3.4, and an "ECDSA curve mismatch" jws.SignError
-// otherwise.
+// jws.Sign call made under jws.WithStrictECDSA(true) with a (curve,
+// algorithm) pair: success when they match RFC 7518 Section 3.4, and an
+// "ECDSA curve mismatch" jws.SignError otherwise.
 func assertECDSACurveSignOutcome(t *testing.T, err error, match bool) {
 	t.Helper()
 	if match {
@@ -2478,13 +2478,15 @@ func assertECDSACurveSignOutcome(t *testing.T, err error, match bool) {
 	require.True(t, errors.Is(err, jws.SignError()), `errors.Is(err, jws.SignError()) should be true, got %v`, err)
 }
 
-// TestSignRejectsECDSACurveMismatch covers all six wrong (curve, alg)
+// TestStrictECDSARejectsCurveMismatch covers all six wrong (curve, alg)
 // combinations of P-256/P-384/P-521 x ES256/ES384/ES512 across every sign
 // path that produces an ECDSA JWS signature: jws.Sign with a raw key, with
 // an imported jwk.Key, with the streaming detached-payload path, and with a
-// crypto.Signer wrapper. The three matching pairs must still succeed and
-// round-trip through jws.Verify.
-func TestSignRejectsECDSACurveMismatch(t *testing.T) {
+// crypto.Signer wrapper. Every call opts in with jws.WithStrictECDSA(true);
+// the default behavior is covered by TestSignAllowsECDSACurveMismatchByDefault.
+// The three matching pairs must still succeed and round-trip through
+// jws.Verify.
+func TestStrictECDSARejectsCurveMismatch(t *testing.T) {
 	t.Parallel()
 
 	payload := []byte(`Lorem Ipsum Dolor Sit Amet`)
@@ -2515,7 +2517,7 @@ func TestSignRejectsECDSACurveMismatch(t *testing.T) {
 
 				t.Run("raw *ecdsa.PrivateKey", func(t *testing.T) {
 					t.Parallel()
-					_, err := jws.Sign(payload, jws.WithKey(a.alg, key))
+					_, err := jws.Sign(payload, jws.WithKey(a.alg, key), jws.WithStrictECDSA(true))
 					assertECDSACurveSignOutcome(t, err, match)
 				})
 
@@ -2523,7 +2525,17 @@ func TestSignRejectsECDSACurveMismatch(t *testing.T) {
 					t.Parallel()
 					jwkKey, err := jwk.Import(key)
 					require.NoError(t, err, `jwk.Import should succeed`)
-					_, err = jws.Sign(payload, jws.WithKey(a.alg, jwkKey))
+					_, err = jws.Sign(payload, jws.WithKey(a.alg, jwkKey), jws.WithStrictECDSA(true))
+					assertECDSACurveSignOutcome(t, err, match)
+				})
+
+				t.Run("JSON serialization", func(t *testing.T) {
+					t.Parallel()
+					_, err := jws.Sign(payload,
+						jws.WithKey(a.alg, key),
+						jws.WithStrictECDSA(true),
+						jws.WithJSON(),
+					)
 					assertECDSACurveSignOutcome(t, err, match)
 				})
 
@@ -2531,6 +2543,7 @@ func TestSignRejectsECDSACurveMismatch(t *testing.T) {
 					t.Parallel()
 					_, err := jws.Sign(nil,
 						jws.WithKey(a.alg, key),
+						jws.WithStrictECDSA(true),
 						jws.WithDetachedPayloadReader(bytes.NewReader(payload)),
 					)
 					assertECDSACurveSignOutcome(t, err, match)
@@ -2539,7 +2552,7 @@ func TestSignRejectsECDSACurveMismatch(t *testing.T) {
 				t.Run("crypto.Signer", func(t *testing.T) {
 					t.Parallel()
 					signer := &dummyECDSACryptoSigner{raw: key}
-					_, err := jws.Sign(payload, jws.WithKey(a.alg, signer))
+					_, err := jws.Sign(payload, jws.WithKey(a.alg, signer), jws.WithStrictECDSA(true))
 					assertECDSACurveSignOutcome(t, err, match)
 				})
 
@@ -2548,7 +2561,7 @@ func TestSignRejectsECDSACurveMismatch(t *testing.T) {
 				}
 				t.Run("round-trips through jws.Verify", func(t *testing.T) {
 					t.Parallel()
-					signed, err := jws.Sign(payload, jws.WithKey(a.alg, key))
+					signed, err := jws.Sign(payload, jws.WithKey(a.alg, key), jws.WithStrictECDSA(true))
 					require.NoError(t, err, `jws.Sign should succeed`)
 					verified, err := jws.Verify(signed, jws.WithKey(a.alg, &key.PublicKey))
 					require.NoError(t, err, `jws.Verify should succeed`)
@@ -2559,16 +2572,109 @@ func TestSignRejectsECDSACurveMismatch(t *testing.T) {
 	}
 }
 
+// TestSignAllowsECDSACurveMismatchByDefault pins the default: without
+// jws.WithStrictECDSA(true), a key whose curve disagrees with the ES*
+// algorithm still signs, exactly as it did before the option existed. It
+// mirrors the sign paths TestStrictECDSARejectsCurveMismatch drives, so a
+// check added to any one of them without an opt-in gate fails here.
+func TestSignAllowsECDSACurveMismatchByDefault(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`Lorem Ipsum Dolor Sit Amet`)
+
+	// P-521 under ES256 is the shape RFC 7518 Section 3.4 forbids.
+	key, err := jwxtest.GenerateEcdsaKey(jwa.P521())
+	require.NoError(t, err, `jwxtest.GenerateEcdsaKey should succeed`)
+
+	t.Run("raw *ecdsa.PrivateKey", func(t *testing.T) {
+		t.Parallel()
+		signed, err := jws.Sign(payload, jws.WithKey(jwa.ES256(), key))
+		require.NoError(t, err, `jws.Sign should stay permissive by default`)
+
+		verified, err := jws.Verify(signed, jws.WithKey(jwa.ES256(), &key.PublicKey))
+		require.NoError(t, err, `jws.Verify should accept the mismatched pairing`)
+		require.Equal(t, payload, verified)
+	})
+
+	t.Run("jwk.Key", func(t *testing.T) {
+		t.Parallel()
+		jwkKey, err := jwk.Import(key)
+		require.NoError(t, err, `jwk.Import should succeed`)
+		_, err = jws.Sign(payload, jws.WithKey(jwa.ES256(), jwkKey))
+		require.NoError(t, err, `jws.Sign should stay permissive by default`)
+	})
+
+	t.Run("JSON serialization", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Sign(payload, jws.WithKey(jwa.ES256(), key), jws.WithJSON())
+		require.NoError(t, err, `jws.Sign should stay permissive by default`)
+	})
+
+	t.Run("streaming detached", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Sign(nil,
+			jws.WithKey(jwa.ES256(), key),
+			jws.WithDetachedPayloadReader(bytes.NewReader(payload)),
+		)
+		require.NoError(t, err, `jws.Sign should stay permissive by default`)
+	})
+
+	t.Run("crypto.Signer", func(t *testing.T) {
+		t.Parallel()
+		signer := &dummyECDSACryptoSigner{raw: key}
+		_, err := jws.Sign(payload, jws.WithKey(jwa.ES256(), signer))
+		require.NoError(t, err, `jws.Sign should stay permissive by default`)
+	})
+
+	t.Run("explicit jws.WithStrictECDSA(false)", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Sign(payload, jws.WithKey(jwa.ES256(), key), jws.WithStrictECDSA(false))
+		require.NoError(t, err, `jws.WithStrictECDSA(false) should match the default`)
+	})
+}
+
+// TestStrictECDSALeavesOtherFamiliesAlone guards the gate in front of the
+// curve check: jws.WithStrictECDSA(true) must be a no-op for every
+// algorithm family that is not ECDSA, rather than rejecting keys it cannot
+// classify.
+func TestStrictECDSALeavesOtherFamiliesAlone(t *testing.T) {
+	t.Parallel()
+
+	payload := []byte(`Lorem Ipsum Dolor Sit Amet`)
+
+	t.Run("HMAC", func(t *testing.T) {
+		t.Parallel()
+		_, err := jws.Sign(payload, jws.WithKey(jwa.HS256(), []byte(`abracadabra`)), jws.WithStrictECDSA(true))
+		require.NoError(t, err, `jws.Sign should succeed`)
+	})
+
+	t.Run("RSA", func(t *testing.T) {
+		t.Parallel()
+		key, err := jwxtest.GenerateRsaKey()
+		require.NoError(t, err, `jwxtest.GenerateRsaKey should succeed`)
+		_, err = jws.Sign(payload, jws.WithKey(jwa.RS256(), key), jws.WithStrictECDSA(true))
+		require.NoError(t, err, `jws.Sign should succeed`)
+	})
+
+	t.Run("EdDSA", func(t *testing.T) {
+		t.Parallel()
+		key, err := jwxtest.GenerateEd25519Key()
+		require.NoError(t, err, `jwxtest.GenerateEd25519Key should succeed`)
+		_, err = jws.Sign(payload, jws.WithKey(jwa.EdDSA(), key), jws.WithStrictECDSA(true))
+		require.NoError(t, err, `jws.Sign should succeed`)
+	})
+}
+
 // TestVerifyKeepsPermissiveECDSAInference guards against a future accidental
-// tightening of the verify path. It deliberately does not depend on
-// jws.Sign to produce a mismatched-curve JWS -- after
-// TestSignRejectsECDSACurveMismatch that is no longer possible -- and
-// instead builds one by hand: a P-256 key signs a digest hashed and
+// tightening of the verify path. It builds a mismatched-curve JWS by hand
+// rather than through jws.Sign: a P-256 key signs a digest hashed and
 // serialized as if it were ES384, exactly the self-consistent but
-// non-conformant shape jws.Sign used to be able to emit. jws.Verify's
-// key -> algorithm handling must accept it exactly as it does today,
-// both when the algorithm is pinned via WithKey and when it is inferred
-// from a JWKS entry that carries no "alg" field.
+// non-conformant shape a caller can still emit today. Building it by hand
+// keeps this test independent of whatever the sign path does, including
+// jws.WithStrictECDSA. jws.Verify's key -> algorithm handling must accept
+// it exactly as it does today, both when the algorithm is pinned via
+// WithKey and when it is inferred from a JWKS entry that carries no "alg"
+// field.
 func TestVerifyKeepsPermissiveECDSAInference(t *testing.T) {
 	t.Parallel()
 

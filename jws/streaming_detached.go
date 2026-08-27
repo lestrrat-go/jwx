@@ -86,7 +86,9 @@ func (sc *signContext) signStreaming() ([]byte, error) {
 			return nil, makeSignError(prefixJwsSign, `failed to convert key for signature %d: %w`, idx, err)
 		}
 
-		if dsigInfo.Family == dsig.ECDSA {
+		// The non-streaming path runs the same check from
+		// signatureBuilder.Build, which this path does not go through.
+		if sc.strictECDSA && dsigInfo.Family == dsig.ECDSA {
 			if err := jwsbbi.RequireECDSACurve(alg.String(), dsigInfo.Name, rawKey); err != nil {
 				return nil, makeSignError(prefixJwsSign, `signature %d: %w`, idx, err)
 			}

@@ -18,7 +18,6 @@ Composition Layer
 Processing Layer
   jws → jwa, jwk, cert, internal/{base64,json,pool,tokens}
        → jws/jwsbb, jws/internal/keyalg, jws/internal/jwsbb
-  jws/jwsbb → jws/internal/jwsbb
   jwe → jwa, jwk, cert, transform, internal/{base64,json,pool,tokens}
        → jwe/internal/{aescbc,cipher,concatkdf,content_crypt,keygen}
        → jwe/jwebb
@@ -64,5 +63,5 @@ Leaf Packages (no internal deps)
 | `decred/secp256k1` | jwk (direct); jwa, jws (via build tag) | ES256K support (build tag) |
 | `valyala/fastjson` | jws/jwsbb, jwk/jwkbb | Fast JSON header / object peek |
 | `golang.org/x/crypto` | jwe | Extended crypto (PBKDF2, etc.) |
-| `lestrrat-go/dsig` | jws/jwsbb, jws/internal/jwsbb | Digital signature primitives (HMAC, RSA, ECDSA, EdDSA) |
+| `lestrrat-go/dsig` | jws, jws/jwsbb, jws/internal/jwsbb | Digital signature primitives (HMAC, RSA, ECDSA, EdDSA) |
 | `lestrrat-go/dsig-secp256k1` | jws/jwsbb | ES256K/secp256k1 signature support (build tag) |

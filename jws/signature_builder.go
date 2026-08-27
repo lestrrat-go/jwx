@@ -2,14 +2,19 @@ package jws
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"fmt"
 	"slices"
 
+	"github.com/lestrrat-go/dsig"
+
 	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
 	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
+	jwsbbi "github.com/lestrrat-go/jwx/v3/jws/internal/jwsbb"
 	"github.com/lestrrat-go/jwx/v3/jws/jwsbb"
 )
 
@@ -52,7 +57,48 @@ func freeSignatureBuilder(sb *signatureBuilder) *signatureBuilder {
 	return sb
 }
 
+// requireECDSACurve enforces the RFC 7518 Section 3.4 binding between an ES*
+// algorithm and the curve its key must sit on. It is only reached when the
+// caller asked for it with jws.WithStrictECDSA(true).
+//
+// Anything that is not an ECDSA signature passes straight through, as does an
+// ECDSA-family algorithm outside the three JOSE built-ins (an extension on its
+// own curve, such as ES256K) and a key whose curve cannot be read. Deciding
+// those cases is not this check's job; only positive evidence of a mismatch is
+// an error.
+func requireECDSACurve(alg jwa.SignatureAlgorithm, key any) error {
+	dsigAlg, ok := jwsbb.GetDsigAlgorithm(alg.String())
+	if !ok {
+		return nil
+	}
+
+	info, ok := dsig.GetAlgorithmInfo(dsigAlg)
+	if !ok || info.Family != dsig.ECDSA {
+		return nil
+	}
+
+	// jwsbbi.RequireECDSACurve reads the curve off a raw key or a
+	// crypto.Signer, so a jwk.Key has to be unwrapped first. A key that will
+	// not convert is left to the signer to reject.
+	rawKey := key
+	if _, ok := key.(jwk.Key); ok {
+		var privkey *ecdsa.PrivateKey
+		if err := keyconv.ECDSAPrivateKey(&privkey, key); err != nil {
+			return nil
+		}
+		rawKey = privkey
+	}
+
+	return jwsbbi.RequireECDSACurve(alg.String(), dsigAlg, rawKey)
+}
+
 func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, error) {
+	if sc.strictECDSA {
+		if err := requireECDSACurve(sb.alg, sb.key); err != nil {
+			return nil, makeSignError(prefixJwsSign, `%w`, err)
+		}
+	}
+
 	// Clone caller-provided headers before mutating so that re-using the
 	// same Headers instance across multiple Sign calls does not cause
 	// cross-contamination of alg/kid.
