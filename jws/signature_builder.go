@@ -77,19 +77,31 @@ func requireECDSACurve(alg jwa.SignatureAlgorithm, key any) error {
 		return nil
 	}
 
-	// jwsbbi.RequireECDSACurve reads the curve off a raw key or a
-	// crypto.Signer, so a jwk.Key has to be unwrapped first. A key that will
-	// not convert is left to the signer to reject.
-	rawKey := key
-	if _, ok := key.(jwk.Key); ok {
-		var privkey *ecdsa.PrivateKey
-		if err := keyconv.ECDSAPrivateKey(&privkey, key); err != nil {
-			return nil
-		}
-		rawKey = privkey
+	rawKey, ok := unwrapECDSASignKey(key)
+	if !ok {
+		return nil
 	}
 
 	return jwsbbi.RequireECDSACurve(alg.String(), dsigAlg, rawKey)
+}
+
+// unwrapECDSASignKey returns the key jwsbbi.RequireECDSACurve should inspect.
+// That function reads the curve off a raw key or a crypto.Signer, so a
+// jwk.Key has to be unwrapped first.
+//
+// The bool is false when key is a jwk.Key holding something other than an
+// ECDSA private key, which leaves the curve unreadable. The caller skips the
+// check in that case and lets the signer reject the key on its own terms.
+func unwrapECDSASignKey(key any) (any, bool) {
+	if _, ok := key.(jwk.Key); !ok {
+		return key, true
+	}
+
+	var privkey *ecdsa.PrivateKey
+	if err := keyconv.ECDSAPrivateKey(&privkey, key); err != nil {
+		return nil, false
+	}
+	return privkey, true
 }
 
 func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, error) {
