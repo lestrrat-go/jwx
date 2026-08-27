@@ -2,6 +2,7 @@ package examples_test
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -9,6 +10,7 @@ import (
 	"math/big"
 
 	"github.com/emmansun/gmsm/sm2"
+	"github.com/lestrrat-go/dsig"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	ourecdsa "github.com/lestrrat-go/jwx/v3/jwk/ecdsa"
@@ -26,6 +28,13 @@ import (
 // as its consistent in your usage.
 var SM2 = jwa.NewEllipticCurveAlgorithm("SM2")
 
+// SM2Alg is the JWS signature algorithm used to sign with an SM2 key.
+// RFC 7518 Section 3.4 binds jwa.ES256() to the P-256 curve specifically,
+// and ShangMi SM2 is a distinct curve despite the "P256" in its Go type
+// name, so it needs its own algorithm identifier rather than reusing
+// "ES256".
+var SM2Alg = jwa.NewSignatureAlgorithm("SM2")
+
 func init() {
 	// Register the algorithm name so it can be looked up
 	jwa.RegisterEllipticCurveAlgorithm(SM2)
@@ -40,6 +49,17 @@ func init() {
 	jwk.RegisterKeyImporter(&sm2.PrivateKey{}, jwk.KeyImportFunc(convertShangMiSm2))
 
 	jwk.RegisterKeyExporter(jwk.KeyKind(jwa.EC().String()), jwk.KeyExportFunc(convertJWKToShangMiSm2))
+
+	// Register the JWS signature algorithm for SM2 and scope it to the SM2
+	// curve, so that jws.Sign()/jws.Verify() accept an SM2 key under it.
+	jwa.RegisterSignatureAlgorithm(SM2Alg)
+	jws.RegisterAlgorithmForCurve(SM2, SM2Alg)
+	if err := dsig.RegisterAlgorithm(SM2Alg.String(), dsig.AlgorithmInfo{
+		Family: dsig.ECDSA,
+		Meta:   dsig.ECDSAFamilyMeta{Hash: crypto.SHA256},
+	}); err != nil {
+		panic(err)
+	}
 }
 
 func convertShangMiSm2(key any) (jwk.Key, error) {
@@ -157,7 +177,7 @@ func Example_shang_mi_sm2() {
 	}
 
 	payload := []byte("Lorem ipsum")
-	signed, err := jws.Sign(payload, jws.WithKey(jwa.ES256(), shangmi2JWK))
+	signed, err := jws.Sign(payload, jws.WithKey(SM2Alg, shangmi2JWK))
 	if err != nil {
 		fmt.Printf("Failed to sign using ShangMi key: %s\n", err)
 		return
@@ -169,7 +189,7 @@ func Example_shang_mi_sm2() {
 		return
 	}
 
-	verified, err := jws.Verify(signed, jws.WithKey(jwa.ES256(), shangmi2PubJWK))
+	verified, err := jws.Verify(signed, jws.WithKey(SM2Alg, shangmi2PubJWK))
 	if err != nil {
 		fmt.Printf("Failed to verify using ShangMi key: %s\n", err)
 		return

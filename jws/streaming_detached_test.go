@@ -35,7 +35,7 @@ func streamingDetachedAlgCases(t *testing.T) []streamingDetachedAlgCase {
 	rsaPub, err := jwk.PublicKeyOf(rsaKey)
 	require.NoError(t, err)
 
-	ecdsaKey, err := jwxtest.GenerateEcdsaJwk()
+	ecdsaKey, err := jwxtest.GenerateEcdsaJwk(jwa.P256())
 	require.NoError(t, err)
 	ecdsaPub, err := jwk.PublicKeyOf(ecdsaKey)
 	require.NoError(t, err)
@@ -530,7 +530,7 @@ func TestStreamingDetachedMultiSigJSONRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	rsaPub, err := jwk.PublicKeyOf(rsaKey)
 	require.NoError(t, err)
-	ecdsaKey, err := jwxtest.GenerateEcdsaJwk()
+	ecdsaKey, err := jwxtest.GenerateEcdsaJwk(jwa.P256())
 	require.NoError(t, err)
 	ecdsaPub, err := jwk.PublicKeyOf(ecdsaKey)
 	require.NoError(t, err)

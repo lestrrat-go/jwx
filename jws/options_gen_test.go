@@ -29,6 +29,7 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithPublicHeaders", identPublicHeaders{}.String())
 	require.Equal(t, "WithRequireKid", identRequireKid{}.String())
 	require.Equal(t, "WithSerialization", identSerialization{}.String())
+	require.Equal(t, "WithStrictECDSA", identStrictECDSA{}.String())
 	require.Equal(t, "WithUseDefault", identUseDefault{}.String())
 	require.Equal(t, "WithValidateKey", identValidateKey{}.String())
 }

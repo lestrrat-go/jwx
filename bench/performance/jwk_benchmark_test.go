@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
+	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 )
 
@@ -83,7 +84,7 @@ func BenchmarkJWK(b *testing.B) {
 			runJSONBench(b, rsakey)
 		})
 		b.Run("EC", func(b *testing.B) {
-			eckey, _ := jwxtest.GenerateEcdsaJwk()
+			eckey, _ := jwxtest.GenerateEcdsaJwk(jwa.P256())
 			runJSONBench(b, eckey)
 		})
 		b.Run("Symmetric", func(b *testing.B) {
