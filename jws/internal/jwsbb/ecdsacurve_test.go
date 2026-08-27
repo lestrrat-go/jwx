@@ -22,17 +22,17 @@ import (
 type nilParamsCurve struct{}
 
 func (nilParamsCurve) Params() *elliptic.CurveParams { return nil }
-func (nilParamsCurve) IsOnCurve(x, y *big.Int) bool   { return false }
-func (nilParamsCurve) Add(x1, y1, x2, y2 *big.Int) (x, y *big.Int) {
+func (nilParamsCurve) IsOnCurve(_, _ *big.Int) bool  { return false }
+func (nilParamsCurve) Add(_, _, _, _ *big.Int) (*big.Int, *big.Int) {
 	return nil, nil
 }
-func (nilParamsCurve) Double(x1, y1 *big.Int) (x, y *big.Int) {
+func (nilParamsCurve) Double(_, _ *big.Int) (*big.Int, *big.Int) {
 	return nil, nil
 }
-func (nilParamsCurve) ScalarMult(x1, y1 *big.Int, k []byte) (x, y *big.Int) {
+func (nilParamsCurve) ScalarMult(_, _ *big.Int, _ []byte) (*big.Int, *big.Int) {
 	return nil, nil
 }
-func (nilParamsCurve) ScalarBaseMult(k []byte) (x, y *big.Int) {
+func (nilParamsCurve) ScalarBaseMult(_ []byte) (*big.Int, *big.Int) {
 	return nil, nil
 }
 
