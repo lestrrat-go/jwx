@@ -2536,7 +2536,9 @@ func TestSignRejectsECDSACurveMismatch(t *testing.T) {
 // instead builds one by hand: a P-256 key signs a digest hashed and
 // serialized as if it were ES384, exactly the self-consistent but
 // non-conformant shape jws.Sign used to be able to emit. jws.Verify's
-// key -> algorithm handling must accept it exactly as it does today.
+// key -> algorithm handling must accept it exactly as it does today,
+// both when the algorithm is pinned via WithKey and when it is inferred
+// from a JWKS entry that carries no "alg" field.
 func TestVerifyKeepsPermissiveECDSAInference(t *testing.T) {
 	t.Parallel()
 
@@ -2564,7 +2566,39 @@ func TestVerifyKeepsPermissiveECDSAInference(t *testing.T) {
 
 	compact := []byte(signingInput + "." + base64.EncodeToString(sig))
 
-	verified, err := jws.Verify(compact, jws.WithKey(jwa.ES384(), &privkey.PublicKey))
-	require.NoError(t, err, `jws.Verify should stay permissive about the ECDSA curve/algorithm pairing`)
-	require.Equal(t, payload, verified)
+	t.Run("pinned algorithm via WithKey", func(t *testing.T) {
+		t.Parallel()
+		verified, err := jws.Verify(compact, jws.WithKey(jwa.ES384(), &privkey.PublicKey))
+		require.NoError(t, err, `jws.Verify should stay permissive about the ECDSA curve/algorithm pairing`)
+		require.Equal(t, payload, verified)
+	})
+
+	t.Run("algorithm inferred from a no-alg JWKS entry", func(t *testing.T) {
+		t.Parallel()
+
+		// This is the case the pinned-algorithm subtest above does not
+		// reach: a JWKS entry with no "alg" member, verified through
+		// jws.WithKeySet. That drives jws.Verify's key -> algorithm
+		// inference in jws/internal/keyalg.Candidates, which is the
+		// exact mechanism this test exists to keep permissive. Building
+		// the jwk.Key from the raw public key (rather than copying the
+		// signer's jwk.Key, if it had one) keeps "alg" genuinely unset.
+		pubKey, err := jwk.Import[jwk.Key](&privkey.PublicKey)
+		require.NoError(t, err, `jwk.Import should succeed`)
+		_, ok := pubKey.Algorithm()
+		require.False(t, ok, `imported key must carry no "alg" member`)
+
+		set := jwk.NewSet()
+		require.NoError(t, set.AddKey(pubKey))
+
+		// WithRequireKid(false): the hand-built JWS above has no "kid" in
+		// its protected header, so kid-based key lookup cannot apply.
+		// WithInferAlgorithmFromKey(true): required to reach
+		// keyalg.Candidates at all -- selectKey skips a no-alg key
+		// otherwise.
+		verified, err := jws.Verify(compact,
+			jws.WithKeySet(set, jws.WithRequireKid(false), jws.WithInferAlgorithmFromKey(true)))
+		require.NoError(t, err, `jws.Verify should accept the inferred (ES384, P-256 key) pair`)
+		require.Equal(t, payload, verified)
+	})
 }
