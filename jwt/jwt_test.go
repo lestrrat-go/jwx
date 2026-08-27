@@ -666,21 +666,38 @@ func TestGH52(t *testing.T) {
 	wg.Wait()
 }
 
-// TestSignFastPathRejectsECDSACurveMismatch exercises jwt.Sign's fast path
-// (exactly one jwt.WithKey option, no suboptions). The fast path routes
-// through jws.SignerFor(alg).Sign directly and never builds a jws.WithKey
-// option, so it needs its own coverage of the ECDSA curve/algorithm binding
-// alongside the jws.Sign cases in jws.TestSignRejectsECDSACurveMismatch.
-func TestSignFastPathRejectsECDSACurveMismatch(t *testing.T) {
+// TestSignECDSACurveMismatch covers how jwt.Sign treats a key whose curve
+// disagrees with the ES* algorithm. jwt exposes no option of its own for
+// this, so the only way in is jwt.WithSignOption wrapping
+// jws.WithStrictECDSA. Passing it also takes jwt.Sign off its fast path
+// (which requires exactly one jwt.WithKey option and no others), so both
+// subtests below reach jws.Sign by different routes.
+func TestSignECDSACurveMismatch(t *testing.T) {
 	t.Parallel()
 
 	priv, err := jwxtest.GenerateEcdsaKey(jwa.P521())
 	require.NoError(t, err)
 
-	tok := jwt.New()
-	_, err = jwt.Sign(tok, jwt.WithKey(jwa.ES256(), priv))
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "ECDSA curve mismatch")
+	t.Run("fast path signs a mismatched pair by default", func(t *testing.T) {
+		t.Parallel()
+
+		signed, err := jwt.Sign(jwt.New(), jwt.WithKey(jwa.ES256(), priv))
+		require.NoError(t, err, `jwt.Sign should stay permissive by default`)
+
+		_, err = jws.Verify(signed, jws.WithKey(jwa.ES256(), &priv.PublicKey))
+		require.NoError(t, err, `the JWS jwt.Sign produced should still verify`)
+	})
+
+	t.Run("jws.WithStrictECDSA rejects a mismatched pair", func(t *testing.T) {
+		t.Parallel()
+
+		_, err := jwt.Sign(jwt.New(),
+			jwt.WithKey(jwa.ES256(), priv),
+			jwt.WithSignOption(jws.WithStrictECDSA(true)),
+		)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "ECDSA curve mismatch")
+	})
 }
 
 func TestUnmarshalJSON(t *testing.T) {

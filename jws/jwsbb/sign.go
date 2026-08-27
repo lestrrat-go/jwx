@@ -10,7 +10,6 @@ import (
 
 	"github.com/lestrrat-go/dsig"
 	"github.com/lestrrat-go/jwx/v4/internal/keyconv"
-	impl "github.com/lestrrat-go/jwx/v4/jws/internal/jwsbb"
 )
 
 // Sign generates a JWS signature using the specified key and algorithm.
@@ -64,7 +63,7 @@ func SignWithOpts(key any, alg string, payload []byte, opts crypto.SignerOpts, r
 	case dsig.RSA:
 		return dispatchRSASign(key, dsigAlg, payload, rr)
 	case dsig.ECDSA:
-		return dispatchECDSASign(key, alg, dsigAlg, payload, rr)
+		return dispatchECDSASign(key, dsigAlg, payload, rr)
 	case dsig.EdDSAFamily:
 		return dispatchEdDSASign(key, alg, dsigAlg, payload, rr)
 	case dsig.Custom, dsig.MLDSAFamily:
@@ -108,7 +107,12 @@ func dispatchRSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([]b
 	return dsig.Sign(privkey, dsigAlg, payload, rr)
 }
 
-func dispatchECDSASign(key any, jwsAlg, dsigAlg string, payload []byte, rr io.Reader) ([]byte, error) {
+// dispatchECDSASign does not enforce the RFC 7518 Section 3.4 binding
+// between an ES* algorithm and its curve. That check lives one layer up, in
+// jws, behind jws.WithStrictECDSA, because it is opt-in: signing a P-521 key
+// under ES256 is non-conformant but has always been allowed here, and jwsbb
+// is the raw building-block layer where the caller owns that decision.
+func dispatchECDSASign(key any, dsigAlg string, payload []byte, rr io.Reader) ([]byte, error) {
 	// See dispatchRSASign: reject malformed ed25519 keys before the
 	// crypto.Signer probe to avoid a cross-family Public() panic.
 	if err := validateEd25519KeyShape(key); err != nil {
@@ -118,10 +122,7 @@ func dispatchECDSASign(key any, jwsAlg, dsigAlg string, payload []byte, rr io.Re
 	// Try crypto.Signer first (dsig can handle it directly)
 	if signer, ok := key.(crypto.Signer); ok {
 		// Verify it's an ECDSA key
-		if pub, ok := signer.Public().(*ecdsa.PublicKey); ok {
-			if err := impl.RequireECDSACurve(jwsAlg, dsigAlg, pub); err != nil {
-				return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
-			}
+		if _, ok := signer.Public().(*ecdsa.PublicKey); ok {
 			return dsig.Sign(signer, dsigAlg, payload, rr)
 		}
 	}
@@ -130,10 +131,6 @@ func dispatchECDSASign(key any, jwsAlg, dsigAlg string, payload []byte, rr io.Re
 	privkey, err := keyconv.KeyAs[*ecdsa.PrivateKey](key)
 	if err != nil {
 		return nil, fmt.Errorf(`jwsbb.Sign: invalid key type %T. *ecdsa.PrivateKey is required: %w`, key, err)
-	}
-
-	if err := impl.RequireECDSACurve(jwsAlg, dsigAlg, &privkey.PublicKey); err != nil {
-		return nil, fmt.Errorf(`jwsbb.Sign: %w`, err)
 	}
 
 	return dsig.Sign(privkey, dsigAlg, payload, rr)
