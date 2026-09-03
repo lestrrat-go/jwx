@@ -5,7 +5,7 @@ description: Guide for developing Go applications with github.com/lestrrat-go/jw
 
 # jwx-guide-v4
 
-This skill helps you assist Go developers who are **using** `github.com/lestrrat-go/jwx/v4` in their own projects. It is scoped to **v4** only — for v3 or v2, install the corresponding `jwx-dev-v3` / `jwx-dev-v2` plugin.
+This skill helps you assist Go developers who are **using** `github.com/lestrrat-go/jwx/v4` in their own projects. It is scoped to **v4** only. There is no equivalent skill for v3 or v2; for those, work from the version's own `docs/` directory and pkg.go.dev. Do not apply v4 rules to a v3 or v2 codebase — the `jwa` identifiers are constants there, not functions, and the `jwk` and error APIs differ.
 
 ## Where to look things up
 
