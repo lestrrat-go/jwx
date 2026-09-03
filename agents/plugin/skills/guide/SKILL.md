@@ -233,6 +233,7 @@ For algorithm and HPKE modules: **import for side effects** (`import _ "..."`). 
 | Module | What it does | When to use |
 |--------|--------------|-------------|
 | `github.com/jwx-go/jwkfetch/v4` | HTTP JWK Set retrieval — `Client` (one-shot) and `Cache` (background-refreshed, backed by `httprc`) | **Always**, whenever you fetch JWKS over HTTP. Core jwx has no HTTP dependency; this is the entry point. |
+| `github.com/jwx-go/jwxfilter/v4` | Filter and introspection helpers for `jwt.Token`, `jws.Headers`, `jwe.Headers`, `jwk.Key`, and `openid.Token` | Selecting or redacting fields on a token, header, or key. Extracted from core in v4, so a user porting v3 filter code needs this module. |
 | `github.com/jwx-go/asmbase64/v4` | Assembly-optimized base64 backend (via `segmentio/asm`) | High-throughput JWS verify/decode paths where base64 is hot. Drop-in import. |
 | `github.com/jwx-go/jwxmigrate` | Machine-readable v3→v4 migration rules and automated checking | A user porting an app from jwx/v3 to jwx/v4. |
 | `github.com/jwx-go/examples` | Runnable usage patterns covering JWT/JWS/JWE/JWK/extensions; `README.md` is a topical index by package and sub-topic | Pointing the user at canonical example code — fetch the README first to find the right file by topic, then fetch the linked test file. Also importable via `go.work` in local development. |
