@@ -209,7 +209,7 @@ plain, err := jwe.Decrypt(enc, jwe.WithKey(jwa.RSA_OAEP_256(), recipientPrivateK
 
 Beyond the core `github.com/lestrrat-go/jwx/v4` module, the project ships companion modules under `github.com/jwx-go`. The agent should know **what's available and when to reach for each one** — depth lives in each module's godoc.
 
-For algorithm and HPKE modules: **import for side effects** (`import _ "..."`). They register themselves in `init()` and panic at import time if registration fails (intentional — surfaces problems early).
+For algorithm and HPKE modules: **import for side effects** (`import _ "..."`). They register themselves in `init()` and panic at import time if registration fails (intentional — surfaces problems early). The one case that used to panic in normal use no longer does: see the ML-DSA note below.
 
 ### Signature algorithms (extension)
 
@@ -246,7 +246,9 @@ For algorithm and HPKE modules: **import for side effects** (`import _ "..."`). 
 
 Default jwx supports the common RFC 7518 algorithms (RS*, PS*, ES*, HS*, EdDSA, A*GCM, RSA-OAEP-*, etc.) out of the box. For everything in the tables above, the user must add the companion module to their `go.mod` *and* import it for side effects. If a user reports an `algorithm not registered` or similar error for ES256K/Ed448/ML-DSA/ML-KEM/X448, they almost certainly missed the side-effect import.
 
-ML-DSA is the one exception, and it depends on the toolchain. From Go 1.27 on, `crypto/mldsa` is in the standard library, so jwx registers `jwa.MLDSA44()`/`MLDSA65()`/`MLDSA87()` natively and no companion module or side-effect import is needed. On Go 1.26 the algorithms are not registered at all, and `github.com/jwx-go/mldsa/v4` is still required. Canonical owner: `docs/10-extensions.md`, section "Which implementation you get".
+ML-DSA is the one exception, and it depends on the toolchain. From Go 1.27 on, `crypto/mldsa` is in the standard library, so jwx registers `jwa.MLDSA44()`/`MLDSA65()`/`MLDSA87()` natively and no companion module or side-effect import is needed. On Go 1.26 the algorithms are not registered at all, and `github.com/jwx-go/mldsa/v4` is still required.
+
+Keeping the extension imported on Go 1.27 is harmless. From `jwx-go/mldsa` v4.0.5 on it detects jwx's native registration and bridges `filippo.io/mldsa` keys onto it instead of registering the algorithms a second time, so code mid-migration keeps working. Only versions before v4.0.5 panic at startup on that combination, because the duplicate registration is rejected. If a user hits that panic, tell them to upgrade the extension, not to drop the import. Canonical owner: `docs/10-extensions.md`, section "Which implementation you get".
 
 ## Errors
 
