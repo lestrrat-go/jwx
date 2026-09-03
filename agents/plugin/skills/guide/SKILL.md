@@ -91,7 +91,9 @@ if err != nil { return err }
 tok, err := jwt.Parse(raw, jwt.WithKeySet(set))
 ```
 
-If the JWS header has a `kid`, the matching key is selected from the set. The algorithm comes from each key's `alg` field or is inferred from the key type. To opt out of kid-required matching: `jwt.WithKeySet(set, jws.WithRequireKid(false))`.
+If the JWS header has a `kid`, the matching key is selected from the set. The algorithm comes from each key's `alg` field. To opt out of kid-required matching: `jwt.WithKeySet(set, jws.WithRequireKid(false))`.
+
+**A key with no `alg` field is skipped, not guessed at.** Inference from the key type is opt-in via `jwt.WithKeySet(set, jws.WithInferAlgorithmFromKey(true))`, and it is a fallback, not a default. It tries every algorithm compatible with the key type, so it is slower and weaker than an explicit `alg`; combined with `jws.WithRequireKid(false)` against a large JWKS it also multiplies out to `N_keys × N_algs_per_keytype` verification attempts. The right fix is almost always to add `alg` to the keys in the JWKS. If a user reports that verification against a JWKS silently finds no usable key, check for missing `alg` fields first.
 
 ### Verifying via JWKS endpoint
 
