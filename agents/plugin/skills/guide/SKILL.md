@@ -40,7 +40,7 @@ Sub-package map:
 
 | Package | Role |
 |---------|------|
-| `jwa` | Algorithm identifiers as **functions**: `jwa.RS256()`, `jwa.ES256()`, `jwa.HS256()`, `jwa.A256GCM()`, `jwa.RSA_OAEP_256()`, `jwa.EdDSA()`, etc. |
+| `jwa` | Algorithm identifiers as **functions**: `jwa.RS256()`, `jwa.ES256()`, `jwa.HS256()`, `jwa.A256GCM()`, `jwa.RSA_OAEP_256()`, `jwa.EdDSAEd25519()`, etc. |
 | `jwk` | JSON Web Keys: parsing, generating, import/export between `jwk.Key` and `crypto.*` keys, key sets. |
 | `jws` | Sign and verify arbitrary payloads (compact or JSON serialization). |
 | `jwe` | Encrypt and decrypt arbitrary payloads. |
@@ -135,7 +135,8 @@ Match algorithm to key type:
 | `RS256` / `RS384` / `RS512` | RSA, widest interop. |
 | `PS256` / `PS384` / `PS512` | RSA-PSS, prefer over `RS*` for new systems. |
 | `ES256` / `ES384` / `ES512` | ECDSA, smaller signatures than RSA. |
-| `EdDSA` | Ed25519, fastest verify; preferred for new systems where supported. |
+| `Ed25519` (`jwa.EdDSAEd25519()`) | Ed25519, fastest verify; preferred for new systems where supported. |
+| `EdDSA` (`jwa.EdDSA()`) | The pre-RFC-9864 polymorphic identifier. **Deprecated.** Use it only to interoperate with a producer or consumer that still emits or expects `alg: EdDSA`. |
 | `none` | **Never.** jwx refuses by default. |
 
 ## JWK basics
@@ -227,7 +228,7 @@ For algorithm and HPKE modules: **import for side effects** (`import _ "..."`). 
 | Module | What it enables | When to use |
 |--------|-----------------|-------------|
 | `github.com/jwx-go/mldsa/v4` | ML-DSA-44/65/87 (FIPS 204 post-quantum) | Forward-looking post-quantum signing. AKP key type, `"alg"` field required on keys. |
-| `github.com/jwx-go/ed448/v4` | EdDSA (Ed448 curve) | When Ed25519 isn't strong enough or interop requires Ed448. |
+| `github.com/jwx-go/ed448/v4` | `Ed448`, via `ed448.EdDSAEd448()` | When Ed25519 isn't strong enough or interop requires Ed448. |
 | `github.com/jwx-go/es256k/v4` | ES256K (secp256k1) | Web3/crypto ecosystem interop. Uses ECDSA with the secp256k1 curve. |
 | `github.com/jwx-go/compsig/v4` | ML-DSA composite signatures (PQ + classical) per draft-ietf-jose-pq-composite-sigs | **Experimental, draft-spec.** Hybrid signing during PQ transition. |
 
