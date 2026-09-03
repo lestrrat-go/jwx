@@ -192,7 +192,8 @@ Cases are split into two families: **single-source** cases (one doc carries the 
 Cases the SKILL.md alone covers. Each negative case must also produce a code sample that **builds** — these are real questions an end user might ask, and the skill is responsible for them too. Fetching anyway isn't a failure but signals the skill body is unclear.
 
 - "How do I verify an RS256 JWT?" — Verifying-a-JWT section.
-- "Why doesn't `jwk.ParseKey(data)` compile?" — Critical Rules item 8.
+- "Why doesn't `jwk.Import(raw)` compile?" — Critical Rules item 8.
+- "How do I parse a JWK into a concrete type like `jwk.RSAPublicKey`?" — Critical Rules item 9.
 - "Where do I import jwkfetch from?" — JWKS endpoint section.
 
 ## Reporting
