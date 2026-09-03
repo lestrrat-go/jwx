@@ -191,6 +191,14 @@ payload, err := jws.Verify(sig, jws.WithKey(jwa.ES256(), publicKey))
 
 `jws.Parse` only parses the structure — it does **not** verify. Use `jws.Verify` (which returns the verified payload) for verification.
 
+### The protected `alg` must match the verifying algorithm exactly
+
+`jws.Verify` rejects a message whose protected header advertises one algorithm while it is verified under another. The comparison is plain string equality with no aliasing, and it applies to every key source (`jws.WithKey`, `jws.WithKeySet`, `jws.WithVerifyAuto`, custom `jws.WithKeyProvider`). The check only fires when the protected header actually carries an `alg`.
+
+The practical consequence involves EdDSA. Per RFC 9864, `EdDSA`, `Ed25519` and `Ed448` are three distinct `alg` values, so a token whose header says `alg: Ed25519` does **not** verify under `jws.WithKey(jwa.EdDSA(), key)`, and vice versa. Match the identifier the producer actually emitted.
+
+`jws.WithSkipAlgorithmMatch(true)` bypasses the check. It exists for interop with non-conforming producers, and it weakens a real safety guard, so treat it the way you treat `jws.WithRequireKid(false)`.
+
 ## JWE (encrypting payloads)
 
 ```go
