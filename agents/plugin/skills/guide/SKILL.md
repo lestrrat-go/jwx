@@ -56,7 +56,8 @@ Sub-package map:
 5. **`kid` matching is enforced when verifying with a JWK Set.** Override the requirement with `jwt.WithKeySet(set, jws.WithRequireKid(false))` only when you understand the consequences.
 6. **`jku` (key URL in the JWS header) is attacker-controlled.** Use `jwt.WithVerifyAuto` only with a `jwkfetch.Client` configured with a `jwkfetch.NewMapWhitelist()` of allowed URLs.
 7. **HMAC keys are `[]byte`, not `string`.** Pass `[]byte("secret")`, or better, a `jwk.Key` imported from those bytes.
-8. **Generic functions require explicit type parameters.** `jwk.ParseKey[jwk.Key](data)`, `jwk.Import[jwk.Key](raw)`, `jwk.Export[*rsa.PublicKey](key)`. Bare `jwk.ParseKey(data)` does **not** compile.
+8. **`jwk.Import` and `jwk.Export` require explicit type parameters.** `jwk.Import[jwk.Key](raw)`, `jwk.Export[*rsa.PublicKey](key)`. Their type argument is not inferable from the call, so bare `jwk.Import(raw)` does **not** compile.
+9. **`jwk.ParseKey` is not generic.** `jwk.ParseKey(data)` returns `(jwk.Key, error)`. Use `jwk.ParseKeyAs[jwk.RSAPublicKey](data)` when a concrete JWK type is required.
 
 ## Verifying a JWT (the 90% case)
 
@@ -137,14 +138,14 @@ Match algorithm to key type:
 
 ## JWK basics
 
-All generic accessors require the type parameter:
+`jwk.Import` and `jwk.Export` require the type parameter. The parsers do not: `jwk.ParseKey` and `jwk.Parse` are non-generic, and `jwk.ParseKeyAs[T]` is the typed variant.
 
 ```go
 // Parse a single JWK (returns jwk.Key):
-key, err := jwk.ParseKey[jwk.Key](jwkBytes)
+key, err := jwk.ParseKey(jwkBytes)
 
 // Parse a single JWK with a concrete type (fails if not that type):
-rsaKey, err := jwk.ParseKey[jwk.RSAPublicKey](jwkBytes)
+rsaKey, err := jwk.ParseKeyAs[jwk.RSAPublicKey](jwkBytes)
 
 // Parse a JWK Set (returns jwk.Set, not generic):
 set, err := jwk.Parse(jwksBytes)
@@ -296,14 +297,15 @@ When reviewing or writing jwx-using code, watch for these:
 
 1. `jwt.Parse(data)` with no key option — errors out; if the intent was to read claims without verifying, that's a security bug unless the source is already trusted, in which case use `jwt.ParseInsecure`.
 2. `jwa.RS256` instead of `jwa.RS256()` — these are functions in v4.
-3. `jwk.ParseKey(data)` or `jwk.Import(raw)` without the type parameter — won't compile.
-4. Type-asserting a `jwk.Key` to a `crypto.*` type. Use `jwk.Export[*rsa.PublicKey](key)` instead.
-5. Hardcoding the alg from the JWS header (or token contents) to pick a verifier — always pin the expected algorithm on the verify side.
-6. Reusing a single `jwt.Builder` across goroutines — builders aren't safe to share.
-7. Verifying by passing a *private* key — works but leaks intent. Use the public key on the verify side.
-8. Manually building JWS compact strings via concatenation — always go through `jws.Sign`/`jwt.Sign`.
-9. `tok.Get("exp")` — the method is `tok.Field("exp")` (or just `tok.Expiration()`).
-10. Disabling kid matching as a "make it work" shortcut. Understand why the kid doesn't match before adding `jws.WithRequireKid(false)`.
+3. `jwk.Import(raw)` or `jwk.Export(key)` without the type parameter — won't compile.
+4. `jwk.ParseKey[jwk.RSAPublicKey](data)` — `ParseKey` is not generic; the typed parser is `jwk.ParseKeyAs[T]`.
+5. Type-asserting a `jwk.Key` to a `crypto.*` type. Use `jwk.Export[*rsa.PublicKey](key)` instead.
+6. Hardcoding the alg from the JWS header (or token contents) to pick a verifier — always pin the expected algorithm on the verify side.
+7. Reusing a single `jwt.Builder` across goroutines — builders aren't safe to share.
+8. Verifying by passing a *private* key — works but leaks intent. Use the public key on the verify side.
+9. Manually building JWS compact strings via concatenation — always go through `jws.Sign`/`jwt.Sign`.
+10. `tok.Get("exp")` — the method is `tok.Field("exp")` (or just `tok.Expiration()`).
+11. Disabling kid matching as a "make it work" shortcut. Understand why the kid doesn't match before adding `jws.WithRequireKid(false)`.
 
 ## What NOT to suggest
 
