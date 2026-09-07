@@ -6,7 +6,7 @@ require (
 	github.com/lestrrat-go/jwx/v4 v4.0.0
 	github.com/stretchr/testify v1.12.1
 	github.com/urfave/cli/v2 v2.26.0
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 	golang.org/x/term v0.45.0
 )
 
