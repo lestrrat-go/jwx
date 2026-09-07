@@ -1,6 +1,6 @@
 module github.com/lestrrat-go/jwx/v3
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1
@@ -13,7 +13,7 @@ require (
 	github.com/segmentio/asm v1.2.1
 	github.com/stretchr/testify v1.12.1
 	github.com/valyala/fastjson v1.6.10
-	golang.org/x/crypto v0.55.0
+	golang.org/x/crypto v0.56.0
 )
 
 require (
