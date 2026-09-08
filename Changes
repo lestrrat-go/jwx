@@ -4,7 +4,7 @@ Changes
 v4 has many incompatibilities with v3. To see the full list of differences between
 v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MICRATION-v4.md)
 
-UNRELEASED
+v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes
     as is, so a name containing `"` could close its own member and add
@@ -21,7 +21,7 @@ UNRELEASED
     allowlist, and if you accept a prefix, require the rest of the name to be
     a plain identifier.
 
-    Fixed in v4.4.1 and v3.2.1. v2, v1, and v0 contain the same code and are
+    Fixed in v4.5.0 and v3.3.0. v2, v1, and v0 contain the same code and are
     unmaintained; see SECURITY.md. (GHSA-4cf7-xm37-g63h)
 
   * [jws] Added `jws.WithStrictECDSA(bool)`, a `jws.Sign` option that rejects
