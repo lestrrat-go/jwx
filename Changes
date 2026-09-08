@@ -5,6 +5,24 @@ v3 has many incompatibilities with v2. To see the full list of differences betwe
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
 UNRELEASED
+  * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
+    JSON-escaped on output. Previously a name was written between the quotes
+    as is, so a name containing `"` could close its own member and add
+    members the application never set. For example, calling `Set` with the
+    name `x":0,"admin` produced a signed token containing `"admin":true`.
+    Every name now yields exactly one member, and names that need no
+    escaping serialize exactly as before.
+
+    If your application accepts custom names from callers, an exact-match
+    allowlist was never affected. A blocklist of reserved names, or an
+    allowlist by namespace prefix, could be bypassed by this defect. Both are
+    reasonable designs; the bug was in the serializer. Prefer an exact-match
+    allowlist, and if you accept a prefix, require the rest of the name to be
+    a plain identifier.
+
+    Fixed in v4.4.1 and v3.2.1. v2, v1, and v0 contain the same code and are
+    unmaintained; see SECURITY.md. (GHSA-4cf7-xm37-g63h)
+
   * [jws] Added `jws.WithStrictECDSA(bool)`, a `jws.Sign` option that rejects
     anything RFC 7518 forbids for an ECDSA signature. Today that is Section
     3.4's binding of ES256 to P-256, ES384 to P-384, and ES512 to P-521, so
