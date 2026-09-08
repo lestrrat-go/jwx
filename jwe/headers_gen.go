@@ -1011,12 +1011,6 @@ func fieldPairLess(a, b fieldPair) int {
 	return cmp.Compare(a.Name, b.Name)
 }
 
-func writeQuotedKey(buf *bytes.Buffer, key string) {
-	buf.WriteByte('"')
-	buf.WriteString(key)
-	buf.WriteString(`":`)
-}
-
 func (h *stdHeaders) MarshalJSON() ([]byte, error) {
 	l := getFieldPairList()
 	defer putFieldPairList(l)
@@ -1087,7 +1081,9 @@ func (h *stdHeaders) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteByte(',')
 		}
-		writeQuotedKey(buf, p.Name)
+		if err := json.WriteQuotedKey(buf, p.Name); err != nil {
+			return nil, fmt.Errorf(`failed to encode field name %q: %w`, p.Name, err)
+		}
 		switch v := p.Value.(type) {
 		case []byte:
 			buf.WriteByte('"')

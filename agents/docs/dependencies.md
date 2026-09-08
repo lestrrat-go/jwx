@@ -32,7 +32,8 @@ Leaf Packages (no internal deps)
   jwa → internal/tokens
   cert → internal/{base64,tokens}
   transform → (stdlib only)
-  internal/{base64,json,ecutil,pool,tokens}
+  internal/json → internal/{base64,tokens}
+  internal/{base64,ecutil,pool,tokens}
 ```
 
 ## Package Import Summary

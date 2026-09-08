@@ -680,10 +680,9 @@ func (h *akpPublicKey) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteByte(',')
 		}
-		buf.WriteByte('"')
-		buf.WriteString(p.Name)
-		buf.WriteByte('"')
-		buf.WriteByte(':')
+		if err := json.WriteQuotedKey(buf, p.Name); err != nil {
+			return nil, fmt.Errorf(`failed to encode field name %q: %w`, p.Name, err)
+		}
 		buf.Write(p.Value.([]byte))
 	}
 	buf.WriteByte('}')
@@ -1451,10 +1450,9 @@ func (h *akpPrivateKey) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteByte(',')
 		}
-		buf.WriteByte('"')
-		buf.WriteString(p.Name)
-		buf.WriteByte('"')
-		buf.WriteByte(':')
+		if err := json.WriteQuotedKey(buf, p.Name); err != nil {
+			return nil, fmt.Errorf(`failed to encode field name %q: %w`, p.Name, err)
+		}
 		buf.Write(p.Value.([]byte))
 	}
 	buf.WriteByte('}')

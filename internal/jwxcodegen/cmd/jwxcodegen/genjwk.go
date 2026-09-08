@@ -722,11 +722,12 @@ func generateKeyMarshalJSON(o *codegen.Output, kt *KeyType, obj *codegen.Object,
 	o.L("buf.WriteByte('{')")
 	o.L("for i, p := range pairs {")
 	o.L("if i > 0 { buf.WriteByte(',') }")
-	// Direct buffer writes for key name (known-safe ASCII, no need for fmt.Fprintf)
-	o.L("buf.WriteByte('\"')")
-	o.L("buf.WriteString(p.Name)")
-	o.L("buf.WriteByte('\"')")
-	o.L("buf.WriteByte(':')")
+	// Field names can come from Set, so they must be JSON-escaped.
+	// json.WriteQuotedKey writes a name that needs no escaping without
+	// allocating.
+	o.L("if err := json.WriteQuotedKey(buf, p.Name); err != nil {")
+	o.L("return nil, fmt.Errorf(`failed to encode field name %%q: %%w`, p.Name, err)")
+	o.L("}")
 	// Value is pre-marshaled []byte
 	o.L("buf.Write(p.Value.([]byte))")
 	o.L("}")
