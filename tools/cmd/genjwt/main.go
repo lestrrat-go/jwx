@@ -610,9 +610,12 @@ func generateToken(obj *codegen.Object) error {
 	o.L("if i > 0 {")
 	o.L("buf.WriteByte(tokens.Comma)")
 	o.L("}")
-	o.L(`buf.WriteByte('"')`)
-	o.L(`buf.WriteString(pair.Name)`)
-	o.L("buf.WriteString(`\": `)")
+	// Claim names can come from Set, so they must be JSON-escaped.
+	// json.WriteQuotedKey writes a name that needs no escaping without
+	// allocating.
+	o.L("if err := json.WriteQuotedKey(buf, pair.Name); err != nil {")
+	o.L("return nil, fmt.Errorf(`failed to encode claim name %%q: %%w`, pair.Name, err)")
+	o.L("}")
 	o.L(`buf.Write(pair.Value.([]byte))`)
 	o.L("}")
 	o.L("buf.WriteByte(tokens.CloseCurlyBracket)")

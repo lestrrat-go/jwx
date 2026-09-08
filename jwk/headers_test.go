@@ -3,6 +3,7 @@ package jwk_test
 import (
 	"testing"
 
+	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk"
 	"github.com/stretchr/testify/require"
@@ -100,4 +101,29 @@ func TestHeader(t *testing.T) {
 			require.Equal(t, value, got, "values match")
 		}
 	})
+}
+
+// A custom field name must never be able to introduce members of its own.
+// See GHSA-4cf7-xm37-g63h.
+func TestFieldNameCannotInjectMembers(t *testing.T) {
+	t.Parallel()
+
+	const name = `x":0,"use`
+
+	key, err := jwk.Import([]byte("0123456789abcdef"))
+	require.NoError(t, err, `jwk.Import should succeed`)
+	require.NoError(t, key.Set(name, "sig"), `Set should succeed`)
+
+	buf, err := json.Marshal(key)
+	require.NoError(t, err, `json.Marshal should succeed`)
+
+	var got map[string]any
+	require.NoError(t, json.Unmarshal(buf, &got), `serialized key should be valid JSON`)
+	require.Contains(t, got, name, `field name should round-trip unchanged: %s`, buf)
+	require.NotContains(t, got, "use", `no "use" field should have been injected: %s`, buf)
+
+	roundtrip, err := jwk.ParseKey(buf)
+	require.NoError(t, err, `jwk.ParseKey should succeed`)
+	_, ok := roundtrip.KeyUsage()
+	require.False(t, ok, `no "use" field should have been injected`)
 }

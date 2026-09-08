@@ -7,6 +7,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 
+	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwt"
 	"github.com/stretchr/testify/require"
 )
@@ -220,4 +221,34 @@ func TestToken(t *testing.T) {
 			require.NoError(t, newtok.Set(k, v), `newtok.Set should succeed`)
 		}
 	})
+}
+
+// A custom claim name must never be able to introduce members of its own.
+// See GHSA-4cf7-xm37-g63h.
+func TestClaimNameCannotInjectMembers(t *testing.T) {
+	t.Parallel()
+
+	const name = `x":0,"admin`
+
+	tok, err := jwt.NewBuilder().Claim(name, true).Build()
+	require.NoError(t, err, `jwt.NewBuilder should succeed`)
+
+	buf, err := json.Marshal(tok)
+	require.NoError(t, err, `json.Marshal should succeed`)
+
+	var got map[string]any
+	require.NoError(t, json.Unmarshal(buf, &got), `serialized token should be valid JSON`)
+	require.Len(t, got, 1, `exactly one claim should be serialized: %s`, buf)
+	require.Contains(t, got, name, `claim name should round-trip unchanged: %s`, buf)
+
+	// The injected member must not survive a sign/verify round trip either.
+	key := []byte("0123456789abcdef0123456789abcdef")
+	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256(), key))
+	require.NoError(t, err, `jwt.Sign should succeed`)
+
+	parsed, err := jwt.Parse(signed, jwt.WithKey(jwa.HS256(), key))
+	require.NoError(t, err, `jwt.Parse should succeed`)
+
+	require.False(t, parsed.Has("admin"), `no "admin" claim should have been injected`)
+	require.True(t, parsed.Has(name), `the original claim should be present`)
 }
