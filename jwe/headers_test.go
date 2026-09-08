@@ -195,3 +195,27 @@ func TestHeaders(t *testing.T) {
 		})
 	})
 }
+
+// A custom header name must never be able to introduce members of its own.
+// See GHSA-4cf7-xm37-g63h.
+func TestHeaderNameCannotInjectMembers(t *testing.T) {
+	t.Parallel()
+
+	const name = `x":0,"kid`
+
+	hdrs := jwe.NewHeaders()
+	require.NoError(t, hdrs.Set(name, "injected"), `Set should succeed`)
+
+	buf, err := json.Marshal(hdrs)
+	require.NoError(t, err, `json.Marshal should succeed`)
+
+	var got map[string]any
+	require.NoError(t, json.Unmarshal(buf, &got), `serialized headers should be valid JSON`)
+	require.Len(t, got, 1, `exactly one header should be serialized: %s`, buf)
+	require.Contains(t, got, name, `header name should round-trip unchanged: %s`, buf)
+
+	roundtrip := jwe.NewHeaders()
+	require.NoError(t, json.Unmarshal(buf, roundtrip), `headers should unmarshal`)
+	kid, ok := roundtrip.KeyID()
+	require.False(t, ok, `no "kid" header should have been injected, got %q`, kid)
+}

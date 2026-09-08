@@ -301,3 +301,37 @@ func TestUnmarshalResetsPrivateClaims(t *testing.T) {
 		require.Equal(t, "y", sub)
 	})
 }
+
+// A custom claim name must never be able to introduce members of its own.
+// See GHSA-4cf7-xm37-g63h.
+func TestClaimNameCannotInjectMembers(t *testing.T) {
+	t.Parallel()
+
+	const name = `x":0,"admin`
+
+	tok, err := jwt.NewBuilder().Claim(name, true).Build()
+	require.NoError(t, err, `jwt.NewBuilder should succeed`)
+
+	buf, err := json.Marshal(tok)
+	require.NoError(t, err, `json.Marshal should succeed`)
+
+	var got map[string]any
+	require.NoError(t, json.Unmarshal(buf, &got), `serialized token should be valid JSON`)
+	require.Len(t, got, 1, `exactly one claim should be serialized: %s`, buf)
+	require.Contains(t, got, name, `claim name should round-trip unchanged: %s`, buf)
+
+	// The injected member must not survive a sign/verify round trip either.
+	key := []byte("0123456789abcdef0123456789abcdef")
+	signed, err := jwt.Sign(tok, jwt.WithKey(jwa.HS256(), key))
+	require.NoError(t, err, `jwt.Sign should succeed`)
+
+	parsed, err := jwt.Parse(signed, jwt.WithKey(jwa.HS256(), key))
+	require.NoError(t, err, `jwt.Parse should succeed`)
+
+	_, ok := parsed.Field("admin")
+	require.False(t, ok, `no "admin" claim should have been injected`)
+
+	v, ok := parsed.Field(name)
+	require.True(t, ok, `the original claim should be present`)
+	require.Equal(t, true, v, `the original claim value should be preserved`)
+}

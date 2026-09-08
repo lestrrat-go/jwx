@@ -527,9 +527,12 @@ func generateTokenMakePairsAndMarshal(o *codegen.Output, obj *codegen.Object, pk
 	o.L("buf.WriteByte('{')")
 	o.L("for i, pair := range pairs {")
 	o.L("if i > 0 { buf.WriteByte(',') }")
-	o.L("buf.WriteByte('\"')")
-o.L("buf.WriteString(pair.Name)")
-o.L("buf.WriteString(`\":`)")
+	// Claim names can come from Set, so they must be JSON-escaped.
+	// json.WriteQuotedKey writes a name that needs no escaping without
+	// allocating.
+	o.L("if err := json.WriteQuotedKey(buf, pair.Name); err != nil {")
+	o.L("return nil, fmt.Errorf(`failed to encode claim name %%q: %%w`, pair.Name, err)")
+	o.L("}")
 	o.L("if pair.Name == AudienceKey {")
 	// Need to handle audience flattening specially
 	o.L("if aud, ok := pair.Value.(types.StringList); ok {")

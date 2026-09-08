@@ -651,9 +651,9 @@ func (t *stdToken) MarshalJSON() ([]byte, error) {
 		if i > 0 {
 			buf.WriteByte(',')
 		}
-		buf.WriteByte('"')
-		buf.WriteString(pair.Name)
-		buf.WriteString(`":`)
+		if err := json.WriteQuotedKey(buf, pair.Name); err != nil {
+			return nil, fmt.Errorf(`failed to encode claim name %q: %w`, pair.Name, err)
+		}
 		if pair.Name == AudienceKey {
 			if aud, ok := pair.Value.(types.StringList); ok {
 				audBytes, err := json.MarshalAudience(aud, t.options.IsEnabled(FlattenAudience))

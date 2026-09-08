@@ -10,7 +10,10 @@ go_library(
     ],
     importpath = "github.com/lestrrat-go/jwx/v4/internal/json",
     visibility = ["//:__subpackages__"],
-    deps = ["//internal/base64"],
+    deps = [
+        "//internal/base64",
+        "//internal/tokens",
+    ],
 )
 
 alias(
@@ -21,7 +24,10 @@ alias(
 
 go_test(
     name = "json_test",
-    srcs = ["registry_test.go"],
+    srcs = [
+        "json_test.go",
+        "registry_test.go",
+    ],
     deps = [
         ":json",
         "@com_github_stretchr_testify//require",

@@ -498,13 +498,6 @@ func generateHeaders(cfg *HeaderConfig, obj *codegen.Object) error {
 	o.LL("func fieldPairLess(a, b fieldPair) int {")
 	o.L("return cmp.Compare(a.Name, b.Name)")
 	o.L("}")
-	// writeQuotedKey helper: writes "key": without fmt.Fprintf overhead
-	o.LL("func writeQuotedKey(buf *bytes.Buffer, key string) {")
-	o.L("buf.WriteByte('\"')")
-	o.L("buf.WriteString(key)")
-	o.L("buf.WriteString(`\":`)")
-	o.L("}")
-
 	// MarshalJSON
 	o.LL("func (h *stdHeaders) MarshalJSON() ([]byte, error) {")
 	o.L("l := getFieldPairList()")
@@ -530,7 +523,12 @@ func generateHeaders(cfg *HeaderConfig, obj *codegen.Object) error {
 	o.L("buf.WriteByte('{')")
 	o.L("for i, p := range l.pairs {")
 	o.L("if i > 0 { buf.WriteByte(',') }")
-	o.L("writeQuotedKey(buf, p.Name)")
+	// Header names can come from Set, so they must be JSON-escaped.
+	// json.WriteQuotedKey writes a name that needs no escaping without
+	// allocating.
+	o.L("if err := json.WriteQuotedKey(buf, p.Name); err != nil {")
+	o.L("return nil, fmt.Errorf(`failed to encode field name %%q: %%w`, p.Name, err)")
+	o.L("}")
 	o.L("switch v := p.Value.(type) {")
 	o.L("case []byte:")
 	o.L("buf.WriteByte('\"')")
