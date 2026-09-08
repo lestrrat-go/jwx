@@ -211,3 +211,33 @@ func TestHeaderB64Typed(t *testing.T) {
 		require.Error(t, err, `Set("b64", nil) must reject — b64 is typed bool`)
 	})
 }
+
+// A custom header name must never be able to introduce members of its own.
+// See GHSA-4cf7-xm37-g63h.
+func TestHeaderNameCannotInjectMembers(t *testing.T) {
+	t.Parallel()
+
+	const name = `x":0,"kid`
+
+	hdrs := jws.NewHeaders()
+	require.NoError(t, hdrs.Set(name, "injected"), `Set should succeed`)
+
+	buf, err := json.Marshal(hdrs)
+	require.NoError(t, err, `json.Marshal should succeed`)
+
+	var got map[string]any
+	require.NoError(t, json.Unmarshal(buf, &got), `serialized headers should be valid JSON`)
+	require.Len(t, got, 1, `exactly one header should be serialized: %s`, buf)
+	require.Contains(t, got, name, `header name should round-trip unchanged: %s`, buf)
+
+	// The injected member must not survive signing either.
+	key := []byte("0123456789abcdef0123456789abcdef")
+	signed, err := jws.Sign([]byte("payload"), jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(hdrs)))
+	require.NoError(t, err, `jws.Sign should succeed`)
+
+	msg, err := jws.Parse(signed)
+	require.NoError(t, err, `jws.Parse should succeed`)
+
+	kid, ok := msg.Signatures()[0].ProtectedHeaders().KeyID()
+	require.False(t, ok, `no "kid" header should have been injected, got %q`, kid)
+}
