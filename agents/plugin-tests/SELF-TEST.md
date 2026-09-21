@@ -228,6 +228,7 @@ The skill passes when:
 ## When to re-run
 
 - After any non-trivial edit to `SKILL.md`.
+- After changes to public jwx APIs or behavior covered by `SKILL.md` or a test case.
 - After changes to jwx core `docs/*.md` that target one of the cases.
 - After changes to the examples repo README (the topical index) or the addition of new example files referenced by a case.
 - After changes to a companion module's public API that a case depends on.
