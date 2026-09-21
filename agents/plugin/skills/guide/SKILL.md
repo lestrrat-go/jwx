@@ -53,7 +53,9 @@ Sub-package map:
 2. **Always pin the algorithm on the verify side.** `jwt.WithKey(jwa.RS256(), key)`, `jws.WithKey(jwa.ES256(), key)`. Never trust the `alg` from the incoming header alone.
 3. **Never use `jwt.ParseInsecure` for tokens received from the network.** It is for testing or for extracting claims from a token whose origin is already trusted by other means.
 4. **`jwa` algorithms are functions in v4, not constants.** Write `jwa.RS256()`, not `jwa.RS256`. This trips up users migrating from v2/v3.
-5. **`kid` matching is enforced when verifying with a JWK Set.** Override the requirement with `jwt.WithKeySet(set, jws.WithRequireKid(false))` only when you understand the consequences.
+5. **`kid` matching is enforced when verifying with a JWK Set.** If a token omits `kid` and the set contains exactly
+   one key, use `jwt.WithKeySet(set, jws.WithUseDefault(true))`. Use `jws.WithRequireKid(false)` only when verification
+   must consider multiple keys without matching `kid` values.
 6. **`jku` (key URL in the JWS header) is attacker-controlled.** Use `jwt.WithVerifyAuto` only with a `jwkfetch.Client` configured with a `jwkfetch.NewMapWhitelist()` of allowed URLs.
 7. **HMAC keys are `[]byte`, not `string`.** Pass `[]byte("secret")`, or better, a `jwk.Key` imported from those bytes.
 8. **`jwk.Import` and `jwk.Export` require explicit type parameters.** `jwk.Import[jwk.Key](raw)`, `jwk.Export[*rsa.PublicKey](key)`. Their type argument is not inferable from the call, so bare `jwk.Import(raw)` does **not** compile.
@@ -80,7 +82,9 @@ if err != nil {
 - `[]byte` for HMAC algorithms
 - a `jwk.Key`
 
-To validate against expected claim values, pass `jwt.WithIssuer(...)`, `jwt.WithAudience(...)`, `jwt.WithSubject(...)`, `jwt.WithJwtID(...)`. To extend the default clock skew window: `jwt.WithAcceptableSkew(30 * time.Second)`.
+To validate against expected claim values, pass `jwt.WithIssuer(...)`, `jwt.WithAudience(...)`,
+`jwt.WithSubject(...)`, and `jwt.WithJwtID(...)`. Validation uses exact timestamps by default. Configure clock skew
+tolerance with `jwt.WithAcceptableSkew(30 * time.Second)`.
 
 ### Verifying with a JWK Set (kid-based key selection)
 
@@ -91,9 +95,21 @@ if err != nil { return err }
 tok, err := jwt.Parse(raw, jwt.WithKeySet(set))
 ```
 
-If the JWS header has a `kid`, the matching key is selected from the set. The algorithm comes from each key's `alg` field. To opt out of kid-required matching: `jwt.WithKeySet(set, jws.WithRequireKid(false))`.
+If the JWS header has a `kid`, the matching key is selected from the set. The algorithm comes from each key's `alg`
+field. If a token omits `kid` and the set contains exactly one key, use
+`jwt.WithKeySet(set, jws.WithUseDefault(true))`. Use `jws.WithRequireKid(false)` only when every key in the set should
+be considered without matching `kid` values.
 
-**A key with no `alg` field is skipped, not guessed at.** Inference from the key type is opt-in via `jwt.WithKeySet(set, jws.WithInferAlgorithmFromKey(true))`, and it is a fallback, not a default. It tries every algorithm compatible with the key type, so it is slower and weaker than an explicit `alg`; combined with `jws.WithRequireKid(false)` against a large JWKS it also multiplies out to `N_keys × N_algs_per_keytype` verification attempts. The right fix is almost always to add `alg` to the keys in the JWKS. If a user reports that verification against a JWKS silently finds no usable key, check for missing `alg` fields first.
+**A key with no `alg` field is skipped, not guessed at.** Inference from the key type is opt-in via
+`jwt.WithKeySet(set, jws.WithInferAlgorithmFromKey(true))`, and it is a fallback, not a default. When the protected
+header has an `alg`, inference tries only that algorithm against compatible keys. When the header omits `alg`,
+inference tries every compatible algorithm; combined with `jws.WithRequireKid(false)`, verification can perform
+`N_keys × N_algs_per_keytype` attempts. Keep JWKS inputs bounded. The right fix is almost always to add `alg` to the
+keys in the JWKS. If verification against a JWKS finds no usable key, check for missing `alg` fields first.
+
+`jwk.Parse` retains an unparseable JWKS entry as a `jwk.UnsupportedKey` by default, so one unknown key type does not
+make the whole set fail. Use `jwk.IsUnsupportedKey` when inspecting entries. Pass
+`jwk.WithStrictKeySetParsing(true)` when every entry must parse or the whole operation must fail.
 
 ### Verifying via JWKS endpoint
 
@@ -195,6 +211,10 @@ payload, err := jws.Verify(sig, jws.WithKey(jwa.ES256(), publicKey))
 
 `jws.Parse` only parses the structure — it does **not** verify. Use `jws.Verify` (which returns the verified payload) for verification.
 
+For RFC 7518 ECDSA signing, pass `jws.WithStrictECDSA(true)` to reject ES256/P-256, ES384/P-384, and ES512/P-521
+curve mismatches. The check is opt-in and affects signing only. Pass it through JWT signing as
+`jwt.WithSignOption(jws.WithStrictECDSA(true))`.
+
 ### The protected `alg` must match the verifying algorithm exactly
 
 `jws.Verify` rejects a message whose protected header advertises one algorithm while it is verified under another. The comparison is plain string equality with no aliasing, and it applies to every key source (`jws.WithKey`, `jws.WithKeySet`, `jws.WithVerifyAuto`, custom `jws.WithKeyProvider`). The check only fires when the protected header actually carries an `alg`.
@@ -221,7 +241,10 @@ plain, err := jwe.Decrypt(enc, jwe.WithKey(jwa.RSA_OAEP_256(), recipientPrivateK
 
 Beyond the core `github.com/lestrrat-go/jwx/v4` module, the project ships companion modules under `github.com/jwx-go`. The agent should know **what's available and when to reach for each one** — depth lives in each module's godoc.
 
-For algorithm and HPKE modules: **import for side effects** (`import _ "..."`). They register themselves in `init()` and panic at import time if registration fails (intentional — surfaces problems early). The one case that used to panic in normal use no longer does: see the ML-DSA note below.
+Algorithm and HPKE modules register themselves in `init()` and panic at import time if registration fails. Import a
+module by name when calling its algorithm constructors, such as `es256k.ES256K()`. Use a blank import only when
+registration is the sole reason for the import. The one case that used to panic in normal use no longer does: see the
+ML-DSA note below.
 
 ### Signature algorithms (extension)
 
@@ -244,7 +267,7 @@ For algorithm and HPKE modules: **import for side effects** (`import _ "..."`). 
 
 | Module | What it does | When to use |
 |--------|--------------|-------------|
-| `github.com/jwx-go/jwkfetch/v4` | HTTP JWK Set retrieval — `Client` (one-shot) and `Cache` (background-refreshed, backed by `httprc`) | **Always**, whenever you fetch JWKS over HTTP. Core jwx has no HTTP dependency; this is the entry point. |
+| `github.com/jwx-go/jwkfetch/v4` | HTTP JWK Set retrieval — `Client` (one-shot) and `Cache` (background-refreshed, backed by `httprc`) | **Always**, whenever you fetch JWKS over HTTP. Core `jwk` has no HTTP fetch implementation; this is the entry point. |
 | `github.com/jwx-go/jwxfilter/v4` | Filter and introspection helpers for `jwt.Token`, `jws.Headers`, `jwe.Headers`, `jwk.Key`, and `openid.Token` | Selecting or redacting fields on a token, header, or key. Extracted from core in v4, so a user porting v3 filter code needs this module. |
 | `github.com/jwx-go/asmbase64/v4` | Assembly-optimized base64 backend (via `segmentio/asm`) | High-throughput JWS verify/decode paths where base64 is hot. Drop-in import. |
 | `github.com/jwx-go/jwxmigrate` | Machine-readable v3→v4 migration rules and automated checking | A user porting an app from jwx/v3 to jwx/v4. |
@@ -257,7 +280,11 @@ For algorithm and HPKE modules: **import for side effects** (`import _ "..."`). 
 
 ### What to do when the user asks about post-quantum or non-default algorithms
 
-Default jwx supports the common RFC 7518 algorithms (RS*, PS*, ES*, HS*, EdDSA, A*GCM, RSA-OAEP-*, etc.) out of the box. For everything in the tables above, the user must add the companion module to their `go.mod` *and* import it for side effects. If a user reports an `algorithm not registered` or similar error for ES256K/Ed448/ML-DSA/ML-KEM/X448, they almost certainly missed the side-effect import.
+Default jwx supports the common RFC 7518 algorithms (RS*, PS*, ES*, HS*, EdDSA, A*GCM, RSA-OAEP-*, etc.) out of the
+box. Non-default algorithm modules must be added to `go.mod` and imported so their `init()` functions run. Use a named
+import when calling the module's algorithm constructors. A missing import commonly causes `algorithm not registered`
+errors for ES256K, Ed448, ML-DSA, ML-KEM, and X448. Tooling modules such as `jwkfetch`, `jwxfilter`, `jwxmigrate`, and
+`examples` are ordinary APIs or repositories, not algorithm registrars.
 
 ML-DSA is the one exception, and it depends on the toolchain. From Go 1.27 on, `crypto/mldsa` is in the standard library, so jwx registers `jwa.MLDSA44()`/`MLDSA65()`/`MLDSA87()` natively and no companion module or side-effect import is needed. On Go 1.26 the algorithms are not registered at all, and `github.com/jwx-go/mldsa/v4` is still required.
 
@@ -265,7 +292,9 @@ Keeping the extension imported on Go 1.27 is harmless. From `jwx-go/mldsa` v4.0.
 
 ## Errors
 
-JWT/JWS/JWE/JWK errors are struct types with named fields. Use `errors.Is` with a zero-value struct to test for *kind*, or Go 1.26's `errors.AsType[T]` to recover the *fields*:
+Most JWT errors and selected JWS/JWE/JWK errors are struct types with named fields. Use `errors.Is` with a zero-value
+struct to test a struct error's kind, or Go 1.26's `errors.AsType[T]` to recover its fields. Other package-level errors
+remain sentinel functions such as `jws.VerificationError()`, `jwe.DecryptError()`, and `jwk.ParseError()`.
 
 ```go
 import "errors"

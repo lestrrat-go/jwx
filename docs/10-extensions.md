@@ -25,7 +25,7 @@ In v4, optional features are provided as standalone modules under [`github.com/j
 
 | Module | Capability |
 |:-------|:-----------|
-| [`github.com/jwx-go/jwkfetch/v4`](https://github.com/jwx-go/jwkfetch) | HTTP JWK Set retrieval — one-shot `Client` and background-refreshed `Cache` (backed by [`httprc`](https://github.com/lestrrat-go/httprc)). Holds the HTTP fetch surface so the core jwx module doesn't depend on `net/http` or `httprc`. |
+| [`github.com/jwx-go/jwkfetch/v4`](https://github.com/jwx-go/jwkfetch) | HTTP JWK Set retrieval — one-shot `Client` and background-refreshed `Cache` (backed by [`httprc`](https://github.com/lestrrat-go/httprc)). Holds the HTTP fetch surface so core `jwk` does not implement HTTP retrieval or depend on `httprc`. |
 | [`github.com/jwx-go/jwxfilter/v4`](https://github.com/jwx-go/jwxfilter) | Filter and introspection helpers for `jwt.Token`, `jws.Headers`, `jwe.Headers`, `jwk.Key`, and `openid.Token`. Extracted from core in v4 — the JOSE operations (sign/verify/encrypt/decrypt/parse) do not depend on it. |
 | [`github.com/jwx-go/asmbase64/v4`](https://github.com/jwx-go/asmbase64) | Assembly-optimized base64 backend via [`segmentio/asm`](https://github.com/segmentio/asm) |
 
