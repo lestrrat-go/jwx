@@ -701,7 +701,9 @@ source: [examples/jwk_import_example_test.go](https://github.com/jwx-go/examples
 
 # Fetching JWK Sets
 
-HTTP-based JWK Set retrieval has moved out of the core `jwk` package. The main jwx module no longer depends on `net/http` or [`httprc`](https://github.com/lestrrat-go/httprc), and there is no `jwk.Fetch` function. All HTTP fetching lives in the [`github.com/jwx-go/jwkfetch/v4`](https://github.com/jwx-go/jwkfetch) companion.
+HTTP-based JWK Set retrieval has moved out of the core `jwk` package. The `jwk` package no longer imports `net/http`
+or [`httprc`](https://github.com/lestrrat-go/httprc), and there is no `jwk.Fetch` function. All HTTP fetching lives in
+the [`github.com/jwx-go/jwkfetch/v4`](https://github.com/jwx-go/jwkfetch) companion.
 
 The `jwk` package still defines the minimal `jwk.Fetcher` interface:
 

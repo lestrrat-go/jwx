@@ -18,7 +18,7 @@ if expErr, ok := errors.AsType[jwt.TokenExpiredError](err); ok {
 }
 ```
 
-Only `jwt.UnknownPayloadTypeError()` remains a sentinel function (no struct type).
+Within `jwt`, only `jwt.UnknownPayloadTypeError()` remains a sentinel function (no struct type).
 
 ## Exported Error Types (jwt)
 
@@ -83,7 +83,6 @@ Only `jwt.UnknownPayloadTypeError()` remains a sentinel function (no struct type
 | `jwe` | `ParseError()` | Parse failed |
 | `jwk` | `ImportError()` | Key import failed |
 | `jwk` | `ParseError()` | Key parse failed |
-| `jwk` | `WhitelistError()` | URL not whitelisted |
 | `jwk` | `ContinueError()` | Skip key (used by parsers) |
 | `jwa` | `ErrInvalidKeyAlgorithm()` | Invalid algorithm |
 
