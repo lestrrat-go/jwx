@@ -201,6 +201,13 @@ if expErr, ok := errors.AsType[jwt.TokenExpiredError](err); ok {
 
 Use `github.com/stretchr/testify/require` for assertions (not `assert`).
 
+## Consumer Guide Skill Validation
+
+- After changing exported API or behavior in `jwa`, `jwe`, `jwk`, `jws`, or `jwt`, MUST run applicable
+  `jwx-guide-v4` cases from `agents/plugin-tests/SELF-TEST.md` before handoff.
+- Install and cache latest repository skill before running cases. Follow `SELF-TEST.md` **Assumptions and setup**.
+- Report cases run and results in final response.
+
 ## Build Tags
 
 No feature build tags in v4. Optional features (signature algorithms, backend replacements) are provided as extension modules under [`github.com/jwx-go`](https://github.com/jwx-go). See [Extension Modules](docs/10-extensions.md) for the full list.
