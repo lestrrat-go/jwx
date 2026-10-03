@@ -634,11 +634,11 @@ func WithSkipAlgorithmMatch(v bool) VerifyOption {
 	return &verifyOption{option.New(identSkipAlgorithmMatch{}, v)}
 }
 
-// WithStrictECDSA makes `jws.Sign()` reject anything RFC 7518 forbids for
+// WithStrictECDSA makes `jws.Sign()` and `jws.Verify()` reject anything RFC 7518 forbids for
 // an ECDSA signature. Today that is exactly one rule: Section 3.4 binds
 // ES256 to P-256, ES384 to P-384, and ES512 to P-521, so signing with a
-// key on any other curve fails instead of producing a JWS that strict
-// JOSE implementations reject.
+// key on any other curve fails instead of producing or accepting a JWS
+// that strict JOSE implementations reject.
 //
 // Future releases may enforce further RFC 7518 ECDSA rules under this
 // same option, so enabling it means "be strict about ECDSA", not "check
@@ -647,13 +647,17 @@ func WithSkipAlgorithmMatch(v bool) VerifyOption {
 // Extension algorithms on their own curves, such as ES256K, are not
 // affected. Only the three curves the RFC names are checked.
 //
-// This option is sign-side only. `jws.Verify()` is unaffected and keeps
-// inferring algorithms from a key's curve exactly as before, so a JWS
-// produced without this option still verifies.
+// On verification, this applies to each selected key, including keys
+// from a JWK Set or custom key provider, and to streaming detached
+// payloads. Algorithm inference remains unchanged. Verification without
+// this option remains permissive.
+//
+// For JWTs, use `jwt.WithSignOption(jws.WithStrictECDSA(true))` when
+// signing or `jwt.WithVerifyOption(jws.WithStrictECDSA(true))` when parsing.
 //
 // By default, the curve is not checked.
-func WithStrictECDSA(v bool) SignOption {
-	return &signOption{option.New(identStrictECDSA{}, v)}
+func WithStrictECDSA(v bool) SignVerifyOption {
+	return &signVerifyOption{option.New(identStrictECDSA{}, v)}
 }
 
 // WithUseDefault specifies that if and only if a jwk.Key contains

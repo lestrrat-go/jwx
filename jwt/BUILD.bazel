@@ -51,6 +51,7 @@ go_test(
         "options_gen_test.go",
         "settings_test.go",
         "structured_errors_test.go",
+        "strict_ecdsa_verify_test.go",
         "token_options_test.go",
         "token_test.go",
         "validate_test.go",

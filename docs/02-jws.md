@@ -17,6 +17,7 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
   * [Verification using a JWKS](#verification-using-a-jwks)
   * [Verification using a detached payload](#verification-using-a-detached-payload)
   * [Verification using `jku`](#verification-using-jku)
+  * [Enforce RFC 7518 ECDSA curve bindings](#enforce-rfc-7518-ecdsa-curve-bindings)
 * [Using a custom signing/verification algorithm](#using-a-custom-signingverification-algorithm)
 * [Extension algorithms (Ed448, ES256K, ML-DSA)](#extension-algorithms-ed448-es256k-ml-dsa)
 * [Using a custom base64 encoder](#using-a-custom-base64-encoder)
@@ -416,6 +417,20 @@ func Example_jws_verify_with_key() {
 ```
 source: [examples/jws_verify_with_key_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_verify_with_key_example_test.go)
 <!-- END INCLUDE -->
+
+## Enforce RFC 7518 ECDSA curve bindings
+
+Use `jws.WithStrictECDSA(true)` with `jws.Sign` or `jws.Verify` to require
+P-256 for ES256, P-384 for ES384, and P-521 for ES512. Verification checks
+all selected keys, including keys from a JWK Set or custom key provider,
+and supports streaming detached payloads. The option is disabled by default;
+algorithm inference is unchanged. Extension algorithms such as ES256K are
+not affected.
+
+For JWTs, pass `jwt.WithSignOption(jws.WithStrictECDSA(true))` to `jwt.Sign`,
+or `jwt.WithVerifyOption(jws.WithStrictECDSA(true))` to `jwt.Parse`.
+`jws.VerifyCompactFast` does not accept verification options; use `jws.Verify`
+when strict ECDSA verification is required.
 
 ## Verification using a JWKS
 

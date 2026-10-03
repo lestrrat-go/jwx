@@ -103,6 +103,12 @@ func toVerifyOptions(options ...Option) ([]jws.VerifyOption, error) {
 		case identVerifyAuto{}:
 			vo := option.MustGet[jws.VerifyOption](opt)
 			voptions = append(voptions, vo)
+		case identVerifyOption{}:
+			vo, ok := option.Get[jws.VerifyOption](opt)
+			if !ok || vo == nil {
+				return nil, fmt.Errorf(`jwt.WithVerifyOption requires a non-nil jws.VerifyOption`)
+			}
+			voptions = append(voptions, vo)
 		case identKeyProvider{}:
 			kp := option.MustGet[jws.KeyProvider](opt)
 			voptions = append(voptions, jws.WithKeyProvider(kp))

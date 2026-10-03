@@ -34,4 +34,5 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithValidate", identValidate{}.String())
 	require.Equal(t, "WithValidator", identValidator{}.String())
 	require.Equal(t, "WithVerify", identVerify{}.String())
+	require.Equal(t, "WithVerifyOption", identVerifyOption{}.String())
 }

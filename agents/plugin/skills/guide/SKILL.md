@@ -211,9 +211,11 @@ payload, err := jws.Verify(sig, jws.WithKey(jwa.ES256(), publicKey))
 
 `jws.Parse` only parses the structure — it does **not** verify. Use `jws.Verify` (which returns the verified payload) for verification.
 
-For RFC 7518 ECDSA signing, pass `jws.WithStrictECDSA(true)` to reject ES256/P-256, ES384/P-384, and ES512/P-521
-curve mismatches. The check is opt-in and affects signing only. Pass it through JWT signing as
-`jwt.WithSignOption(jws.WithStrictECDSA(true))`.
+For RFC 7518 ECDSA signing or verification, pass `jws.WithStrictECDSA(true)` to reject ES256/P-256, ES384/P-384,
+and ES512/P-521 curve mismatches. The check is opt-in. Pass it through JWT signing as
+`jwt.WithSignOption(jws.WithStrictECDSA(true))`, or JWT parsing as
+`jwt.WithVerifyOption(jws.WithStrictECDSA(true))`. This also applies to keys selected from a JWKS.
+`jws.VerifyCompactFast` does not accept options; use `jws.Verify` for strict ECDSA verification.
 
 ### The protected `alg` must match the verifying algorithm exactly
 

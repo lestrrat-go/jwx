@@ -590,7 +590,7 @@ func RegisterAlgorithmForCurve(crv jwa.EllipticCurveAlgorithm, alg jwa.Signature
 // builtin registration binds P-256, P-384, or P-521 to an algorithm
 // either, so every EC key reports the full ES* list no matter which curve
 // it sits on. RFC 7518 Section 3.4 is stricter than that; see
-// [WithStrictECDSA] for enforcing it when signing.
+// [WithStrictECDSA] for enforcing it when signing or verifying.
 //
 // Accepted key shapes (resolved in order):
 //
@@ -783,6 +783,9 @@ func Settings(options ...GlobalOption) error {
 // key or provider you supply (e.g. WithKey, WithKeySet) — this function takes
 // the algorithm as an explicit argument. It is useful for performance-critical
 // applications where the algorithm is known in advance.
+//
+// This function does not enforce ECDSA algorithm/curve bindings. Use
+// [Verify] with [WithStrictECDSA] when that check is required.
 //
 // This function uses strict base64url encoding without padding (RFC 4648 §5)
 // for decoding the signature and payload. It does not auto-detect other

@@ -124,9 +124,9 @@ func (w *withKey) SetProtectedDefault(v Headers) Headers {
 // (ES256/P-256, ES384/P-384, ES512/P-521), but `jws.Sign()` does not enforce
 // that by default: a key on any other curve still signs, and the JWS it
 // produces is one strict JOSE implementations reject. Pass
-// `jws.WithStrictECDSA(true)` to `jws.Sign()` to reject the mismatch instead.
-// `jws.Verify()` is unaffected either way and keeps inferring algorithms from
-// a key's curve exactly as before.
+// `jws.WithStrictECDSA(true)` to `jws.Sign()` or `jws.Verify()` to reject the
+// mismatch. Algorithm inference and verification without the option remain
+// unchanged.
 //
 // Any of the following is accepted for the `key` parameter:
 // * A "raw" key (e.g. rsa.PrivateKey, ecdsa.PrivateKey, etc)

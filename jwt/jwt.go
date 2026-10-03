@@ -277,7 +277,7 @@ func parseBytes(data []byte, options ...ParseOption) (Token, error) {
 				ctx.withKey = option.MustGet[*withKey](o)
 			}
 			verifyOpts = append(verifyOpts, o)
-		case identKeySet{}, identVerifyAuto{}, identKeyProvider{}, identBase64Encoder{}, identContext{}:
+		case identKeySet{}, identVerifyAuto{}, identVerifyOption{}, identKeyProvider{}, identBase64Encoder{}, identContext{}:
 			verifyOpts = append(verifyOpts, o)
 		case identToken{}:
 			ctx.token = option.MustGet[Token](o)

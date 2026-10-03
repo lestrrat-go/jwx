@@ -11,8 +11,8 @@ import (
 
 // This file enforces the RFC 7518 Section 3.4 binding between an ECDSA JWS
 // algorithm and the curve its key must sit on (ES256/P-256, ES384/P-384,
-// ES512/P-521). It is sign-side only, and jws reaches it only when the caller
-// passes jws.WithStrictECDSA(true).
+// ES512/P-521). jws reaches it on signing and verification only when the
+// caller passes jws.WithStrictECDSA(true).
 //
 // The check is opt-in because the old permissive behavior is an interop
 // defect, not a security hole: the signer controls both the key and the
@@ -20,10 +20,9 @@ import (
 // under its own key. Turning the check on by default would break working
 // callers to fix a conformance problem they may not have.
 //
-// jws.Verify never reaches this file at all. It infers algorithms from a key
-// when a JWKS entry carries no "alg" (see jws/internal/keyalg.Candidates and
-// the deprecated jws.AlgorithmsForKey, whose godoc freezes that inference),
-// and it must stay exactly as permissive as it is today.
+// Algorithm inference for JWKS entries without "alg" remains unchanged.
+// Strict verification checks the selected (algorithm, key) pair afterwards;
+// without the option, verification stays permissive.
 
 // RequireECDSACurve reports whether key sits on the curve RFC 7518 Section
 // 3.4 binds joseAlg to. It returns nil -- never an error -- when the binding

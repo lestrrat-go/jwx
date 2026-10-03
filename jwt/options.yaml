@@ -234,6 +234,15 @@ options:
       WithSignOption provides an escape hatch for cases where extra options to
       `jws.Sign()` must be specified when using `jwt.Sign()`. Normally you do not
       need to use this.
+  - ident: VerifyOption
+    interface: ParseOption
+    argument_type: jws.VerifyOption
+    comment: |
+      WithVerifyOption provides an escape hatch for passing extra options to
+      `jws.Verify()` when using `jwt.Parse()` and its siblings.
+
+      For example, use `jwt.WithVerifyOption(jws.WithStrictECDSA(true))` to
+      enforce RFC 7518 ECDSA curve bindings during JWT verification.
   - ident: Validator
     interface: ValidateOption
     argument_type: Validator
