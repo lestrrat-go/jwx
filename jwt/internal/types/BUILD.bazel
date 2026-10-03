@@ -18,6 +18,7 @@ go_test(
     name = "types_test",
     srcs = [
         "date_test.go",
+        "date_range_test.go",
         "string_test.go",
     ],
     deps = [

@@ -32,6 +32,17 @@ func (n *NumericDate) Get() time.Time {
 	return n.Time
 }
 
+// validateNumericDateTime rejects values that overflow time.Time's internal
+// epoch offset. Unix() alone does not detect this: time.Unix(math.MaxInt64, 0)
+// round-trips the seconds, but compares as before the Unix epoch.
+func validateNumericDateTime(t time.Time) error {
+	seconds := t.Unix()
+	if (seconds < 0) != t.Before(time.Unix(0, 0)) {
+		return fmt.Errorf(`NumericDate %d is out of range for time.Time`, seconds)
+	}
+	return nil
+}
+
 func intToTime(v any, t *time.Time) bool {
 	var n int64
 	switch x := v.(type) {
@@ -137,6 +148,9 @@ func (n *NumericDate) Accept(v any) error {
 			return fmt.Errorf(`invalid type %T`, v)
 		}
 	}
+	if err := validateNumericDateTime(t); err != nil {
+		return err
+	}
 	n.Time = t.UTC()
 	return nil
 }
@@ -189,7 +203,11 @@ func (n *NumericDate) UnmarshalJSON(data []byte) error {
 		if isInt {
 			v, err := strconv.ParseInt(string(data), 10, 64)
 			if err == nil {
-				n.Time = time.Unix(v, 0).UTC()
+				t := time.Unix(v, 0).UTC()
+				if err := validateNumericDateTime(t); err != nil {
+					return err
+				}
+				n.Time = t
 				return nil
 			}
 		}
