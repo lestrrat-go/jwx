@@ -397,8 +397,14 @@ func WithNumericDateFormatPrecision(v int) GlobalOption {
 // it tries to parse using a RFC3339 parser. This allows us to parse
 // payloads from non-conforming servers.
 //
-// However, when you set WithNumericDateParePedantic to `true`, the
-// RFC3339 parser is not tried, and we expect a numeric value strictly
+// When set to true, JSON timestamps must be numbers as required by
+// RFC 7519. Numeric strings and RFC3339 strings are rejected. Integer,
+// fractional, and exponent-form JSON numbers are accepted.
+//
+// This does not change the Go types accepted by Token.Set: numeric
+// strings remain supported there, but the RFC3339 fallback is disabled.
+//
+// By default, this is false.
 func WithNumericDateParsePedantic(v bool) GlobalOption {
 	return &globalOption{option.New(identNumericDateParsePedantic{}, v)}
 }
