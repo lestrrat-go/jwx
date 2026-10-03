@@ -23,7 +23,10 @@ go_library(
 
 go_test(
     name = "openid_test",
-    srcs = ["openid_test.go"],
+    srcs = [
+        "numeric_date_pedantic_test.go",
+        "openid_test.go",
+    ],
     deps = [
         ":openid",
         "//internal/json",

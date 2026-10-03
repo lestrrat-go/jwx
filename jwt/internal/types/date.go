@@ -200,6 +200,11 @@ func (n *NumericDate) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &v); err != nil {
 		return fmt.Errorf(`failed to unmarshal date: %w`, err)
 	}
+	if Pedantic.Load() == 1 {
+		if _, ok := v.(float64); !ok {
+			return fmt.Errorf(`invalid JSON type for NumericDate: expected a number, got %T`, v)
+		}
+	}
 
 	var n2 NumericDate
 	if err := n2.Accept(v); err != nil {

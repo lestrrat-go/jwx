@@ -48,6 +48,7 @@ go_test(
         "fuzz_test.go",
         "jwt_crit_test.go",
         "jwt_test.go",
+        "numeric_date_pedantic_test.go",
         "options_gen_test.go",
         "settings_test.go",
         "structured_errors_test.go",
