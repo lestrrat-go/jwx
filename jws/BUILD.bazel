@@ -63,6 +63,7 @@ go_test(
         "signature_builder_test.go",
         "signer_test.go",
         "streaming_detached_test.go",
+        "strict_ecdsa_verify_test.go",
         "unsupported_test.go",
         "verify_alg_match_test.go",
     ],

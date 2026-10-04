@@ -8,12 +8,15 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/lestrrat-go/dsig"
 	"github.com/lestrrat-go/option/v3"
 
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/jwx/v4/internal/pool"
 	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwk"
+	jwsbbi "github.com/lestrrat-go/jwx/v4/jws/internal/jwsbb"
 	"github.com/lestrrat-go/jwx/v4/jws/jwsbb"
 )
 
@@ -26,6 +29,7 @@ type verifyContext struct {
 	keyProviders       []KeyProvider
 	keyUsed            *any
 	validateKey        bool
+	strictECDSA        bool
 	critValidation     bool
 	skipAlgorithmMatch bool
 	criticalExtensions []string
@@ -52,6 +56,7 @@ func freeVerifyContext(vc *verifyContext) *verifyContext {
 	vc.keyProviders = vc.keyProviders[:0]
 	vc.keyUsed = nil
 	vc.validateKey = false
+	vc.strictECDSA = false
 	vc.critValidation = true
 	vc.skipAlgorithmMatch = false
 	vc.criticalExtensions = vc.criticalExtensions[:0]
@@ -118,6 +123,8 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 			ctxOpt = option.MustGet[context.Context](opt) //nolint:fatcontext // not nesting; selecting from options
 		case identValidateKey{}:
 			vc.validateKey = option.MustGet[bool](opt)
+		case identStrictECDSA{}:
+			vc.strictECDSA = option.MustGet[bool](opt)
 		case identCritValidation{}:
 			vc.critValidation = option.MustGet[bool](opt)
 		case identSkipAlgorithmMatch{}:
@@ -324,6 +331,11 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 			return fmt.Errorf(`failed to validate key before verification: %w`, err)
 		}
 	}
+	if vc.strictECDSA {
+		if err := validateECDSAVerificationCurve(alg, key); err != nil {
+			return verificationError{err}
+		}
+	}
 
 	verifier, err := VerifierFor(alg)
 	if err != nil {
@@ -344,6 +356,27 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 	}
 
 	return nil
+}
+
+// validateECDSAVerificationCurve checks the selected key, rather than changing
+// algorithm inference. This also covers keys supplied by custom providers.
+func validateECDSAVerificationCurve(alg jwa.SignatureAlgorithm, key any) error {
+	dsigAlg, ok := jwsbb.GetDsigAlgorithm(alg.String())
+	if !ok {
+		return nil
+	}
+	info, ok := dsig.GetAlgorithmInfo(dsigAlg)
+	if !ok || info.Family != dsig.ECDSA {
+		return nil
+	}
+	if jwkKey, ok := key.(jwk.Key); ok {
+		raw, err := jwk.Export[any](jwkKey)
+		if err != nil {
+			return fmt.Errorf(`failed to export key for ECDSA curve validation: %w`, err)
+		}
+		key = raw
+	}
+	return jwsbbi.RequireECDSACurve(alg.String(), dsigAlg, key)
 }
 
 // validateB64InCritIfFalse enforces RFC 7797 §3: producers that set

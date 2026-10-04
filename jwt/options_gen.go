@@ -174,6 +174,7 @@ type identTruncation struct{}
 type identValidate struct{}
 type identValidator struct{}
 type identVerify struct{}
+type identVerifyOption struct{}
 
 func (identAcceptableSkew) String() string {
 	return "WithAcceptableSkew"
@@ -273,6 +274,10 @@ func (identValidator) String() string {
 
 func (identVerify) String() string {
 	return "WithVerify"
+}
+
+func (identVerifyOption) String() string {
+	return "WithVerifyOption"
 }
 
 // WithAcceptableSkew specifies the duration in which exp, iat and nbf
@@ -548,4 +553,13 @@ func WithValidator(v Validator) ValidateOption {
 // you must use `jwt.WithVerify(false)` or use `jwt.ParseInsecure()`
 func WithVerify(v bool) ParseOption {
 	return &parseOption{option.New(identVerify{}, v)}
+}
+
+// WithVerifyOption provides an escape hatch for passing extra options to
+// `jws.Verify()` when using `jwt.Parse()` and its siblings.
+//
+// For example, use `jwt.WithVerifyOption(jws.WithStrictECDSA(true))` to
+// enforce RFC 7518 ECDSA curve bindings during JWT verification.
+func WithVerifyOption(v jws.VerifyOption) ParseOption {
+	return &parseOption{option.New(identVerifyOption{}, v)}
 }

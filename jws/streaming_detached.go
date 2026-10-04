@@ -321,6 +321,11 @@ func (vc *verifyContext) verifyStreaming(buf []byte) ([]byte, error) {
 	if err != nil {
 		return nil, makeVerifyError(`failed to convert key: %w`, err)
 	}
+	if vc.strictECDSA && dsigInfo.Family == dsig.ECDSA {
+		if err := jwsbbi.RequireECDSACurve(alg.String(), dsigInfo.Name, rawKey); err != nil {
+			return nil, makeVerifyError(`%w`, verificationError{err})
+		}
+	}
 
 	hasher, err := newStreamingHasher(dsigInfo, rawKey)
 	if err != nil {
