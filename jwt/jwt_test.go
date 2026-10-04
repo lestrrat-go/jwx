@@ -157,6 +157,34 @@ func TestParseRejectsOverflowingNumericDates(t *testing.T) {
 	require.ErrorIs(t, err, jwt.TokenNotYetValidError{})
 }
 
+func TestParsePedanticNumericDateTypes(t *testing.T) {
+	oldPedantic := types.Pedantic.Load()
+	t.Cleanup(func() { types.Pedantic.Store(oldPedantic) })
+	key := []byte("pedantic-numeric-date-regression-test")
+	for _, claim := range []string{jwt.ExpirationKey, jwt.IssuedAtKey, jwt.NotBeforeKey} {
+		for _, value := range []string{`"1791072000"`, `"1791072000.5"`, `"2026-10-04T00:00:00Z"`} {
+			t.Run(claim+"/"+value, func(t *testing.T) {
+				signed, err := jws.Sign(fmt.Appendf(nil, `{"%s":%s}`, claim, value), jws.WithKey(jwa.HS256(), key))
+				require.NoError(t, err)
+				for _, pedantic := range []bool{false, true} {
+					require.NoError(t, jwt.Settings(jwt.WithNumericDateParsePedantic(pedantic)))
+					for _, options := range [][]jwt.ParseOption{
+						{jwt.WithKey(jwa.HS256(), key), jwt.WithValidate(false)},
+						{jwt.WithKey(jwa.HS256(), key), jwt.WithToken(jwt.New()), jwt.WithValidate(false)},
+					} {
+						_, err := jwt.Parse(signed, options...)
+						if pedantic {
+							require.Error(t, err)
+						} else {
+							require.NoError(t, err)
+						}
+					}
+				}
+			})
+		}
+	}
+}
+
 func TestStrictBase64Encoding(t *testing.T) {
 	t.Parallel()
 
