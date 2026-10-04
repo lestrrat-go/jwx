@@ -32,9 +32,12 @@ func (n *NumericDate) Get() time.Time {
 	return n.Time
 }
 
-// validateNumericDateTime rejects values that overflow time.Time's internal
-// epoch offset. Unix() alone does not detect this: time.Unix(math.MaxInt64, 0)
-// round-trips the seconds, but compares as before the Unix epoch.
+// validateNumericDateTime checks that Unix seconds and time.Time agree about
+// whether a date is before January 1, 1970 UTC. Negative seconds must be
+// before that instant; zero or positive seconds must be on or after it.
+// time.Unix(math.MaxInt64, 0) breaks this rule: adding Go's internal time
+// offset overflows, so Unix() stays positive while comparisons put the date
+// before 1970.
 func validateNumericDateTime(t time.Time) error {
 	seconds := t.Unix()
 	if (seconds < 0) != t.Before(time.Unix(0, 0)) {
