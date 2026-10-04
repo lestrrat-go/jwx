@@ -32,6 +32,20 @@ func (n *NumericDate) Get() time.Time {
 	return n.Time
 }
 
+// validateNumericDateTime checks that Unix seconds and time.Time agree about
+// whether a date is before January 1, 1970 UTC. Negative seconds must be
+// before that instant; zero or positive seconds must be on or after it.
+// time.Unix(math.MaxInt64, 0) breaks this rule: adding Go's internal time
+// offset overflows, so Unix() stays positive while comparisons put the date
+// before 1970.
+func validateNumericDateTime(t time.Time) error {
+	seconds := t.Unix()
+	if (seconds < 0) != t.Before(time.Unix(0, 0)) {
+		return fmt.Errorf(`NumericDate %d is out of range for time.Time`, seconds)
+	}
+	return nil
+}
+
 func intToTime(v any, t *time.Time) bool {
 	var n int64
 	switch x := v.(type) {
@@ -137,6 +151,9 @@ func (n *NumericDate) Accept(v any) error {
 			return fmt.Errorf(`invalid type %T`, v)
 		}
 	}
+	if err := validateNumericDateTime(t); err != nil {
+		return err
+	}
 	n.Time = t.UTC()
 	return nil
 }
@@ -189,7 +206,11 @@ func (n *NumericDate) UnmarshalJSON(data []byte) error {
 		if isInt {
 			v, err := strconv.ParseInt(string(data), 10, 64)
 			if err == nil {
-				n.Time = time.Unix(v, 0).UTC()
+				t := time.Unix(v, 0).UTC()
+				if err := validateNumericDateTime(t); err != nil {
+					return err
+				}
+				n.Time = t
 				return nil
 			}
 		}
