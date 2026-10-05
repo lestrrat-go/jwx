@@ -2212,6 +2212,66 @@ func TestDecryptSubstepTypedErrors(t *testing.T) {
 	})
 }
 
+func TestDecryptKeyProviderFallback(t *testing.T) {
+	key := bytes.Repeat([]byte{1}, 32)
+	payload := []byte("provider fallback")
+	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.DIRECT(), key), jwe.WithContentEncryption(jwa.A256GCM()))
+	require.NoError(t, err)
+	providerErr := errors.New("key lookup failed")
+	failing := jwe.KeyProviderFunc(func(context.Context, jwe.KeySink, jwe.Recipient, *jwe.Message) error {
+		return providerErr
+	})
+	for _, tc := range []struct {
+		name   string
+		option jwe.DecryptOption
+	}{
+		{"provider failure", jwe.WithKeyProvider(failing)},
+		{"empty key set", jwe.WithKeySet(jwk.NewSet())},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			decrypted, err := jwe.Decrypt(encrypted, tc.option, jwe.WithKey(jwa.DIRECT(), key))
+			require.NoError(t, err)
+			require.Equal(t, payload, decrypted)
+		})
+	}
+
+	_, err = jwe.Decrypt(encrypted, jwe.WithKeyProvider(failing), jwe.WithKey(jwa.DIRECT(), bytes.Repeat([]byte{2}, 32)))
+	require.ErrorIs(t, err, providerErr, "provider failures must remain discoverable when no key works")
+	require.ErrorIs(t, err, jwe.DecryptError())
+	require.ErrorContains(t, err, "tried 1 keys", "later providers must still be attempted")
+}
+
+func TestDecryptProviderFallbackHonorsCancellation(t *testing.T) {
+	key := bytes.Repeat([]byte{1}, 32)
+	encrypted, err := jwe.Encrypt([]byte("payload"), jwe.WithKey(jwa.DIRECT(), key))
+	require.NoError(t, err)
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	first := jwe.KeyProviderFunc(func(context.Context, jwe.KeySink, jwe.Recipient, *jwe.Message) error {
+		cancel()
+		return errors.New("provider canceled the request")
+	})
+	called := false
+	second := jwe.KeyProviderFunc(func(context.Context, jwe.KeySink, jwe.Recipient, *jwe.Message) error {
+		called = true
+		return nil
+	})
+	_, err = jwe.Decrypt(encrypted, jwe.WithContext(ctx), jwe.WithKeyProvider(first), jwe.WithKeyProvider(second))
+	require.ErrorIs(t, err, context.Canceled)
+	require.False(t, called, "cancellation must stop provider fallback")
+
+	t.Run("last provider", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		provider := jwe.KeyProviderFunc(func(context.Context, jwe.KeySink, jwe.Recipient, *jwe.Message) error {
+			cancel()
+			return errors.New("last provider canceled the request")
+		})
+		_, err := jwe.Decrypt(encrypted, jwe.WithContext(ctx), jwe.WithKeyProvider(provider))
+		require.ErrorIs(t, err, context.Canceled, "cancellation must be returned even without a later provider")
+	})
+}
+
 // TestDecryptHonorsContextCancellation locks the contract that
 // jwe.Decrypt observes ctx cancellation between iterations of its
 // outer loops. The slow-path verifier was patched the same way for
