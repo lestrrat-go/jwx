@@ -518,6 +518,7 @@ type keySet = jwk.Set
 // slice on every iteration, so jwx's own loops index with Len/Key instead.
 type allForbiddenSet struct {
 	keySet
+
 	t *testing.T
 }
 
