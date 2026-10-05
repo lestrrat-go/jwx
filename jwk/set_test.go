@@ -2,8 +2,11 @@ package jwk_test
 
 import (
 	"encoding/json"
+	"fmt"
+	"maps"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
 	"github.com/lestrrat-go/jwx/v4/jwa"
@@ -52,6 +55,117 @@ func TestSet(t *testing.T) {
 	set.Clear()
 
 	require.Equal(t, set.Len(), 0, `set.Len should be 0`)
+}
+
+// A blocked iterator must fail the test without hanging the whole test suite.
+func runSetIteration(t *testing.T, iterate func() error) {
+	t.Helper()
+	done := make(chan error, 1)
+	go func() { done <- iterate() }()
+	select {
+	case err := <-done:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("set mutation inside the iterator deadlocked")
+	}
+}
+
+func TestSetAllAllowsMutation(t *testing.T) {
+	set := jwk.NewSet()
+	keys := make([]jwk.Key, 0, 3)
+	for _, value := range []string{"first", "second", "third"} {
+		key, err := jwk.Import[jwk.Key]([]byte(value))
+		require.NoError(t, err)
+		require.NoError(t, set.AddKey(key))
+		keys = append(keys, key)
+	}
+	var got []jwk.Key
+	var indices []int
+	runSetIteration(t, func() error {
+		for i, key := range set.All() {
+			indices = append(indices, i)
+			got = append(got, key)
+			if err := set.RemoveKey(key); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	require.Equal(t, []int{0, 1, 2}, indices)
+	require.Equal(t, keys, got, "iteration must retain the original keys and indices")
+	require.Zero(t, set.Len())
+}
+
+func TestSetFieldsAllowsMutation(t *testing.T) {
+	set := jwk.NewSet()
+	want := map[string]any{"first": 1, "second": 2, "third": 3}
+	for name, value := range want {
+		require.NoError(t, set.Set(name, value))
+	}
+	got := make(map[string]any)
+	runSetIteration(t, func() error {
+		for name, value := range set.Fields() {
+			got[name] = value
+			if err := set.Remove(name); err != nil {
+				return err
+			}
+			if err := set.Set("added", 4); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	require.Equal(t, want, got, "new fields must not enter an active iteration")
+	require.Equal(t, map[string]any{"added": 4}, maps.Collect(set.Fields()))
+}
+
+func TestSetIteratorsSnapshotAtEachIteration(t *testing.T) {
+	set := jwk.NewSet()
+	all, fields := set.All(), set.Fields()
+	key, err := jwk.Import[jwk.Key]([]byte("key"))
+	require.NoError(t, err)
+	require.NoError(t, set.AddKey(key))
+	require.NoError(t, set.Set("field", "value"))
+	runSetIteration(t, func() error {
+		var seenKey bool
+		for i, got := range all {
+			if i != 0 || got != key {
+				return fmt.Errorf("unexpected key at index %d", i)
+			}
+			seenKey = true
+			if err := set.Clear(); err != nil {
+				return err
+			}
+			break
+		}
+		if !seenKey {
+			return fmt.Errorf("iterator missed the key added before iteration")
+		}
+		for range all {
+			return fmt.Errorf("reused iterator retained a removed key")
+		}
+		if err := set.Set("new", "value"); err != nil {
+			return err
+		}
+		var seenField bool
+		for name := range fields {
+			if name != "new" {
+				return fmt.Errorf("unexpected field %q", name)
+			}
+			if err := set.Remove(name); err != nil {
+				return err
+			}
+			seenField = true
+			break
+		}
+		if !seenField {
+			return fmt.Errorf("iterator missed the field added before iteration")
+		}
+		for range fields {
+			return fmt.Errorf("reused iterator retained a removed field")
+		}
+		return nil
+	})
 }
 
 // fakeStructKey embeds jwk.Key to satisfy the interface without implementing
