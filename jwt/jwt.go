@@ -643,6 +643,11 @@ func Equal(t1, t2 Token) bool {
 		return false
 	}
 
+	// v4 serializes with encoding/json/v2, which writes map keys in random
+	// order (v3's encoding/json sorted them). Comparing the raw bytes would
+	// make two tokens holding the same map claim unequal at random, so sort
+	// object members at every level before comparing.
+	//
 	// Reorder objects recursively without canonicalizing numbers: RFC 8785
 	// numeric canonicalization would lose precision for integers above 2^53.
 	v1, v2 := jsontext.Value(j1), jsontext.Value(j2)
