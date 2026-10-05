@@ -23,6 +23,12 @@ UNRELEASED
     loop now runs over a copy of the keys or fields taken when it starts,
     so changes made inside the loop do not affect the running loop. (#2373)
 
+  * [jwt] `jwt.Parse` called with exactly two `jwt.WithKey` options and no
+    other options checked the signature against the second key only, so a
+    token signed with the first key was rejected. Both keys are now tried.
+    Calls with three or more options were not affected, because they
+    already skipped the fast path that caused this. (#2374)
+
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes
