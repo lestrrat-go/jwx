@@ -4,6 +4,15 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+UNRELEASED
+  * [jwe] `jwe.Decrypt` stopped at the first key provider that returned an
+    error and never tried the providers after it. For example, passing
+    `jwe.WithKeySet` with a set that had no usable key, followed by a
+    working `jwe.WithKey`, failed to decrypt. `jwe.Decrypt` now moves on to
+    the next provider, as `jws.Verify` already did. If no key works, the
+    returned error wraps the last failure, so `errors.Is` can find it.
+    (#2384)
+
 v3.3.0 8 Sep 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes
