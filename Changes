@@ -43,6 +43,13 @@ UNRELEASED
     no key works, the provider errors are included in the returned error.
     (#2376)
 
+  * [jwe] JSON serialization of a JWE now always includes the `ciphertext`
+    member, and `jwe.Parse` now accepts an empty `ciphertext`. A JWE that
+    encrypts an empty plaintext with AES-GCM therefore round-trips through
+    `jwe.Encrypt(..., jwe.WithJSON())`, `jwe.Parse`, and `json.Marshal`. A
+    missing, `null`, or non-string `ciphertext` is still rejected, and the
+    `iv` and `tag` members must still be non-empty. (#2377)
+
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes
