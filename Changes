@@ -40,6 +40,13 @@ UNRELEASED
     exact digits, so integers above 2^53 that differ still compare
     unequal. (#2375)
 
+  * [jwe] `jwe.Decrypt` stopped at the first key provider that returned an
+    error and never tried the providers after it. For example, passing
+    `jwe.WithKeySet` with a set that had no usable key, followed by a
+    working `jwe.WithKey`, failed to decrypt. `jwe.Decrypt` now moves on to
+    the next provider, as `jws.Verify` already did. If no key works, the
+    provider errors are included in the returned error. (#2376)
+
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes

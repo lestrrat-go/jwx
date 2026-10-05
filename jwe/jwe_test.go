@@ -2213,6 +2213,7 @@ func TestDecryptSubstepTypedErrors(t *testing.T) {
 }
 
 func TestDecryptKeyProviderFallback(t *testing.T) {
+	t.Parallel()
 	key := bytes.Repeat([]byte{1}, 32)
 	payload := []byte("provider fallback")
 	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.DIRECT(), key), jwe.WithContentEncryption(jwa.A256GCM()))
@@ -2221,46 +2222,63 @@ func TestDecryptKeyProviderFallback(t *testing.T) {
 	failing := jwe.KeyProviderFunc(func(context.Context, jwe.KeySink, jwe.Recipient, *jwe.Message) error {
 		return providerErr
 	})
+
 	for _, tc := range []struct {
 		name   string
 		option jwe.DecryptOption
 	}{
-		{"provider failure", jwe.WithKeyProvider(failing)},
-		{"empty key set", jwe.WithKeySet(jwk.NewSet())},
+		{"failing provider before a valid key", jwe.WithKeyProvider(failing)},
+		{"empty key set before a valid key", jwe.WithKeySet(jwk.NewSet())},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			decrypted, err := jwe.Decrypt(encrypted, tc.option, jwe.WithKey(jwa.DIRECT(), key))
 			require.NoError(t, err)
 			require.Equal(t, payload, decrypted)
 		})
 	}
 
-	_, err = jwe.Decrypt(encrypted, jwe.WithKeyProvider(failing), jwe.WithKey(jwa.DIRECT(), bytes.Repeat([]byte{2}, 32)))
-	require.ErrorIs(t, err, providerErr, "provider failures must remain discoverable when no key works")
-	require.ErrorIs(t, err, jwe.DecryptError())
-	require.ErrorContains(t, err, "tried 1 keys", "later providers must still be attempted")
+	t.Run("provider error is kept when no key works", func(t *testing.T) {
+		t.Parallel()
+		var secondCalled bool
+		wrongKey := jwe.KeyProviderFunc(func(_ context.Context, sink jwe.KeySink, _ jwe.Recipient, _ *jwe.Message) error {
+			secondCalled = true
+			sink.Key(jwa.DIRECT(), bytes.Repeat([]byte{2}, 32))
+			return nil
+		})
+		_, err := jwe.Decrypt(encrypted, jwe.WithKeyProvider(failing), jwe.WithKeyProvider(wrongKey))
+		require.ErrorIs(t, err, providerErr)
+		require.ErrorIs(t, err, jwe.DecryptError())
+		require.True(t, secondCalled, "the provider after the failing one must still run")
+	})
 }
 
 func TestDecryptProviderFallbackHonorsCancellation(t *testing.T) {
+	t.Parallel()
 	key := bytes.Repeat([]byte{1}, 32)
 	encrypted, err := jwe.Encrypt([]byte("payload"), jwe.WithKey(jwa.DIRECT(), key))
 	require.NoError(t, err)
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	first := jwe.KeyProviderFunc(func(context.Context, jwe.KeySink, jwe.Recipient, *jwe.Message) error {
-		cancel()
-		return errors.New("provider canceled the request")
-	})
-	called := false
-	second := jwe.KeyProviderFunc(func(context.Context, jwe.KeySink, jwe.Recipient, *jwe.Message) error {
-		called = true
-		return nil
-	})
-	_, err = jwe.Decrypt(encrypted, jwe.WithContext(ctx), jwe.WithKeyProvider(first), jwe.WithKeyProvider(second))
-	require.ErrorIs(t, err, context.Canceled)
-	require.False(t, called, "cancellation must stop provider fallback")
 
-	t.Run("last provider", func(t *testing.T) {
+	t.Run("cancellation stops later providers", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		first := jwe.KeyProviderFunc(func(context.Context, jwe.KeySink, jwe.Recipient, *jwe.Message) error {
+			cancel()
+			return errors.New("provider canceled the request")
+		})
+		var secondCalled bool
+		second := jwe.KeyProviderFunc(func(context.Context, jwe.KeySink, jwe.Recipient, *jwe.Message) error {
+			secondCalled = true
+			return nil
+		})
+		_, err := jwe.Decrypt(encrypted, jwe.WithContext(ctx), jwe.WithKeyProvider(first), jwe.WithKeyProvider(second))
+		require.ErrorIs(t, err, context.Canceled)
+		require.False(t, secondCalled)
+	})
+
+	t.Run("cancellation by the last provider is reported", func(t *testing.T) {
+		t.Parallel()
 		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()
 		provider := jwe.KeyProviderFunc(func(context.Context, jwe.KeySink, jwe.Recipient, *jwe.Message) error {
@@ -2268,7 +2286,7 @@ func TestDecryptProviderFallbackHonorsCancellation(t *testing.T) {
 			return errors.New("last provider canceled the request")
 		})
 		_, err := jwe.Decrypt(encrypted, jwe.WithContext(ctx), jwe.WithKeyProvider(provider))
-		require.ErrorIs(t, err, context.Canceled, "cancellation must be returned even without a later provider")
+		require.ErrorIs(t, err, context.Canceled)
 	})
 }
 
