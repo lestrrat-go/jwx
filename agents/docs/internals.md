@@ -111,6 +111,12 @@ demote these to `log.Printf` + continue. Package godoc on companion
 modules should mention that importing the package can panic if jwx
 rejects the registration.
 
+## JWE JSON Ciphertext
+
+`jwe.Message` always serializes the required `ciphertext` member. Empty string
+is valid for empty AES-GCM plaintext; missing, null, or non-string ciphertext
+is rejected. IV and authentication tag must remain non-empty.
+
 ## JSON Backend
 
 Uses `encoding/json/v2` exclusively (no build-tag switching between backends).
