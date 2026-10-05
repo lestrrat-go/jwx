@@ -20,8 +20,8 @@ type fastParseCtx struct {
 
 // tryFastPath checks whether the fast path can be used.
 // The fast path requires:
-//  1. One or two options: a WithKey(SignatureAlgorithm, key) with no suboptions,
-//     optionally followed by WithValidate(false)
+//  1. Exactly one WithKey(SignatureAlgorithm, key) with no suboptions,
+//     optionally accompanied by WithValidate
 //  2. The data is not JSON (first byte != '{')
 //  3. The data has exactly two '.' separators (compact JWS format)
 func tryFastPath(ctx *fastParseCtx, data []byte, options []ParseOption) bool {
@@ -29,12 +29,15 @@ func tryFastPath(ctx *fastParseCtx, data []byte, options []ParseOption) bool {
 		return false
 	}
 
-	// First option must be WithKey
+	// Multiple keys need the full verification path, which tries each key.
 	keyIdx := -1
 	var skipValidate bool
 	for i, opt := range options {
 		switch opt.Ident() {
 		case identKey{}:
+			if keyIdx >= 0 {
+				return false
+			}
 			keyIdx = i
 		case identValidate{}:
 			if !option.MustGet[bool](opt) {
