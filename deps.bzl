@@ -26,8 +26,8 @@ def go_dependencies():
         name = "com_github_goccy_go_json",
         build_file_proto_mode = "disable_global",
         importpath = "github.com/goccy/go-json",
-        sum = "h1:A9zM5lyz9i472qiD1rP6n6jEqcBs8ms4fpLx3R/k3MY=",
-        version = "v0.11.0",
+        sum = "h1:jdZv93Tt4ioR8yW1CoNsvSxrcZlCXAUU1aZXN7gpXUA=",
+        version = "v0.11.2",
     )
     go_repository(
         name = "com_github_lestrrat_go_blackmagic",
