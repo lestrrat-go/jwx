@@ -6,6 +6,7 @@ package jwt
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"io"
@@ -616,9 +617,10 @@ func Sign(t Token, options ...SignOption) ([]byte, error) {
 // to compare tokens as they will also compare extra detail such as
 // sync.Mutex objects used to control concurrent access.
 //
-// The comparison for values is currently done using a simple equality ("=="),
-// except for time.Time, which uses time.Equal after dropping the monotonic
-// clock and truncating the values to 1 second accuracy.
+// Tokens are compared by their JSON representations, ignoring object member
+// order, including in nested claims. Array order and numeric precision are
+// preserved. Registered time claims use the configured JSON format precision
+// (seconds by default), without monotonic clock information.
 //
 // if both t1 and t2 are nil, returns true
 func Equal(t1, t2 Token) bool {
@@ -641,7 +643,21 @@ func Equal(t1, t2 Token) bool {
 		return false
 	}
 
-	return bytes.Equal(j1, j2)
+	// v4 serializes with encoding/json/v2, which writes map keys in random
+	// order (v3's encoding/json sorted them). Comparing the raw bytes would
+	// make two tokens holding the same map claim unequal at random, so sort
+	// object members at every level before comparing.
+	//
+	// Reorder objects recursively without canonicalizing numbers: RFC 8785
+	// numeric canonicalization would lose precision for integers above 2^53.
+	v1, v2 := jsontext.Value(j1), jsontext.Value(j2)
+	if err := v1.Format(jsontext.ReorderRawObjects(true)); err != nil {
+		return false
+	}
+	if err := v2.Format(jsontext.ReorderRawObjects(true)); err != nil {
+		return false
+	}
+	return bytes.Equal(v1, v2)
 }
 
 func (t *stdToken) Clone() (Token, error) {
