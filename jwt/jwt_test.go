@@ -1825,19 +1825,29 @@ func TestVerifyAuto(t *testing.T) {
 }
 
 func TestEqualNestedObjects(t *testing.T) {
-	left, right := jwt.New(), jwt.New()
-	require.NoError(t, left.Set("custom", jsontext.Value(`{"a":1,"nested":[{"b":2,"a":1}],"z":3}`)))
-	require.NoError(t, right.Set("custom", jsontext.Value(`{"z":3,"nested":[{"a":1,"b":2}],"a":1}`)))
-	require.True(t, jwt.Equal(left, right), "object member order must not affect equality")
-	require.True(t, jwt.Equal(right, left))
+	t.Parallel()
+	t.Run("raw object claims in different member order", func(t *testing.T) {
+		t.Parallel()
+		left, right := jwt.New(), jwt.New()
+		require.NoError(t, left.Set("custom", jsontext.Value(`{"a":1,"nested":[{"b":2,"a":1}],"z":3}`)))
+		require.NoError(t, right.Set("custom", jsontext.Value(`{"z":3,"nested":[{"a":1,"b":2}],"a":1}`)))
+		require.True(t, jwt.Equal(left, right))
+		require.True(t, jwt.Equal(right, left))
+	})
 
-	claim := map[string]any{"a": 1, "b": 2, "c": 3, "d": 4, "e": 5, "nested": map[string]int{"a": 1, "b": 2}}
-	require.NoError(t, left.Set("custom", claim))
-	require.NoError(t, right.Set("custom", claim))
-	for range 100 {
-		require.True(t, jwt.Equal(left, left), "a token must equal itself")
-		require.True(t, jwt.Equal(left, right), "independent serialization must not affect equality")
-	}
+	// json/v2 writes map keys in random order, so a single comparison can
+	// pass by luck. Repeating it makes a regression all but certain to fail.
+	t.Run("same map claim on two tokens", func(t *testing.T) {
+		t.Parallel()
+		claim := map[string]any{"a": 1, "b": 2, "c": 3, "d": 4, "e": 5, "nested": map[string]int{"a": 1, "b": 2}}
+		left, right := jwt.New(), jwt.New()
+		require.NoError(t, left.Set("custom", claim))
+		require.NoError(t, right.Set("custom", claim))
+		for range 100 {
+			require.True(t, jwt.Equal(left, left), "a token must equal itself")
+			require.True(t, jwt.Equal(left, right))
+		}
+	})
 }
 
 func TestEqualPreservesValueDifferences(t *testing.T) {
@@ -1860,17 +1870,30 @@ func TestEqualPreservesValueDifferences(t *testing.T) {
 }
 
 func TestEqualNilTimesAndMarshalErrors(t *testing.T) {
-	require.True(t, jwt.Equal(nil, nil))
-	left, right := jwt.New(), jwt.New()
-	require.False(t, jwt.Equal(left, nil))
-	require.False(t, jwt.Equal(nil, right))
-	now := time.Now()
-	require.NoError(t, left.Set(jwt.IssuedAtKey, now))
-	require.NoError(t, right.Set(jwt.IssuedAtKey, now.UTC().Truncate(time.Second)))
-	require.True(t, jwt.Equal(left, right))
-	require.NoError(t, left.Set("custom", make(chan int)))
-	require.False(t, jwt.Equal(left, right), "unserializable tokens must compare unequal")
-	require.False(t, jwt.Equal(right, left))
+	t.Parallel()
+	t.Run("nil tokens", func(t *testing.T) {
+		t.Parallel()
+		require.True(t, jwt.Equal(nil, nil))
+		require.False(t, jwt.Equal(jwt.New(), nil))
+		require.False(t, jwt.Equal(nil, jwt.New()))
+	})
+
+	t.Run("times compare at serialized precision", func(t *testing.T) {
+		t.Parallel()
+		now := time.Now()
+		left, right := jwt.New(), jwt.New()
+		require.NoError(t, left.Set(jwt.IssuedAtKey, now))
+		require.NoError(t, right.Set(jwt.IssuedAtKey, now.UTC().Truncate(time.Second)))
+		require.True(t, jwt.Equal(left, right))
+	})
+
+	t.Run("unserializable token compares unequal", func(t *testing.T) {
+		t.Parallel()
+		left, right := jwt.New(), jwt.New()
+		require.NoError(t, left.Set("custom", make(chan int)))
+		require.False(t, jwt.Equal(left, right))
+		require.False(t, jwt.Equal(right, left))
+	})
 }
 
 func TestSerializer(t *testing.T) {
