@@ -3,7 +3,6 @@ package jwe_test
 import (
 	"bytes"
 	"context"
-	"errors"
 	"crypto"
 	"crypto/ecdh"
 	"crypto/ecdsa"
@@ -11,6 +10,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"math"
 	"os"
