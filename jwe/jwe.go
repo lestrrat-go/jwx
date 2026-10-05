@@ -625,8 +625,14 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 		}
 
 		var sink algKeySink
-		if err := kp.FetchKeys(dc.ctx, &sink, recipient, msg); err != nil {
-			return nil, fmt.Errorf(`key provider %d failed: %w`, i, err)
+		fetchErr := kp.FetchKeys(dc.ctx, &sink, recipient, msg)
+		if err := dc.ctx.Err(); err != nil {
+			return nil, err
+		}
+		if fetchErr != nil {
+			// A later provider may still have the right key, as in jws.Verify.
+			lastError = fmt.Errorf(`key provider %d failed: %w`, i, fetchErr)
+			continue
 		}
 
 		for _, pair := range sink.list {
@@ -657,7 +663,7 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 			return decrypted, nil
 		}
 	}
-	return nil, fmt.Errorf(`jwe.Decrypt: tried %d keys, but failed to match any of the keys with recipient (last error = %s)`, tried, lastError)
+	return nil, fmt.Errorf(`jwe.Decrypt: tried %d keys, but failed to match any of the keys with recipient (last error = %w)`, tried, lastError)
 }
 
 func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {

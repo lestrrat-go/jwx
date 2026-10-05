@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -1769,6 +1770,88 @@ func TestDecryptRejectsAlgConflictBetweenProtectedAndPerRecipient(t *testing.T) 
 	require.Error(t, err, `Decrypt must reject a JWE whose alg differs between protected and per-recipient headers`)
 	require.ErrorIs(t, err, jwe.DecryptError())
 	require.Contains(t, err.Error(), "differs between protected", `error should name the conflict`)
+}
+
+func TestDecryptKeyProviderFallback(t *testing.T) {
+	t.Parallel()
+	key := bytes.Repeat([]byte{1}, 32)
+	payload := []byte("provider fallback")
+	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.DIRECT(), key), jwe.WithContentEncryption(jwa.A256GCM()))
+	require.NoError(t, err)
+	failing := jwe.KeyProviderFunc(func(context.Context, jwe.KeySink, jwe.Recipient, *jwe.Message) error {
+		return errors.New("key lookup failed")
+	})
+
+	for _, tc := range []struct {
+		name   string
+		option jwe.DecryptOption
+	}{
+		{"failing provider before a valid key", jwe.WithKeyProvider(failing)},
+		{"empty key set before a valid key", jwe.WithKeySet(jwk.NewSet())},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			decrypted, err := jwe.Decrypt(encrypted, tc.option, jwe.WithKey(jwa.DIRECT(), key))
+			require.NoError(t, err)
+			require.Equal(t, payload, decrypted)
+		})
+	}
+
+	t.Run("later providers run after a failing one", func(t *testing.T) {
+		t.Parallel()
+		var secondCalled bool
+		wrongKey := jwe.KeyProviderFunc(func(_ context.Context, sink jwe.KeySink, _ jwe.Recipient, _ *jwe.Message) error {
+			secondCalled = true
+			sink.Key(jwa.DIRECT(), bytes.Repeat([]byte{2}, 32))
+			return nil
+		})
+		_, err := jwe.Decrypt(encrypted, jwe.WithKeyProvider(failing), jwe.WithKeyProvider(wrongKey))
+		require.Error(t, err)
+		require.True(t, secondCalled, "the provider after the failing one must still run")
+	})
+
+	t.Run("provider error is reported when it is the last failure", func(t *testing.T) {
+		t.Parallel()
+		_, err := jwe.Decrypt(encrypted, jwe.WithKeyProvider(failing))
+		require.ErrorContains(t, err, "key lookup failed")
+	})
+}
+
+func TestDecryptProviderFallbackHonorsCancellation(t *testing.T) {
+	t.Parallel()
+	key := bytes.Repeat([]byte{1}, 32)
+	encrypted, err := jwe.Encrypt([]byte("payload"), jwe.WithKey(jwa.DIRECT(), key))
+	require.NoError(t, err)
+
+	t.Run("cancellation stops later providers", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		first := jwe.KeyProviderFunc(func(context.Context, jwe.KeySink, jwe.Recipient, *jwe.Message) error {
+			cancel()
+			return errors.New("provider canceled the request")
+		})
+		var secondCalled bool
+		second := jwe.KeyProviderFunc(func(context.Context, jwe.KeySink, jwe.Recipient, *jwe.Message) error {
+			secondCalled = true
+			return nil
+		})
+		_, err := jwe.Decrypt(encrypted, jwe.WithContext(ctx), jwe.WithKeyProvider(first), jwe.WithKeyProvider(second))
+		require.ErrorIs(t, err, context.Canceled)
+		require.False(t, secondCalled)
+	})
+
+	t.Run("cancellation by the last provider is reported", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+		provider := jwe.KeyProviderFunc(func(context.Context, jwe.KeySink, jwe.Recipient, *jwe.Message) error {
+			cancel()
+			return errors.New("last provider canceled the request")
+		})
+		_, err := jwe.Decrypt(encrypted, jwe.WithContext(ctx), jwe.WithKeyProvider(provider))
+		require.ErrorIs(t, err, context.Canceled)
+	})
 }
 
 // TestDecryptHonorsContextCancellation locks the contract that
