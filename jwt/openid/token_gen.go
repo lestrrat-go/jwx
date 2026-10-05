@@ -150,7 +150,14 @@ type Token interface {
 	Options() *jwt.TokenOptionSet
 	Clone() (jwt.Token, error)
 	Keys() []string
-	// Claims returns an iterator over all claims (standard and private) in the token.
+
+	// Claims returns an iterator over all claims (standard and private) in the
+	// token, yielding (name, value) pairs.
+	//
+	// Each iteration starts by copying the token's claims, and loops over that
+	// snapshot. The token may therefore be modified inside the loop, and changes
+	// made there are not seen by the running iteration. Claim values themselves
+	// are shared, not cloned.
 	Claims() iter.Seq2[string, any]
 }
 type stdToken struct {
