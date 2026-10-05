@@ -18,6 +18,13 @@ UNRELEASED
     character or invalid UTF-8 in a string, matching `jws.Verify`, which
     always did. (#2372)
 
+  * [jwk] Adding, removing, or setting keys and fields on a `jwk.Set` inside
+    a `range set.All()` or `range set.Fields()` loop no longer hangs. Each
+    loop now runs over a copy of the keys or fields taken when it starts,
+    so changes made inside the loop do not affect the running loop.
+    `jwk.ExportAll` no longer goes through `Set.All()`, and does not make
+    that copy. (#2373)
+
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes
