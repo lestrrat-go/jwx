@@ -100,7 +100,7 @@ JSON Web Tokens per RFC 7519. Parse, sign, validate.
 - **ParseInsecure(s []byte, ...ParseOption) (Token, error)** — parse without verification/validation
 - **Sign(t Token, ...SignOption) ([]byte, error)** — sign token to compact serialization
 - **Validate(t Token, ...ValidateOption) error** — validate claims (exp, nbf, iat, iss, aud, etc.)
-- **Equal(t1, t2 Token) bool** — deep-compare two tokens
+- **Equal(t1, t2 Token) bool** — compare JSON representations recursively with object member order ignored; preserve array order and numeric precision. Registered times use the configured JSON format precision. Marshal/format errors compare unequal
 - **New() Token** / **NewBuilder() *Builder** — create empty token or use fluent builder
 - HTTP helpers: `ParseCookie()`, `ParseHeader()`, `ParseForm()`, `ParseRequest()`
 - Validator factories: `IsExpirationValid()`, `IsIssuedAtValid()`, `IsNbfValid()`, `IsRequired()`, `ClaimValueIs()`, `ClaimContainsString()`

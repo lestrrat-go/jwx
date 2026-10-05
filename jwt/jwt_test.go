@@ -10,6 +10,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json/jsontext"
 	"errors"
 	"fmt"
 	"io"
@@ -1821,6 +1822,55 @@ func TestVerifyAuto(t *testing.T) {
 	require.Error(t, err, `jwt.Parse should fail when URL is not whitelisted`)
 
 	// Cache test case moved to ext/jwkfetch
+}
+
+func TestEqualNestedObjects(t *testing.T) {
+	left, right := jwt.New(), jwt.New()
+	require.NoError(t, left.Set("custom", jsontext.Value(`{"a":1,"nested":[{"b":2,"a":1}],"z":3}`)))
+	require.NoError(t, right.Set("custom", jsontext.Value(`{"z":3,"nested":[{"a":1,"b":2}],"a":1}`)))
+	require.True(t, jwt.Equal(left, right), "object member order must not affect equality")
+	require.True(t, jwt.Equal(right, left))
+
+	claim := map[string]any{"a": 1, "b": 2, "c": 3, "d": 4, "e": 5, "nested": map[string]int{"a": 1, "b": 2}}
+	require.NoError(t, left.Set("custom", claim))
+	require.NoError(t, right.Set("custom", claim))
+	for range 100 {
+		require.True(t, jwt.Equal(left, left), "a token must equal itself")
+		require.True(t, jwt.Equal(left, right), "independent serialization must not affect equality")
+	}
+}
+
+func TestEqualPreservesValueDifferences(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		left, right any
+	}{
+		{"large integers", uint64(9007199254740992), uint64(9007199254740993)},
+		{"maximum integers", ^uint64(0) - 1, ^uint64(0)},
+		{"array order", []int{1, 2}, []int{2, 1}},
+		{"nested values", map[string]int{"a": 1}, map[string]int{"a": 2}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			left, right := jwt.New(), jwt.New()
+			require.NoError(t, left.Set("custom", tc.left))
+			require.NoError(t, right.Set("custom", tc.right))
+			require.False(t, jwt.Equal(left, right))
+		})
+	}
+}
+
+func TestEqualNilTimesAndMarshalErrors(t *testing.T) {
+	require.True(t, jwt.Equal(nil, nil))
+	left, right := jwt.New(), jwt.New()
+	require.False(t, jwt.Equal(left, nil))
+	require.False(t, jwt.Equal(nil, right))
+	now := time.Now()
+	require.NoError(t, left.Set(jwt.IssuedAtKey, now))
+	require.NoError(t, right.Set(jwt.IssuedAtKey, now.UTC().Truncate(time.Second)))
+	require.True(t, jwt.Equal(left, right))
+	require.NoError(t, left.Set("custom", make(chan int)))
+	require.False(t, jwt.Equal(left, right), "unserializable tokens must compare unequal")
+	require.False(t, jwt.Equal(right, left))
 }
 
 func TestSerializer(t *testing.T) {
