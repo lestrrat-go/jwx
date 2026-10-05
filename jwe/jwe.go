@@ -618,8 +618,13 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 		}
 
 		var sink algKeySink
-		if err := kp.FetchKeys(dc.ctx, &sink, recipient, msg); err != nil {
-			return nil, fmt.Errorf(`key provider %d failed: %w`, i, err)
+		fetchErr := kp.FetchKeys(dc.ctx, &sink, recipient, msg)
+		if err := dc.ctx.Err(); err != nil {
+			return nil, err
+		}
+		if fetchErr != nil {
+			attemptErrors = append(attemptErrors, fmt.Errorf(`key provider %d failed: %w`, i, fetchErr))
+			continue
 		}
 
 		for _, pair := range sink.list {
@@ -652,7 +657,7 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 			return decrypted, nil
 		}
 	}
-	// Preserve per-key attempt errors via errors.Join so each constituent
+	// Preserve provider and per-key attempt errors via errors.Join so each constituent
 	// remains reachable through errors.Is / errors.As on the outer error.
 	// Cap the count so a hostile JWE with many keys per provider can't
 	// produce unbounded error text. Top-level "jwe.Decrypt:" prefix is

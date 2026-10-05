@@ -100,6 +100,13 @@ err := jwt.Validate(token, jwt.WithIssuer("x"), jwt.WithCollectErrors(true))
 // err wraps all failures via errors.Join; each cause is reachable via errors.Is / errors.AsType
 ```
 
+## JWE Key Provider Failures
+
+`jwe.Decrypt` continues to later key providers after a `FetchKeys` error. If
+all attempts fail, provider errors and per-key errors are joined (subject to
+`decryptErrorJoinCap`) and remain reachable via `errors.Is` / `errors.AsType`.
+Context cancellation stops attempts immediately, including after `FetchKeys`.
+
 ## Error Wrapping
 
 Errors wrap typed errors with `fmt.Errorf("context: %w", inner)`. Chain checking works:

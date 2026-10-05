@@ -10,35 +10,38 @@ UNRELEASED
     and `jsontext`.
 
     `jwsbb.HeaderParse`, `jwsbb.HeaderParseCompact`, and `jwkbb.HeaderParse`
-    are stricter as a result. A header whose strings contain a raw control
-    character, invalid UTF-8, or a lone surrogate escape such as `\ud800`
-    used to parse, and now fails on the first `HeaderGet*` call. `HeaderHas`
-    reports false for such a header. `jws.VerifyCompactFast`, and therefore
-    `jwt.Parse`, now also reject a protected header with a raw control
-    character or invalid UTF-8 in a string, matching `jws.Verify`, which
-    always did. (#2372)
+    now reject a header whose strings contain a raw control character,
+    invalid UTF-8, or a lone surrogate escape such as `\ud800`. The first
+    `HeaderGet*` call returns the error, and `HeaderHas` reports false.
+    `jws.VerifyCompactFast`, and therefore `jwt.Parse`, now also reject a
+    protected header with a raw control character or invalid UTF-8 in a
+    string, as `jws.Verify` does. (#2372)
 
-  * [jwk] Adding, removing, or setting keys and fields on a `jwk.Set` inside
-    a `range set.All()` or `range set.Fields()` loop no longer hangs. Each
-    loop now runs over a copy of the keys or fields taken when it starts,
-    so changes made inside the loop do not affect the running loop. (#2373)
+  * [jwk] `jwk.Set.All()` and `jwk.Set.Fields()` now loop over a copy of the
+    keys or fields taken when each loop starts. The set can therefore be
+    changed inside the loop, for example with `AddKey`, `RemoveKey`, `Set`,
+    or `Remove`, and those changes do not affect the running loop. (#2373)
 
   * [jwt] `jwt.Parse` called with exactly two `jwt.WithKey` options and no
-    other options checked the signature against the second key only, so a
-    token signed with the first key was rejected. Both keys are now tried.
-    Calls with three or more options were not affected, because they
-    already skipped the fast path that caused this. (#2374)
+    other options now tries both keys, so a token signed with either key
+    verifies. Calls with three or more options already tried every key.
+    (#2374)
 
-  * [jwt] `jwt.Equal` could report two tokens holding the same map-valued
-    claim as unequal, and the result could change from call to call.
-    `jwt.Equal` compares the tokens' JSON, and v4 serializes with
-    `encoding/json/v2`, which writes map keys in random order. (v3 used
-    `encoding/json`, which sorts them.) `jwt.Equal` now sorts the members
-    of every JSON object, including nested ones, before comparing. Two raw
-    JSON claims holding the same members in a different order therefore
-    also compare equal. Arrays keep their order and numbers keep their
-    exact digits, so integers above 2^53 that differ still compare
-    unequal. (#2375)
+  * [jwt] `jwt.Equal` now sorts the members of every JSON object, including
+    nested ones, before comparing, so two tokens holding the same map-valued
+    claim always compare equal. This is needed because v4 serializes with
+    `encoding/json/v2`, which writes map keys in random order (v3's
+    `encoding/json` sorted them). Raw JSON claims holding the same members
+    in a different order also compare equal. Arrays keep their order and
+    numbers keep their exact digits, so integers above 2^53 that differ
+    still compare unequal. (#2375)
+
+  * [jwe] `jwe.Decrypt` now tries each key provider in turn and moves on to
+    the next one when a provider returns an error, as `jws.Verify` does.
+    For example, `jwe.WithKeySet` with a set that has no usable key,
+    followed by a working `jwe.WithKey`, decrypts with the working key. If
+    no key works, the provider errors are included in the returned error.
+    (#2376)
 
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
