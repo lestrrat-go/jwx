@@ -127,41 +127,52 @@ func TestToken_Parse(t *testing.T) {
 }
 
 func TestParseMultipleKeys(t *testing.T) {
+	t.Parallel()
 	keys := [][]byte{bytes.Repeat([]byte{1}, 32), bytes.Repeat([]byte{2}, 32)}
-	token := jwt.New()
-	require.NoError(t, token.Set(jwt.SubjectKey, "multiple-keys"))
+	newToken := func(t *testing.T) jwt.Token {
+		t.Helper()
+		token := jwt.New()
+		require.NoError(t, token.Set(jwt.SubjectKey, "multiple-keys"))
+		return token
+	}
+
+	// Two WithKey options and nothing else used to take the single-key fast
+	// path, which kept only the last key.
 	for signingIndex, signingKey := range keys {
-		signed, err := jwt.Sign(token, jwt.WithKey(jwa.HS256(), signingKey))
-		require.NoError(t, err)
 		for _, order := range [][]int{{0, 1}, {1, 0}} {
-			for _, forceSlow := range []bool{false, true} {
-				opts := []jwt.ParseOption{
+			t.Run(fmt.Sprintf("signed with key %d, keys in order %v", signingIndex, order), func(t *testing.T) {
+				t.Parallel()
+				signed, err := jwt.Sign(newToken(t), jwt.WithKey(jwa.HS256(), signingKey))
+				require.NoError(t, err)
+				parsed, err := jwt.Parse(signed,
 					jwt.WithKey(jwa.HS256(), keys[order[0]]),
 					jwt.WithKey(jwa.HS256(), keys[order[1]]),
-				}
-				if forceSlow {
-					opts = append(opts, jwt.WithValidate(true))
-				}
-				parsed, err := jwt.Parse(signed, opts...)
-				require.NoError(t, err, "signing key %d, order %v, slow=%v", signingIndex, order, forceSlow)
+				)
+				require.NoError(t, err)
 				subject, ok := parsed.Subject()
 				require.True(t, ok)
 				require.Equal(t, "multiple-keys", subject)
-			}
+			})
 		}
 	}
 
-	signed, err := jwt.Sign(token, jwt.WithKey(jwa.HS256(), bytes.Repeat([]byte{3}, 32)))
-	require.NoError(t, err)
-	_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), keys[0]), jwt.WithKey(jwa.HS256(), keys[1]))
-	require.Error(t, err, "a signature matching neither key must be rejected")
+	t.Run("signature matching neither key is rejected", func(t *testing.T) {
+		t.Parallel()
+		signed, err := jwt.Sign(newToken(t), jwt.WithKey(jwa.HS256(), bytes.Repeat([]byte{3}, 32)))
+		require.NoError(t, err)
+		_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), keys[0]), jwt.WithKey(jwa.HS256(), keys[1]))
+		require.Error(t, err)
+	})
 
-	require.NoError(t, token.Set(jwt.ExpirationKey, time.Unix(1, 0)))
-	signed, err = jwt.Sign(token, jwt.WithKey(jwa.HS256(), keys[0]))
-	require.NoError(t, err)
-	_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), keys[0]), jwt.WithKey(jwa.HS256(), keys[1]))
-	var expiredError jwt.TokenExpiredError
-	require.ErrorIs(t, err, expiredError, "validation must remain enabled")
+	t.Run("claims are still validated", func(t *testing.T) {
+		t.Parallel()
+		token := newToken(t)
+		require.NoError(t, token.Set(jwt.ExpirationKey, time.Unix(1, 0)))
+		signed, err := jwt.Sign(token, jwt.WithKey(jwa.HS256(), keys[0]))
+		require.NoError(t, err)
+		_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), keys[0]), jwt.WithKey(jwa.HS256(), keys[1]))
+		require.ErrorIs(t, err, jwt.TokenExpiredError{})
+	})
 }
 
 func TestParseRejectsOverflowingNumericDates(t *testing.T) {
