@@ -33,11 +33,12 @@ UNRELEASED
     claim as unequal, and the result could change from call to call.
     `jwt.Equal` compares the tokens' JSON, and v4 serializes with
     `encoding/json/v2`, which writes map keys in random order. (v3 used
-    `encoding/json`, which sorts them.) `jwt.Equal` now ignores the order
-    of object members at every level, so the same holds for raw JSON claims
-    whose members are written in a different order. Array order and number
-    formatting still count, so integers above 2^53 that differ still
-    compare unequal. (#2375)
+    `encoding/json`, which sorts them.) `jwt.Equal` now sorts the members
+    of every JSON object, including nested ones, before comparing. Two raw
+    JSON claims holding the same members in a different order therefore
+    also compare equal. Arrays keep their order and numbers keep their
+    exact digits, so integers above 2^53 that differ still compare
+    unequal. (#2375)
 
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
