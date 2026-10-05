@@ -10,7 +10,7 @@ go_library(
     importpath = "github.com/lestrrat-go/jwx/v4/jwk/jwkbb",
     visibility = ["//visibility:public"],
     deps = [
-        "@com_github_valyala_fastjson//:fastjson",
+        "//internal/json",
     ],
 )
 

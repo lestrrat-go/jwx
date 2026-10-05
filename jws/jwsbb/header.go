@@ -41,6 +41,8 @@ func HeaderParseCompact(buf []byte) Header {
 // You will need to call HeaderGet* functions to extract the values from the header.
 //
 // Unlike HeaderParseCompact, this function does not perform any base64 decoding.
+// JSON strings must contain valid UTF-8 and properly escaped control characters.
+// Duplicate object members are retained; field lookup returns the first match.
 // This function is experimental and may change or be removed in the future.
 func HeaderParse(decoded []byte) Header {
 	return impl.HeaderParse(decoded)
