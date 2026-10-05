@@ -4,6 +4,20 @@ Changes
 v4 has many incompatibilities with v3. To see the full list of differences between
 v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MICRATION-v4.md)
 
+UNRELEASED
+  * [jws][jwk] `github.com/valyala/fastjson` is no longer a dependency. The
+    header probes in `jws/jwsbb` and `jwk/jwkbb` now use `encoding/json/v2`
+    and `jsontext`.
+
+    `jwsbb.HeaderParse`, `jwsbb.HeaderParseCompact`, and `jwkbb.HeaderParse`
+    are stricter as a result. A header whose strings contain a raw control
+    character, invalid UTF-8, or a lone surrogate escape such as `\ud800`
+    used to parse, and now fails on the first `HeaderGet*` call. `HeaderHas`
+    reports false for such a header. `jws.VerifyCompactFast`, and therefore
+    `jwt.Parse`, now also reject a protected header with a raw control
+    character or invalid UTF-8 in a string, matching `jws.Verify`, which
+    always did. (#2372)
+
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes

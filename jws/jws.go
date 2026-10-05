@@ -870,9 +870,9 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// Preserve the fast-path contract by deferring any protected header
 	// containing a JSON escape sequence to jws.Verify. The field probe keeps
 	// duplicates for the shape check below. The header parameter names the
-	// fast path handles (alg/typ/kid/cty) never
-	// require escaping; an escape in a value (e.g. a "kid" containing a quote
-	// or a control char) is simply deferred to jws.Verify, which handles it.
+	// fast path handles (alg/typ/kid/cty) never require escaping; an escape
+	// in a value (e.g. a "kid" containing a quote or a control char) is
+	// simply deferred to jws.Verify, which handles it.
 	if bytes.IndexByte(decodedHdr, '\\') >= 0 {
 		return nil, verifyError{fmt.Errorf(`%w (header contains a JSON escape sequence)`, errNonMinimalHeader)}
 	}

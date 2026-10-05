@@ -88,6 +88,7 @@ make fuzz-jwt          # FuzzParse, FuzzSignAndParse
 make fuzz-jws          # FuzzParse, FuzzSignAndVerify
 make fuzz-jwe          # FuzzParse, FuzzEncryptAndDecrypt
 make fuzz-jwk          # FuzzParseKey, FuzzParse, FuzzParseKeyRoundtrip
+make fuzz-json         # FuzzFieldProbe (internal/json header probe)
 FUZZTIME=5m make fuzz  # Override fuzz duration
 ```
 

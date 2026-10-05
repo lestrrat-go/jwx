@@ -123,9 +123,10 @@ It indexes top-level members in owned input, preserves duplicates in document or
 (first-wins lookup), and validates nested values without allocating a value tree.
 `internal/json.HasField` is the allocation-light streaming presence check used by
 `jwk.Parse` to distinguish JWK from JWKS. Both use json/v2's pooled decoder and
-strict UTF-8/control-character validation; no third-party JSON parser remains.
-`VerifyCompactFast` still enforces its minimal-shape gate and existing refusal
-sentinels. Invalid JSON string encodings now fail on the fast path too.
+strict UTF-8/control-character validation; no third-party JSON parser is used.
+`VerifyCompactFast` enforces its minimal-shape gate and refusal sentinels on top
+of the probe. Invalid JSON string encodings (raw control characters, invalid
+UTF-8, lone surrogate escapes) fail on both `VerifyCompactFast` and `jws.Verify`.
 
 ## Native ML-DSA (Go 1.27)
 
