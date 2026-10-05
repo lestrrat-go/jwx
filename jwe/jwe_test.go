@@ -445,7 +445,9 @@ func Test_GHIssue207(t *testing.T) {
 	}
 }
 
-// tests direct key encryption by encrypting-decrypting a plaintext
+// TestJWEEmptyPlaintextRoundTrip checks that AES-GCM with an empty plaintext
+// round-trips through compact and JSON serialization. The ciphertext is empty,
+// but the JSON "ciphertext" member is still required.
 func TestJWEEmptyPlaintextRoundTrip(t *testing.T) {
 	for _, tc := range []struct {
 		alg     jwa.ContentEncryptionAlgorithm
@@ -490,6 +492,7 @@ func TestJWEEmptyPlaintextRoundTrip(t *testing.T) {
 	}
 }
 
+// tests direct key encryption by encrypting-decrypting a plaintext
 func TestEncode_Direct(t *testing.T) {
 	testcases := []*struct {
 		Algorithm jwa.ContentEncryptionAlgorithm
