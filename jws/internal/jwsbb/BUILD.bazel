@@ -10,8 +10,8 @@ go_library(
     visibility = ["//jws:__subpackages__"],
     deps = [
         "//internal/base64",
+        "//internal/json",
         "@com_github_lestrrat_go_dsig//:dsig",
-        "@com_github_valyala_fastjson//:fastjson",
     ],
 )
 

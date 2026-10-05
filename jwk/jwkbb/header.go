@@ -3,7 +3,7 @@ package jwkbb
 import (
 	"fmt"
 
-	"github.com/valyala/fastjson"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
 )
 
 type headerNotFoundError struct {
@@ -42,13 +42,13 @@ func ErrHeaderNotFound() error {
 //
 // This type is experimental and may change or be removed in the future.
 type Header interface {
-	// Sealed so callers can't depend on the underlying fastjson type
+	// Sealed so callers can't depend on the underlying JSON implementation
 	// or substitute their own implementation.
 	jwkbbHeader()
 }
 
 type header struct {
-	v   *fastjson.Value
+	v   *json.FieldProbe
 	err error
 }
 
@@ -56,19 +56,19 @@ func (h *header) jwkbbHeader() {}
 
 // HeaderParse parses a JSON byte slice and returns a Header for fast
 // field access. Parse errors are deferred to the first HeaderGet* /
-// HeaderHas call.
+// HeaderHas call. JSON strings must contain valid UTF-8 and properly escaped
+// control characters. Duplicate members are retained; lookup is first-wins.
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderParse(buf []byte) Header {
-	var p fastjson.Parser
-	v, err := p.ParseBytes(buf)
+	v, err := json.ParseFieldProbe(buf)
 	if err != nil {
 		return &header{err: err}
 	}
 	return &header{v: v}
 }
 
-func headerGet(h Header, key string) (*fastjson.Value, error) {
+func headerGet(h Header, key string) (*json.ProbeValue, error) {
 	//nolint:forcetypeassert
 	hh := h.(*header) // we _know_ this can't be another type
 	if hh.err != nil {
@@ -87,8 +87,9 @@ func headerGet(h Header, key string) (*fastjson.Value, error) {
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderHas(h Header, key string) bool {
-	_, err := headerGet(h, key)
-	return err == nil
+	//nolint:forcetypeassert
+	hh := h.(*header)
+	return hh.err == nil && hh.v.Get(key) != nil
 }
 
 // HeaderGetString returns the string value for the given key as a

@@ -14,7 +14,7 @@ func TestHeaderForEachKey(t *testing.T) {
 		require.NoError(t, jwsbb.HeaderForEachKey(h, func(name []byte) {
 			got = append(got, string(name))
 		}))
-		// fastjson keeps duplicate object members, so both "alg" entries are
+		// The field probe keeps duplicate object members, so both "alg" entries are
 		// reported in document order — this is what lets a caller detect a
 		// duplicate parameter name.
 		require.Equal(t, []string{"alg", "typ", "alg"}, got)

@@ -10,8 +10,8 @@ import (
 // errNonMinimalHeader is the umbrella sentinel for every VerifyCompactFast
 // header refusal: the protected header is not in the minimal shape the fast
 // path handles ("alg" exactly once, an optional single "typ"/"kid"/"cty", no
-// JSON escape sequences, and no other parameters). fastjson (used by the fast
-// path) keeps duplicate object members and resolves them first-wins, whereas
+// JSON escape sequences, and no other parameters). The field probe used by the
+// fast path keeps duplicate object members and resolves them first-wins, whereas
 // encoding/json/v2 (used by jws.Verify) rejects duplicate names outright — so
 // a header carrying a duplicate, a nested object, an unknown or key-source
 // parameter, or an escaped key could be read differently by the two paths

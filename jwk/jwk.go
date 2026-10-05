@@ -20,7 +20,6 @@ import (
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/jwx/v4/jwa"
-	"github.com/lestrrat-go/jwx/v4/jwk/jwkbb"
 	"github.com/lestrrat-go/option/v3"
 )
 
@@ -635,7 +634,8 @@ func Parse(src []byte, options ...ParseOption) (Set, error) {
 
 	// Dispatch JWK-vs-JWKS up front. Set.UnmarshalJSON / UnmarshalJSONFrom
 	// require JWKS shape; the bare-JWK convenience lives here.
-	if jwkbb.HeaderHas(jwkbb.HeaderParse(src), "keys") {
+	hasKeys, peekErr := json.HasField(src, "keys")
+	if peekErr == nil && hasKeys {
 		if err := json.Unmarshal(src, s); err != nil {
 			return nil, parseerr(`failed to unmarshal JWK set: %w`, err)
 		}
