@@ -40,11 +40,12 @@ UNRELEASED
     exact digits, so integers above 2^53 that differ still compare
     unequal. (#2375)
 
-  * [jwe] `jwe.Decrypt` tries each key provider in turn and moves on to the
-    next one when a provider returns an error, as `jws.Verify` does. For
-    example, `jwe.WithKeySet` with a set that has no usable key, followed by
-    a working `jwe.WithKey`, decrypts with the working key. If no key works,
-    the provider errors are included in the returned error. (#2376)
+  * [jwe] `jwe.Decrypt` now tries each key provider in turn and moves on to
+    the next one when a provider returns an error, as `jws.Verify` does.
+    For example, `jwe.WithKeySet` with a set that has no usable key,
+    followed by a working `jwe.WithKey`, decrypts with the working key. If
+    no key works, the provider errors are included in the returned error.
+    (#2376)
 
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
