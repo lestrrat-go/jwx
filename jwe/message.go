@@ -309,7 +309,7 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 		if len(unprotected) > 2 {
 			fields = append(fields, jsonKV{
 				Key:   UnprotectedHeadersKey,
-				Value: fmt.Sprintf("%q", unprotected),
+				Value: string(unprotected),
 			})
 		}
 	}
