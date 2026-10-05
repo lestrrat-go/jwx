@@ -10,7 +10,7 @@ import (
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
-	"github.com/valyala/fastjson"
+	"github.com/lestrrat-go/jwx/v4/internal/json"
 )
 
 type headerNotFoundError struct {
@@ -58,7 +58,7 @@ type Header interface {
 }
 
 type header struct {
-	v   *fastjson.Value
+	v   *json.FieldProbe
 	err error
 }
 
@@ -80,10 +80,11 @@ func HeaderParseCompact(buf []byte) Header {
 // You will need to call HeaderGet* functions to extract the values from the header.
 //
 // Unlike HeaderParseCompact, this function does not perform any base64 decoding.
+// JSON strings must contain valid UTF-8 and properly escaped control characters.
+// Duplicate object members are retained; field lookup returns the first match.
 // This function is experimental and may change or be removed in the future.
 func HeaderParse(decoded []byte) Header {
-	var p fastjson.Parser
-	v, err := p.ParseBytes(decoded)
+	v, err := json.ParseFieldProbe(decoded)
 	if err != nil {
 		return &header{err: err}
 	}
@@ -114,17 +115,10 @@ func HeaderForEachKey(h Header, fn func(name []byte)) error {
 	if hh.err != nil {
 		return hh.err
 	}
-	obj, err := hh.v.Object()
-	if err != nil {
-		return err
-	}
-	obj.Visit(func(key []byte, _ *fastjson.Value) {
-		fn(key)
-	})
-	return nil
+	return hh.v.ForEachKey(fn)
 }
 
-func headerGet(h Header, key string) (*fastjson.Value, error) {
+func headerGet(h Header, key string) (*json.ProbeValue, error) {
 	//nolint:forcetypeassert
 	hh := h.(*header) // we _know_ this can't be another type
 	if hh.err != nil {
@@ -234,8 +228,9 @@ func HeaderGetStringBytes(h Header, key string) ([]byte, error) {
 //
 // This function is experimental and may change or be removed in the future.
 func HeaderHas(h Header, key string) bool {
-	_, err := headerGet(h, key)
-	return err == nil
+	//nolint:forcetypeassert
+	hh := h.(*header)
+	return hh.err == nil && hh.v.Get(key) != nil
 }
 
 // HeaderGetStringArray returns a string array for the given key from the JWS header.
@@ -249,20 +244,7 @@ func HeaderGetStringArray(h Header, key string) ([]string, error) {
 		return nil, err
 	}
 
-	arr, err := v.Array()
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]string, len(arr))
-	for i, item := range arr {
-		sb, err := item.StringBytes()
-		if err != nil {
-			return nil, err
-		}
-		result[i] = string(sb)
-	}
-	return result, nil
+	return v.StringArray()
 }
 
 // HeaderGetUint returns the uint value for the given key from the JWS header.

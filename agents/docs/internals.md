@@ -118,6 +118,16 @@ once the module requires Go 1.27.
 
 Internal `internal/json` package provides the abstraction. Custom field registry (`json.Registry`) enables type-safe deserialization of extension fields.
 
+`internal/json.FieldProbe` backs the sealed JWS/JWK building-block `Header` APIs.
+It indexes top-level members in owned input, preserves duplicates in document order
+(first-wins lookup), and validates nested values without allocating a value tree.
+`internal/json.HasField` is the allocation-light streaming presence check used by
+`jwk.Parse` to distinguish JWK from JWKS. Both use json/v2's pooled decoder and
+strict UTF-8/control-character validation; no third-party JSON parser is used.
+`VerifyCompactFast` enforces its minimal-shape gate and refusal sentinels on top
+of the probe. Invalid JSON string encodings (raw control characters, invalid
+UTF-8, lone surrogate escapes) fail on both `VerifyCompactFast` and `jws.Verify`.
+
 ## Native ML-DSA (Go 1.27)
 
 `crypto/mldsa` joins the standard library in Go 1.27, so jwx supports ML-DSA

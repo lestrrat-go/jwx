@@ -88,6 +88,7 @@ make fuzz-jwt          # FuzzParse, FuzzSignAndParse
 make fuzz-jws          # FuzzParse, FuzzSignAndVerify
 make fuzz-jwe          # FuzzParse, FuzzEncryptAndDecrypt
 make fuzz-jwk          # FuzzParseKey, FuzzParse, FuzzParseKeyRoundtrip
+make fuzz-json         # FuzzFieldProbe (internal/json header probe)
 FUZZTIME=5m make fuzz  # Override fuzz duration
 ```
 
@@ -109,3 +110,11 @@ once `go.mod` moves to 1.27.
 Key generation helpers for tests:
 - RSA, ECDSA, Ed25519, symmetric key generation
 - JWT/JWS/JWE/JWK operation helpers
+
+## Header probe verification
+
+`internal/json/probe_test.go` covers owned input, escaped names/values, first-wins
+duplicate handling, syntax-error pointers, standard float rounding, integer
+precision/overflow, array typing, and full-input validation.
+`FuzzFieldProbe` checks agreement with jsontext validation (duplicates
+allowed) and that probe access never modifies the caller's input.

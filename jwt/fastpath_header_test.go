@@ -22,7 +22,7 @@ func signHS256Compact(key []byte, hdrJSON, payload string) []byte {
 }
 
 // TestParseDuplicateHeaderParameters is the regression test for issue #2234.
-// jwt.Parse takes the VerifyCompactFast fast path, which (via fastjson)
+// jwt.Parse takes the VerifyCompactFast fast path, which originally
 // accepted a protected header carrying a duplicate "alg" — a header that
 // jws.Verify (encoding/json/v2) rejects. The fast path now defers any
 // non-minimal header to jws.Verify, so jws.Verify, jws.VerifyCompactFast and
@@ -31,6 +31,21 @@ func signHS256Compact(key []byte, hdrJSON, payload string) []byte {
 func TestParseDuplicateHeaderParameters(t *testing.T) {
 	key := []byte("0123456789abcdef0123456789abcdef")
 	payload := `{"sub":"alice"}`
+
+	t.Run("invalid string encoding rejected by every entry point", func(t *testing.T) {
+		for _, header := range []string{
+			"{\"alg\":\"HS256\",\"typ\":\"a\x01b\"}",
+			"{\"alg\":\"HS256\",\"kid\":\"\xff\"}",
+		} {
+			signed := signHS256Compact(key, header, payload)
+			_, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key))
+			require.Error(t, err)
+			_, err = jws.VerifyCompactFast(key, signed, jwa.HS256())
+			require.Error(t, err)
+			_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), key), jwt.WithValidate(false))
+			require.Error(t, err)
+		}
+	})
 
 	dup := signHS256Compact(key, `{"alg":"HS256","alg":"none"}`, payload)
 	control := signHS256Compact(key, `{"alg":"HS256","typ":"JWT"}`, payload)

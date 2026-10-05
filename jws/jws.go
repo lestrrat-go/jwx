@@ -843,12 +843,8 @@ func Settings(options ...GlobalOption) error {
 // Limiting the fast path to the minimal shape — and deferring everything else
 // to jws.Verify, whose strict, recursive header handling is authoritative —
 // makes the two entry points agree on duplicate-name and header-shape handling
-// (see issue #2234). It is not a byte-for-byte mirror, though: the fast parser
-// does not reproduce all of encoding/json/v2's in-string validation, so a
-// header whose "typ"/"kid"/"cty" string value contains e.g. a raw control
-// character or invalid UTF-8 is accepted here but rejected by jws.Verify. The
-// signature is always verified, so this is a parser-strictness nuance, not a
-// bypass; for byte-for-byte parity call jws.Verify. Like the crit refusal,
+// (see issue #2234). Both paths use encoding/json/v2's string validation,
+// rejecting invalid UTF-8 and raw control characters. Like the crit refusal,
 // ErrNonMinimalHeader means "retry through jws.Verify".
 func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error) {
 	if err := validateAlgorithmForKey(alg, key); err != nil {
@@ -871,14 +867,12 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 		return nil, makeVerifyError("failed to decode protected header: %w", err)
 	}
 
-	// Refuse any protected header containing a JSON escape sequence. For
-	// literal keys fastjson resolves duplicates first-wins deterministically,
-	// but for *escaped* keys its resolution becomes order/state-dependent and
-	// can diverge from encoding/json/v2 (which jws.Verify uses). Rather than
-	// reason about that, defer any escape-bearing header to jws.Verify. The
-	// header parameter names the fast path handles (alg/typ/kid/cty) never
-	// require escaping; an escape in a value (e.g. a "kid" containing a quote
-	// or a control char) is simply deferred to jws.Verify, which handles it.
+	// Preserve the fast-path contract by deferring any protected header
+	// containing a JSON escape sequence to jws.Verify. The field probe keeps
+	// duplicates for the shape check below. The header parameter names the
+	// fast path handles (alg/typ/kid/cty) never require escaping; an escape
+	// in a value (e.g. a "kid" containing a quote or a control char) is
+	// simply deferred to jws.Verify, which handles it.
 	if bytes.IndexByte(decodedHdr, '\\') >= 0 {
 		return nil, verifyError{fmt.Errorf(`%w (header contains a JSON escape sequence)`, errNonMinimalHeader)}
 	}
@@ -913,7 +907,7 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 		return nil, verifyError{errB64Present}
 	}
 
-	// Minimal-shape gate. fastjson keeps duplicate object members and resolves
+	// Minimal-shape gate. The field probe keeps duplicate object members and resolves
 	// them first-wins, whereas encoding/json/v2 (jws.Verify) rejects duplicate
 	// names — so a header with a duplicate or otherwise unusual parameter
 	// could be read differently by the two paths (issue #2234). The fast path
@@ -1019,11 +1013,11 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// advertises and the discipline under which we verify is the sort of
 	// silent divergence that downstream code (e.g. JWT consumers) should
 	// not be asked to re-discover on its own.
-	hdrAlg, err := jwsbbi.HeaderGetString(parsedHdr, AlgorithmKey)
+	hdrAlg, err := jwsbbi.HeaderGetStringBytes(parsedHdr, AlgorithmKey)
 	if err != nil {
 		return nil, verifyError{verificationError{fmt.Errorf(`jws.Verify: failed to extract %q from protected header: %w`, AlgorithmKey, err)}}
 	}
-	if hdrAlg != algstr {
+	if string(hdrAlg) != algstr {
 		return nil, verifyError{verificationError{fmt.Errorf(`jws.Verify: protected header %q %q does not match caller-supplied algorithm %q`, AlgorithmKey, hdrAlg, algstr)}}
 	}
 

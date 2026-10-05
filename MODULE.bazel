@@ -26,7 +26,6 @@ use_repo(
     "com_github_lestrrat_go_dsig",
     "com_github_lestrrat_go_option_v3",
     "com_github_stretchr_testify",
-    "com_github_valyala_fastjson",
     "org_golang_x_crypto",
     "org_golang_x_tools",
 )

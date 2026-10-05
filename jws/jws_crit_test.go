@@ -552,7 +552,7 @@ func signHS256Compact(key []byte, hdrJSON string) []byte {
 }
 
 // TestVerifyCompactFastMinimalHeaderShape documents the fast path's
-// minimal-shape gate (issue #2234). VerifyCompactFast uses fastjson, which
+// minimal-shape gate (issue #2234). VerifyCompactFast uses a field probe, which
 // keeps duplicate object members and resolves them first-wins, while
 // jws.Verify uses encoding/json/v2, which rejects duplicate names. Without a
 // gate the two entry points disagreed: a duplicate-"alg" header verified on

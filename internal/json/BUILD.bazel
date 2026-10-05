@@ -4,6 +4,7 @@ go_library(
     name = "json",
     srcs = [
         "json.go",
+        "probe.go",
         "registry.go",
         "skipfunc_go127.go",
         "skipfunc_pre_go127.go",
@@ -26,6 +27,7 @@ go_test(
     name = "json_test",
     srcs = [
         "json_test.go",
+        "probe_test.go",
         "registry_test.go",
     ],
     deps = [
