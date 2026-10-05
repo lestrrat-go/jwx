@@ -537,15 +537,20 @@ func ExportAll[T any](set Set) ([]T, error) {
 	if set == nil {
 		return nil, fmt.Errorf(`jwk.ExportAll: set must not be nil`)
 	}
-	out := make([]T, 0, set.Len())
-	i := 0
-	for _, k := range set.All() {
+	// Index with Len/Key: Set.All copies the key slice on every iteration.
+	n := set.Len()
+	out := make([]T, 0, n)
+	for i := range n {
+		k, ok := set.Key(i)
+		if !ok {
+			// The set shrank while we were exporting it.
+			break
+		}
 		v, err := Export[T](k)
 		if err != nil {
 			return nil, fmt.Errorf(`jwk.ExportAll: key #%d: %w`, i, err)
 		}
 		out = append(out, v)
-		i++
 	}
 	return out, nil
 }

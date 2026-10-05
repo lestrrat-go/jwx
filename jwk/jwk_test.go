@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"iter"
 	"log"
 	"math/big"
 	"net/http"
@@ -499,6 +500,31 @@ func TestExportAll(t *testing.T) {
 		_, err := jwk.ExportAll[any](nil)
 		require.Error(t, err)
 	})
+
+	t.Run("Does not copy the set through All", func(t *testing.T) {
+		t.Parallel()
+		set := allForbiddenSet{keySet: newMixedSet(t), t: t}
+		raws, err := jwk.ExportAll[any](set)
+		require.NoError(t, err)
+		require.Len(t, raws, 3)
+	})
+}
+
+// keySet lets allForbiddenSet embed jwk.Set without the embedded field's
+// name hiding the promoted Set method.
+type keySet = jwk.Set
+
+// allForbiddenSet fails the test if Set.All is called. All copies the key
+// slice on every iteration, so jwx's own loops index with Len/Key instead.
+type allForbiddenSet struct {
+	keySet
+
+	t *testing.T
+}
+
+func (s allForbiddenSet) All() iter.Seq2[int, jwk.Key] {
+	s.t.Error("Set.All must not be used by jwx internals")
+	return s.keySet.All()
 }
 
 const testOctKeyJSON = `{"kty":"oct","k":"AyM1SysPpbyDfgZld3umj1qzKObwVMkoqQ-EstJQLr_T-1qS0gZH75aKtMN3Yj0iPS4hcgUuTwjAzZr1Z9CAow"}`

@@ -375,8 +375,9 @@ func (s *set) LookupKeyID(kid string) (Key, bool) {
 func (s *set) All() iter.Seq2[int, Key] {
 	return func(yield func(int, Key) bool) {
 		s.mu.RLock()
-		defer s.mu.RUnlock()
-		for i, k := range s.keys {
+		keys := slices.Clone(s.keys)
+		s.mu.RUnlock()
+		for i, k := range keys {
 			if !yield(i, k) {
 				return
 			}
@@ -387,8 +388,9 @@ func (s *set) All() iter.Seq2[int, Key] {
 func (s *set) Fields() iter.Seq2[string, any] {
 	return func(yield func(string, any) bool) {
 		s.mu.RLock()
-		defer s.mu.RUnlock()
-		for k, v := range s.privateParams {
+		fields := maps.Clone(s.privateParams)
+		s.mu.RUnlock()
+		for k, v := range fields {
 			if !yield(k, v) {
 				return
 			}

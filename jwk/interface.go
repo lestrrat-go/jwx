@@ -123,12 +123,23 @@ type Set interface {
 	// TODO: name is confusing between this and Key()
 	Keys() []string
 
-	// All returns an iterator over all keys in the set.
-	// The iterator yields (index, key) pairs.
+	// All returns an iterator over all keys in the set, yielding
+	// (index, key) pairs.
+	//
+	// Each iteration starts by copying the set's list of keys, and loops
+	// over that snapshot. The set may therefore be modified inside the
+	// loop, and changes made there are not seen by the running iteration.
+	// The keys themselves are shared, not cloned. To walk the keys without
+	// the copy, index with Len and Key.
 	All() iter.Seq2[int, Key]
 
 	// Fields returns an iterator over all non-key fields in the set
-	// (i.e. private parameters). The iterator yields (name, value) pairs.
+	// (i.e. private parameters), yielding (name, value) pairs.
+	//
+	// Each iteration starts by copying the set's map of fields, and loops
+	// over that snapshot. The set may therefore be modified inside the
+	// loop, and changes made there are not seen by the running iteration.
+	// The field values themselves are shared, not cloned.
 	Fields() iter.Seq2[string, any]
 
 	// Clone create a new set with identical keys. Keys themselves are not cloned.

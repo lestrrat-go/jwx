@@ -197,6 +197,14 @@ if expErr, ok := errors.AsType[jwt.TokenExpiredError](err); ok {
 | `jws` | `VerificationError()` | Signature verification failed |
 | `jwe` | `DecryptError()` | Decryption failed |
 
+## Internal Loops
+
+- ALWAYS keep loops inside jwx allocation-free where the API allows. Parse/verify/export paths run per request → per-call copies add up.
+- NEVER range over `jwk.Set.All()`, `jwk.Set.Fields()`, or `jwt.Token.Claims()` inside jwx. Each iteration copies the underlying slice/map so callers may mutate during the loop.
+- Walk a `jwk.Set` with `for i := range set.Len()` + `set.Key(i)` instead. `Key(i)` returning `false` → set shrank concurrently → stop.
+- `Fields()`/`Claims()`/`Keys()` have no copy-free equivalent → keep them off hot paths; read known names with `Get`.
+- `TestExportAll` subtest "Does not copy the set through All" fails if `jwk.ExportAll` calls `Set.All()`. Reuse its `allForbiddenSet` wrapper when guarding other internal loops.
+
 ## Testing
 
 Use `github.com/stretchr/testify/require` for assertions (not `assert`).
