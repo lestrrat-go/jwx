@@ -126,6 +126,44 @@ func TestToken_Parse(t *testing.T) {
 	})
 }
 
+func TestParseMultipleKeys(t *testing.T) {
+	keys := [][]byte{bytes.Repeat([]byte{1}, 32), bytes.Repeat([]byte{2}, 32)}
+	token := jwt.New()
+	require.NoError(t, token.Set(jwt.SubjectKey, "multiple-keys"))
+	for signingIndex, signingKey := range keys {
+		signed, err := jwt.Sign(token, jwt.WithKey(jwa.HS256(), signingKey))
+		require.NoError(t, err)
+		for _, order := range [][]int{{0, 1}, {1, 0}} {
+			for _, forceSlow := range []bool{false, true} {
+				opts := []jwt.ParseOption{
+					jwt.WithKey(jwa.HS256(), keys[order[0]]),
+					jwt.WithKey(jwa.HS256(), keys[order[1]]),
+				}
+				if forceSlow {
+					opts = append(opts, jwt.WithValidate(true))
+				}
+				parsed, err := jwt.Parse(signed, opts...)
+				require.NoError(t, err, "signing key %d, order %v, slow=%v", signingIndex, order, forceSlow)
+				subject, ok := parsed.Subject()
+				require.True(t, ok)
+				require.Equal(t, "multiple-keys", subject)
+			}
+		}
+	}
+
+	signed, err := jwt.Sign(token, jwt.WithKey(jwa.HS256(), bytes.Repeat([]byte{3}, 32)))
+	require.NoError(t, err)
+	_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), keys[0]), jwt.WithKey(jwa.HS256(), keys[1]))
+	require.Error(t, err, "a signature matching neither key must be rejected")
+
+	require.NoError(t, token.Set(jwt.ExpirationKey, time.Unix(1, 0)))
+	signed, err = jwt.Sign(token, jwt.WithKey(jwa.HS256(), keys[0]))
+	require.NoError(t, err)
+	_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), keys[0]), jwt.WithKey(jwa.HS256(), keys[1]))
+	var expiredError jwt.TokenExpiredError
+	require.ErrorIs(t, err, expiredError, "validation must remain enabled")
+}
+
 func TestParseRejectsOverflowingNumericDates(t *testing.T) {
 	key := []byte("numeric-date-range-regression-test")
 	for _, claim := range []string{jwt.NotBeforeKey, jwt.IssuedAtKey, jwt.ExpirationKey} {
