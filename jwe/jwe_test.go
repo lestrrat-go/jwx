@@ -2575,6 +2575,7 @@ func TestDisabledKeyAlgorithms(t *testing.T) {
 type shrinkableSet interface{ jwk.Set }
 type shrinkingSet struct {
 	shrinkableSet
+
 	after int
 }
 
