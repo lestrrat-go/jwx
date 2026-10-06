@@ -25,6 +25,11 @@ UNRELEASED
     longer be moved between `ciphertext` and `tag` to produce a different
     message that still decrypts. (#2387)
 
+  * [jwe] JSON serialization of a JWE now writes the shared `unprotected`
+    header as a JSON object, as RFC 7516 requires. A JWE with a shared
+    unprotected header therefore round-trips through `jwe.Parse`,
+    `json.Marshal`, `jwe.Parse`, and `jwe.Decrypt`. (#2389)
+
 v3.3.0 8 Sep 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes
