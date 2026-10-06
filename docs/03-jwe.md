@@ -108,10 +108,10 @@ source: [examples/jwe_parsefs_example_test.go](https://github.com/jwx-go/example
 
 ## Generating a JWE message in compact serialization format
 
-To encrypt an arbitrary payload as a JWE message in compact serialization format, use `jwt.Encrypt()`.
+To encrypt an arbitrary payload as a JWE message in compact serialization format, use `jwe.Encrypt()`.
 
 Note that this would be [slightly different if you are encrypting JWTs](01-jwt.md#serialize-using-jws), as you would be
-using functions from the `jwt` package instead of `jws`.
+using functions from the `jwt` package instead of `jwe`.
 
 <!-- INCLUDE(examples/jwe_encrypt_example_test.go) -->
 ```go
@@ -169,7 +169,7 @@ source: [examples/jwe_encrypt_example_test.go](https://github.com/jwx-go/example
 
 Generally the only time you need to use a JSON serialization format is when you have to generate multiple recipients (encrypted keys) for a given payload using multiple encryption algorithms and keys.
 
-When this need arises, use the [`jwe.Encrypt()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jws#Encrypt) function with the `jwe.WithJSON()` option and multiple `jwe.WithKey()` options:
+When this need arises, use the [`jwe.Encrypt()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwe#Encrypt) function with the `jwe.WithJSON()` option and multiple `jwe.WithKey()` options:
 
 <!-- INCLUDE(examples/jwe_encrypt_json_example_test.go) -->
 ```go

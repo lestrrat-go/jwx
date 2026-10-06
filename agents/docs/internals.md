@@ -58,6 +58,17 @@ options:
 
 Manual option functions in `{pkg}/options.go` supplement generated ones.
 
+Object fields can set `reject_null: true` to reject an explicit JSON null before
+typed decoding. JWS uses this for `crit`, whose nil-slice representation would
+otherwise erase the presence of the member. Other fields retain their existing
+decoding policy unless the flag is set.
+
+JWS JSON probes decode `protected` into a presence/type-aware string through
+`UnmarshalJSONFrom`, avoiding a raw-value copy and a second unmarshal. Unknown
+top-level members in general JSON remain ignored. Built-in verification key
+providers receive the per-call algorithm-match policy through a private interface;
+shared provider options are not mutated.
+
 ## Key Registration/Extension Points
 
 | What | Registration Function | Package |

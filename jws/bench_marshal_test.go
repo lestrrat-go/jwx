@@ -1,6 +1,7 @@
 package jws_test
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -71,5 +72,31 @@ func BenchmarkMarshalFull(b *testing.B) {
 		if err != nil {
 			b.Fatal(err)
 		}
+	}
+}
+
+func BenchmarkVerifyJSONHeaderUnion(b *testing.B) {
+	key := bytes.Repeat([]byte{42}, 32)
+	protected := `{"alg":"HS256"}`
+	for _, general := range []bool{false, true} {
+		name := "flattened"
+		if general {
+			name = "general"
+		}
+		b.Run(name, func(b *testing.B) {
+			wire := headerUnionJWS(b, &protected, nil, general, false)
+			options := []jws.VerifyOption{jws.WithKey(jwa.HS256(), key)}
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				got, err := jws.Verify(wire, options...)
+				if err != nil {
+					b.Fatal(err)
+				}
+				if !bytes.Equal(got, []byte("payload")) {
+					b.Fatal("unexpected verified payload")
+				}
+			}
+		})
 	}
 }

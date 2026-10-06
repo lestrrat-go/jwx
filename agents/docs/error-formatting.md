@@ -100,6 +100,12 @@ err := jwt.Validate(token, jwt.WithIssuer("x"), jwt.WithCollectErrors(true))
 // err wraps all failures via errors.Join; each cause is reachable via errors.Is / errors.AsType
 ```
 
+## JWS Key Provider Failures
+
+Missing JOSE `alg` is reported as a verification-process error before providers
+run. The verifier continues to later signatures. `jku` diagnostics refer to the
+JOSE header union because `jku`, `kid`, and `alg` may be protected or unprotected.
+
 ## JWE Key Provider Failures
 
 `jwe.Decrypt` continues to later key providers after a `FetchKeys` error. If

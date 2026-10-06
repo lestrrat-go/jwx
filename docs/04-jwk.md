@@ -23,7 +23,7 @@ In this document we describe how to work with JWK using `github.com/lestrrat-go/
   * [Working with key-specific methods](#working-with-key-specific-methods)
   * [Setting values to fields](#setting-values-to-fields)
   * [Converting a jwk.Key to a raw key](#converting-a-jwkkey-to-a-raw-key)
-  * [Filtering Keys with KeyFilter](#filtering-keys-with-keyfilter)
+  * [Filtering Keys](#filtering-keys)
 
 ---
 
@@ -853,11 +853,11 @@ source: [examples/jwk_key_specific_methods_example_test.go](https://github.com/j
 
 Using [`jwk.Import()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Import) allows you to create a key whose fields have been properly populated, but sometimes there are other fields that you may want to populate in a key, such as`kid`, or other custom fields.
 
-These fields can all be set using the [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Set) method.
+These fields can all be set using the [`(jwk.Key).Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Key) method.
 
-The [`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Set) method takes the name of the key and a value to be associated with it. Some predefined keys have specific types (in which type checks are enforced), and others don't.
+The [`(jwk.Key).Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Key) method takes the name of the key and a value to be associated with it. Some predefined keys have specific types (in which type checks are enforced), and others don't.
 
-[`jwk.Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Set) may not alter the Key Type (`kty`) field of a key.
+[`(jwk.Key).Set()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Key) may not alter the Key Type (`kty`) field of a key.
 
 The `jwk` package defines field key names for predefined keys as constants, so you won't ever have to bang your head against the wall after finding out that you have a typo.
 
@@ -868,47 +868,26 @@ key.Set(`my-custom-field`, `unbelievable-value`)
 
 ## Converting a jwk.Key to a raw key
 
-As discussed in [Terminology](#terminology), this package calls the "original" keys (e.g. `rsa.PublicKey`, `ecdsa.PrivateKey`, etc.) "raw" keys. To obtain a raw key from a  [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Key) object, use the [`Raw()`](https://github.com/github.com/lestrrat-go/jwx/v4/jwk#Raw) method.
+Use [`jwk.Export[T]`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Export) to convert a JWK into a standard Go crypto key. Specify the expected raw type, or use `any` to let the exporter choose its default:
 
 ```go
-key, _ := jwk.ParseKey(src)
-
-var raw interface{}
-if err := key.Raw(&raw); err != nil {
-  ...
+key, err := jwk.ParseKey(src)
+if err != nil {
+  return err
+}
+raw, err := jwk.Export[any](key)
+if err != nil {
+  return err
 }
 ```
 
-In the above example, `raw` contains whatever the [`jwk.Key`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#Key) represents.
-If `key` represents an RSA key, it will contain either a `rsa.PublicKey` or `rsa.PrivateKey`. If it represents an ECDSA key, an `ecdsa.PublicKey`, or `ecdsa.PrivateKey`, etc.
+RSA keys export as `*rsa.PublicKey` or `*rsa.PrivateKey`. EC keys export as `*ecdsa.PublicKey` or `*ecdsa.PrivateKey` by default; an explicit `*ecdh.PublicKey` or `*ecdh.PrivateKey` type parameter selects ECDH export. Symmetric keys export as `[]byte`.
 
-If the only operation that you are performing is to grab the raw key out of a JSON JWK, use [`jwk.ParseRawKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#ParseRawKey)
+[`jwk.ParseRawKey`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#ParseRawKey) also parses a single JWK and assigns its exported raw key into a caller-supplied pointer. `ParseKey` followed by `Export[T]` provides a typed return value.
 
-```go
-var raw interface{}
-if err := jwk.ParseRawKey(src, &raw); err != nil {
-  ...
-}
-```
+## Filtering Keys
 
-## Filtering Keys with KeyFilter
-
-The [`jwk.KeyFilter`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#KeyFilter) interface provides a mechanism to selectively include or exclude specific fields when working with JWK keys. This is useful when you need to serialize keys with only certain fields, or when you want to create clean representations of keys for specific purposes.
-
-KeyFilter objects provide two methods:
-- `Filter()`: Returns a new key containing only the fields that should be included
-- `Reject()`: Returns a new key with specified fields excluded
-
-### Standard Field Filters
-
-For convenience, the library provides pre-defined filters that include standard fields for each key type:
-
-- [`jwk.RSAStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#RSAStandardFieldsFilter) - for RSA keys
-- [`jwk.ECDSAStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#ECDSAStandardFieldsFilter) - for ECDSA keys  
-- [`jwk.OKPStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#OKPStandardFieldsFilter) - for OKP keys
-- [`jwk.SymmetricStandardFieldsFilter()`](https://pkg.go.dev/github.com/lestrrat-go/jwx/v4/jwk#SymmetricStandardFieldsFilter) - for symmetric keys
-
-These functions return filters configured to include the standard fields defined in the JWK specification for each key type.
+In v4, key filtering lives in the companion package `github.com/jwx-go/jwxfilter/v4/jwkfilter`. See [Filters and Introspection](10-extensions.md#filters-and-introspection-jwxfilter) for the package map and examples.
 
 ## Registering a custom key type
 

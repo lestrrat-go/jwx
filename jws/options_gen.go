@@ -328,10 +328,11 @@ func WithContext(v context.Context) VerifyOption {
 // jws.WithCritExtension(). It will also reject structurally invalid
 // "crit" lists: empty arrays, duplicate names, empty extension names,
 // names of standard JOSE header parameters, and names that do not
-// appear as header parameters in the protected header.
+// appear as header parameters in the JOSE header union.
 //
 // Pass jws.WithCritValidation(false) to silently ignore the "crit"
-// header entirely, matching the lax pre-v3.0.14 behavior. This opt-out
+// value checks, matching the lax pre-v3.0.14 behavior. Null crit and
+// unprotected crit are still rejected during parsing. This opt-out
 // is discouraged: per RFC 7515 Section 4.1.11, recipients MUST reject a
 // JWS whose "crit" list names extensions they do not understand, and
 // the only way to satisfy that requirement with this library is to
@@ -478,36 +479,23 @@ func WithDetachedPayloadReader(v io.Reader) SignVerifyOption {
 	return &signVerifyOption{option.New(identDetachedPayloadReader{}, v)}
 }
 
-// WithInferAlgorithmFromKey specifies whether the JWS signing algorithm name
-// should be inferred by looking at the provided key, in case the JWS
-// message or the key does not have a proper `alg` header.
+// WithInferAlgorithmFromKey permits a JWK without an `alg` field to be
+// used by inferring compatible signature algorithms from its key type.
+// The transmitted JOSE header must still contain `alg`.
 //
-// When this option is set to true, a list of algorithm(s) that is compatible
-// with the key type will be enumerated, and _ALL_ of them will be tried
-// against the key/message pair. If any of them succeeds, the verification
-// will be considered successful.
+// By default, inference selects only the advertised algorithm if it is
+// compatible with the key. With WithSkipAlgorithmMatch(true), every
+// compatible inferred algorithm may be tried until verification succeeds.
+// A key with an explicit `alg` uses that algorithm instead of inference.
 //
-// Compared to providing explicit `alg` from the key this is slower, and
-// verification may fail to verify if somehow our heuristics are wrong
-// or outdated.
+// Prefer setting a proper `alg` on the key or pinning an algorithm with
+// WithKey. Inference is disabled by default.
 //
-// Also, automatic detection of signature verification methods are always
-// more vulnerable for potential attack vectors.
-//
-// It is highly recommended that you fix your key to contain a proper `alg`
-// header field instead of resorting to using this option, but sometimes
-// it just needs to happen.
-//
-// Fan-out and DoS considerations: when combined with `WithRequireKid(false)`
-// against a large JWKS, verification attempts scale with the number of
-// keys in the set. If the JWS protected header advertises an `alg` (as
-// required by RFC 7515 §4.1.1), only keys whose type is compatible with
-// that algorithm are tried, so the cost is bounded by the number of
-// type-compatible keys. If the header has no `alg`, every inferred
-// algorithm is tried against every candidate key, and the cost becomes
-// `N_keys × N_algs_per_keytype`. Operators exposing verification to
-// untrusted input should pair this option with `WithMaxSignatures` and
-// keep their JWKS bounded.
+// Fan-out considerations: with WithRequireKid(false), candidates scale
+// with the number of compatible keys in the set. WithSkipAlgorithmMatch
+// disables the algorithm-based key-type filter; together with inference,
+// attempts can scale as `N_keys × N_algs_per_keytype`. Keep JWKS inputs
+// bounded and use WithMaxSignatures to limit multi-signature work.
 func WithInferAlgorithmFromKey(v bool) WithKeySetSuboption {
 	return &withKeySetSuboption{option.New(identInferAlgorithmFromKey{}, v)}
 }
@@ -592,7 +580,7 @@ func WithPublicHeaders(v Headers) WithKeySuboption {
 	return &withKeySuboption{option.New(identPublicHeaders{}, v)}
 }
 
-// WithRequiredKid specifies whether the keys in the jwk.Set should
+// WithRequireKid specifies whether the keys in the jwk.Set should
 // only be matched if the target JWS message's Key ID and the Key ID
 // in the given key matches.
 func WithRequireKid(v bool) WithKeySetSuboption {
@@ -622,6 +610,11 @@ func WithCompact() SignVerifyParseOption {
 // always matches the discipline under which it was accepted. The check
 // checks the union of protected and unprotected headers. The "alg"
 // parameter is required even when this option is enabled.
+//
+// Builtin JWKS and jku providers also honor this option when selecting
+// candidates. With algorithm inference enabled, skipping the match
+// permits all algorithms compatible with the key rather than just the
+// advertised algorithm. Shared options can be reused across calls.
 //
 // Pass jws.WithSkipAlgorithmMatch(true) to bypass this check. It is
 // intended for recovery or interoperability with non-conforming
@@ -660,8 +653,8 @@ func WithStrictECDSA(v bool) SignVerifyOption {
 	return &signVerifyOption{option.New(identStrictECDSA{}, v)}
 }
 
-// WithUseDefault specifies that if and only if a jwk.Key contains
-// exactly one jwk.Key, that key should be used.
+// WithUseDefault permits verification of a JWS without a kid when the
+// jwk.Set contains exactly one jwk.Key. That key is used as the default.
 func WithUseDefault(v bool) WithKeySetSuboption {
 	return &withKeySetSuboption{option.New(identUseDefault{}, v)}
 }

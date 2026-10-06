@@ -180,7 +180,7 @@ source: [examples/jws_use_jws_header_example_test.go](https://github.com/jwx-go/
 
 ## Generating a JWS message in compact serialization format
 
-To sign an arbitrary payload as a JWS message in compact serialization format, use `jwt.Sign()`.
+To sign an arbitrary payload as a JWS message in compact serialization format, use `jws.Sign()`.
 
 Note that this would be [slightly different if you are signing JWTs](01-jwt.md#serialize-using-jws), as you would be
 using functions from the `jwt` package instead of `jws`.
@@ -219,7 +219,7 @@ source: [examples/jws_sign_example_test.go](https://github.com/jwx-go/examples/b
 
 > Warning: the symmetric literals in the examples are deliberately short for readability. Production `HS*` keys should be random secrets that meet the minimum sizes described in [the JWK docs](04-jwk.md).
 
-For normal JWS code, prefer passing a concrete `jwa.SignatureAlgorithm` constant such as
+For normal JWS code, prefer passing a concrete `jwa.SignatureAlgorithm` value such as
 `jwa.HS256()` or `jwa.RS256()` to `jws.WithKey()`. The option accepts `jwa.KeyAlgorithm`
 so it can forward `(jwk.Key).Algorithm()`, but that metadata is still operation-specific:
 passing a JWE key-encryption algorithm such as `jwa.A128KW()` to `jws.WithKey()` compiles
@@ -379,7 +379,7 @@ It will automatically do the right thing whether it's serialized in compact form
 
 The `alg` must be explicitly specified. See "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)"
 
-As with signing, prefer a concrete `jwa.SignatureAlgorithm` constant when you already know
+As with signing, prefer a concrete `jwa.SignatureAlgorithm` value when you already know
 you are verifying a JWS. Passing `(jwk.Key).Algorithm()` through `jws.WithKey()` only works
 when that JWK is already marked with a signature algorithm; JWE algorithms are rejected at
 runtime.
@@ -436,7 +436,7 @@ when strict ECDSA verification is required.
 
 To verify a payload using JWKS, by default you will need your payload and JWKS to have matching `kid` and `alg` fields.
 
-First the `alg` field's requirement is the same for using a single key. But you could, at a possible cost of trying multiple algorithms, let this module infer the algorithm to use by using the `jws.InferAlgorithmFromKey(true)` sub-option to `jws.WithKeySet()` (or `jwt.WithKeySet()`) See the example below for details.
+First the `alg` field's requirement is the same for using a single key. But you could, at a possible cost of trying multiple algorithms, let this module infer the algorithm to use by using the `jws.WithInferAlgorithmFromKey(true)` sub-option to `jws.WithKeySet()` (or `jwt.WithKeySet()`) See the example below for details.
 
 (ref: "[Why don't you automatically infer the algorithm for `jws.Verify`?](99-faq.md#why-dont-you-automatically-infer-the-algorithm-for-jwsverify-)").
 
@@ -521,15 +521,10 @@ func Example_jws_verify_with_jwk_set() {
     }
 
     // This works, because we're telling it to infer the algorithm by the
-    // key type. Beyond making verification succeed, WithInferAlgorithmFromKey
-    // is also the recommended defense against the classic JWT "alg confusion"
-    // attack: an attacker takes a token signed with an asymmetric algorithm
-    // such as RS256, rewrites its header to alg=HS256, and tricks a naive
-    // verifier into using the RSA *public* key as an HMAC secret — which the
-    // attacker also knows, so the forged signature verifies. Inferring the
-    // algorithm from the key type (RSA key ⇒ RS256, never HS256) makes the
-    // attacker-supplied alg header irrelevant. Prefer this option whenever
-    // your JWKs don't carry explicit "alg" metadata.
+    // key type. The advertised alg must belong to the key's candidate
+    // algorithms: an RSA key cannot be treated as an HMAC secret.
+    // Missing alg is rejected. Prefer explicit alg metadata on JWKs;
+    // use inference only when that metadata is unavailable.
     if _, err := jws.Verify(signed, jws.WithKeySet(set, jws.WithInferAlgorithmFromKey(true), jws.WithRequireKid(false))); err != nil {
       fmt.Printf("Failed to verify using jwk.Set: %s", err)
       return
@@ -651,7 +646,7 @@ A `jwkfetch.Client` whitelist is applied to both the initial URL and every redir
 
 **If you reach for `RegexpWhitelist`, anchor your patterns.** They are **not** anchored for you, so `example\.com` matches anywhere in the URL and also allows `https://example.com.attacker.com/evil` — a whitelist bypass back into the SSRF / key-substitution territory the whitelist was meant to close. Write `^https://example\.com/` (anchor the start with `^`, escape the dots, terminate the host with `/`), or prefer `MapWhitelist` when the `jku` URLs are known up front.
 
-The URL in the `jku` field must have the `https` scheme and the key ID in the fetched JWK Set must match the key ID in the JWS header.
+The `jku`, `kid`, and `alg` parameters are read from the JOSE header union, whether protected or unprotected. The URL must use `https`, and the fetched key must match the header's `kid`. The fetcher's URL restrictions still apply.
 
 Passing `nil` to `jws.WithVerifyAuto` is not supported: jku verification will error at use time rather than silently falling back to any default. This is intentional — there is no correct default fetcher for jku verification because the policy (which URLs to trust) is site-specific.
 
@@ -1047,3 +1042,5 @@ func validateJWSSecurityHeaders(headers jws.Headers) {
 ```
 source: [examples/jws_filter_advanced_example_test.go](https://github.com/jwx-go/examples/blob/v4/jws_filter_advanced_example_test.go)
 <!-- END INCLUDE -->
+
+JSON verification rejects explicit `crit: null` and a present non-string `protected` member, even when critical-value validation is disabled. An allowed generic critical extension may be in either header location; `crit` itself and `b64` must be protected. Missing `alg` is rejected before key providers are called; a later valid signature can still succeed. `jws.WithSkipAlgorithmMatch(true)` bypasses algorithm-based candidate filtering as well as comparison. With `jws.WithInferAlgorithmFromKey(true)`, it permits all algorithms compatible with the selected key. Shared JWKS options retain their per-call policy when reused.

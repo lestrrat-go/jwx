@@ -1,10 +1,12 @@
 package jws_test
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
@@ -89,14 +91,14 @@ func TestCritValidationDefaultStrict(t *testing.T) {
 		require.ErrorContains(t, err, `standard header parameter`)
 	})
 
-	t.Run("missing from protected header rejected", func(t *testing.T) {
+	t.Run("missing from JOSE header union rejected", func(t *testing.T) {
 		hdrs := jws.NewHeaders()
 		require.NoError(t, hdrs.Set(jws.CriticalKey, []string{"x-missing"}))
 		signed := signWith(t, key, payload, hdrs)
 
 		_, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key))
-		require.Error(t, err, `jws.Verify should reject crit entry not present in protected header`)
-		require.ErrorContains(t, err, `not present in the protected header`)
+		require.Error(t, err, `jws.Verify should reject crit entry not present in JOSE header union`)
+		require.ErrorContains(t, err, `not present in the JOSE header union`)
 	})
 
 	t.Run("undeclared extension rejected", func(t *testing.T) {
@@ -318,7 +320,7 @@ func TestSignAutoDeclaresB64InCritWhenFalse(t *testing.T) {
 				if len(tc.preCrit) > 0 && tc.preCrit[0] != "b64" {
 					// Set a placeholder header so validateCritical
 					// does not later complain that the crit name is
-					// not present in the protected header.
+					// not present in the JOSE header union.
 					require.NoError(t, hdrs.Set(tc.preCrit[0], "v"))
 				}
 			}
@@ -693,4 +695,61 @@ func TestMessageMarshalJSONHonorsB64False(t *testing.T) {
 	require.NoError(t, err, `re-Parse of MarshalJSON output should succeed`)
 	require.Equal(t, msg.Payload(), msg2.Payload(),
 		`Parse → MarshalJSON → Parse round-trip must preserve b64=false payload bytes`)
+}
+
+func TestJSONCriticalHeaderUnion(t *testing.T) {
+	key := bytes.Repeat([]byte{42}, 32)
+	for _, general := range []bool{false, true} {
+		for _, streaming := range []bool{false, true} {
+			t.Run(fmt.Sprintf("general=%t/streaming=%t", general, streaming), func(t *testing.T) {
+				options := func() []jws.VerifyOption {
+					opts := []jws.VerifyOption{jws.WithKey(jwa.HS256(), key), jws.WithCritExtension("x-test")}
+					if streaming {
+						opts = append(opts, jws.WithDetachedPayloadReader(bytes.NewReader([]byte("payload"))))
+					}
+					return opts
+				}
+				protected := `{"alg":"HS256","crit":["x-test"]}`
+				wire := headerUnionJWS(t, &protected, map[string]any{"x-test": true}, general, streaming)
+				got, err := jws.Verify(wire, options()...)
+				require.NoError(t, err)
+				if streaming {
+					require.NotNil(t, got)
+					require.Empty(t, got)
+				} else {
+					require.Equal(t, []byte("payload"), got)
+				}
+				opts := options()[:1]
+				if streaming {
+					opts = append(opts, jws.WithDetachedPayloadReader(bytes.NewReader([]byte("payload"))))
+				}
+				_, err = jws.Verify(wire, opts...)
+				require.ErrorContains(t, err, "not declared support")
+				_, err = jws.Verify(headerUnionJWS(t, &protected, nil, general, streaming), options()...)
+				require.Error(t, err)
+				b64 := `{"alg":"HS256","crit":["b64"]}`
+				_, err = jws.Verify(headerUnionJWS(t, &b64, map[string]any{"b64": true}, general, streaming), options()...)
+				require.Error(t, err)
+				for _, c := range []struct {
+					name, protected string
+					public          map[string]any
+				}{
+					{name: "public null", protected: `{"alg":"HS256"}`, public: map[string]any{"crit": nil}},
+					{name: "protected null", protected: `{"alg":"HS256","crit":null}`},
+					{name: "duplicate public null", protected: `{"alg":"HS256","crit":["x-test"],"x-test":true}`, public: map[string]any{"crit": nil}},
+				} {
+					t.Run(c.name, func(t *testing.T) {
+						wire := headerUnionJWS(t, &c.protected, c.public, general, streaming)
+						_, err := jws.Parse(wire)
+						require.Error(t, err)
+						for _, validation := range []bool{false, true} {
+							opts := append(options(), jws.WithCritValidation(validation))
+							_, err = jws.Verify(wire, opts...)
+							require.Error(t, err)
+						}
+					})
+				}
+			})
+		}
+	}
 }

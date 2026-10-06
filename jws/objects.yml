@@ -102,6 +102,7 @@ fields:
   - name: critical
     type: "[]string"
     json: crit
+    reject_null: true
     comment: https://tools.ietf.org/html/rfc7515#section-4.1.11
   - name: b64
     exported_name: B64

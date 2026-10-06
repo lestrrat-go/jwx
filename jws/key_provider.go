@@ -68,8 +68,17 @@ import (
 //	    return OK
 //	  }
 //	}
+//
+// Signatures without an alg in the transmitted JOSE header are rejected before
+// FetchKeys is called. Providers supply keys rather than missing algorithms.
 type KeyProvider interface {
 	FetchKeys(context.Context, KeySink, *Signature, *Message) error
+}
+
+// Builtin providers receive the per-call algorithm policy without changing
+// shared options or adding context values on the verification path.
+type algorithmMatchAwareKeyProvider interface {
+	fetchKeys(context.Context, KeySink, *Signature, *Message, bool) error
 }
 
 // KeySink is a data storage where `jws.KeyProvider` objects should
@@ -120,7 +129,7 @@ type keySetProvider struct {
 // disabled). Callers use it to tell "nothing was tried" apart from
 // "candidates were emitted", so collected per-key errors are not
 // discarded when no candidate ever reached the sink.
-func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _ *Message) (bool, error) {
+func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _ *Message, skipAlgorithmMatch bool) (bool, error) {
 	if uk, ok := key.(jwk.UnsupportedKey); ok {
 		kid, _ := uk.KeyID()
 		return false, fmt.Errorf(`key with kid %q has unsupported key type %q and cannot be used for signature verification; an extension module may be required to parse it: %w`, kid, uk.KeyType().String(), uk.Reason())
@@ -151,7 +160,7 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _
 		}
 
 		// bail out if the JWT has a `alg` field, and it doesn't match
-		if tokAlg, ok := signatureAlgorithm(sig); ok {
+		if tokAlg, ok := signatureAlgorithm(sig); ok && !skipAlgorithmMatch {
 			for _, alg := range algs {
 				if tokAlg == alg {
 					sink.Key(alg, key)
@@ -161,7 +170,7 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _
 			return false, fmt.Errorf(`algorithm in the message does not match any of the inferred algorithms`)
 		}
 
-		// Yes, you get to try them all!!!!!!!
+		// An explicit skip policy also permits every compatible inferred algorithm.
 		for _, alg := range algs {
 			sink.Key(alg, key)
 		}
@@ -170,7 +179,11 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _
 	return false, nil
 }
 
-func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signature, msg *Message) error {
+func (kp *keySetProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signature, msg *Message) error {
+	return kp.fetchKeys(ctx, sink, sig, msg, false)
+}
+
+func (kp *keySetProvider) fetchKeys(_ context.Context, sink KeySink, sig *Signature, msg *Message, skipAlgorithmMatch bool) error {
 	if kp.requireKid {
 		wantedKid, ok := signatureKeyID(sig)
 		if !ok {
@@ -188,7 +201,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 			if !ok {
 				return fmt.Errorf(`failed to get key at index 0 (empty JWKS?)`)
 			}
-			_, err := kp.selectKey(sink, key, sig, msg)
+			_, err := kp.selectKey(sink, key, sig, msg, skipAlgorithmMatch)
 			return err
 		}
 
@@ -200,7 +213,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 			if !ok {
 				return fmt.Errorf(`failed to find key with key ID %q in key set`, wantedKid)
 			}
-			_, err := kp.selectKey(sink, key, sig, msg)
+			_, err := kp.selectKey(sink, key, sig, msg, skipAlgorithmMatch)
 			return err
 		}
 
@@ -215,7 +228,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 			}
 			matched = true
 
-			ok, err := kp.selectKey(sink, key, sig, msg)
+			ok, err := kp.selectKey(sink, key, sig, msg, skipAlgorithmMatch)
 			if err != nil {
 				errs = append(errs, fmt.Errorf(`key #%d: %w`, i, err))
 				continue
@@ -242,8 +255,8 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 
 	// Otherwise just try all keys.
 	//
-	// When the protected header advertises an `alg`, keys whose type
-	// cannot produce that algorithm are skipped before reaching
+	// When matching is enabled and the JOSE header advertises an `alg`,
+	// keys whose type cannot produce that algorithm are skipped before reaching
 	// selectKey (unsupported-key placeholders excepted — see the
 	// comment at the check below). This bounds verification fan-out to
 	// N_keys_of_matching_type instead of N_keys against a heterogeneous
@@ -258,7 +271,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 	// key type), the filter is skipped and existing behavior is
 	// preserved.
 	var allowedKtys []jwa.KeyType
-	if hdrAlg, ok := signatureAlgorithm(sig); ok {
+	if hdrAlg, ok := signatureAlgorithm(sig); ok && !skipAlgorithmMatch {
 		allowedKtys = keyalg.KeyTypesFor(hdrAlg)
 	}
 	emitted := false
@@ -277,7 +290,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 		if allowedKtys != nil && !slices.Contains(allowedKtys, key.KeyType()) && !jwk.IsUnsupportedKey(key) {
 			continue
 		}
-		ok, err := kp.selectKey(sink, key, sig, msg)
+		ok, err := kp.selectKey(sink, key, sig, msg, skipAlgorithmMatch)
 		if err != nil {
 			errs = append(errs, fmt.Errorf(`key #%d: %w`, i, err))
 			continue
@@ -300,22 +313,26 @@ type jkuProvider struct {
 	fetcher jwk.Fetcher
 }
 
-func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signature, _ *Message) error {
+func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signature, msg *Message) error {
+	return kp.fetchKeys(ctx, sink, sig, msg, false)
+}
+
+func (kp jkuProvider) fetchKeys(ctx context.Context, sink KeySink, sig *Signature, _ *Message, skipAlgorithmMatch bool) error {
 	if kp.fetcher == nil {
 		return fmt.Errorf(`jku verification requires a non-nil jwk.Fetcher (see jws.WithVerifyAuto)`)
 	}
 
 	kid, ok := signatureKeyID(sig)
 	if !ok {
-		return fmt.Errorf(`use of "jku" requires that the payload contain a "kid" field in the protected header`)
+		return fmt.Errorf(`use of "jku" requires a "kid" field in the JOSE header union`)
 	}
 
 	// errors here can't be reliably passed to the consumers.
 	// it's unfortunate, but if you need this control, you are
 	// going to have to write your own fetcher
-	u, ok := sig.ProtectedHeaders().JWKSetURL()
+	u, ok := signatureJWKSetURL(sig)
 	if !ok || u == "" {
-		return fmt.Errorf(`use of "jku" field specified, but the field is empty`)
+		return fmt.Errorf(`use of "jku" requires a non-empty "jku" field in the JOSE header union`)
 	}
 	uo, err := url.Parse(u)
 	if err != nil {
@@ -353,20 +370,25 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 	hdrAlg, ok := signatureAlgorithm(sig)
 	if !ok {
 		// The jku provider routes a key by matching both "kid" and
-		// "alg" against the JWS protected header. With no alg in the
+		// "alg" against the JOSE header union. With no alg in the
 		// header there's nothing to pin the signature algorithm to,
 		// so reject explicitly rather than returning no keys and
 		// letting the outer verify loop surface a generic "could not
 		// be verified with any of the keys" message.
-		return fmt.Errorf(`use of "jku" requires that the protected header contain an "alg" field`)
+		return fmt.Errorf(`use of "jku" requires an "alg" field in the JOSE header union`)
 	}
 
 	for _, alg := range algs {
-		if hdrAlg != alg {
+		if !skipAlgorithmMatch && hdrAlg != alg {
 			continue
 		}
 
 		sink.Key(alg, key)
+		if !skipAlgorithmMatch {
+			return nil
+		}
+	}
+	if skipAlgorithmMatch && len(algs) > 0 {
 		return nil
 	}
 

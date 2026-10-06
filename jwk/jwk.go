@@ -332,7 +332,7 @@ func PublicRawKeyOf(v any) (any, error) {
 	return raw, nil
 }
 
-// ParseRawKey is a combination of ParseKey and Raw. It parses a single JWK key,
+// ParseRawKey is a combination of ParseKey and Export. It parses a single JWK key,
 // and assigns the "raw" key to the given parameter. The key must either be
 // a pointer to an empty interface, or a pointer to the actual raw key type
 // such as *rsa.PrivateKey, *ecdsa.PublicKey, *[]byte, etc.

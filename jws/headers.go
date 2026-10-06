@@ -76,6 +76,18 @@ func signatureKeyID(sig *Signature) (string, bool) {
 	return "", false
 }
 
+func signatureJWKSetURL(sig *Signature) (string, bool) {
+	if sig.protected != nil {
+		if url, ok := sig.protected.JWKSetURL(); ok {
+			return url, true
+		}
+	}
+	if sig.headers != nil {
+		return sig.headers.JWKSetURL()
+	}
+	return "", false
+}
+
 // Called only on freshly parsed headers, before they are exposed to providers.
 // Both headers are distinct stdHeaders constructed by the JSON parser.
 func validateSignatureHeaders(sig *Signature) error {

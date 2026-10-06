@@ -62,10 +62,34 @@ func (s *Signature) SetSignature(v []byte) *Signature {
 	return s
 }
 
+// protectedHeaderString decodes strings directly while preserving presence and
+// type. The general-message probe may encounter an unused top-level protected
+// member, so invalid types are rejected only when this field is consumed.
+type protectedHeaderString struct {
+	value    string
+	present  bool
+	isString bool
+}
+
+func (s *protectedHeaderString) UnmarshalJSONFrom(dec *json.Decoder) error {
+	*s = protectedHeaderString{present: true}
+	if dec.PeekKind() != '"' {
+		_, err := dec.ReadValue()
+		return err
+	}
+	tok, err := dec.ReadToken()
+	if err != nil {
+		return err
+	}
+	s.value = tok.String()
+	s.isString = true
+	return nil
+}
+
 type signatureUnmarshalProbe struct {
-	Header    Headers         `json:"header,omitempty"`
-	Protected json.RawMessage `json:"protected,omitempty"`
-	Signature *string         `json:"signature,omitempty"`
+	Header    Headers               `json:"header,omitempty"`
+	Protected protectedHeaderString `json:"protected,omitempty"`
+	Signature *string               `json:"signature,omitempty"`
 }
 
 func (s *Signature) UnmarshalJSON(data []byte) error {
@@ -77,13 +101,9 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 
 	s.headers = sup.Header
 	s.protected = nil
-	s.protectedAbsent = sup.Protected == nil
-	if buf := sup.Protected; buf != nil {
-		var encoded *string
-		if err := json.Unmarshal(buf, &encoded); err != nil {
-			return fmt.Errorf(`failed to decode protected headers: %w`, err)
-		}
-		if encoded == nil {
+	s.protectedAbsent = !sup.Protected.present
+	if encoded := sup.Protected; encoded.present {
+		if !encoded.isString {
 			return fmt.Errorf(`protected headers must be a string`)
 		}
 		// RFC 7515 §3 mandates that "protected" be base64url-encoded.
@@ -93,7 +113,7 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 		// flattened branch (which only base64-decodes) and gave callers
 		// a non-conforming wire form useful for evading byte-exact JWS
 		// dedup / replay caches.
-		decoded, err := base64.Decode([]byte(*encoded))
+		decoded, err := base64.DecodeString(encoded.value)
 		if err != nil {
 			return fmt.Errorf(`failed to base64 decode protected headers: %w`, err)
 		}
@@ -200,11 +220,11 @@ func (m Message) LookupSignature(kid string) []*Signature {
 // incoming JSON object. We then decide how to parse it
 // from the fields that are populated.
 type messageUnmarshalProbe struct {
-	Payload    json.RawMessage   `json:"payload"`
-	Signatures []json.RawMessage `json:"signatures,omitempty"`
-	Header     json.RawMessage   `json:"header,omitempty"`
-	Protected  json.RawMessage   `json:"protected,omitempty"`
-	Signature  *string           `json:"signature,omitempty"`
+	Payload    json.RawMessage       `json:"payload"`
+	Signatures []json.RawMessage     `json:"signatures,omitempty"`
+	Header     json.RawMessage       `json:"header,omitempty"`
+	Protected  protectedHeaderString `json:"protected,omitempty"`
+	Signature  *string               `json:"signature,omitempty"`
 }
 
 func (m *Message) UnmarshalJSON(buf []byte) error {
@@ -288,15 +308,11 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 			}
 			sig.headers = hdrs
 		}
-		if src := mup.Protected; src != nil {
-			var encoded *string
-			if err := json.Unmarshal(src, &encoded); err != nil {
-				return fmt.Errorf(`failed to decode flattened protected headers: %w`, err)
-			}
-			if encoded == nil {
+		if encoded := mup.Protected; encoded.present {
+			if !encoded.isString {
 				return fmt.Errorf(`protected headers must be a string`)
 			}
-			decoded, err := base64.DecodeString(*encoded)
+			decoded, err := base64.DecodeString(encoded.value)
 			if err != nil {
 				return fmt.Errorf(`failed to base64 decode flattened protected headers: %w`, err)
 			}

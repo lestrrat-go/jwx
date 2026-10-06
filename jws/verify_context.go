@@ -217,6 +217,11 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 			return nil, makeVerifyError(`%w`, err)
 		}
 
+		if _, ok := signatureAlgorithm(sig); !ok {
+			errs = append(errs, makeVerifyError(`signature #%d: required "alg" header is missing`, idx+1))
+			continue
+		}
+
 		var rawHeaders []byte
 		if rbp, ok := sig.protected.(interface{ rawBuffer() []byte }); ok {
 			if raw := rbp.rawBuffer(); raw != nil {
@@ -240,7 +245,7 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 				errs = append(errs, makeVerifyError(`signature #%d: %w`, idx+1, err))
 				continue
 			}
-			if err := validateCritical(sig.protected, vc.criticalExtensions); err != nil {
+			if err := validateCritical(sig, vc.criticalExtensions); err != nil {
 				errs = append(errs, makeVerifyError(`signature #%d has invalid "crit" header: %w`, idx+1, err))
 				continue
 			}
@@ -256,8 +261,14 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 			}
 
 			var sink algKeySink
-			if err := kp.FetchKeys(vc.ctx, &sink, sig, msg); err != nil {
-				errs = append(errs, makeVerifyError(`signature #%d: key provider %d failed: %w`, idx+1, i, err))
+			var fetchErr error
+			if aware, ok := kp.(algorithmMatchAwareKeyProvider); ok {
+				fetchErr = aware.fetchKeys(vc.ctx, &sink, sig, msg, vc.skipAlgorithmMatch)
+			} else {
+				fetchErr = kp.FetchKeys(vc.ctx, &sink, sig, msg)
+			}
+			if fetchErr != nil {
+				errs = append(errs, makeVerifyError(`signature #%d: key provider %d failed: %w`, idx+1, i, fetchErr))
 				continue
 			}
 
@@ -399,7 +410,7 @@ func validateB64InCritIfFalse(protected Headers) error {
 //   - no entry is the empty string
 //   - no entry duplicates another
 //   - no entry names a standard JOSE header parameter
-//   - every entry appears as a header parameter in the protected header
+//   - every entry appears as a header parameter in the JOSE header union
 //   - every entry is in the caller-supplied allowedExtensions allowlist
 //
 // The last check is the central RFC requirement: recipients MUST reject
@@ -412,7 +423,8 @@ func validateB64InCritIfFalse(protected Headers) error {
 // — see the identDetachedPayload case in ProcessOptions. The auto-
 // declaration only short-circuits the allowlist check; every other
 // rule above still applies to the "b64" entry.
-func validateCritical(protected Headers, allowedExtensions []string) error {
+func validateCritical(sig *Signature, allowedExtensions []string) error {
+	protected := sig.protected
 	if !protected.Has(CriticalKey) {
 		return nil
 	}
@@ -441,9 +453,10 @@ func validateCritical(protected Headers, allowedExtensions []string) error {
 			return makeVerifyError(`"crit" header must not contain standard header parameter %q`, name)
 		}
 
-		// The extension must be present in the protected header.
-		if !protected.Has(name) {
-			return makeVerifyError(`"crit" header references extension %q, but it is not present in the protected header`, name)
+		// The crit list is protected, but a generic extension can reside
+		// in either header location unless its own specification forbids it.
+		if !protected.Has(name) && (sig.headers == nil || !sig.headers.Has(name)) {
+			return makeVerifyError(`"crit" header references extension %q, but it is not present in the JOSE header union`, name)
 		}
 
 		// The recipient must have declared support for the extension.

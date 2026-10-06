@@ -102,7 +102,8 @@ be considered without matching `kid` values.
 
 **A key with no `alg` field is skipped, not guessed at.** Inference from the key type is opt-in via
 `jwt.WithKeySet(set, jws.WithInferAlgorithmFromKey(true))`, and it is a fallback, not a default. When the JOSE
-header has an `alg`, inference tries only that algorithm against compatible keys. Verification requires `alg` in
+header has an `alg`, inference tries only that algorithm against compatible keys unless the caller
+explicitly passes `jws.WithSkipAlgorithmMatch(true)` (through `jwt.WithVerifyOption` for JWTs). Verification requires `alg` in
 the JOSE header union; omission is rejected even when inference is enabled. Combined with `jws.WithRequireKid(false)`,
 inference may consider many compatible keys, so keep JWKS inputs bounded. The right fix is usually to add `alg` to the
 keys in the JWKS. If verification against a JWKS finds no usable key, check for missing `alg` fields first.
@@ -122,6 +123,8 @@ client := jwkfetch.NewClient()
 set, err := client.Fetch(ctx, "https://issuer.example/jwks.json")
 // then: jwt.Parse(raw, jwt.WithKeySet(set))
 ```
+
+`WithVerifyAuto` reads `jku`, `kid`, and `alg` from the protected/unprotected JOSE header union. The URL must use HTTPS and the fetcher's URL restrictions still apply.
 
 For repeated fetches with background refresh, use `jwkfetch.NewCache`. For `jku`-driven verification, build a `jwkfetch.Client` with a `jwkfetch.NewMapWhitelist()` of allowed URLs and pass it to `jwt.WithVerifyAuto(client)`.
 
@@ -219,11 +222,11 @@ and ES512/P-521 curve mismatches. The check is opt-in. Pass it through JWT signi
 
 ### The JOSE `alg` must match the verifying algorithm exactly
 
-`jws.Verify` rejects a message whose JOSE header advertises one algorithm while it is verified under another. The comparison is plain string equality with no aliasing, and it applies to every key source (`jws.WithKey`, `jws.WithKeySet`, `jws.WithVerifyAuto`, custom `jws.WithKeyProvider`). The `alg` parameter is required and is read from the union of protected and unprotected headers. Header names must be disjoint, and `crit` and `b64` must be protected.
+`jws.Verify` rejects a message whose JOSE header advertises one algorithm while it is verified under another. The comparison is plain string equality with no aliasing, and it applies to every key source (`jws.WithKey`, `jws.WithKeySet`, `jws.WithVerifyAuto`, custom `jws.WithKeyProvider`). The `alg` parameter is required and is read from the union of protected and unprotected headers. Header names must be disjoint, and `crit` and `b64` must be protected. An explicit `crit: null` is rejected even with critical-value validation disabled. An allowed generic critical extension may appear in either header location unless its specification requires protection.
 
 The practical consequence involves EdDSA. Per RFC 9864, `EdDSA`, `Ed25519` and `Ed448` are three distinct `alg` values, so a token whose header says `alg: Ed25519` does **not** verify under `jws.WithKey(jwa.EdDSA(), key)`, and vice versa. Match the identifier the producer actually emitted.
 
-`jws.WithSkipAlgorithmMatch(true)` bypasses the check. It exists for interop with non-conforming producers, and it weakens a real safety guard, so treat it the way you treat `jws.WithRequireKid(false)`.
+`jws.WithSkipAlgorithmMatch(true)` bypasses the check and built-in algorithm-based candidate filtering. Combined with algorithm inference, it tries every compatible algorithm; it still requires a transmitted `alg`. Shared JWKS options keep this policy per verification call. It exists for interop with non-conforming producers, and it weakens a real safety guard, so treat it the way you treat `jws.WithRequireKid(false)`.
 
 ## JWE (encrypting payloads)
 

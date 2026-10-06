@@ -36,7 +36,7 @@ Environment variables:
 
 ## Build Tags for Tests
 
-No feature build tags in v4. Optional features (signature algorithms, base64 backend) are activated via side-effect imports of [extension modules](../docs/10-extensions.md).
+No feature build tags in v4. Optional features (signature algorithms, base64 backend) are activated via side-effect imports of [extension modules](../../docs/10-extensions.md).
 
 The only build tags in the tree are Go-version constraints, and tests never set
 them; the toolchain selects the files. Two groups exist: the json/v2 sentinel
@@ -110,6 +110,13 @@ once `go.mod` moves to 1.27.
 Key generation helpers for tests:
 - RSA, ECDSA, Ed25519, symmetric key generation
 - JWT/JWS/JWE/JWK operation helpers
+
+## JSON JWS vectors
+
+`headerUnionJWS` in `jws/jws_test.go` accepts `testing.TB` and independently
+builds HMAC signing input with standard-library primitives. Existing tests and
+`BenchmarkVerifyJSONHeaderUnion` reuse it for flattened/general JSON, protected
+header presence/types, critical extensions, and built-in provider policies.
 
 ## Header probe verification
 

@@ -529,6 +529,9 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, ContentTypeKey, err)
 			}
 		case CriticalKey:
+			if dec.PeekKind() == 'n' {
+				return fmt.Errorf(`field %s must not be null`, CriticalKey)
+			}
 			var decoded []string
 			if err := json.UnmarshalDecode(dec, &decoded); err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, CriticalKey, err)

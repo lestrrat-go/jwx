@@ -31,9 +31,12 @@ type identCritExtension struct{}
 // disabled the protection the producer was trying to obtain by listing
 // the extension as critical.
 //
+// Unprotected extension values are not authenticated by the signature; the
+// extension specification determines which header locations are permitted.
+//
 // Concretely, the post-verify code path for a declared extension must:
 //
-//  1. Read the value of the named header from the verified message.
+//  1. Read the value of the named header from the JOSE header union.
 //  2. Apply whatever check or transformation the extension specifies
 //     (e.g. for an "x-tenant-binding" extension, refuse to act on the
 //     payload unless the binding matches the current tenant).
@@ -312,6 +315,9 @@ func WithKeySet(set jwk.Set, options ...WithKeySetSuboption) VerifyOption {
 //
 // If you pass a different jwk.Fetcher implementation, YOU own the
 // whitelist semantics. jwx will not and cannot check.
+//
+// The jku URL, kid, and alg are read from the protected/unprotected
+// header union. URL policy still belongs to the fetcher.
 //
 // A nil fetcher is not permitted: jku verification errors at use
 // time rather than silently falling back to any default.
