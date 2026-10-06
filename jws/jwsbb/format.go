@@ -22,7 +22,13 @@ import (
 //
 // Returns the constructed signing input in the format: base64(header).base64(payload) or base64(header).payload
 func SignBuffer(buf, hdr, payload []byte, encoder base64.Encoder, encodePayload bool) []byte {
-	l := encoder.EncodedLen(len(hdr)+len(payload)) + 1
+	// Header and payload are encoded separately, so each one is padded or
+	// rounded on its own. An unencoded payload is copied as-is.
+	payloadLen := len(payload)
+	if encodePayload {
+		payloadLen = encoder.EncodedLen(payloadLen)
+	}
+	l := encoder.EncodedLen(len(hdr)) + 1 + payloadLen
 	if cap(buf) < l {
 		buf = make([]byte, 0, l)
 	}
