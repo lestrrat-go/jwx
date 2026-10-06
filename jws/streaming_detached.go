@@ -131,12 +131,8 @@ func (sc *signContext) signStreaming() ([]byte, error) {
 		if err := protected.Set(AlgorithmKey, alg); err != nil {
 			return nil, makeSignError(prefixJwsSign, `failed to set "alg" header for signature %d: %w`, idx, err)
 		}
-		if jwkKey, ok := sb.key.(jwk.Key); ok {
-			if kid, ok := jwkKey.KeyID(); ok && kid != "" {
-				if err := protected.Set(KeyIDKey, kid); err != nil {
-					return nil, makeSignError(prefixJwsSign, `failed to set "kid" header for signature %d: %w`, idx, err)
-				}
-			}
+		if err := sb.setKeyID(protected, sc.format); err != nil {
+			return nil, makeSignError(prefixJwsSign, `signature %d: %w`, idx, err)
 		}
 
 		// For compact serialization RFC 7515 requires the unprotected
@@ -144,6 +140,11 @@ func (sc *signContext) signStreaming() ([]byte, error) {
 		// is no separate slot for it on the wire. JSON serializations
 		// keep them separate.
 		signingHeaders := protected
+		if sc.format != fmtCompact {
+			if err := validateSigningHeaders(protected, sb.public); err != nil {
+				return nil, makeSignError(prefixJwsSign, `signature %d: %w`, idx, err)
+			}
+		}
 		if sc.format == fmtCompact {
 			signingHeaders, err = mergeHeaders(sb.public, protected)
 			if err != nil {

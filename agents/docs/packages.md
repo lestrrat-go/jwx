@@ -162,3 +162,5 @@ Shared utilities. Not public API.
 | `jwxtest` | Test key generation helpers (RSA, ECDSA, Ed25519, symmetric) |
 | `tokens` | String constants for algorithm names and separators |
 | `pool` | Generic object pool (`Pool[T]`, `SlicePool[T]`) |
+
+JSON JWS signing rejects intersecting header names and public crit/b64 before producing a signature. A public kid matching the JWK kid is retained without inserting a duplicate protected kid, including streaming detached signing.

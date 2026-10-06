@@ -184,23 +184,8 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (buildResult,
 		return br, makeSignError(prefixJwsSign, `failed to set "alg" header: %w`, err)
 	}
 
-	if key, ok := sb.key.(jwk.Key); ok {
-		if kid, ok := key.KeyID(); ok && kid != "" {
-			// If the caller already placed a kid into the protected
-			// header via WithProtectedHeaders and it disagrees with
-			// the jwk.Key's kid, fail loudly. Silently preferring
-			// one is a footgun in multi-kid routing setups; callers
-			// who want the override should strip kid from the key or
-			// omit it from the custom headers.
-			if existing, ok := protected.KeyID(); ok && existing != "" && existing != kid {
-				return br, makeSignError(prefixJwsSign,
-					`conflicting "kid" values: jws.WithProtectedHeaders carries %q but jws.WithKey's jwk.Key carries %q — remove one`,
-					existing, kid)
-			}
-			if err := protected.Set(KeyIDKey, kid); err != nil {
-				return br, makeSignError(prefixJwsSign, `failed to set "kid" header: %w`, err)
-			}
-		}
+	if err := sb.setKeyID(protected, sc.format); err != nil {
+		return br, makeSignError(prefixJwsSign, `%w`, err)
 	}
 
 	// RFC 7797 §3 requires producers that set "b64":false to also list
@@ -223,7 +208,12 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (buildResult,
 	// When there are no public (unprotected) headers, skip the merge
 	// to avoid allocating a third Headers object just to copy into.
 	hdrs := protected
-	if sb.public != nil {
+	if sc.format != fmtCompact {
+		if err := validateSigningHeaders(protected, sb.public); err != nil {
+			return br, makeSignError(prefixJwsSign, `%w`, err)
+		}
+	}
+	if sb.public != nil && sc.format == fmtCompact {
 		var err error
 		hdrs, err = mergeHeaders(sb.public, protected)
 		if err != nil {
@@ -239,7 +229,7 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (buildResult,
 
 	// check if we need to base64 encode the payload
 	b64 := getB64Value(hdrs)
-	if !b64 && !sc.detached {
+	if !b64 && !sc.detached && sc.format == fmtCompact {
 		if bytes.IndexByte(payload, tokens.Period) != -1 {
 			return br, fmt.Errorf(`compact serialization with b64=false requires payload to contain no "." characters per RFC 7797 §5.2; use jws.WithDetachedPayload to keep the payload out of the wire format`)
 		}
@@ -260,4 +250,58 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (buildResult,
 	br.sig.signature = signature
 
 	return br, nil
+}
+
+func (sb *signatureBuilder) setKeyID(protected Headers, format int) error {
+	key, ok := sb.key.(jwk.Key)
+	if !ok {
+		return nil
+	}
+	kid, ok := key.KeyID()
+	if !ok || kid == "" {
+		return nil
+	}
+	if existing, ok := protected.KeyID(); ok && existing != "" && existing != kid {
+		return fmt.Errorf(`conflicting "kid" values: jws.WithProtectedHeaders carries %q but jws.WithKey's jwk.Key carries %q — remove one`, existing, kid)
+	}
+	if format != fmtCompact && sb.public != nil {
+		if existing, ok := sb.public.KeyID(); ok {
+			if existing != kid {
+				return fmt.Errorf(`conflicting "kid" values: public header carries %q but jwk.Key carries %q`, existing, kid)
+			}
+			return nil // Do not duplicate an explicit public kid in the protected header.
+		}
+	}
+	return protected.Set(KeyIDKey, kid)
+}
+
+func validateSigningHeaders(protected, public Headers) error {
+	if public == nil {
+		return nil
+	}
+	if public.Has(CriticalKey) || public.Has(B64Key) {
+		return fmt.Errorf(`"crit" and "b64" must be in the protected header`)
+	}
+	for _, name := range stdHeaderNames {
+		if public.Has(name) && protected.Has(name) {
+			return fmt.Errorf(`header parameter %q occurs in both protected and unprotected headers`, name)
+		}
+	}
+	if h, ok := public.(*stdHeaders); ok {
+		h.mu.RLock()
+		defer h.mu.RUnlock()
+		for name := range h.privateParams {
+			if protected.Has(name) {
+				return fmt.Errorf(`header parameter %q occurs in both protected and unprotected headers`, name)
+			}
+		}
+	} else {
+		// Custom Headers has no copy-free field enumeration API.
+		for _, name := range public.Keys() {
+			if protected.Has(name) {
+				return fmt.Errorf(`header parameter %q occurs in both protected and unprotected headers`, name)
+			}
+		}
+	}
+	return nil
 }
