@@ -22,17 +22,19 @@ func TestRecipient(t *testing.T) {
 	})
 }
 
-// TestJWEJSONRejectsEmptyCryptoFields pins RFC 7516 §7.2 — "ciphertext", "iv",
-// and "tag" MUST be present and non-empty. Without this check, a zero-length
-// authentication tag would reach the AEAD verification code path.
-func TestJWEJSONRejectsEmptyCryptoFields(t *testing.T) {
+// Ciphertext must be a string (possibly empty), while IV and tag must be
+// present and non-empty. In particular, empty ciphertext must not allow an
+// empty authentication tag to reach the AEAD verification code path.
+func TestJWEJSONRejectsInvalidCryptoFields(t *testing.T) {
 	// Minimal protected headers "{}" base64url-encoded = "e30".
 	testcases := []struct {
 		name string
 		body string
 	}{
 		{"missing ciphertext", `{"protected":"e30","iv":"AAAA","tag":"AAAA","recipients":[{}]}`},
-		{"empty ciphertext", `{"protected":"e30","ciphertext":"","iv":"AAAA","tag":"AAAA","recipients":[{}]}`},
+		{"null ciphertext", `{"protected":"e30","ciphertext":null,"iv":"AAAA","tag":"AAAA","recipients":[{}]}`},
+		{"non-string ciphertext", `{"protected":"e30","ciphertext":42,"iv":"AAAA","tag":"AAAA","recipients":[{}]}`},
+		{"empty ciphertext and tag", `{"protected":"e30","ciphertext":"","iv":"AAAA","tag":"","recipients":[{}]}`},
 		{"missing iv", `{"protected":"e30","ciphertext":"AAAA","tag":"AAAA","recipients":[{}]}`},
 		{"empty iv", `{"protected":"e30","ciphertext":"AAAA","iv":"","tag":"AAAA","recipients":[{}]}`},
 		{"missing tag", `{"protected":"e30","ciphertext":"AAAA","iv":"AAAA","recipients":[{}]}`},
@@ -42,7 +44,7 @@ func TestJWEJSONRejectsEmptyCryptoFields(t *testing.T) {
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := jwe.Parse([]byte(tc.body))
-			require.Error(t, err, `jwe.Parse should reject JWE JSON with missing/empty crypto fields`)
+			require.Error(t, err, `jwe.Parse should reject JWE JSON with invalid crypto fields`)
 		})
 	}
 }

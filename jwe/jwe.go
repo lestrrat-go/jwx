@@ -870,10 +870,6 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 		plaintext = buf
 	}
 
-	if plaintext == nil {
-		return nil, fmt.Errorf(`failed to find matching recipient`)
-	}
-
 	return plaintext, nil
 }
 

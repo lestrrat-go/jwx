@@ -12,6 +12,19 @@ UNRELEASED
     no key works, the returned error wraps the last failure, so `errors.Is`
     can find it. (#2385)
 
+  * [jwe] JSON serialization of a JWE now always includes the `ciphertext`
+    member, `jwe.Parse` now accepts an empty `ciphertext`, and `jwe.Decrypt`
+    now returns an empty payload for it. A JWE that encrypts an empty
+    plaintext with AES-GCM therefore round-trips through
+    `jwe.Encrypt(..., jwe.WithJSON())`, `jwe.Parse`, `json.Marshal`, and
+    `jwe.Decrypt`. A missing, `null`, or non-string `ciphertext` is still
+    rejected, and the `iv` and `tag` members must still be non-empty. (#2387)
+
+  * [jwe] `jwe.Decrypt` now rejects a message whose `tag` or `iv` is not
+    exactly the length the content encryption algorithm uses. Bytes can no
+    longer be moved between `ciphertext` and `tag` to produce a different
+    message that still decrypts. (#2387)
+
 v3.3.0 8 Sep 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes

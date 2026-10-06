@@ -441,6 +441,53 @@ func Test_GHIssue207(t *testing.T) {
 	}
 }
 
+// TestJWEEmptyPlaintextRoundTrip checks that AES-GCM with an empty plaintext
+// round-trips through compact and JSON serialization. The ciphertext is empty,
+// but the JSON "ciphertext" member is still required.
+func TestJWEEmptyPlaintextRoundTrip(t *testing.T) {
+	for _, tc := range []struct {
+		alg     jwa.ContentEncryptionAlgorithm
+		keySize int
+	}{{jwa.A128GCM(), 16}, {jwa.A192GCM(), 24}, {jwa.A256GCM(), 32}} {
+		for _, useJSON := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/json=%t", tc.alg, useJSON), func(t *testing.T) {
+				key := bytes.Repeat([]byte{1}, tc.keySize)
+				opts := []jwe.EncryptOption{jwe.WithKey(jwa.DIRECT(), key), jwe.WithContentEncryption(tc.alg)}
+				if useJSON {
+					opts = append(opts, jwe.WithJSON())
+				}
+				encrypted, err := jwe.Encrypt([]byte{}, opts...)
+				require.NoError(t, err)
+				if useJSON {
+					var members map[string]json.RawMessage
+					require.NoError(t, json.Unmarshal(encrypted, &members))
+					require.Equal(t, json.RawMessage(`""`), members["ciphertext"], "empty ciphertext is a required JSON member")
+				}
+				decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.DIRECT(), key))
+				require.NoError(t, err)
+				require.Empty(t, decrypted)
+				message, err := jwe.Parse(encrypted)
+				require.NoError(t, err)
+				require.Empty(t, message.CipherText())
+				require.Len(t, message.InitializationVector(), 12, "RFC 7518 section 5.3 requires a 96-bit IV")
+				require.Len(t, message.Tag(), 16, "RFC 7518 section 5.3 requires a 128-bit authentication tag")
+				serialized, err := json.Marshal(message)
+				require.NoError(t, err)
+				decrypted, err = jwe.Decrypt(serialized, jwe.WithKey(jwa.DIRECT(), key))
+				require.NoError(t, err)
+				require.Empty(t, decrypted)
+				tag := bytes.Clone(message.Tag())
+				tag[0] ^= 1
+				require.NoError(t, message.Set(jwe.TagKey, tag))
+				tampered, err := json.Marshal(message)
+				require.NoError(t, err)
+				_, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.DIRECT(), key))
+				require.Error(t, err, "empty plaintext still requires authentication")
+			})
+		}
+	}
+}
+
 // tests direct key encryption by encrypting-decrypting a plaintext
 func TestEncode_Direct(t *testing.T) {
 	testcases := []*struct {
