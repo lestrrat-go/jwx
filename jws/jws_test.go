@@ -9,11 +9,14 @@ import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/asn1"
+	stdbase64 "encoding/base64"
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -29,7 +32,6 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/dsig"
-
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
@@ -2707,4 +2709,155 @@ func TestVerifyKeepsPermissiveECDSAInference(t *testing.T) {
 		require.NoError(t, err, `jws.Verify should accept the inferred (ES384, P-256 key) pair`)
 		require.Equal(t, payload, verified)
 	})
+}
+
+// Compute the signing input independently of jwx, including an empty prefix.
+func headerUnionJWS(t *testing.T, protected *string, public map[string]any, general, detached bool) []byte {
+	t.Helper()
+	key := bytes.Repeat([]byte{42}, 32)
+	payload := stdbase64.RawURLEncoding.EncodeToString([]byte("payload"))
+	prefix := ""
+	entry := map[string]any{}
+	if protected != nil {
+		prefix = stdbase64.RawURLEncoding.EncodeToString([]byte(*protected))
+		entry["protected"] = prefix
+	}
+	if public != nil {
+		entry["header"] = public
+	}
+	mac := hmac.New(sha256.New, key)
+	_, err := mac.Write([]byte(prefix + "." + payload))
+	require.NoError(t, err)
+	entry["signature"] = stdbase64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	var obj map[string]any
+	if general {
+		obj = map[string]any{"signatures": []any{entry}}
+	} else {
+		obj = entry
+	}
+	if !detached {
+		obj["payload"] = payload
+	}
+	wire, err := stdjson.Marshal(obj)
+	require.NoError(t, err)
+	return wire
+}
+
+func TestJSONHeaderUnionVerification(t *testing.T) {
+	key := bytes.Repeat([]byte{42}, 32)
+	cases := []struct {
+		name, protected string
+		absent          bool
+		public          map[string]any
+		wantError       string
+	}{
+		{name: "protected alg", protected: `{"alg":"HS256"}`},
+		{name: "unprotected alg", protected: `{}`, public: map[string]any{"alg": "HS256", "kid": "test"}},
+		{name: "omitted protected", absent: true, public: map[string]any{"alg": "HS256", "kid": "test"}},
+		{name: "missing alg", protected: `{}`, wantError: `required "alg"`},
+		{name: "public alg mismatch", protected: `{}`, public: map[string]any{"alg": "HS512"}, wantError: "does not match"},
+		{name: "duplicate same alg", protected: `{"alg":"HS256"}`, public: map[string]any{"alg": "HS256"}, wantError: "both protected and unprotected"},
+		{name: "duplicate different alg", protected: `{"alg":"HS256"}`, public: map[string]any{"alg": "HS512"}, wantError: "both protected and unprotected"},
+		{name: "duplicate private field", protected: `{"alg":"HS256","x-test":1}`, public: map[string]any{"x-test": 1}, wantError: "both protected and unprotected"},
+		{name: "public crit", protected: `{"alg":"HS256"}`, public: map[string]any{"crit": []string{"x-test"}, "x-test": true}, wantError: `"crit" must be`},
+		{name: "public b64", protected: `{"alg":"HS256"}`, public: map[string]any{"b64": false}, wantError: `"b64" must be`},
+	}
+	for _, c := range cases {
+		for _, general := range []bool{false, true} {
+			for _, streaming := range []bool{false, true} {
+				name := c.name
+				if general {
+					name += "/general"
+				}
+				if streaming {
+					name += "/streaming"
+				}
+				t.Run(name, func(t *testing.T) {
+					var protected *string
+					if !c.absent {
+						protected = &c.protected
+					}
+					wire := headerUnionJWS(t, protected, c.public, general, streaming)
+					opts := []jws.VerifyOption{jws.WithKey(jwa.HS256(), key)}
+					if streaming {
+						opts = append(opts, jws.WithDetachedPayloadReader(strings.NewReader("payload")))
+					}
+					got, err := jws.Verify(wire, opts...)
+					if c.wantError != "" {
+						require.ErrorContains(t, err, c.wantError)
+						return
+					}
+					require.NoError(t, err)
+					if !streaming {
+						require.Equal(t, []byte("payload"), got)
+					}
+					if c.absent || c.name == "unprotected alg" {
+						jk, err := jwk.Import[jwk.Key](key)
+						require.NoError(t, err)
+						require.NoError(t, jk.Set(jwk.KeyIDKey, "test"))
+						set := jwk.NewSet()
+						require.NoError(t, set.AddKey(jk))
+						opts := []jws.VerifyOption{jws.WithKeySet(set, jws.WithInferAlgorithmFromKey(true))}
+						if streaming {
+							opts = append(opts, jws.WithDetachedPayload([]byte("payload")))
+						}
+						_, err = jws.Verify(wire, opts...)
+						require.NoError(t, err)
+					}
+					if c.absent {
+						msg, err := jws.Parse(wire)
+						require.NoError(t, err)
+						serialized, err := stdjson.Marshal(msg)
+						require.NoError(t, err)
+						require.NotContains(t, string(serialized), `"protected"`)
+						if streaming {
+							opts = []jws.VerifyOption{jws.WithKey(jwa.HS256(), key), jws.WithDetachedPayloadReader(strings.NewReader("payload"))}
+						}
+						_, err = jws.Verify(serialized, opts...)
+						require.NoError(t, err)
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestSkipAlgorithmMatchStillRequiresAlg(t *testing.T) {
+	key := bytes.Repeat([]byte{42}, 32)
+	protected := `{}`
+	_, err := jws.Verify(headerUnionJWS(t, &protected, nil, false, false), jws.WithKey(jwa.HS256(), key), jws.WithSkipAlgorithmMatch(true))
+	require.ErrorContains(t, err, `required "alg"`)
+	_, err = jws.Verify(headerUnionJWS(t, &protected, map[string]any{"alg": "HS512"}, false, false), jws.WithKey(jwa.HS256(), key), jws.WithSkipAlgorithmMatch(true))
+	require.NoError(t, err)
+}
+
+func TestJSONNullProtectedIsNotOmitted(t *testing.T) {
+	for _, general := range []bool{false, true} {
+		wire := headerUnionJWS(t, nil, map[string]any{"alg": "HS256"}, general, false)
+		var obj map[string]any
+		require.NoError(t, stdjson.Unmarshal(wire, &obj))
+		entry := obj
+		if general {
+			entry = obj["signatures"].([]any)[0].(map[string]any)
+		}
+		entry["protected"] = nil
+		wire, err := stdjson.Marshal(obj)
+		require.NoError(t, err)
+		_, err = jws.Verify(wire, jws.WithKey(jwa.HS256(), bytes.Repeat([]byte{42}, 32)))
+		require.Error(t, err, "present null protected must not authenticate as an omitted member")
+	}
+}
+
+func TestOmittedProtectedHeaderMutation(t *testing.T) {
+	wire := headerUnionJWS(t, nil, map[string]any{"alg": "HS256"}, false, false)
+	msg, err := jws.Parse(wire)
+	require.NoError(t, err)
+	require.NoError(t, msg.Signatures()[0].ProtectedHeaders().Set("x-protected", true))
+	wire, err = stdjson.Marshal(msg)
+	require.NoError(t, err)
+	var obj map[string]stdjson.RawMessage
+	require.NoError(t, stdjson.Unmarshal(wire, &obj))
+	require.Contains(t, obj, "protected")
+	_, err = jws.Verify(wire, jws.WithKey(jwa.HS256(), bytes.Repeat([]byte{42}, 32)))
+	require.Error(t, err, "changing protected fields invalidates the original signature")
 }

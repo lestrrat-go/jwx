@@ -162,3 +162,5 @@ Shared utilities. Not public API.
 | `jwxtest` | Test key generation helpers (RSA, ECDSA, Ed25519, symmetric) |
 | `tokens` | String constants for algorithm names and separators |
 | `pool` | Generic object pool (`Pool[T]`, `SlicePool[T]`) |
+
+JWS JSON verification reads mandatory `alg` and `kid` from the JOSE header union, rejects overlapping header names and unprotected `crit`/`b64`, and preserves an omitted protected header as an empty signing-input prefix. `WithSkipAlgorithmMatch` bypasses the match only, not the required presence of `alg`.

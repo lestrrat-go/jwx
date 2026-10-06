@@ -101,10 +101,10 @@ field. If a token omits `kid` and the set contains exactly one key, use
 be considered without matching `kid` values.
 
 **A key with no `alg` field is skipped, not guessed at.** Inference from the key type is opt-in via
-`jwt.WithKeySet(set, jws.WithInferAlgorithmFromKey(true))`, and it is a fallback, not a default. When the protected
-header has an `alg`, inference tries only that algorithm against compatible keys. When the header omits `alg`,
-inference tries every compatible algorithm; combined with `jws.WithRequireKid(false)`, verification can perform
-`N_keys × N_algs_per_keytype` attempts. Keep JWKS inputs bounded. The right fix is almost always to add `alg` to the
+`jwt.WithKeySet(set, jws.WithInferAlgorithmFromKey(true))`, and it is a fallback, not a default. When the JOSE
+header has an `alg`, inference tries only that algorithm against compatible keys. Verification requires `alg` in
+the JOSE header union; omission is rejected even when inference is enabled. Combined with `jws.WithRequireKid(false)`,
+inference may consider many compatible keys, so keep JWKS inputs bounded. The right fix is usually to add `alg` to the
 keys in the JWKS. If verification against a JWKS finds no usable key, check for missing `alg` fields first.
 
 `jwk.Parse` retains an unparseable JWKS entry as a `jwk.UnsupportedKey` by default, so one unknown key type does not
@@ -217,9 +217,9 @@ and ES512/P-521 curve mismatches. The check is opt-in. Pass it through JWT signi
 `jwt.WithVerifyOption(jws.WithStrictECDSA(true))`. This also applies to keys selected from a JWKS.
 `jws.VerifyCompactFast` does not accept options; use `jws.Verify` for strict ECDSA verification.
 
-### The protected `alg` must match the verifying algorithm exactly
+### The JOSE `alg` must match the verifying algorithm exactly
 
-`jws.Verify` rejects a message whose protected header advertises one algorithm while it is verified under another. The comparison is plain string equality with no aliasing, and it applies to every key source (`jws.WithKey`, `jws.WithKeySet`, `jws.WithVerifyAuto`, custom `jws.WithKeyProvider`). The check only fires when the protected header actually carries an `alg`.
+`jws.Verify` rejects a message whose JOSE header advertises one algorithm while it is verified under another. The comparison is plain string equality with no aliasing, and it applies to every key source (`jws.WithKey`, `jws.WithKeySet`, `jws.WithVerifyAuto`, custom `jws.WithKeyProvider`). The `alg` parameter is required and is read from the union of protected and unprotected headers. Header names must be disjoint, and `crit` and `b64` must be protected.
 
 The practical consequence involves EdDSA. Per RFC 9864, `EdDSA`, `Ed25519` and `Ed448` are three distinct `alg` values, so a token whose header says `alg: Ed25519` does **not** verify under `jws.WithKey(jwa.EdDSA(), key)`, and vice versa. Match the identifier the producer actually emitted.
 

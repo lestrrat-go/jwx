@@ -224,6 +224,9 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 			}
 		}
 
+		if sig.hasAbsentProtectedHeaders() {
+			rawHeaders = []byte{}
+		}
 		if rawHeaders == nil {
 			protected, err := json.Marshal(sig.protected)
 			if err != nil {
@@ -307,23 +310,8 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 		return err
 	}
 
-	// Enforce that the algorithm we are about to verify under exactly matches
-	// the "alg" advertised in this signature's protected header. tryKey is the
-	// single chokepoint every (alg, key) candidate funnels through, so this
-	// covers all key sources (WithKey, WithKeySet, WithVerifyAuto, and
-	// custom WithKeyProvider) — a provider cannot verify a message under an
-	// algorithm that contradicts the message's own protected "alg". The match
-	// is plain string equality: the deprecated polymorphic "EdDSA" and the
-	// fully-specified "Ed25519"/"Ed448" identifiers are distinct per RFC 9864
-	// and do NOT alias one another. The check fires only when the protected
-	// header carries an "alg"; if "alg" is absent (for example a JSON JWS that
-	// places it only in the unprotected header) we fall through unchanged.
-	// VerifyCompactFast performs the equivalent cross-check on the fast path.
-	// Use WithSkipAlgorithmMatch to bypass this for non-conforming producers.
-	if !vc.skipAlgorithmMatch && sig.protected != nil {
-		if hdrAlg, ok := sig.protected.Algorithm(); ok && hdrAlg.String() != alg.String() {
-			return verifyError{verificationError{fmt.Errorf(`protected header %q %q does not match verification algorithm %q`, AlgorithmKey, hdrAlg, alg)}}
-		}
+	if err := vc.matchAlgorithm(sig, alg); err != nil {
+		return err
 	}
 
 	if vc.validateKey {

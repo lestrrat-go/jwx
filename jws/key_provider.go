@@ -151,7 +151,7 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _
 		}
 
 		// bail out if the JWT has a `alg` field, and it doesn't match
-		if tokAlg, ok := sig.ProtectedHeaders().Algorithm(); ok {
+		if tokAlg, ok := signatureAlgorithm(sig); ok {
 			for _, alg := range algs {
 				if tokAlg == alg {
 					sink.Key(alg, key)
@@ -172,7 +172,7 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, sig *Signature, _
 
 func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signature, msg *Message) error {
 	if kp.requireKid {
-		wantedKid, ok := sig.ProtectedHeaders().KeyID()
+		wantedKid, ok := signatureKeyID(sig)
 		if !ok {
 			// If the kid is NOT specified... kp.useDefault needs to be true, and the
 			// JWKs must have exactly one key in it
@@ -258,7 +258,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 	// key type), the filter is skipped and existing behavior is
 	// preserved.
 	var allowedKtys []jwa.KeyType
-	if hdrAlg, ok := sig.ProtectedHeaders().Algorithm(); ok {
+	if hdrAlg, ok := signatureAlgorithm(sig); ok {
 		allowedKtys = keyalg.KeyTypesFor(hdrAlg)
 	}
 	emitted := false
@@ -305,7 +305,7 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 		return fmt.Errorf(`jku verification requires a non-nil jwk.Fetcher (see jws.WithVerifyAuto)`)
 	}
 
-	kid, ok := sig.ProtectedHeaders().KeyID()
+	kid, ok := signatureKeyID(sig)
 	if !ok {
 		return fmt.Errorf(`use of "jku" requires that the payload contain a "kid" field in the protected header`)
 	}
@@ -350,7 +350,7 @@ func (kp jkuProvider) FetchKeys(ctx context.Context, sink KeySink, sig *Signatur
 		return fmt.Errorf(`failed to get a list of signature methods for key type %s: %w`, key.KeyType(), err)
 	}
 
-	hdrAlg, ok := sig.ProtectedHeaders().Algorithm()
+	hdrAlg, ok := signatureAlgorithm(sig)
 	if !ok {
 		// The jku provider routes a key by matching both "kid" and
 		// "alg" against the JWS protected header. With no alg in the
