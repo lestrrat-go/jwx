@@ -662,7 +662,10 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 	// Cap the count so a hostile JWE with many keys per provider can't
 	// produce unbounded error text. Top-level "jwe.Decrypt:" prefix is
 	// added by the caller (Decrypt) via makeDecryptError.
-	return nil, fmt.Errorf(`tried %d keys, but failed to match any of the keys with recipient: %w`, tried, joinDecryptErrors(attemptErrors))
+	if err := joinDecryptErrors(attemptErrors); err != nil {
+		return nil, fmt.Errorf(`tried %d keys, but failed to match any of the keys with recipient: %w`, tried, err)
+	}
+	return nil, fmt.Errorf(`tried %d keys, but failed to match any of the keys with recipient`, tried)
 }
 
 func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
