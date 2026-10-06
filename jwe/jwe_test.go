@@ -21,6 +21,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
+
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwe"
 	"github.com/lestrrat-go/jwx/v4/jwk"
@@ -2585,37 +2586,46 @@ func (s shrinkingSet) Key(i int) (jwk.Key, bool) {
 }
 
 func TestShrinkingKeySet(t *testing.T) {
-	for _, after := range []int{0, 1} {
-		t.Run(map[int]string{0: "before first candidate", 1: "after first candidate"}[after], func(t *testing.T) {
-			raw := bytes.Repeat([]byte{42}, 16)
-			key, err := jwk.Import[jwk.Key](raw)
-			require.NoError(t, err)
-			require.NoError(t, key.Set(jwk.KeyIDKey, "test"))
-			require.NoError(t, key.Set(jwk.AlgorithmKey, jwa.DIRECT()))
+	raw := bytes.Repeat([]byte{42}, 16)
+	key, err := jwk.Import[jwk.Key](raw)
+	require.NoError(t, err)
+	require.NoError(t, key.Set(jwk.KeyIDKey, "test"))
+	require.NoError(t, key.Set(jwk.AlgorithmKey, jwa.DIRECT()))
+	other, err := key.Clone()
+	require.NoError(t, err)
+	require.NoError(t, other.Set("other", true))
+
+	payload := []byte("payload")
+	wire, err := jwe.Encrypt(payload, jwe.WithKey(jwa.DIRECT(), raw), jwe.WithContentEncryption(jwa.A128GCM()))
+	require.NoError(t, err)
+
+	testcases := []struct {
+		Name  string
+		After int
+		Error bool
+	}{
+		{Name: "cleared before first candidate", After: 0, Error: true},
+		{Name: "cleared after first candidate", After: 1},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.Name, func(t *testing.T) {
 			set := jwk.NewSet()
 			require.NoError(t, set.AddKey(key))
-			other, err := key.Clone()
-			require.NoError(t, err)
-			require.NoError(t, other.Set("other", true))
 			require.NoError(t, set.AddKey(other))
-			payload := []byte("payload")
-			wire, err := jwe.Encrypt(payload, jwe.WithKey(jwa.DIRECT(), raw), jwe.WithContentEncryption(jwa.A128GCM()))
-			require.NoError(t, err)
 
 			var got []byte
+			var err error
 			require.NotPanics(t, func() {
-				got, err = jwe.Decrypt(wire, jwe.WithKeySet(shrinkingSet{set, after}, jwe.WithRequireKid(false)))
+				got, err = jwe.Decrypt(wire, jwe.WithKeySet(shrinkingSet{set, tc.After}, jwe.WithRequireKid(false)))
 			})
-			if after == 0 {
-				require.Error(t, err)
+			if tc.Error {
 				require.ErrorIs(t, err, jwe.DecryptError())
 				require.Contains(t, err.Error(), "tried 0 keys")
 				require.NotContains(t, err.Error(), "%!")
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, payload, got)
+				return
 			}
-
+			require.NoError(t, err)
+			require.Equal(t, payload, got)
 		})
 	}
 }
