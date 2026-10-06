@@ -2708,3 +2708,66 @@ func TestVerifyKeepsPermissiveECDSAInference(t *testing.T) {
 		require.Equal(t, payload, verified)
 	})
 }
+
+// Embedding a named interface avoids hiding the Set method on jwk.Set.
+type shrinkableSet interface{ jwk.Set }
+type shrinkingSet struct {
+	shrinkableSet
+
+	after int
+}
+
+func (s shrinkingSet) Key(i int) (jwk.Key, bool) {
+	if i == s.after {
+		_ = s.shrinkableSet.Clear()
+	}
+	return s.shrinkableSet.Key(i)
+}
+
+func TestShrinkingKeySet(t *testing.T) {
+	raw := bytes.Repeat([]byte{42}, 32)
+	key, err := jwk.Import[jwk.Key](raw)
+	require.NoError(t, err)
+	require.NoError(t, key.Set(jwk.KeyIDKey, "test"))
+	require.NoError(t, key.Set(jwk.AlgorithmKey, jwa.HS256()))
+	other, err := key.Clone()
+	require.NoError(t, err)
+	require.NoError(t, other.Set("other", true))
+
+	payload := []byte("payload")
+	hdr := jws.NewHeaders()
+	require.NoError(t, hdr.Set(jws.KeyIDKey, "test"))
+	wire, err := jws.Sign(payload, jws.WithKey(jwa.HS256(), raw, jws.WithProtectedHeaders(hdr)))
+	require.NoError(t, err)
+
+	testcases := []struct {
+		Name     string
+		After    int
+		Multiple bool
+		Error    bool
+	}{
+		{Name: "all keys, cleared before first candidate", After: 0, Error: true},
+		{Name: "all keys, cleared after first candidate", After: 1},
+		{Name: "matching kid, cleared before first candidate", After: 0, Multiple: true, Error: true},
+		{Name: "matching kid, cleared after first candidate", After: 1, Multiple: true},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.Name, func(t *testing.T) {
+			set := jwk.NewSet()
+			require.NoError(t, set.AddKey(key))
+			require.NoError(t, set.AddKey(other))
+
+			var got []byte
+			var err error
+			require.NotPanics(t, func() {
+				got, err = jws.Verify(wire, jws.WithKeySet(shrinkingSet{set, tc.After}, jws.WithRequireKid(tc.Multiple), jws.WithMultipleKeysPerKeyID(tc.Multiple)))
+			})
+			if tc.Error {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, payload, got)
+		})
+	}
+}
