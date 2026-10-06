@@ -106,6 +106,8 @@ err := jwt.Validate(token, jwt.WithIssuer("x"), jwt.WithCollectErrors(true))
 all attempts fail, provider errors and per-key errors are joined (subject to
 `decryptErrorJoinCap`) and remain reachable via `errors.Is` / `errors.AsType`.
 Context cancellation stops attempts immediately, including after `FetchKeys`.
+If no provider supplies a candidate and there are no underlying errors, the
+failure reports zero attempted keys without wrapping a nil error.
 
 ## Error Wrapping
 

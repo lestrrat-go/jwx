@@ -21,7 +21,6 @@ import (
 
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
-
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/jwx/v4/jwe"
 	"github.com/lestrrat-go/jwx/v4/jwk"
@@ -2569,4 +2568,54 @@ func TestDisabledKeyAlgorithms(t *testing.T) {
 		require.NoError(t, err, `Decrypt should succeed after the disabled set is cleared`)
 		require.Equal(t, plaintext, got, `Decrypt should return the original plaintext after re-enabling`)
 	})
+}
+
+// Embedding a named interface avoids hiding the Set method on jwk.Set.
+type shrinkableSet interface{ jwk.Set }
+type shrinkingSet struct {
+	shrinkableSet
+	after int
+}
+
+func (s shrinkingSet) Key(i int) (jwk.Key, bool) {
+	if i == s.after {
+		_ = s.shrinkableSet.Clear()
+	}
+	return s.shrinkableSet.Key(i)
+}
+
+func TestShrinkingKeySet(t *testing.T) {
+	for _, after := range []int{0, 1} {
+		t.Run(map[int]string{0: "before first candidate", 1: "after first candidate"}[after], func(t *testing.T) {
+			raw := bytes.Repeat([]byte{42}, 16)
+			key, err := jwk.Import[jwk.Key](raw)
+			require.NoError(t, err)
+			require.NoError(t, key.Set(jwk.KeyIDKey, "test"))
+			require.NoError(t, key.Set(jwk.AlgorithmKey, jwa.DIRECT()))
+			set := jwk.NewSet()
+			require.NoError(t, set.AddKey(key))
+			other, err := key.Clone()
+			require.NoError(t, err)
+			require.NoError(t, other.Set("other", true))
+			require.NoError(t, set.AddKey(other))
+			payload := []byte("payload")
+			wire, err := jwe.Encrypt(payload, jwe.WithKey(jwa.DIRECT(), raw), jwe.WithContentEncryption(jwa.A128GCM()))
+			require.NoError(t, err)
+
+			var got []byte
+			require.NotPanics(t, func() {
+				got, err = jwe.Decrypt(wire, jwe.WithKeySet(shrinkingSet{set, after}, jwe.WithRequireKid(false)))
+			})
+			if after == 0 {
+				require.Error(t, err)
+				require.ErrorIs(t, err, jwe.DecryptError())
+				require.Contains(t, err.Error(), "tried 0 keys")
+				require.NotContains(t, err.Error(), "%!")
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, payload, got)
+			}
+
+		})
+	}
 }

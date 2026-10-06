@@ -182,7 +182,10 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, r Recipient
 	var perKeyErrs []error
 	var emitted bool
 	for i := range kp.set.Len() {
-		key, _ := kp.set.Key(i)
+		key, ok := kp.set.Key(i)
+		if !ok {
+			break // The set shrank after Len; retain candidates already emitted.
+		}
 		err := kp.selectKey(sink, key, r, msg)
 		if err != nil {
 			perKeyErrs = append(perKeyErrs, err)

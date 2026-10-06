@@ -29,7 +29,6 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/dsig"
-
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
@@ -2707,4 +2706,58 @@ func TestVerifyKeepsPermissiveECDSAInference(t *testing.T) {
 		require.NoError(t, err, `jws.Verify should accept the inferred (ES384, P-256 key) pair`)
 		require.Equal(t, payload, verified)
 	})
+}
+
+// Embedding a named interface avoids hiding the Set method on jwk.Set.
+type shrinkableSet interface{ jwk.Set }
+type shrinkingSet struct {
+	shrinkableSet
+	after int
+}
+
+func (s shrinkingSet) Key(i int) (jwk.Key, bool) {
+	if i == s.after {
+		_ = s.shrinkableSet.Clear()
+	}
+	return s.shrinkableSet.Key(i)
+}
+
+func TestShrinkingKeySet(t *testing.T) {
+	for _, after := range []int{0, 1} {
+		t.Run(map[int]string{0: "before first candidate", 1: "after first candidate"}[after], func(t *testing.T) {
+			raw := bytes.Repeat([]byte{42}, 32)
+			key, err := jwk.Import[jwk.Key](raw)
+			require.NoError(t, err)
+			require.NoError(t, key.Set(jwk.KeyIDKey, "test"))
+			require.NoError(t, key.Set(jwk.AlgorithmKey, jwa.HS256()))
+			set := jwk.NewSet()
+			require.NoError(t, set.AddKey(key))
+			other, err := key.Clone()
+			require.NoError(t, err)
+			require.NoError(t, other.Set("other", true))
+			require.NoError(t, set.AddKey(other))
+			payload := []byte("payload")
+			hdr := jws.NewHeaders()
+			require.NoError(t, hdr.Set(jws.KeyIDKey, "test"))
+			wire, err := jws.Sign(payload, jws.WithKey(jwa.HS256(), raw, jws.WithProtectedHeaders(hdr)))
+			require.NoError(t, err)
+			for _, multiple := range []bool{false, true} {
+				t.Run(map[bool]string{false: "all keys", true: "matching kid"}[multiple], func(t *testing.T) {
+					set := jwk.NewSet()
+					require.NoError(t, set.AddKey(key))
+					require.NoError(t, set.AddKey(other))
+					var got []byte
+					require.NotPanics(t, func() {
+						got, err = jws.Verify(wire, jws.WithKeySet(shrinkingSet{set, after}, jws.WithRequireKid(multiple), jws.WithMultipleKeysPerKeyID(multiple)))
+					})
+					if after == 0 {
+						require.Error(t, err)
+					} else {
+						require.NoError(t, err)
+						require.Equal(t, payload, got)
+					}
+				})
+			}
+		})
+	}
 }
