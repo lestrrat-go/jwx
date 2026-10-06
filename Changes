@@ -50,6 +50,11 @@ UNRELEASED
     missing, `null`, or non-string `ciphertext` is still rejected, and the
     `iv` and `tag` members must still be non-empty. (#2377)
 
+  * [jwe] JSON serialization of a JWE now writes the shared `unprotected`
+    header as a JSON object, as RFC 7516 requires. A JWE with a shared
+    unprotected header therefore round-trips through `jwe.Parse`,
+    `json.Marshal`, `jwe.Parse`, and `jwe.Decrypt`. (#2378)
+
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes

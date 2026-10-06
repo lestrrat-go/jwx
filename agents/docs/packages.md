@@ -79,6 +79,9 @@ JSON Web Signatures per RFC 7515. Sign, verify, parse.
 
 JSON Web Encryption per RFC 7516. Encrypt, decrypt, parse.
 
+`Message.MarshalJSON` writes shared `unprotected` headers as a JSON object,
+preserving them across Parse → Marshal → Parse.
+
 - **Encrypt(payload []byte, ...EncryptOption) ([]byte, error)** — encrypt payload
 - **EncryptStatic(payload, cek []byte, ...EncryptOption) ([]byte, error)** — encrypt with caller-supplied content encryption key
 - **Decrypt(buf []byte, ...DecryptOption) ([]byte, error)** — decrypt message
