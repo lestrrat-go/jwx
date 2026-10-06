@@ -37,8 +37,19 @@ func (s Signature) ProtectedHeaders() Headers {
 	return s.protected
 }
 
+func (s *Signature) hasAbsentProtectedHeaders() bool {
+	if !s.protectedAbsent {
+		return false
+	}
+	if h, ok := s.protected.(interface{ isZero() bool }); ok {
+		return h.isZero()
+	}
+	return s.protected == nil
+}
+
 func (s *Signature) SetProtectedHeaders(v Headers) *Signature {
 	s.protected = v
+	s.protectedAbsent = false
 	return s
 }
 
@@ -52,9 +63,9 @@ func (s *Signature) SetSignature(v []byte) *Signature {
 }
 
 type signatureUnmarshalProbe struct {
-	Header    Headers `json:"header,omitempty"`
-	Protected *string `json:"protected,omitempty"`
-	Signature *string `json:"signature,omitempty"`
+	Header    Headers         `json:"header,omitempty"`
+	Protected json.RawMessage `json:"protected,omitempty"`
+	Signature *string         `json:"signature,omitempty"`
 }
 
 func (s *Signature) UnmarshalJSON(data []byte) error {
@@ -65,7 +76,16 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 	}
 
 	s.headers = sup.Header
+	s.protected = nil
+	s.protectedAbsent = sup.Protected == nil
 	if buf := sup.Protected; buf != nil {
+		var encoded *string
+		if err := json.Unmarshal(buf, &encoded); err != nil {
+			return fmt.Errorf(`failed to decode protected headers: %w`, err)
+		}
+		if encoded == nil {
+			return fmt.Errorf(`protected headers must be a string`)
+		}
 		// RFC 7515 §3 mandates that "protected" be base64url-encoded.
 		// Earlier code carried a relaxed probe that accepted a literal-
 		// JSON form (a JSON string whose content begins with "{") and
@@ -73,7 +93,7 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 		// flattened branch (which only base64-decodes) and gave callers
 		// a non-conforming wire form useful for evading byte-exact JWS
 		// dedup / replay caches.
-		decoded, err := base64.Decode([]byte(*buf))
+		decoded, err := base64.Decode([]byte(*encoded))
 		if err != nil {
 			return fmt.Errorf(`failed to base64 decode protected headers: %w`, err)
 		}
@@ -88,6 +108,10 @@ func (s *Signature) UnmarshalJSON(data []byte) error {
 		//nolint:forcetypeassert
 		prt.(*stdHeaders).SetDecodeCtx(nil)
 		s.protected = prt
+	}
+
+	if s.protected == nil {
+		s.protected = NewHeaders()
 	}
 
 	if sup.Signature != nil {
@@ -179,7 +203,7 @@ type messageUnmarshalProbe struct {
 	Payload    json.RawMessage   `json:"payload"`
 	Signatures []json.RawMessage `json:"signatures,omitempty"`
 	Header     json.RawMessage   `json:"header,omitempty"`
-	Protected  *string           `json:"protected,omitempty"`
+	Protected  json.RawMessage   `json:"protected,omitempty"`
 	Signature  *string           `json:"signature,omitempty"`
 }
 
@@ -236,6 +260,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 			if sig.protected == nil {
 				// Instead of barfing on a nil protected header, use an empty header
 				sig.protected = NewHeaders()
+				sig.protectedAbsent = true
 			}
 
 			if i == 0 {
@@ -264,7 +289,14 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 			sig.headers = hdrs
 		}
 		if src := mup.Protected; src != nil {
-			decoded, err := base64.DecodeString(*src)
+			var encoded *string
+			if err := json.Unmarshal(src, &encoded); err != nil {
+				return fmt.Errorf(`failed to decode flattened protected headers: %w`, err)
+			}
+			if encoded == nil {
+				return fmt.Errorf(`protected headers must be a string`)
+			}
+			decoded, err := base64.DecodeString(*encoded)
 			if err != nil {
 				return fmt.Errorf(`failed to base64 decode flattened protected headers: %w`, err)
 			}
@@ -282,6 +314,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		if sig.protected == nil {
 			// Instead of barfing on a nil protected header, use an empty header
 			sig.protected = NewHeaders()
+			sig.protectedAbsent = true
 		}
 
 		decoded, err := base64.DecodeString(*mup.Signature)
@@ -292,6 +325,12 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 
 		m.signatures = []*Signature{&sig}
 		b64 = getB64Value(sig.protected)
+	}
+
+	for i, sig := range m.signatures {
+		if err := validateSignatureHeaders(sig); err != nil {
+			return fmt.Errorf(`invalid headers for signature #%d: %w`, i+1, err)
+		}
 	}
 
 	// mup.Payload is json.RawMessage, so we can distinguish an omitted
@@ -385,7 +424,7 @@ func (m Message) marshalFlattened() ([]byte, error) {
 		wrote = true
 	}
 
-	if protected := sig.protected; protected != nil {
+	if protected := sig.protected; protected != nil && !sig.hasAbsentProtectedHeaders() {
 		protectedbuf, err := json.Marshal(protected)
 		if err != nil {
 			return nil, fmt.Errorf(`failed to marshal "protected" (flattened format): %w`, err)
@@ -458,7 +497,7 @@ func (m Message) marshalFull() ([]byte, error) {
 			wrote = true
 		}
 
-		if protected := sig.protected; protected != nil {
+		if protected := sig.protected; protected != nil && !sig.hasAbsentProtectedHeaders() {
 			protectedbuf, err := json.Marshal(protected)
 			if err != nil {
 				return nil, fmt.Errorf(`failed to marshal "protected" for signature #%d: %w`, i+1, err)

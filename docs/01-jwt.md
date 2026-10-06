@@ -548,13 +548,13 @@ the actual algorithm.The general stance that we take when verifying JWTs is that
 trust what the values on the JWT (or actually, the JWS message) says, so we don't just use their
 `alg` value. This is why we require that users specify the `alg` field in the `jwt.WithKey` option for single keys.
 
-The presence of `jws.WithInferAlgorithmFromKey(true)` tells the `jws.Verify()` routine to use
-heuristics to deduce the algorithm used. It's a brute-force approach, and does not always provide
-the best performance. But it will try all possible algorithms available for a given key type until
-one of them matches. For example, for an RSA key (either raw key or `jwk.Key`) algorithms such as RS256, RS384, RS512, PS256, PS384, and PS512 are tried.
+`jws.WithInferAlgorithmFromKey(true)` allows a JWK without `alg` to be considered when its key
+type supports the message's required JOSE `alg`. The header algorithm must belong to the key's
+candidate algorithms; verification does not try every RSA algorithm when the header specifies one.
+A missing `alg` is rejected, and a declared algorithm outside those candidates is rejected.
 
-In most cases using this suboption would Just Work. However, this type of "try until something works"
-is not really recommended from a security perspective, and that is why the option is not enabled by default.
+Prefer setting `alg` on your JWKs or pinning an expected algorithm with `jwt.WithKey` so the
+verification policy is explicit. Algorithm inference is disabled by default.
 
 ## Parse and Verify a JWT (using arbitrary keys)
 
