@@ -42,6 +42,7 @@ go_library(
 go_test(
     name = "jwe_test",
     srcs = [
+        "aead_tag_length_test.go",
         "bench_encrypt_test.go",
         "encrypt_aad_test.go",
         "filter_test.go",
