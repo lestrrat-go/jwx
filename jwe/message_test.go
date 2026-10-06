@@ -1,13 +1,63 @@
 package jwe_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/internal/json"
 	"github.com/stretchr/testify/require"
 
+	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwe"
 )
+
+func TestJWESharedUnprotectedHeadersRoundTrip(t *testing.T) {
+	t.Run("RFC7516AppendixA5", func(t *testing.T) {
+		// https://www.rfc-editor.org/rfc/rfc7516#appendix-A.5
+		const source = `{
+			"protected":"eyJlbmMiOiJBMTI4Q0JDLUhTMjU2In0",
+			"unprotected":{"jku":"https://server.example.com/keys.jwks"},
+			"header":{"alg":"A128KW","kid":"7"},
+			"encrypted_key":"6KB707dM9YTIgHtLvtgWQ8mKwboJW3of9locizkDTHzBC2IlrT1oOQ",
+			"iv":"AxY8DCtDaGlsbGljb3RoZQ",
+			"ciphertext":"KDlTtXchhZTGufMYmOYGS4HffxPSUrfmqCHXaI9wOGY",
+			"tag":"Mz-VPPyU4RlcuYv1IwIvzw"
+		}`
+		message, err := jwe.Parse([]byte(source))
+		require.NoError(t, err)
+		serialized, err := json.Marshal(message)
+		require.NoError(t, err)
+		require.JSONEq(t, source, string(serialized))
+	})
+
+	key := bytes.Repeat([]byte{1}, 32)
+	payload := []byte("shared unprotected headers")
+	encrypted, err := jwe.Encrypt(payload, jwe.WithKey(jwa.DIRECT(), key), jwe.WithContentEncryption(jwa.A256GCM()), jwe.WithJSON())
+	require.NoError(t, err)
+	var members map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(encrypted, &members))
+	members["unprotected"] = json.RawMessage(`{"kid":"shared-key","custom":"quotes: \" and slash: \\"}`)
+	source, err := json.Marshal(members)
+	require.NoError(t, err)
+	message, err := jwe.Parse(source)
+	require.NoError(t, err)
+	serialized, err := json.Marshal(message)
+	require.NoError(t, err)
+	var got map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(serialized, &got))
+	require.JSONEq(t, string(members["unprotected"]), string(got["unprotected"]), "unprotected must remain a JSON object")
+	for _, name := range []string{"protected", "ciphertext", "iv", "tag"} {
+		require.Equal(t, members[name], got[name], "cryptographic member %s must be preserved", name)
+	}
+	reparsed, err := jwe.Parse(serialized)
+	require.NoError(t, err)
+	kid, ok := reparsed.UnprotectedHeaders().KeyID()
+	require.True(t, ok)
+	require.Equal(t, "shared-key", kid)
+	decrypted, err := jwe.Decrypt(serialized, jwe.WithKey(jwa.DIRECT(), key))
+	require.NoError(t, err)
+	require.Equal(t, payload, decrypted)
+}
 
 func TestRecipient(t *testing.T) {
 	t.Run("JSON Marshaling", func(t *testing.T) {
