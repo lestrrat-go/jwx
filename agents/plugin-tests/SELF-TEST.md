@@ -174,19 +174,6 @@ Cases are split into two families: **single-source** cases (one doc carries the 
 - `go build` passes.
 - Code wires `jwkfetch.NewCache` with appropriate refresh options *and* a `jwt.WithValidator` for `azp`.
 
-#### Case 9 — Nested JWS+JWE (target: `docs/01-jwt.md` "Serialize using JWE and JWS" + `docs/03-jwe.md`)
-
-**User question**: "Produce a JWT that is first signed with RS256, then encrypted to a recipient with RSA-OAEP-256 + A256GCM. The recipient must decrypt and then verify it. Show both sides end to end."
-
-**Why this requires synthesis**: nested-serialization is a JWT concept (`jwt.NewSerializer().Sign(...).Encrypt(...)`) that uses both JWS and JWE primitives. Neither `docs/01-jwt.md` alone nor `docs/03-jwe.md` alone is sufficient — the agent must combine the JWT-level serializer pattern with JWE algorithm/content-encryption knowledge.
-
-**Pass criteria**:
-- Agent fetches `docs/01-jwt.md` *and* `docs/03-jwe.md` (or their module-cache equivalents).
-- `go build` passes.
-- Sign side uses `jwt.NewSerializer().Sign(...).Encrypt(...).Serialize(tok)` (or the actual current API).
-- Receive side decrypts the JWE envelope first, then calls `jwt.Parse` on the inner JWS payload.
-- Roundtrip recovers the original token's claims.
-
 ## Negative cases (the skill should NOT need to fetch)
 
 Cases the SKILL.md alone covers. Each negative case must also produce a code sample that **builds** — these are real questions an end user might ask, and the skill is responsible for them too. Fetching anyway isn't a failure but signals the skill body is unclear.
@@ -198,6 +185,7 @@ Cases the SKILL.md alone covers. Each negative case must also produce a code sam
 - "Why doesn't `jwk.Import(raw)` compile?" — Critical Rules item 8.
 - "How do I parse a JWK into a concrete type like `jwk.RSAPublicKey`?" — Critical Rules item 9.
 - "Where do I import jwkfetch from?" — JWKS endpoint section.
+- "Sign a JWT with RS256, then encrypt it with RSA-OAEP-256 + A256GCM, and show the receiving side." — Nested JWT section. The code MUST decrypt with `jwe.Decrypt` before calling `jwt.Parse`.
 
 ## Reporting
 
@@ -205,7 +193,7 @@ For each case, record:
 
 | Field | Value |
 |-------|-------|
-| Case | 1–9 |
+| Case | 1–8 |
 | Skill invoked | yes / no |
 | jwx core docs fetched | list of `docs/*.md` URLs or module-cache paths |
 | Examples README fetched | yes / no |
@@ -225,7 +213,6 @@ The skill passes when:
 - **Case 6 builds green AND the trajectory hit the examples README + the specific example file.**
 - **Case 7 builds green AND `Companion docs fetched` lists a jwkfetch source.**
 - **Case 8 builds green AND sources span at least two of the five enumerated source kinds** (jwx core docs / module cache / pkg.go.dev / examples / companion READMEs).
-- **Case 9 builds green AND the trajectory hit both `docs/01-jwt.md` and `docs/03-jwe.md`** (or their module-cache equivalents).
 - **Every negative case builds green from SKILL.md content alone**, with no fabricated APIs in the final code.
 
 ## When to re-run
