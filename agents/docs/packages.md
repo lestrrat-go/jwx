@@ -48,20 +48,23 @@ JSON Web Keys per RFC 7517. Key representation, parsing, import/export, caching.
 - Extension: `RegisterCustomField[T]()`, `RegisterCustomDecoder[T]()`, `RegisterKeyParser()`, `RegisterKeyImporter()`, `RegisterKeyExporter()`
 - Error sentinels: `ImportError()`, `ParseError()`, `ContinueError()`
 - Files: `jwk.go`, `set.go`, `parser.go`, `convert.go`, `fetcher.go`, `interface.go`, `errors.go`, `x509.go`,
-  `filter.go`, `rsa.go`, `ecdsa.go`, `okp.go`, `symmetric.go`, `akp.go`, `mldsa.go` (go1.27;
-  `crypto/mldsa` importers/exporters for AKP keys), `unsupported.go`, `accessors.go`, `io.go`
+  `rsa.go`, `ecdsa.go`, `okp.go`, `symmetric.go`, `akp.go`, `mldsa.go` (go1.27;
+  `crypto/mldsa` importers/exporters for AKP keys), `unsupported.go`, `accessors.go`, `io_gen.go`
 - Sub-packages: `jwk/ecdsa` — elliptic curve registration (`RegisterCurve(alg, curve, PointValidator)`, `CurveFromAlgorithm`, `AlgorithmFromCurve`, `ValidatorFromCurve`, `PointValidator` interface, `PointValidatorFunc` adapter); `jwk/jwkbb` — X.509/PEM encoding building blocks. Block-type-keyed decoder registry (`X509Decoder[T]` / `X509DecodeFunc[T]` / `RegisterX509Decoder[T](blockType, d) error` / `UnregisterX509Decoder(blockType)`) with `DecodeX509(block *pem.Block) (any, error)` as the dispatch entry point. Type-keyed encoder registry (`X509Encoder[T]` / `X509EncodeFunc[T]` / `RegisterX509Encoder[T](e) error` / `UnregisterX509Encoder[T]()`) with `EncodePEM(keys ...any) ([]byte, error)` as the dispatch entry point — dispatches each key by its runtime Go type and concatenates PEM blocks. Block type constants: `PrivateKeyBlockType`, `PublicKeyBlockType`, `ECPrivateKeyBlockType`, `RSAPublicKeyBlockType`, `RSAPrivateKeyBlockType`, `CertificateBlockType`. Decode from `jwk.ParseKey` with `jwk.WithX509(true)`. Also a jsontext-backed `Header` (sealed) for fast field probing of JWK / JWKS bytes: `HeaderParse`, `HeaderHas`, `HeaderGetString`, `HeaderGetStringBytes`, sentinel `ErrHeaderNotFound()`; mirrors the `jws/jwsbb` Header API and is experimental. `jwk/jwkunsafe` — low-level key constructors (`NewKey`, `NewPublicKey`) for extension modules
-- Imports: jwa, cert, transform, internal/{base64,json,ecutil}
+- Imports: jwa, cert, internal/{base64,json,ecutil,pool}
 
 ## jws/
 
 JSON Web Signatures per RFC 7515. Sign, verify, parse.
 
+JSON signing includes only the transmitted protected header in the signing
+input. Compact signing merges public headers into its single protected header.
+
 - **Sign(payload []byte, ...SignOption) ([]byte, error)** — sign payload
 - **Verify(buf []byte, ...VerifyOption) ([]byte, error)** — verify and extract payload
 - **VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]byte, error)** — fast-path verification
 - **Parse(src []byte, ...ParseOption) (*Message, error)** — parse without verification
-- **SplitCompact(src []byte) ([]byte, []byte, []byte, error)** — split compact JWS into parts
+- **jwsbb.SplitCompact(src []byte) ([]byte, []byte, []byte, error)** — split compact JWS into parts (`jws/jwsbb`)
 - Key types: `Message`, `Signature`, `Headers`, `KeyProvider`, `KeySink`, `Base64Encoder`
 - Options: `WithKey()`, `WithKeySet()`, `WithVerifyAuto()`, `WithJSON()`, `WithDetachedPayload()`, `WithDetachedPayloadReader()` (streaming variant; single-key, HMAC/RSA/ECDSA only), `WithStrictECDSA()` (sign and verify; see ECDSA curve binding below)
 - Global/per-call settings: `WithMaxSignatures()` (usable in both `Settings()` and `Parse()`/`ReadFile()`)
@@ -73,7 +76,7 @@ JSON Web Signatures per RFC 7515. Sign, verify, parse.
 - ML-DSA (go1.27): `mldsa.go` installs a `Signer`/`Verifier` pair per parameter set. Both accept a raw `crypto/mldsa` key or an AKP `jwk.Key`, and both reject a key whose parameter set disagrees with the algorithm. The signature primitives come from `lestrrat-go/dsig` v1.4.0, which owns the algorithm registration.
 - ECDSA curve binding (opt-in): `WithStrictECDSA(bool)` is a `SignVerifyOption` that rejects a key whose curve disagrees with ES256/ES384/ES512 per RFC 7518 Section 3.4. OFF by default. `jws/internal/jwsbb.RequireECDSACurve` is reached through `signatureBuilder.Build`, `signStreaming`, `verifyContext.tryKey`, and `verifyStreaming`, each gated on its context's `strictECDSA` flag. JWKS algorithm inference is unchanged; strict verification checks each selected pair afterwards. Use `jwt.WithSignOption(jws.WithStrictECDSA(true))` for signing or `jwt.WithVerifyOption(jws.WithStrictECDSA(true))` for parsing. The latter routes JWT verification through `jws.Verify`, avoiding both compact fast paths. `jws/jwsbb` and `jws.VerifyCompactFast` remain permissive; use `jws.Verify` when strict verification is required.
 - Files: `jws.go`, `message.go`, `signer.go`, `verifier.go`, `headers.go`, `interface.go`, `errors.go`, `options.go`, `key_provider.go`, `sign_context.go`, `verify_context.go`, `streaming_detached.go`, `mldsa.go` (go1.27)
-- Imports: jwa, jwk, cert, dsig, internal/{base64,json,pool,tokens}
+- Imports: jwa, jwk, cert, dsig, internal/{base64,json,keyconv,pool,tokens}
 
 ## jwe/
 
@@ -92,8 +95,8 @@ preserving them across Parse → Marshal → Parse.
 - Global/per-call settings: `WithMaxPBES2Count()`, `WithMinPBES2Count()`, `WithMaxDecompressBufferSize()`, `WithMaxRecipients()` (usable in both `Settings()` and `Decrypt()`); `WithCBCBufferSize()`, `WithDisabledKeyAlgorithms(...jwa.KeyEncryptionAlgorithm)` (global only; the latter blocks listed key algorithms in both Encrypt and Decrypt)
 - Error sentinels: `EncryptError()`, `DecryptError()`, `HPKEError()`, `RecipientError()`, `ParseError()`
 - Internal subpackages: `jwe/internal/{aescbc,cipher,concatkdf,content_crypt,keygen}`, `jwe/jwebb` — building blocks including HPKE extension interfaces (`HPKEKeyEncrypter`, `HPKEKeyDecrypter`), custom HPKE encrypt/decrypt bridges (`KeyEncryptHPKECustom`, `KeyDecryptHPKECustom`), and dynamic algorithm registration (`RegisterHPKEAlgorithm`)
-- Files: `jwe.go`, `message.go`, `interface.go`, `headers.go`, `errors.go`, `options.go`, `key_provider.go`, `compress.go`, `filter.go`
-- Imports: jwa, jwk, cert, transform, internal/{base64,json,pool,tokens}
+- Files: `jwe.go`, `message.go`, `interface.go`, `headers.go`, `errors.go`, `options.go`, `key_provider.go`, `compress.go`
+- Imports: jwa, jwk, cert, internal/{base64,json,keyconv,pool,tokens}
 
 ## jwt/
 
@@ -111,8 +114,8 @@ JSON Web Tokens per RFC 7519. Parse, sign, validate.
 - Token options: `FlattenAudience` per-token option
 - Error types (use zero-value for `errors.Is`, `errors.AsType[T]` for structured fields): `TokenExpiredError`, `TokenNotYetValidError`, `InvalidIssuedAtError`, `InvalidIssuerError`, `InvalidAudienceError`, `ValidationError`, `ParseError`, `MissingRequiredClaimError`, `ClaimNotFoundError`, `ClaimAssignmentFailedError`, `ClaimValidationError`, `TimeDeltaError`
 - Options: `WithVerifyOption(jws.VerifyOption)` — forward verification options to `jws.Verify`; `WithCollectErrors(bool)` — collect all validation errors instead of first-error-only
-- Files: `jwt.go`, `validate.go`, `serialize.go`, `http.go`, `filter.go`, `errors.go`, `options.go`, `fastpath.go`, `token_options.go`
-- Imports: jwa, jws, jwe, jwk, transform, internal/json
+- Files: `jwt.go`, `validate.go`, `serialize.go`, `http.go`, `errors.go`, `options.go`, `fastpath.go`, `token_options.go`
+- Imports: jwx, jwa, jws, jwe, jwk, jws/jwsbb, jwt/internal/types, internal/{base64,json,pool,tokens}
 
 ## jwt/openid/
 
@@ -121,19 +124,8 @@ OpenID Connect ID Token per OIDC Core 1.0. Extends jwt.Token with OIDC claims.
 - **New() Token** — create OpenID token with OIDC claim accessors
 - OIDC claims: Address, Birthdate, Email, EmailVerified, FamilyName, Gender, GivenName, Locale, MiddleName, Name, Nickname, PhoneNumber, PhoneNumberVerified, Picture, PreferredUsername, Profile, UpdatedAt, Website, Zoneinfo
 - Key types: `Token` (extends jwt.Token), `AddressClaim`, `BirthdateClaim`
-- Files: `openid.go`, `address.go`, `birthdate.go`, `filter.go`, `interface.go`
-- Imports: jwt, internal/{json,tokens,pool}
-
-## transform/
-
-Generic filtering utilities using Go generics.
-
-- **Apply[T Filterable[T]](object T, logic FilterLogic) (T, error)** — include matching fields
-- **Reject[T Filterable[T]](object T, logic FilterLogic) (T, error)** — exclude matching fields
-- **AsMap(m Mappable, dst map[string]any) error** — convert to map; values are whatever `Field()` returns, so mutable values may be live aliases of source object (EXPERIMENTAL)
-- Key types: `FilterLogic`, `FilterLogicFunc`, `Filterable[T]`, `NameBasedFilter[T]`, `Mappable`
-- Files: `filter.go`, `map.go`
-- Imports: (external only: blackmagic)
+- Files: `openid.go`, `address.go`, `birthdate.go`, `interface.go`
+- Imports: jwt, jwt/internal/types, internal/{json,tokens,pool}
 
 ## cert/
 
@@ -155,7 +147,7 @@ Shared utilities. Not public API.
 | Subpackage | Purpose |
 |------------|---------|
 | `base64` | Pluggable base64 encoding (RawURL, URL, RawStd, Std) |
-| `json` | Pluggable JSON (stdlib or goccy/go-json), custom field registry |
+| `json` | encoding/json/v2 abstraction, custom field registry |
 | `ecutil` | Elliptic curve point buffer management |
 | `keyconv` | Key type conversions between jwk.Key and Go crypto types |
 | `jose` | Test helper for jose CLI integration |

@@ -180,7 +180,7 @@ source: [examples/jws_use_jws_header_example_test.go](https://github.com/jwx-go/
 
 ## Generating a JWS message in compact serialization format
 
-To sign an arbitrary payload as a JWS message in compact serialization format, use `jwt.Sign()`.
+To sign an arbitrary payload as a JWS message in compact serialization format, use `jws.Sign()`.
 
 Note that this would be [slightly different if you are signing JWTs](01-jwt.md#serialize-using-jws), as you would be
 using functions from the `jwt` package instead of `jws`.

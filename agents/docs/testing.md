@@ -36,7 +36,7 @@ Environment variables:
 
 ## Build Tags for Tests
 
-No feature build tags in v4. Optional features (signature algorithms, base64 backend) are activated via side-effect imports of [extension modules](../docs/10-extensions.md).
+No feature build tags in v4. Optional features (signature algorithms, base64 backend) are activated via side-effect imports of [extension modules](../../docs/10-extensions.md).
 
 The only build tags in the tree are Go-version constraints, and tests never set
 them; the toolchain selects the files. Two groups exist: the json/v2 sentinel

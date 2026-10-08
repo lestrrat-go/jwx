@@ -9,11 +9,14 @@ import (
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/asn1"
+	stdbase64 "encoding/base64"
+	stdjson "encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -2707,6 +2710,99 @@ func TestVerifyKeepsPermissiveECDSAInference(t *testing.T) {
 		require.NoError(t, err, `jws.Verify should accept the inferred (ES384, P-256 key) pair`)
 		require.Equal(t, payload, verified)
 	})
+}
+
+func TestJSONSigningInput(t *testing.T) {
+	key := bytes.Repeat([]byte{42}, 32)
+	for _, pretty := range []bool{false, true} {
+		for _, unencoded := range []bool{false, true} {
+			for _, signatures := range []int{1, 2} {
+				t.Run(fmtJSONCase(pretty, unencoded, signatures), func(t *testing.T) {
+					protected, public := jws.NewHeaders(), jws.NewHeaders()
+					require.NoError(t, public.Set(jws.KeyIDKey, "public-key"))
+					if unencoded {
+						require.NoError(t, protected.Set("b64", false))
+					}
+					opts := []jws.SignOption{jws.WithJSON()}
+					if pretty {
+						opts = []jws.SignOption{jws.WithJSON(jws.WithPretty(true))}
+					}
+					for range signatures {
+						opts = append(opts, jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(protected), jws.WithPublicHeaders(public)))
+					}
+					payload := []byte("payload")
+					wire, err := jws.Sign(payload, opts...)
+					require.NoError(t, err)
+					var obj struct {
+						Payload    string         `json:"payload"`
+						Protected  string         `json:"protected"`
+						Signature  string         `json:"signature"`
+						Header     map[string]any `json:"header"`
+						Signatures []struct {
+							Protected string         `json:"protected"`
+							Signature string         `json:"signature"`
+							Header    map[string]any `json:"header"`
+						} `json:"signatures"`
+					}
+					require.NoError(t, stdjson.Unmarshal(wire, &obj))
+					check := func(p, s string, h map[string]any) {
+						require.Equal(t, "public-key", h["kid"])
+						mac := hmac.New(sha256.New, key)
+						_, err := mac.Write([]byte(p + "." + obj.Payload))
+						require.NoError(t, err)
+						sig, err := stdbase64.RawURLEncoding.DecodeString(s)
+						require.NoError(t, err)
+						require.Equal(t, mac.Sum(nil), sig)
+						raw, err := stdbase64.RawURLEncoding.DecodeString(p)
+						require.NoError(t, err)
+						require.NotContains(t, string(raw), "public-key")
+					}
+					if signatures == 1 {
+						check(obj.Protected, obj.Signature, obj.Header)
+					} else {
+						require.Len(t, obj.Signatures, 2)
+						for _, s := range obj.Signatures {
+							check(s.Protected, s.Signature, s.Header)
+						}
+					}
+					verify := []jws.VerifyOption{jws.WithKey(jwa.HS256(), key)}
+					if unencoded {
+						verify = append(verify, jws.WithCritExtension("b64"))
+					}
+					got, err := jws.Verify(wire, verify...)
+					require.NoError(t, err)
+					require.Equal(t, payload, got)
+				})
+			}
+		}
+	}
+	public := jws.NewHeaders()
+	require.NoError(t, public.Set(jws.KeyIDKey, "public-key"))
+	compact, err := jws.Sign([]byte("payload"), jws.WithKey(jwa.HS256(), key, jws.WithPublicHeaders(public)))
+	require.NoError(t, err)
+	got, err := jws.Verify(compact, jws.WithKey(jwa.HS256(), key))
+	require.NoError(t, err)
+	require.Equal(t, []byte("payload"), got)
+	hdrEncoded, _, _, err := jwsbb.SplitCompact(compact)
+	require.NoError(t, err)
+	hdrJSON, err := stdbase64.RawURLEncoding.DecodeString(string(hdrEncoded))
+	require.NoError(t, err)
+	require.JSONEq(t, `{"alg":"HS256","kid":"public-key"}`, string(hdrJSON))
+}
+
+func fmtJSONCase(pretty, unencoded bool, n int) string {
+	// Names describe the wire shape as well as the payload encoding.
+	s := "flattened"
+	if n == 2 {
+		s = "general"
+	}
+	if pretty {
+		s += "/pretty"
+	}
+	if unencoded {
+		s += "/unencoded"
+	}
+	return s
 }
 
 // Embedding a named interface avoids hiding the Set method on jwk.Set.
