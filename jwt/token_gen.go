@@ -559,18 +559,10 @@ func (t *stdToken) makePairs() ([]claimPair, error) {
 		pairs = append(pairs, claimPair{Name: AudienceKey, Value: buf})
 	}
 	if t.expiration != nil {
-		buf, err := json.Marshal(t.expiration.Unix())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "exp": %w`, err)
-		}
-		pairs = append(pairs, claimPair{Name: ExpirationKey, Value: buf})
+		pairs = append(pairs, claimPair{Name: ExpirationKey, Value: []byte(t.expiration.String())})
 	}
 	if t.issuedAt != nil {
-		buf, err := json.Marshal(t.issuedAt.Unix())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "iat": %w`, err)
-		}
-		pairs = append(pairs, claimPair{Name: IssuedAtKey, Value: buf})
+		pairs = append(pairs, claimPair{Name: IssuedAtKey, Value: []byte(t.issuedAt.String())})
 	}
 	if t.issuer != nil {
 		buf, err := json.Marshal(*(t.issuer))
@@ -587,11 +579,7 @@ func (t *stdToken) makePairs() ([]claimPair, error) {
 		pairs = append(pairs, claimPair{Name: JwtIDKey, Value: buf})
 	}
 	if t.notBefore != nil {
-		buf, err := json.Marshal(t.notBefore.Unix())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "nbf": %w`, err)
-		}
-		pairs = append(pairs, claimPair{Name: NotBeforeKey, Value: buf})
+		pairs = append(pairs, claimPair{Name: NotBeforeKey, Value: []byte(t.notBefore.String())})
 	}
 	if t.subject != nil {
 		buf, err := json.Marshal(*(t.subject))

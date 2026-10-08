@@ -567,11 +567,10 @@ func generateToken(obj *codegen.Object) error {
 			o.L("}")
 			o.L("pairs = append(pairs, claimPair{Name: %sKey, Value: buf})", f.Name(true))
 		} else if f.Type() == "types.NumericDate" {
-			o.L("buf, err := json.Marshal(t.%s.Unix())", f.Name(false))
-			o.L("if err != nil {")
-			o.L("return nil, fmt.Errorf(`failed to encode %q: %%w`, err)", f.JSON())
-			o.L("}")
-			o.L("pairs = append(pairs, claimPair{Name: %sKey, Value: buf})", f.Name(true))
+			// String() writes the date as a JSON number at the precision
+			// set by WithNumericDateFormatPrecision. types.NumericDate's own
+			// MarshalJSON writes a string, so it cannot go through json.Marshal.
+			o.L("pairs = append(pairs, claimPair{Name: %sKey, Value: []byte(t.%s.String())})", f.Name(true), f.Name(false))
 		} else if f.Type() == "[]byte" {
 			o.L("buf := base64.EncodeToString(t.%s))", f.Name(false))
 			o.L("pairs = append(pairs, claimPair{Name: %sKey, Value: buf})", f.Name(true))
