@@ -177,10 +177,15 @@ func (n NumericDate) String() string {
 		scale *= 10
 	}
 	frac := int64(n.Nanosecond()) / (int64(time.Second) / scale)
+	if frac == 0 {
+		// Whole seconds are written as an integer, the same as at
+		// precision 0
+		return strconv.FormatInt(sec, 10)
+	}
 
 	var buf [32]byte
 	b := buf[:0]
-	if sec < 0 && frac > 0 {
+	if sec < 0 {
 		// sec + frac/scale is a negative number whose whole part is
 		// -(sec+1) and whose fraction is scale-frac. For example,
 		// sec=-2 and frac=5 at precision 1 is written as "-1.5".
@@ -192,13 +197,22 @@ func (n NumericDate) String() string {
 	}
 	b = append(b, tokens.Period)
 
-	// Write exactly formatPrecision digits, keeping leading zeros
+	// Trim trailing zeros: at precision 3, 0.100 is written as "0.1".
+	// frac is not zero here, so the loop stops at the last nonzero digit.
+	width := int(formatPrecision)
+	for frac%10 == 0 {
+		frac /= 10
+		width--
+	}
+
+	// Write width digits, keeping leading zeros: at precision 3, 0.001
+	// is written as "0.001"
 	var digits [MaxPrecision]byte
-	for i := int(formatPrecision) - 1; i >= 0; i-- {
+	for i := width - 1; i >= 0; i-- {
 		digits[i] = byte('0' + frac%10)
 		frac /= 10
 	}
-	b = append(b, digits[:formatPrecision]...)
+	b = append(b, digits[:width]...)
 	return string(b)
 }
 

@@ -1951,7 +1951,18 @@ func TestFractional(t *testing.T) {
 			{
 				Input:     types.NumericDate{Time: time.Unix(0, 100000000).UTC()},
 				Precision: 9,
-				Expected:  "0.100000000",
+				Expected:  "0.1",
+			},
+			{
+				// A fraction that rounds down to zero is dropped with its period
+				Input:     types.NumericDate{Time: time.Unix(0, 1).UTC()},
+				Precision: 3,
+				Expected:  "0",
+			},
+			{
+				Input:     types.NumericDate{Time: time.Unix(-2, 0).UTC()},
+				Precision: 9,
+				Expected:  "-2",
 			},
 			{
 				Input:     types.NumericDate{Time: time.Unix(-2, 500000000).UTC()},
@@ -1961,7 +1972,7 @@ func TestFractional(t *testing.T) {
 			{
 				Input:     types.NumericDate{Time: time.Unix(-1, 500000000).UTC()},
 				Precision: 3,
-				Expected:  "-0.500",
+				Expected:  "-0.5",
 			},
 			{
 				// Fractions are floored, matching Unix() at precision 0
@@ -1979,12 +1990,13 @@ func TestFractional(t *testing.T) {
 				// Before the first date UnixNano can represent (year 1677)
 				Input:     types.NumericDate{Time: time.Date(1000, time.January, 1, 0, 0, 0, 500000000, time.UTC)},
 				Precision: 3,
-				Expected:  "-30610223999.500",
+				Expected:  "-30610223999.5",
 			},
 		}
 
 		for i := 1; i <= int(types.MaxPrecision); i++ {
-			fractional := (fmt.Sprintf(`%d`, 100000001))[:i]
+			// Trailing zeros are trimmed: "1", "1", ..., "100000001"
+			fractional := strings.TrimRight((fmt.Sprintf(`%d`, 100000001))[:i], "0")
 			testcases = append(testcases, struct {
 				Input     types.NumericDate
 				Expected  string
@@ -2047,6 +2059,15 @@ func TestFractional(t *testing.T) {
 				checkClaims(t, payload)
 			})
 		}
+
+		t.Run("whole seconds are written without a fraction", func(t *testing.T) {
+			require.NoError(t, jwt.Settings(jwt.WithNumericDateFormatPrecision(9)))
+			whole := jwt.New()
+			require.NoError(t, whole.Set(jwt.IssuedAtKey, time.Unix(2000000000, 0)))
+			data, err := json.Marshal(whole)
+			require.NoError(t, err)
+			require.Equal(t, `{"iat":2000000000}`, string(data))
+		})
 
 		t.Run("Equal compares at the configured precision", func(t *testing.T) {
 			a, b := jwt.New(), jwt.New()
