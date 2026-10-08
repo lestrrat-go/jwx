@@ -29,6 +29,7 @@ go_library(
 go_test(
     name = "jwsbb_test",
     srcs = [
+        "format_test.go",
         "header_test.go",
         "jwsbb_test.go",
     ],

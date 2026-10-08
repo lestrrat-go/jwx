@@ -2570,3 +2570,63 @@ func TestDisabledKeyAlgorithms(t *testing.T) {
 		require.Equal(t, plaintext, got, `Decrypt should return the original plaintext after re-enabling`)
 	})
 }
+
+// Embedding a named interface avoids hiding the Set method on jwk.Set.
+type shrinkableSet interface{ jwk.Set }
+type shrinkingSet struct {
+	shrinkableSet
+
+	after int
+}
+
+func (s shrinkingSet) Key(i int) (jwk.Key, bool) {
+	if i == s.after {
+		_ = s.shrinkableSet.Clear()
+	}
+	return s.shrinkableSet.Key(i)
+}
+
+func TestShrinkingKeySet(t *testing.T) {
+	raw := bytes.Repeat([]byte{42}, 16)
+	key, err := jwk.Import[jwk.Key](raw)
+	require.NoError(t, err)
+	require.NoError(t, key.Set(jwk.KeyIDKey, "test"))
+	require.NoError(t, key.Set(jwk.AlgorithmKey, jwa.DIRECT()))
+	other, err := key.Clone()
+	require.NoError(t, err)
+	require.NoError(t, other.Set("other", true))
+
+	payload := []byte("payload")
+	wire, err := jwe.Encrypt(payload, jwe.WithKey(jwa.DIRECT(), raw), jwe.WithContentEncryption(jwa.A128GCM()))
+	require.NoError(t, err)
+
+	testcases := []struct {
+		Name  string
+		After int
+		Error bool
+	}{
+		{Name: "cleared before first candidate", After: 0, Error: true},
+		{Name: "cleared after first candidate", After: 1},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.Name, func(t *testing.T) {
+			set := jwk.NewSet()
+			require.NoError(t, set.AddKey(key))
+			require.NoError(t, set.AddKey(other))
+
+			var got []byte
+			var err error
+			require.NotPanics(t, func() {
+				got, err = jwe.Decrypt(wire, jwe.WithKeySet(shrinkingSet{set, tc.After}, jwe.WithRequireKid(false)))
+			})
+			if tc.Error {
+				require.ErrorIs(t, err, jwe.DecryptError())
+				require.Contains(t, err.Error(), "tried 0 keys")
+				require.NotContains(t, err.Error(), "%!")
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, payload, got)
+		})
+	}
+}

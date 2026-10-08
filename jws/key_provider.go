@@ -209,7 +209,10 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 		var matched, emitted bool
 		var errs []error
 		for i := range kp.set.Len() {
-			key, _ := kp.set.Key(i)
+			key, ok := kp.set.Key(i)
+			if !ok {
+				break // The set shrank after Len; retain candidates already emitted.
+			}
 			if kid, ok := key.KeyID(); !ok || kid != wantedKid {
 				continue
 			}
@@ -266,7 +269,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, sig *Signat
 	for i := range kp.set.Len() {
 		key, ok := kp.set.Key(i)
 		if !ok {
-			return fmt.Errorf(`failed to get key at index %d`, i)
+			break // The set shrank after Len; retain candidates already emitted.
 		}
 		// Unsupported-key placeholders are exempt from the prefilter:
 		// their raw kty is never a registered KeyType, so the filter

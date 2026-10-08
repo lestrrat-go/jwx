@@ -59,6 +59,18 @@ const (
 // iteration, and are found by LookupKeyID. Use [IsUnsupportedKey] to
 // skip them before performing cryptographic operations.
 //
+// The set returned by [NewSet] and [Parse] takes a lock in every method,
+// so one goroutine may change it while another reads it. A loop over Len
+// and Key does not hold that lock between calls, though. When another
+// goroutine removes a key at or before the loop's current index, the next
+// key moves down into an index the loop has already read, and the loop
+// skips it. Key returns false once the index passes the new end.
+// jws.Verify and jwe.Decrypt walk a set given through WithKeySet this way,
+// so removing keys from that set while they run can make them skip the
+// matching key and fail. To rotate keys that concurrent calls are using,
+// build a new set and swap it in for the old one, leaving the old set
+// unchanged.
+//
 //nolint:interfacebloat
 type Set interface {
 	// AddKey adds the specified key. If the key already exists in the set,
