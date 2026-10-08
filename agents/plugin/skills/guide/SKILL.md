@@ -263,6 +263,9 @@ if err != nil { return err }
 tok, err := jwt.Parse(signed, jwt.WithKey(jwa.RS256(), signerPublicKey))
 ```
 
+- `Serialize` returns the JWE in compact form as `[]byte`, and `jwe.Decrypt` returns the inner signed JWT as `[]byte`.
+- Decrypting only proves the message was encrypted to the recipient. The `jwt.Parse` step is what proves who signed the token, so NEVER skip it or replace it with `jwt.ParseInsecure` after decrypting.
+
 ## Companion modules
 
 Beyond the core `github.com/lestrrat-go/jwx/v4` module, the project ships companion modules under `github.com/jwx-go`. The agent should know **what's available and when to reach for each one** — depth lives in each module's godoc.
