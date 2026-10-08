@@ -164,21 +164,42 @@ func (n NumericDate) String() string {
 		return strconv.FormatInt(n.Unix(), 10)
 	}
 
-	// This is cheating, but it's better (easier) than doing floating point math
-	// We basically munge with strings after formatting an integer value
-	// for nanoseconds since epoch
-	s := strconv.FormatInt(n.UnixNano(), 10)
-	for len(s) < int(MaxPrecision) {
-		s = "0" + s
+	// Work from seconds and nanoseconds separately: UnixNano() only covers
+	// the years 1678 through 2262, while a NumericDate can be any time.Time
+	// that passes validateNumericDateTime.
+	//
+	// Unix() floors, so the nanoseconds are always added to the seconds,
+	// even before 1970. The fraction is floored to the requested digits
+	// too, which keeps precision N consistent with precision 0.
+	sec := n.Unix()
+	scale := int64(1)
+	for range formatPrecision {
+		scale *= 10
 	}
+	frac := int64(n.Nanosecond()) / (int64(time.Second) / scale)
 
-	slwhole := len(s) - int(MaxPrecision)
-	s = s[:slwhole] + "." + s[slwhole:slwhole+int(formatPrecision)]
-	if s[0] == tokens.Period {
-		s = "0" + s
+	var buf [32]byte
+	b := buf[:0]
+	if sec < 0 && frac > 0 {
+		// sec + frac/scale is a negative number whose whole part is
+		// -(sec+1) and whose fraction is scale-frac. For example,
+		// sec=-2 and frac=5 at precision 1 is written as "-1.5".
+		b = append(b, '-')
+		b = strconv.AppendInt(b, -(sec + 1), 10)
+		frac = scale - frac
+	} else {
+		b = strconv.AppendInt(b, sec, 10)
 	}
+	b = append(b, tokens.Period)
 
-	return s
+	// Write exactly formatPrecision digits, keeping leading zeros
+	var digits [MaxPrecision]byte
+	for i := int(formatPrecision) - 1; i >= 0; i-- {
+		digits[i] = byte('0' + frac%10)
+		frac /= 10
+	}
+	b = append(b, digits[:formatPrecision]...)
+	return string(b)
 }
 
 // MarshalJSON translates from internal representation to JSON NumericDate

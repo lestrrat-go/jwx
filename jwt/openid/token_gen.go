@@ -1507,7 +1507,7 @@ func (t *stdToken) makePairs() []claimPair {
 		pairs = append(pairs, claimPair{Name: EmailVerifiedKey, Value: *(t.emailVerified)})
 	}
 	if t.expiration != nil {
-		pairs = append(pairs, claimPair{Name: ExpirationKey, Value: t.expiration.Unix()})
+		pairs = append(pairs, claimPair{Name: ExpirationKey, Value: t.expiration})
 	}
 	if t.familyName != nil {
 		pairs = append(pairs, claimPair{Name: FamilyNameKey, Value: *(t.familyName)})
@@ -1519,7 +1519,7 @@ func (t *stdToken) makePairs() []claimPair {
 		pairs = append(pairs, claimPair{Name: GivenNameKey, Value: *(t.givenName)})
 	}
 	if t.issuedAt != nil {
-		pairs = append(pairs, claimPair{Name: IssuedAtKey, Value: t.issuedAt.Unix()})
+		pairs = append(pairs, claimPair{Name: IssuedAtKey, Value: t.issuedAt})
 	}
 	if t.issuer != nil {
 		pairs = append(pairs, claimPair{Name: IssuerKey, Value: *(t.issuer)})
@@ -1540,7 +1540,7 @@ func (t *stdToken) makePairs() []claimPair {
 		pairs = append(pairs, claimPair{Name: NicknameKey, Value: *(t.nickname)})
 	}
 	if t.notBefore != nil {
-		pairs = append(pairs, claimPair{Name: NotBeforeKey, Value: t.notBefore.Unix()})
+		pairs = append(pairs, claimPair{Name: NotBeforeKey, Value: t.notBefore})
 	}
 	if t.phoneNumber != nil {
 		pairs = append(pairs, claimPair{Name: PhoneNumberKey, Value: *(t.phoneNumber)})
@@ -1561,7 +1561,7 @@ func (t *stdToken) makePairs() []claimPair {
 		pairs = append(pairs, claimPair{Name: SubjectKey, Value: *(t.subject)})
 	}
 	if t.updatedAt != nil {
-		pairs = append(pairs, claimPair{Name: UpdatedAtKey, Value: t.updatedAt.Unix()})
+		pairs = append(pairs, claimPair{Name: UpdatedAtKey, Value: t.updatedAt})
 	}
 	if t.website != nil {
 		pairs = append(pairs, claimPair{Name: WebsiteKey, Value: *(t.website)})
@@ -1601,6 +1601,10 @@ func (t *stdToken) MarshalJSON() ([]byte, error) {
 				buf.Write(audBytes)
 				continue
 			}
+		}
+		if date, ok := pair.Value.(*types.NumericDate); ok {
+			buf.WriteString(date.String())
+			continue
 		}
 		valBytes, err := json.Marshal(pair.Value)
 		if err != nil {

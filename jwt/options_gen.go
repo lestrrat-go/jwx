@@ -389,9 +389,18 @@ func WithKeyProvider(v jws.KeyProvider) ParseOption {
 	return &parseOption{option.New(identKeyProvider{}, v)}
 }
 
-// WithNumericDateFormatPrecision sets the precision up to which the
-// library uses to format fractional dates found in the numeric date
-// fields. Default is 0 (second, no fractions), max is 9 (nanosecond)
+// WithNumericDateFormatPrecision sets the number of fractional digits
+// written for NumericDate claims when a token is serialized. This applies
+// to `exp`, `iat`, and `nbf` in jwt.Token, and to those claims plus
+// `updated_at` in openid.Token. Default is 0 (whole seconds, no
+// fraction), max is 9 (nanoseconds).
+//
+// With a precision above 0, serialized tokens contain fractional
+// NumericDate values. For example, at precision 3 an `iat` of
+// 2000000000.123456789 seconds is written as `"iat":2000000000.123`.
+// The value stays a JSON number. Digits past the precision are rounded
+// down, toward the earlier time. This also changes the bytes that
+// jwt.Sign signs and the values that jwt.Equal compares.
 func WithNumericDateFormatPrecision(v int) GlobalOption {
 	return &globalOption{option.New(identNumericDateFormatPrecision{}, v)}
 }

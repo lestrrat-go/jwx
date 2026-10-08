@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json/jsontext"
 	"fmt"
 	"strconv"
 	"testing"
@@ -865,6 +866,38 @@ func TestOpenIDRejectsOverflowingNumericDates(t *testing.T) {
 			for _, value := range []string{"9223372036854775807", "9.22337198e18"} {
 				token := openid.New()
 				require.Error(t, json.Unmarshal(fmt.Appendf(nil, `{"%s":%s}`, claim, value), token))
+			}
+		})
+	}
+}
+
+func TestOpenIDNumericDateFormatPrecision(t *testing.T) {
+	oldPrecision := types.FormatPrecision.Load()
+	t.Cleanup(func() { types.FormatPrecision.Store(oldPrecision) })
+
+	timestamp := time.Unix(2000000000, 123456789).UTC()
+	claims := []string{jwt.ExpirationKey, jwt.IssuedAtKey, jwt.NotBeforeKey, openid.UpdatedAtKey}
+	token := openid.New()
+	for _, claim := range claims {
+		require.NoError(t, token.Set(claim, timestamp))
+	}
+
+	for _, tc := range []struct {
+		Precision int
+		Expected  string
+	}{
+		{Precision: 0, Expected: "2000000000"},
+		{Precision: 3, Expected: "2000000000.123"},
+		{Precision: 9, Expected: "2000000000.123456789"},
+	} {
+		t.Run(fmt.Sprintf("precision=%d", tc.Precision), func(t *testing.T) {
+			require.NoError(t, jwt.Settings(jwt.WithNumericDateFormatPrecision(tc.Precision)))
+			data, err := json.Marshal(token)
+			require.NoError(t, err)
+			var fields map[string]jsontext.Value
+			require.NoError(t, json.Unmarshal(data, &fields))
+			for _, claim := range claims {
+				require.Equal(t, tc.Expected, string(fields[claim]), claim)
 			}
 		})
 	}

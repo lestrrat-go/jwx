@@ -505,7 +505,10 @@ func generateTokenMakePairsAndMarshal(o *codegen.Output, obj *codegen.Object, pk
 		if f.Name(false) == `audience` {
 			o.L("pairs = append(pairs, claimPair{Name: %sKey, Value: t.audience})", f.Name(true))
 		} else if f.Type() == "types.NumericDate" {
-			o.L("pairs = append(pairs, claimPair{Name: %sKey, Value: t.%s.Unix()})", f.Name(true), f.Name(false))
+			// MarshalJSON formats the date with the configured precision.
+			// Set and decode store a new pointer, so the value stays
+			// unchanged after the lock is released.
+			o.L("pairs = append(pairs, claimPair{Name: %sKey, Value: t.%s})", f.Name(true), f.Name(false))
 		} else if f.Type() == "[]byte" {
 			o.L("pairs = append(pairs, claimPair{Name: %sKey, Value: base64.EncodeToString(t.%s)})", f.Name(true), f.Name(false))
 		} else {
@@ -550,6 +553,13 @@ func generateTokenMakePairsAndMarshal(o *codegen.Output, obj *codegen.Object, pk
 	o.L("buf.Write(audBytes)")
 	o.L("continue")
 	o.L("}")
+	o.L("}")
+	// Registered date claims are written as JSON numbers at the precision
+	// set by WithNumericDateFormatPrecision. types.NumericDate's own
+	// MarshalJSON writes a string, so it cannot go through json.Marshal.
+	o.L("if date, ok := pair.Value.(*types.NumericDate); ok {")
+	o.L("buf.WriteString(date.String())")
+	o.L("continue")
 	o.L("}")
 	o.L("valBytes, err := json.Marshal(pair.Value)")
 	o.L("if err != nil {")
