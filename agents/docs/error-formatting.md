@@ -58,8 +58,8 @@ Within `jwt`, only `jwt.UnknownPayloadTypeError()` remains a sentinel function (
 
 | Type | Structured Fields | Meaning |
 |------|------------------|---------|
-| `MissingContentEncryptionError` | *(none)* | `enc` missing from protected headers during `Decrypt` |
-| `AlgorithmMismatchError` | `Expected`, `Got` (both `jwa.KeyEncryptionAlgorithm`) | Per-recipient/protected `alg` does not match the key's algorithm |
+| `MissingContentEncryptionError` | *(none)* | `enc` missing from the recipient's JOSE header (protected, shared `unprotected`, or per-recipient) during `Decrypt` |
+| `AlgorithmMismatchError` | `Expected`, `Got` (both `jwa.KeyEncryptionAlgorithm`) | `alg` in the recipient's JOSE header does not match the key's algorithm |
 | `FieldNotFoundError` | `Name` | Header field not present (`jwe.Get` miss) |
 | `FieldTypeMismatchError` | `Name`, `Got`, `Want` | Header field present but wrong type (`jwe.Get` type assertion failed) |
 

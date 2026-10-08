@@ -31,4 +31,5 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithProtectedHeaders", identProtectedHeaders{}.String())
 	require.Equal(t, "WithRequireKid", identRequireKid{}.String())
 	require.Equal(t, "WithSerialization", identSerialization{}.String())
+	require.Equal(t, "WithStrictHeaderRules", identStrictHeaderRules{}.String())
 }

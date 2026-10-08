@@ -58,6 +58,14 @@ options:
 
 Manual option functions in `{pkg}/options.go` supplement generated ones.
 
+## objects.yml field flags (header/token generators)
+
+| Flag | Effect on generated `UnmarshalJSON` |
+|------|-------------------------------------|
+| `direct_storage` | decode into the field type, store without pointer |
+| `noDeref` | decode into pointer element, store `&decoded` |
+| `reject_null` | JSON `null` → decode error (default: null reads as unset). Used by `jwe` `crit`; reason recorded beside the flag in `jwe/objects.yml` |
+
 ## Key Registration/Extension Points
 
 | What | Registration Function | Package |

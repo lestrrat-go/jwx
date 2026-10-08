@@ -10,11 +10,12 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestUnprotectedZipIgnored verifies that a "zip" (compression) header
+// TestUnprotectedZipRejected verifies that a "zip" (compression) header
 // injected into the per-recipient/unprotected header — which the AEAD does
-// not authenticate — is ignored during decryption. Only the protected
-// header may control post-decryption decompression.
-func TestUnprotectedZipIgnored(t *testing.T) {
+// not authenticate — is rejected. RFC 7516 §4.1.3 only allows "zip" in the
+// protected header, so only the protected header may control
+// post-decryption decompression.
+func TestUnprotectedZipRejected(t *testing.T) {
 	const plaintext = `the quick brown fox jumps over the lazy dog`
 
 	key, err := jwk.Import[jwk.SymmetricKey]([]byte(`0123456789abcdef`))
@@ -40,12 +41,9 @@ func TestUnprotectedZipIgnored(t *testing.T) {
 	tampered, err := json.Marshal(obj)
 	require.NoError(t, err, `re-marshal tampered JWE`)
 
-	// The malicious unprotected zip must be IGNORED: decryption returns the
-	// original plaintext rather than trying (and failing/garbling) to
-	// inflate non-compressed bytes.
-	decrypted, err := jwe.Decrypt(tampered, jwe.WithKey(jwa.A128KW(), key))
-	require.NoError(t, err, `jwe.Decrypt should succeed and ignore unprotected zip`)
-	require.Equal(t, plaintext, string(decrypted), `plaintext must be intact`)
+	_, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.A128KW(), key))
+	require.Error(t, err, `jwe.Decrypt should reject an unprotected zip`)
+	require.ErrorIs(t, err, jwe.ParseError(), `the message should be rejected while parsing`)
 }
 
 // TestProtectedZipRoundTrips is the control: compression requested through

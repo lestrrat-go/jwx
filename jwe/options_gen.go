@@ -178,6 +178,7 @@ type identPretty struct{}
 type identProtectedHeaders struct{}
 type identRequireKid struct{}
 type identSerialization struct{}
+type identStrictHeaderRules struct{}
 
 func (identAuthenticateData) String() string {
 	return "WithAuthenticateData"
@@ -265,6 +266,10 @@ func (identRequireKid) String() string {
 
 func (identSerialization) String() string {
 	return "WithSerialization"
+}
+
+func (identStrictHeaderRules) String() string {
+	return "WithStrictHeaderRules"
 }
 
 // WithCBCBufferSize specifies the maximum buffer size for internal
@@ -504,4 +509,82 @@ func WithRequireKid(v bool) WithKeySetSuboption {
 // do not need to specify this option other than to be explicit about it
 func WithCompact() EncryptOption {
 	return &encryptOption{option.New(identSerialization{}, fmtCompact)}
+}
+
+// WithStrictHeaderRules controls whether jwe enforces the RFC 7516 header
+// rules for messages in the JSON serialization. The default is true.
+//
+// With true, jwe treats the protected header, the shared "unprotected"
+// header, and each recipient's "header" as one set of header
+// parameters. "alg", "enc", and the other algorithm parameters may be in
+// any of them, but each name may appear in only one.
+//
+// Pass false to get the behavior of earlier v4 releases. Use it only
+// until the producers you depend on are fixed.
+//
+// The cases below describe what changes with the default, and what false
+// does instead. In the examples, PROTECTED(...) is the base64url-encoded
+// "protected" member, and "iv", "ciphertext", and "tag" are left out.
+//
+// A message without a "protected" member decrypts when its other headers
+// carry "alg" and "enc". With false, it fails.
+//
+//	{"unprotected":{"alg":"dir","enc":"A128GCM"}, ...}
+//
+// A message that carries "alg" or "enc" only in the shared or recipient
+// header decrypts. With false, it fails.
+//
+//	{"protected":PROTECTED({"enc":"A128GCM"}), "unprotected":{"alg":"dir"}, ...}
+//	{"protected":PROTECTED({"alg":"dir"}), "header":{"enc":"A128GCM"}, ...}
+//
+// A message that carries the same header parameter in more than one
+// header is rejected. The sender must put each name in one header only.
+// A message whose recipients name different "enc" values is rejected as
+// well. With false, both decrypt.
+//
+//	{"protected":PROTECTED({"alg":"dir","enc":"A128GCM","kid":"a"}), "header":{"kid":"b"}, ...}
+//
+// A message that carries "zip" or "crit" outside the protected header is
+// rejected. The sender must move them into the protected header. With
+// false, it decrypts and the unprotected "zip" or "crit" is ignored.
+//
+//	{"protected":PROTECTED({"alg":"dir","enc":"A128GCM"}), "unprotected":{"zip":"DEF"}, ...}
+//
+// jwe.Encrypt for two or more recipients fails when a per-recipient header
+// repeats a name from the protected header, or carries "zip" or "crit".
+// Set each name in only one of jwe.WithProtectedHeaders and
+// jwe.WithPerRecipientHeaders. jwe.Encrypt puts "alg", and "kid" when the
+// key has one, into each recipient header itself, so leave those two
+// out of jwe.WithProtectedHeaders. With false, jwe.Encrypt writes the
+// repeated names.
+//
+//	jwe.Encrypt(payload, jwe.WithJSON(),
+//		jwe.WithProtectedHeaders(h1), // h1 sets "kid"
+//		jwe.WithKey(jwa.A128KW(), k1, jwe.WithPerRecipientHeaders(h2)), // h2 also sets "kid"
+//		jwe.WithKey(jwa.A128KW(), k2))
+//
+// jwe.Parse copies the protected header into the recipient header of a
+// compact message. If you change one of those copied values, json.Marshal
+// of the message fails, because the message would carry two different
+// values for one name. With false, json.Marshal writes both values.
+//
+// A null "crit" is rejected with either setting, because earlier releases
+// treated it as no "crit" and skipped the critical-extension check. The
+// sender must leave "crit" out or make it an array of extension names.
+//
+//	{"protected":PROTECTED({"alg":"dir","enc":"A128GCM","crit":null}), ...}
+//
+// These changes also apply with either setting. jwe.Parse accepts a JSON
+// message without a "protected" member. jwe.WithKeySet finds "kid" in any header,
+// so it can decrypt the flattened JSON output of jwe.Encrypt.
+// json.Marshal no longer writes an empty protected header, and no longer
+// repeats protected header names in "header" for a message parsed from
+// the compact form.
+//
+// The setting is read once at the start of each jwe.Parse, jwe.Decrypt,
+// and jwe.Encrypt call.
+//
+// This option has a global effect.
+func WithStrictHeaderRules(v bool) GlobalOption {
+	return &globalOption{option.New(identStrictHeaderRules{}, v)}
 }

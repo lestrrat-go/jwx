@@ -40,6 +40,7 @@ var pbes2Count atomic.Int64
 var maxRecipients atomic.Int64
 var maxDecompressBufferSize atomic.Int64
 var disabledKeyAlgs atomic.Pointer[map[string]struct{}]
+var strictHeaderRules atomic.Bool
 
 func init() {
 	// maxPBES2Count: 1_000_000 covers OWASP 2023's 600k HS256 floor with
@@ -53,6 +54,7 @@ func init() {
 	pbes2Count.Store(0)
 	maxRecipients.Store(100)
 	maxDecompressBufferSize.Store(10 * 1024 * 1024) // 10MB
+	strictHeaderRules.Store(true)
 }
 
 // Settings configures process-global behavior for JWE operations.
@@ -73,6 +75,8 @@ func Settings(options ...GlobalOption) error {
 			maxDecompressBufferSize.Store(option.MustGet[int64](opt))
 		case identCBCBufferSize{}:
 			aescbc.SetMaxBufferSize(option.MustGet[int64](opt))
+		case identStrictHeaderRules{}:
+			strictHeaderRules.Store(option.MustGet[bool](opt))
 		case identDisabledKeyAlgorithms{}:
 			algs := option.MustGet[[]jwa.KeyEncryptionAlgorithm](opt)
 			if len(algs) == 0 {
@@ -348,6 +352,7 @@ type decryptContext struct {
 	minPBES2Count           int
 	critValidation          bool
 	criticalExtensions      []string
+	strictHeaderRules       bool
 	//nolint:containedctx
 	ctx context.Context
 }
@@ -381,6 +386,9 @@ func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 	dc.maxDecompressBufferSize = maxDecompressBufferSize.Load()
 	dc.maxPBES2Count = int(maxPBES2Count.Load())
 	dc.minPBES2Count = int(minPBES2Count.Load())
+	// Read once per call: a Settings change while this call runs does not
+	// affect it.
+	dc.strictHeaderRules = strictHeaderRules.Load()
 
 	var ctxOpt context.Context
 	for _, opt := range options {
@@ -502,7 +510,7 @@ func concatAAD(computed, aad []byte) []byte {
 }
 
 func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
-	msg, err := parseJSONOrCompact(buf, true, dc.maxRecipients)
+	msg, err := parseJSONOrCompact(buf, true, dc.maxRecipients, dc.strictHeaderRules)
 	if err != nil {
 		return nil, fmt.Errorf(`jwe.Decrypt: failed to parse buffer: %w`, err)
 	}
@@ -517,20 +525,28 @@ func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 		}
 	}
 
-	// Clone the shared (top-level) protected header as our working copy.
-	// We deliberately do NOT merge msg.unprotectedHeaders (the shared,
-	// top-level *unprotected* header) here: it is never covered by the
-	// AEAD tag, so it must not contribute algorithm parameters.
+	// Build the part of the JOSE header that every recipient shares: the
+	// protected header plus the shared "unprotected" header (RFC 7516
+	// §7.2.1). decryptContent merges each recipient's own header onto it.
+	// Parsing has already rejected a name that appears in more than one
+	// location, and "zip" or "crit" outside the protected header. The
+	// per-recipient merge is bounded by WithMaxRecipients and, for PBES2,
+	// by WithMaxPBES2Count (applied per recipient).
 	//
-	// Per-recipient unprotected headers are a separate case — RFC 7516
-	// §5.3 explicitly permits them to carry recipient-specific algorithm
-	// parameters (alg, epk, p2s, p2c, iv, tag, apu, apv, …), and
-	// decryptContent merges recipient.Headers() onto this base below.
-	// That merge is bounded by WithMaxRecipients and, for PBES2, by
-	// WithMaxPBES2Count (applied per recipient).
-	h, err := msg.protectedHeaders.Clone()
-	if err != nil {
-		return nil, fmt.Errorf(`jwe.Decrypt: failed to copy protected headers: %w`, err)
+	// With WithStrictHeaderRules(false) parsing skips those checks, so the
+	// shared header is left out: merged on top of the protected header, it
+	// could silently replace the protected "alg".
+	var h Headers
+	if dc.strictHeaderRules && msg.unprotectedHeaders != nil {
+		h, err = msg.protectedHeaders.Merge(msg.unprotectedHeaders)
+		if err != nil {
+			return nil, fmt.Errorf(`jwe.Decrypt: failed to merge shared headers: %w`, err)
+		}
+	} else {
+		h, err = msg.protectedHeaders.Clone()
+		if err != nil {
+			return nil, fmt.Errorf(`jwe.Decrypt: failed to copy protected headers: %w`, err)
+		}
 	}
 
 	var aad []byte
@@ -538,17 +554,9 @@ func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 		aad = base64.Encode(aadContainer)
 	}
 
-	var computedAad []byte
-	if len(msg.rawProtectedHeaders) > 0 {
-		computedAad = msg.rawProtectedHeaders
-	} else {
-		// this is probably not required once msg.Decrypt is deprecated
-		var err error
-		computedAad, err = msg.protectedHeaders.Encode()
-		if err != nil {
-			return nil, fmt.Errorf(`jwe.Decrypt: failed to encode protected headers: %w`, err)
-		}
-	}
+	// The AAD is the protected header exactly as it appeared in the
+	// message. It is empty when a JSON message has no "protected" member.
+	computedAad := msg.rawProtectedHeaders
 
 	// for each recipient, attempt to match the key providers
 	// if we have no recipients, pretend like we only have one
@@ -608,7 +616,7 @@ func joinDecryptErrors(errs []error) error {
 	return errors.Join(kept...)
 }
 
-func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
+func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, baseHeaders Headers, aad, computedAad []byte) ([]byte, error) {
 	var tried int
 	var attemptErrors []error
 	for i, kp := range dc.keyProviders {
@@ -645,7 +653,7 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 			alg := pair.alg.(jwa.KeyEncryptionAlgorithm)
 			key := pair.key
 
-			decrypted, err := dc.decryptContent(msg, alg, key, recipient, protectedHeaders, aad, computedAad)
+			decrypted, err := dc.decryptContent(msg, alg, key, recipient, baseHeaders, aad, computedAad)
 			if err != nil {
 				attemptErrors = append(attemptErrors, err)
 				continue
@@ -668,7 +676,7 @@ func (dc *decryptContext) tryRecipient(msg *Message, recipient Recipient, protec
 	return nil, fmt.Errorf(`tried %d keys, but failed to match any of the keys with recipient`, tried)
 }
 
-func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, protectedHeaders Headers, aad, computedAad []byte) ([]byte, error) {
+func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgorithm, key any, recipient Recipient, baseHeaders Headers, aad, computedAad []byte) ([]byte, error) {
 	if isKeyAlgorithmDisabled(alg) {
 		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: key encryption algorithm %q is disabled by jwe.WithDisabledKeyAlgorithms`, alg)}
 	}
@@ -680,76 +688,53 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 		key = raw
 	}
 
-	ce, ok := msg.protectedHeaders.ContentEncryption()
+	// Merge the shared headers and this recipient's header into the
+	// recipient's JOSE header (RFC 7516 §7.2.1). When the recipient header
+	// is empty (common in compact format), skip the Clone+Merge and use
+	// the shared headers directly.
+	var h2 Headers
+	recipientHdrs := recipient.Headers()
+	if iz, ok := recipientHdrs.(isZeroer); ok && iz.isZero() {
+		h2 = baseHeaders
+	} else {
+		var err error
+		h2, err = baseHeaders.Merge(recipientHdrs)
+		if err != nil {
+			return nil, fmt.Errorf(`jwe.Decrypt: failed to merge headers: %w`, err)
+		}
+	}
+
+	encSource := h2
+	if !dc.strictHeaderRules {
+		encSource = msg.protectedHeaders
+	}
+	ce, ok := encSource.ContentEncryption()
 	if !ok {
 		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: %w`, MissingContentEncryptionError{})}
 	}
 
-	// RFC 7516 §7.2.1 requires header parameter names to be disjoint
-	// across the protected, shared-unprotected, and per-recipient
-	// header locations. For "alg" specifically, allowing protected
-	// and per-recipient headers to declare conflicting values is an
-	// algorithm-confusion vector: an attacker who can rewrite the
-	// per-recipient (unprotected) location can claim a different alg
-	// than the integrity-protected one, and the alg-match loop below
-	// would silently break on whichever it sees first.
-	//
-	// Compact-form JWE legitimately has the same alg value in both
-	// places — parseCompact synthesizes a per-recipient header by
-	// cloning the protected header (minus enc), so a strict-disjoint
-	// check would reject every compact JWE. We therefore allow the
-	// duplication when the values agree, and reject only when they
-	// disagree. The shared unprotected header is ignored elsewhere
-	// in this function (see comment at the top) and so does not
-	// participate here either.
-	if rh := recipient.Headers(); rh != nil {
-		if recipAlg, recipHas := rh.Algorithm(); recipHas {
-			if protectedAlg, protectedHas := protectedHeaders.Algorithm(); protectedHas && protectedAlg != recipAlg {
-				return nil, decryptError{fmt.Errorf(`jwe.Decrypt: malformed JWE — "alg" header value differs between protected (%q) and per-recipient (%q) headers (RFC 7516 §7.2.1)`, protectedAlg, recipAlg)}
+	// Parsing rejects a JSON message whose "alg" appears in more than one
+	// header location. Compact JWE still carries the same "alg" in both
+	// the protected and the recipient header, because parseCompact builds
+	// the recipient header by cloning the protected one (minus "enc"), so
+	// the two are allowed to agree. A key provider can also change the
+	// recipient header after parsing. If the values disagree, the alg-match
+	// loop below would act on whichever it sees first, so reject the
+	// message instead.
+	if recipientHdrs != nil {
+		if recipAlg, recipHas := recipientHdrs.Algorithm(); recipHas {
+			if baseAlg, baseHas := baseHeaders.Algorithm(); baseHas && baseAlg != recipAlg {
+				return nil, decryptError{fmt.Errorf(`jwe.Decrypt: malformed JWE — "alg" header value differs between shared (%q) and per-recipient (%q) headers (RFC 7516 §7.2.1)`, baseAlg, recipAlg)}
 			}
 		}
 	}
 
-	// The "alg" header can be in either protected or per-recipient
-	// headers. With disjointness enforced above, only one location can
-	// have it, so iteration order does not affect security; we keep
-	// per-recipient first to match the historical preference for
-	// recipient-specific algs in multi-recipient JWE.
-	var algMatched bool
-	for _, hdr := range []Headers{recipient.Headers(), protectedHeaders} {
-		v, ok := hdr.Algorithm()
-		if !ok {
-			continue
-		}
-
-		if v == alg {
-			algMatched = true
-			break
-		}
-		// if we found something but didn't match, it's a failure
+	v, ok := h2.Algorithm()
+	if !ok {
+		return nil, fmt.Errorf(`jwe.Decrypt: failed to find "alg" header in the protected, shared unprotected, or per-recipient headers`)
+	}
+	if v != alg {
 		return nil, decryptError{fmt.Errorf(`jwe.Decrypt: %w`, AlgorithmMismatchError{Expected: alg, Got: v})}
-	}
-	if !algMatched {
-		return nil, fmt.Errorf(`jwe.Decrypt: failed to find "alg" header in either protected or per-recipient headers`)
-	}
-
-	// Merge protected and per-recipient headers for algorithm-specific param extraction.
-	// When recipient headers are empty (common in compact format), skip the
-	// expensive Clone+Merge and use protected headers directly.
-	var h2 Headers
-	recipientHdrs := recipient.Headers()
-	if iz, ok := recipientHdrs.(isZeroer); ok && iz.isZero() {
-		h2 = protectedHeaders
-	} else {
-		var err error
-		h2, err = protectedHeaders.Clone()
-		if err != nil {
-			return nil, fmt.Errorf(`jwe.Decrypt: failed to copy headers (1): %w`, err)
-		}
-		h2, err = h2.Merge(recipientHdrs)
-		if err != nil {
-			return nil, fmt.Errorf(`jwe.Decrypt: failed to merge headers: %w`, err)
-		}
 	}
 
 	// Create content cipher (needed by RSA-1.5 for key size, and for content decryption)
@@ -785,7 +770,8 @@ func (dc *decryptContext) decryptContent(msg *Message, alg jwa.KeyEncryptionAlgo
 	// Read compression only from the protected header. The "zip" header in
 	// the unprotected/per-recipient header is not covered by the AEAD, so
 	// honoring it would let an attacker flip post-decryption decompression.
-	if v, ok := protectedHeaders.Compression(); ok && v == jwa.Deflate() {
+	// Parsing already rejects "zip" outside the protected header.
+	if v, ok := msg.protectedHeaders.Compression(); ok && v == jwa.Deflate() {
 		buf, err := uncompress(plaintext, dc.maxDecompressBufferSize)
 		if err != nil {
 			return nil, fmt.Errorf(`jwe.Decrypt: failed to uncompress payload: %w`, err)
@@ -812,6 +798,7 @@ type encryptContext struct {
 	authenticatedData []byte
 	builders          []*recipientBuilder
 	protected         Headers
+	strictHeaderRules bool
 	builderBuf        [1]recipientBuilder // inline storage for common single-recipient case
 }
 
@@ -839,6 +826,9 @@ func freeEncryptContext(ec *encryptContext) *encryptContext {
 
 func (ec *encryptContext) ProcessOptions(options []EncryptOption) error {
 	ec.pbes2Count = int(pbes2Count.Load())
+	// Read once per call: a Settings change while this call runs does not
+	// affect it.
+	ec.strictHeaderRules = strictHeaderRules.Load()
 	var mergeProtected bool
 	var useRawCEK bool
 	for _, opt := range options {
@@ -938,6 +928,7 @@ func freeMessage(msg *Message) *Message {
 	msg.tag = nil
 	msg.rawProtectedHeaders = nil
 	msg.storeProtectedHeaders = false
+	msg.headerRules = headerRulesUnset
 	return msg
 }
 
@@ -1081,6 +1072,16 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		}
 	} else {
 		// If it got here, it's JSON (could be pretty mode, too).
+		if lbuilders > 1 && ec.strictHeaderRules {
+			// General JSON keeps each recipient header separate from the
+			// protected header. Refuse to write a message that jwe.Decrypt
+			// rejects for breaking the RFC 7516 §7.2.1 header rules.
+			for i, r := range recipients {
+				if err := checkRecipientHeader(r.Headers(), protected); err != nil {
+					return nil, fmt.Errorf(`recipient #%d: %w`, i+1, err)
+				}
+			}
+		}
 		if lbuilders == 1 {
 			// If it got here, then we're doing flattened JSON serialization.
 			// In this mode, we should merge per-recipient headers into the protected header,
@@ -1141,6 +1142,7 @@ func (ec *encryptContext) EncryptMessage(payload []byte, cek []byte) ([]byte, er
 		}
 	}
 
+	msg.headerRules = headerRulesFor(ec.strictHeaderRules)
 	switch ec.format {
 	case fmtJSON:
 		return json.Marshal(msg)
@@ -1216,12 +1218,14 @@ func Decrypt(buf []byte, options ...DecryptOption) ([]byte, error) {
 // Bounding the input size is the caller's responsibility; this function
 // trusts the caller-provided buf. See docs/13-input-size.md.
 func Parse(buf []byte, _ ...ParseOption) (*Message, error) {
-	return parseJSONOrCompact(buf, false, int(maxRecipients.Load()))
+	return parseJSONOrCompact(buf, false, int(maxRecipients.Load()), strictHeaderRules.Load())
 }
 
 // errors are wrapped within this function, because we call it directly
 // from Decrypt as well.
-func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool, maxR int) (*Message, error) {
+//
+// strict is the WithStrictHeaderRules value the caller read when it started.
+func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool, maxR int, strict bool) (*Message, error) {
 	buf = bytes.TrimSpace(buf)
 	if len(buf) == 0 {
 		return nil, makeParseError(`jwe.Parse`, `empty buffer`)
@@ -1230,7 +1234,7 @@ func parseJSONOrCompact(buf []byte, storeProtectedHeaders bool, maxR int) (*Mess
 	var msg *Message
 	var err error
 	if buf[0] == tokens.OpenCurlyBracket {
-		msg, err = parseJSON(buf, storeProtectedHeaders)
+		msg, err = parseJSON(buf, storeProtectedHeaders, strict)
 	} else {
 		msg, err = parseCompact(buf, storeProtectedHeaders)
 	}
@@ -1272,9 +1276,10 @@ func ParseReader(src io.Reader, _ ...ParseOption) (*Message, error) {
 	return msg, nil
 }
 
-func parseJSON(buf []byte, storeProtectedHeaders bool) (*Message, error) {
+func parseJSON(buf []byte, storeProtectedHeaders, strict bool) (*Message, error) {
 	m := NewMessage()
 	m.storeProtectedHeaders = storeProtectedHeaders
+	m.headerRules = headerRulesFor(strict)
 	if err := json.Unmarshal(buf, &m); err != nil {
 		return nil, fmt.Errorf(`failed to parse JSON: %w`, err)
 	}

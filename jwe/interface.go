@@ -56,16 +56,18 @@ type KeyIDer interface {
 //
 // Library contract for implementers (read carefully):
 //
-//   - The library has already verified that the wire-level `alg` is
-//     consistent across the protected header and per-recipient header
-//     (RFC 7516 §7.2.1 disjointness). Your DecryptKey is invoked with
-//     the alg the library has decided to use for this attempt.
+//   - The library has already verified that the wire-level `alg`
+//     appears in only one of the protected, shared unprotected, and
+//     per-recipient headers (RFC 7516 §7.2.1 disjointness). Your
+//     DecryptKey is invoked with the alg the library has decided to use
+//     for this attempt.
 //   - The library has NOT validated key-shape-vs-alg compatibility for
 //     your custom decrypter. You receive the raw recipient and message;
-//     headers are split between protected (signed/integrity-protected)
-//     and per-recipient (unprotected). If you read a value from the
-//     unprotected per-recipient header for a security decision, you
-//     must enforce its consistency with the protected header yourself
+//     headers are split between protected (integrity-protected), shared
+//     unprotected (Message.UnprotectedHeaders), and per-recipient
+//     (unprotected). If you read a value from an unprotected header for
+//     a security decision, you must enforce its consistency with the
+//     protected header yourself
 //     — the standard built-in decrypters route through a merged-headers
 //     helper that performs this check, but DecryptKey receives the
 //     unmerged inputs.
@@ -246,6 +248,10 @@ type Message struct {
 	// When this flag is true, UnmarshalJSON() will populate the
 	// rawProtectedHeaders field
 	storeProtectedHeaders bool
+	// headerRules is a hint for UnmarshalJSON() and MarshalJSON(): the
+	// WithStrictHeaderRules value that the calling Parse, Decrypt, or
+	// Encrypt read when it started. UnmarshalJSON() clears it after use.
+	headerRules headerRules
 }
 
 // populater is an interface for things that may modify the

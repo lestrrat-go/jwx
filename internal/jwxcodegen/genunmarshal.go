@@ -15,6 +15,9 @@ import (
 //   - noDeref pointer types or IsPointer types: json.UnmarshalDecode into PointerElem, assign &decoded
 //   - other types: json.UnmarshalDecode into type, assign &decoded
 //
+// A field marked `reject_null` in objects.yml returns an error for a JSON null
+// value. Without it, null decodes to the zero value and the field reads as unset.
+//
 // The decodeCtxExpr parameter is the expression for the decode context passed to
 // AssignNextStringToken (e.g., "nil" for genheaders, "t.dc" for genjwt, "h.dc" for genjwk).
 //
@@ -26,18 +29,23 @@ func GenerateUnmarshalCases(o *codegen.Output, cfg CaseConfig, decodeCtxExpr str
 			continue
 		}
 		keyName := cfg.KeyName(f)
+		o.L("case %s:", keyName)
+		if f.Bool(`reject_null`) {
+			o.L("// JSON null is rejected for this field. The reason is recorded")
+			o.L("// next to its reject_null flag in objects.yml.")
+			o.L("if dec.PeekKind() == 'n' {")
+			o.L("return fmt.Errorf(`invalid value for key %%s: must not be null`, %s)", keyName)
+			o.L("}")
+		}
 		if f.Type() == "string" {
-			o.L("case %s:", keyName)
 			o.L("if err := json.AssignNextStringToken(&%s.%s, dec, %s); err != nil {", recv, f.Name(false), decodeCtxExpr)
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %s, err)", keyName)
 			o.L("}")
 		} else if f.Type() == "[]byte" {
-			o.L("case %s:", keyName)
 			o.L("if err := json.AssignNextBytesToken(&%s.%s, dec); err != nil {", recv, f.Name(false))
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %s, err)", keyName)
 			o.L("}")
 		} else if f.Type() == "jwk.Key" {
-			o.L("case %s:", keyName)
 			o.L("raw, err := dec.ReadValue()")
 			o.L("if err != nil {")
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %s, err)", keyName)
@@ -48,21 +56,18 @@ func GenerateUnmarshalCases(o *codegen.Output, cfg CaseConfig, decodeCtxExpr str
 			o.L("}")
 			o.L("%s.%s = key", recv, f.Name(false))
 		} else if strings.HasPrefix(f.Type(), "[]") || f.Bool(`direct_storage`) {
-			o.L("case %s:", keyName)
 			o.L("var decoded %s", f.Type())
 			o.L("if err := json.UnmarshalDecode(dec, &decoded); err != nil {")
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %s, err)", keyName)
 			o.L("}")
 			o.L("%s.%s = decoded", recv, f.Name(false))
 		} else if f.Bool(`noDeref`) || IsPointer(f) {
-			o.L("case %s:", keyName)
 			o.L("var decoded %s", PointerElem(f))
 			o.L("if err := json.UnmarshalDecode(dec, &decoded); err != nil {")
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %s, err)", keyName)
 			o.L("}")
 			o.L("%s.%s = &decoded", recv, f.Name(false))
 		} else {
-			o.L("case %s:", keyName)
 			o.L("var decoded %s", f.Type())
 			o.L("if err := json.UnmarshalDecode(dec, &decoded); err != nil {")
 			o.L("return fmt.Errorf(`failed to decode value for key %%s: %%w`, %s, err)", keyName)

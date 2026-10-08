@@ -82,6 +82,14 @@ JSON Web Encryption per RFC 7516. Encrypt, decrypt, parse.
 `Message.MarshalJSON` writes shared `unprotected` headers as a JSON object,
 preserving them across Parse → Marshal → Parse.
 
+JSON header rules (RFC 7516 §7.2.1), checked in `jwe/header_union.go`:
+- A recipient's JOSE header = protected ∪ shared `unprotected` ∪ recipient `header`. Decrypt reads `alg`, `enc`, and algorithm parameters from the union. `WithKeySet` reads `kid`/`alg` from all three.
+- `Parse` rejects a name in two locations, `crit`/`zip` outside protected, and recipients that disagree on `enc`. `crit:null` is always rejected (compact too), even under `WithStrictHeaderRules(false)`.
+- `protected` member may be absent → empty protected header, empty AAD. `MarshalJSON` omits it when the protected header is empty.
+- Compact and flattened-without-`header` parsing copy protected (minus `enc`) into the recipient header. `MarshalJSON` drops copied names that match protected/shared; a changed copied value is an error.
+- `Encrypt` with 2+ recipients rejects per-recipient headers that overlap the protected header or carry `crit`/`zip`.
+- **WithStrictHeaderRules(bool) GlobalOption** — default true. `jwe.Settings(jwe.WithStrictHeaderRules(false))` turns off the checks above (except `crit:null`) and the Marshal conflict error, reads `enc` from protected only, and ignores shared `unprotected` for algorithm params (pre-change behavior). Absent `protected`, `WithKeySet` 3-location lookup, and Marshal omitting copied names stay on. Read once per call: `Decrypt`/`Encrypt` (in `ProcessOptions`) and `Parse`; passed down via `Message.headerRules` hint (consumed by `UnmarshalJSON`; `json.Unmarshal`/`json.Marshal` without a hint read the global once on entry). `crit:null` is rejected by the generated header decoder (`reject_null` in `jwe/objects.yml`) in every location and regardless of the flag.
+
 - **Encrypt(payload []byte, ...EncryptOption) ([]byte, error)** — encrypt payload
 - **EncryptStatic(payload, cek []byte, ...EncryptOption) ([]byte, error)** — encrypt with caller-supplied content encryption key
 - **Decrypt(buf []byte, ...DecryptOption) ([]byte, error)** — decrypt message

@@ -55,6 +55,24 @@ fields:
   - name: critical
     type: "[]string"
     json: crit
+    # A null "crit" is rejected while decoding, in every header location
+    # and regardless of jwe.WithStrictHeaderRules.
+    #
+    # RFC 7515 §4.1.11 (adopted for JWE by RFC 7516 §4.1.13) defines the
+    # value as "an array listing the Header Parameter names", forbids even
+    # the empty array ("Producers MUST NOT use the empty list "[]""), and
+    # requires that "crit" be "understood and processed by implementations".
+    # RFC 7516 §5.2 step 5 makes the recipient verify that the values of
+    # such fields "are also understood and supported". null is not an
+    # array, so no valid message carries it.
+    #
+    # Without this check, null decodes to a nil slice, which reads exactly
+    # like an absent "crit". The recipient would then skip the extension
+    # check that a sender asks for by sending "crit" at all, so accepting
+    # null turns a malformed value into a silent bypass. Nothing valid is
+    # lost by rejecting it, which is why WithStrictHeaderRules(false) does
+    # not bring the old acceptance back.
+    reject_null: true
   - name: ephemeralPublicKey
     type: jwk.Key
     direct_storage: true
