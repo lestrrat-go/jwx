@@ -29,7 +29,7 @@ You will not have this repository checked out. To verify an API claim before ans
 4. **Examples repo** — runnable usage patterns. The repo's `README.md` is a topical index that maps "what do I want to do" → "which `*_example_test.go` file." Fetch the README first when looking for an example by topic; then fetch the linked file:
    - `https://github.com/jwx-go/examples/blob/develop/v4/README.md`
 
-When the user's question goes beyond the patterns in this skill (custom claim types, JWE recipients with per-recipient headers, nested JWS+JWE serializers, custom key providers, base64 backend swap, performance tuning), fetch from these sources rather than guessing.
+When the user's question goes beyond the patterns in this skill (custom claim types, JWE recipients with per-recipient headers, custom key providers, base64 backend swap, performance tuning), fetch from these sources rather than guessing.
 
 ## Prerequisites
 
@@ -238,6 +238,33 @@ plain, err := jwe.Decrypt(enc, jwe.WithKey(jwa.RSA_OAEP_256(), recipientPrivateK
 ```
 
 `jwe.WithKey(alg, key)` is the same on both encrypt and decrypt sides — this symmetry is intentional.
+
+### Nested JWT (sign, then encrypt)
+
+Use `jwt.NewSerializer()` to sign a token and then encrypt the result. The steps run in the order they are called, so `Sign(...)` followed by `Encrypt(...)` produces a JWE whose payload is the signed JWT.
+
+```go
+nested, err := jwt.NewSerializer().
+    Sign(jwt.WithKey(jwa.RS256(), signerPrivateKey)).
+    Encrypt(
+        jwt.WithKey(jwa.RSA_OAEP_256(), recipientPublicKey),
+        jwt.WithEncryptOption(jwe.WithContentEncryption(jwa.A256GCM())),
+    ).
+    Serialize(tok)
+```
+
+- Pass `jwe` options to the encrypt step with `jwt.WithEncryptOption`, and `jws` options to the sign step with `jwt.WithSignOption`. The content encryption defaults to `A256GCM` when `jwe.WithContentEncryption` is not given.
+- `jwt.Parse` does not decrypt. On the receiving side, decrypt the JWE first, then verify and validate the inner JWT:
+
+```go
+signed, err := jwe.Decrypt(nested, jwe.WithKey(jwa.RSA_OAEP_256(), recipientPrivateKey))
+if err != nil { return err }
+
+tok, err := jwt.Parse(signed, jwt.WithKey(jwa.RS256(), signerPublicKey))
+```
+
+- `Serialize` returns the JWE in compact form as `[]byte`, and `jwe.Decrypt` returns the inner signed JWT as `[]byte`.
+- Decrypting only proves the message was encrypted to the recipient. The `jwt.Parse` step is what proves who signed the token, so NEVER skip it or replace it with `jwt.ParseInsecure` after decrypting.
 
 ## Companion modules
 
