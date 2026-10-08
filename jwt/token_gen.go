@@ -621,10 +621,10 @@ func (t *stdToken) makePairs() []claimPair {
 		pairs = append(pairs, claimPair{Name: AudienceKey, Value: t.audience})
 	}
 	if t.expiration != nil {
-		pairs = append(pairs, claimPair{Name: ExpirationKey, Value: t.expiration.Unix()})
+		pairs = append(pairs, claimPair{Name: ExpirationKey, Value: t.expiration})
 	}
 	if t.issuedAt != nil {
-		pairs = append(pairs, claimPair{Name: IssuedAtKey, Value: t.issuedAt.Unix()})
+		pairs = append(pairs, claimPair{Name: IssuedAtKey, Value: t.issuedAt})
 	}
 	if t.issuer != nil {
 		pairs = append(pairs, claimPair{Name: IssuerKey, Value: *(t.issuer)})
@@ -633,7 +633,7 @@ func (t *stdToken) makePairs() []claimPair {
 		pairs = append(pairs, claimPair{Name: JwtIDKey, Value: *(t.jwtID)})
 	}
 	if t.notBefore != nil {
-		pairs = append(pairs, claimPair{Name: NotBeforeKey, Value: t.notBefore.Unix()})
+		pairs = append(pairs, claimPair{Name: NotBeforeKey, Value: t.notBefore})
 	}
 	if t.subject != nil {
 		pairs = append(pairs, claimPair{Name: SubjectKey, Value: *(t.subject)})
@@ -670,6 +670,10 @@ func (t *stdToken) MarshalJSON() ([]byte, error) {
 				buf.Write(audBytes)
 				continue
 			}
+		}
+		if date, ok := pair.Value.(*types.NumericDate); ok {
+			buf.WriteString(date.String())
+			continue
 		}
 		valBytes, err := json.Marshal(pair.Value)
 		if err != nil {

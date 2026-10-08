@@ -55,6 +55,22 @@ UNRELEASED
     unprotected header therefore round-trips through `jwe.Parse`,
     `json.Marshal`, `jwe.Parse`, and `jwe.Decrypt`. (#2378)
 
+  * [jwt] `jwt.WithNumericDateFormatPrecision` now applies when a token is
+    serialized. It covers the `exp`, `iat`, and `nbf` claims of `jwt.Token`,
+    and those claims plus `updated_at` in `openid.Token`. Previously the
+    option never had any effect on serialized tokens, which always wrote
+    these claims as whole seconds.
+
+    With a precision above 0, a date that has a fraction is written as a
+    JSON number with up to that many fractional digits. Extra digits are
+    rounded down, toward the earlier time, and trailing zeros are removed.
+    At precision 3, an `iat` of 2000000000.123456789 is written as
+    `2000000000.123`, and 2000000000.1 as `2000000000.1`. A date with no
+    fraction is written as an integer, and output at the default precision
+    of 0 is unchanged. Callers who set a precision above 0 will see
+    fractional dates in their tokens, in the bytes `jwt.Sign` signs, and in
+    what `jwt.Equal` compares. (#2409)
+
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes
