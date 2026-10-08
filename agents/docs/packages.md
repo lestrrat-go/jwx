@@ -82,7 +82,7 @@ JSON Web Encryption per RFC 7516. Encrypt, decrypt, parse.
 `Message.MarshalJSON` writes shared `unprotected` headers as a JSON object,
 preserving them across Parse → Marshal → Parse.
 
-JSON header rules (RFC 7516 §7.2.1), checked in `jwe/header_union.go`:
+JSON header rules (RFC 7516 §7.2.1), checked in `jwe/headers.go` (tests in `jwe/headers_test.go`):
 - A recipient's JOSE header = protected ∪ shared `unprotected` ∪ recipient `header`. Decrypt reads `alg`, `enc`, and algorithm parameters from the union. `WithKeySet` reads `kid`/`alg` from all three.
 - `Parse` rejects a name in two locations, `crit`/`zip` outside protected, and recipients that disagree on `enc`. `crit:null` is always rejected (compact too), even under `WithStrictHeaderRules(false)`.
 - `protected` member may be absent → empty protected header, empty AAD. `MarshalJSON` omits it when the protected header is empty.

@@ -8,7 +8,6 @@ go_library(
         "decrypt.go",
         "encrypt.go",
         "errors.go",
-        "header_union.go",
         "headers.go",
         "headers_gen.go",
         "interface.go",
@@ -48,7 +47,6 @@ go_test(
         "encrypt_aad_test.go",
         "fuzz_test.go",
         "gh402_test.go",
-        "header_union_test.go",
         "headers_nil_test.go",
         "headers_test.go",
         "hpke_test.go",
@@ -61,7 +59,6 @@ go_test(
         "speed_test.go",
         "unsupported_key_internal_test.go",
         "unsupported_key_test.go",
-        "zip_protected_only_test.go",
     ],
     embed = [":jwe"],
     deps = [

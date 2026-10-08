@@ -1,6 +1,12 @@
 package jwe_test
 
 import (
+	"bytes"
+	"context"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/rand"
+	"encoding/base64"
 	"reflect"
 	"testing"
 
@@ -218,4 +224,632 @@ func TestHeaderNameCannotInjectMembers(t *testing.T) {
 	require.NoError(t, json.Unmarshal(buf, roundtrip), `headers should unmarshal`)
 	kid, ok := roundtrip.KeyID()
 	require.False(t, ok, `no "kid" header should have been injected, got %q`, kid)
+}
+
+var headerUnionKey = bytes.Repeat([]byte{42}, 16)
+
+// buildDirectJSONJWE seals "payload" with AES-128-GCM directly through the
+// standard library, so that the header layout under test is not limited to
+// what jwe.Encrypt can produce. A nil protected leaves the "protected" member
+// out, which makes the AAD empty (RFC 7516 §5.1 step 14). Each element of
+// recipients becomes one entry of "recipients"; a single element produces the
+// flattened form instead when flattened is true.
+func buildDirectJSONJWE(t *testing.T, protected *string, shared map[string]any, recipients []map[string]any, flattened bool) []byte {
+	t.Helper()
+	enc := base64.RawURLEncoding.EncodeToString
+
+	obj := map[string]any{}
+	var aad string
+	if protected != nil {
+		aad = enc([]byte(*protected))
+		obj["protected"] = aad
+	}
+
+	block, err := aes.NewCipher(headerUnionKey)
+	require.NoError(t, err, `aes.NewCipher should succeed`)
+	gcm, err := cipher.NewGCM(block)
+	require.NoError(t, err, `cipher.NewGCM should succeed`)
+	nonce := make([]byte, gcm.NonceSize())
+	_, err = rand.Read(nonce)
+	require.NoError(t, err, `rand.Read should succeed`)
+	sealed := gcm.Seal(nil, nonce, []byte("payload"), []byte(aad))
+	split := len(sealed) - gcm.Overhead()
+	obj["iv"] = enc(nonce)
+	obj["ciphertext"] = enc(sealed[:split])
+	obj["tag"] = enc(sealed[split:])
+
+	if shared != nil {
+		obj["unprotected"] = shared
+	}
+
+	if flattened {
+		require.LessOrEqual(t, len(recipients), 1, `flattened form holds at most one recipient`)
+		if len(recipients) == 1 && recipients[0] != nil {
+			obj["header"] = recipients[0]
+		}
+	} else {
+		list := make([]any, 0, len(recipients))
+		for _, hdr := range recipients {
+			entry := map[string]any{}
+			if hdr != nil {
+				entry["header"] = hdr
+			}
+			list = append(list, entry)
+		}
+		obj["recipients"] = list
+	}
+
+	wire, err := json.Marshal(obj)
+	require.NoError(t, err, `json.Marshal should succeed`)
+	return wire
+}
+
+// TestJSONHeaderUnion covers RFC 7516 §7.2.1: a recipient's JOSE header is
+// the union of the protected header, the shared "unprotected" header, and
+// the recipient's own "header", and a name may appear in only one of them.
+func TestJSONHeaderUnion(t *testing.T) {
+	t.Run("accepted placements", func(t *testing.T) {
+		testcases := []struct {
+			name      string
+			protected *string
+			shared    map[string]any
+			recipient map[string]any
+		}{
+			{name: "alg and enc in protected header", protected: new(`{"alg":"dir","enc":"A128GCM"}`)},
+			{name: "alg in shared header", protected: new(`{"enc":"A128GCM"}`), shared: map[string]any{jwe.AlgorithmKey: jwa.DIRECT().String()}},
+			{name: "enc in shared header", protected: new(`{"alg":"dir"}`), shared: map[string]any{jwe.ContentEncryptionKey: jwa.A128GCM().String()}},
+			{name: "enc in recipient header", protected: new(`{"alg":"dir"}`), recipient: map[string]any{jwe.ContentEncryptionKey: jwa.A128GCM().String()}},
+			{name: "no protected member, shared header", shared: map[string]any{jwe.AlgorithmKey: jwa.DIRECT().String(), jwe.ContentEncryptionKey: jwa.A128GCM().String()}},
+			{name: "no protected member, recipient header", recipient: map[string]any{jwe.AlgorithmKey: jwa.DIRECT().String(), jwe.ContentEncryptionKey: jwa.A128GCM().String()}},
+			{name: "distinct private names", protected: new(`{"alg":"dir","enc":"A128GCM","p":1}`), shared: map[string]any{"s": 1}, recipient: map[string]any{"r": 1}},
+		}
+		for _, tc := range testcases {
+			for _, flattened := range []bool{true, false} {
+				name := tc.name + "/general"
+				if flattened {
+					name = tc.name + "/flattened"
+				}
+				t.Run(name, func(t *testing.T) {
+					wire := buildDirectJSONJWE(t, tc.protected, tc.shared, []map[string]any{tc.recipient}, flattened)
+					got, err := jwe.Decrypt(wire, jwe.WithKey(jwa.DIRECT(), headerUnionKey))
+					require.NoError(t, err, `jwe.Decrypt should accept a valid header union`)
+					require.Equal(t, []byte("payload"), got, `plaintext should match`)
+				})
+			}
+		}
+	})
+
+	t.Run("rejected layouts", func(t *testing.T) {
+		testcases := []struct {
+			name       string
+			protected  *string
+			shared     map[string]any
+			recipients []map[string]any
+		}{
+			{name: "kid in protected and recipient headers", protected: new(`{"alg":"dir","enc":"A128GCM","kid":"a"}`), recipients: []map[string]any{{jwe.KeyIDKey: "b"}}},
+			{name: "same alg in protected and shared headers", protected: new(`{"alg":"dir","enc":"A128GCM"}`), shared: map[string]any{jwe.AlgorithmKey: jwa.DIRECT().String()}},
+			{name: "private name in shared and recipient headers", protected: new(`{"alg":"dir","enc":"A128GCM"}`), shared: map[string]any{"x": true}, recipients: []map[string]any{{"x": true}}},
+			{name: "private name in protected and shared headers", protected: new(`{"alg":"dir","enc":"A128GCM","x":true}`), shared: map[string]any{"x": true}},
+			{name: "crit in shared header", protected: new(`{"alg":"dir","enc":"A128GCM"}`), shared: map[string]any{jwe.CriticalKey: []string{"x"}, "x": true}},
+			{name: "crit in recipient header", protected: new(`{"alg":"dir","enc":"A128GCM"}`), recipients: []map[string]any{{jwe.CriticalKey: []string{"x"}, "x": true}}},
+			{name: "zip in shared header", protected: new(`{"alg":"dir","enc":"A128GCM"}`), shared: map[string]any{jwe.CompressionKey: jwa.Deflate().String()}},
+			{name: "zip in recipient header", protected: new(`{"alg":"dir","enc":"A128GCM"}`), recipients: []map[string]any{{jwe.CompressionKey: jwa.Deflate().String()}}},
+			{name: "null crit in protected header", protected: new(`{"alg":"dir","enc":"A128GCM","crit":null}`)},
+			{name: "null crit in shared header", protected: new(`{"alg":"dir","enc":"A128GCM"}`), shared: map[string]any{jwe.CriticalKey: nil}},
+			{name: "empty protected member", protected: new(``), shared: map[string]any{jwe.AlgorithmKey: jwa.DIRECT().String(), jwe.ContentEncryptionKey: jwa.A128GCM().String()}},
+		}
+		for _, tc := range testcases {
+			for _, flattened := range []bool{true, false} {
+				name := tc.name + "/general"
+				if flattened {
+					name = tc.name + "/flattened"
+				}
+				t.Run(name, func(t *testing.T) {
+					wire := buildDirectJSONJWE(t, tc.protected, tc.shared, tc.recipients, flattened)
+
+					_, err := jwe.Parse(wire)
+					require.Error(t, err, `jwe.Parse should reject the header layout`)
+					require.ErrorIs(t, err, jwe.ParseError(), `error should be a jwe.ParseError`)
+
+					_, err = jwe.Decrypt(wire, jwe.WithKey(jwa.DIRECT(), headerUnionKey))
+					require.Error(t, err, `jwe.Decrypt should reject the header layout`)
+					require.ErrorIs(t, err, jwe.DecryptError(), `error should be a jwe.DecryptError`)
+
+					_, err = jwe.Decrypt(wire, jwe.WithKey(jwa.DIRECT(), headerUnionKey), jwe.WithCritValidation(false))
+					require.Error(t, err, `jwe.Decrypt should reject the header layout even without crit validation`)
+				})
+			}
+		}
+	})
+
+	t.Run("recipients disagree on enc", func(t *testing.T) {
+		testcases := []struct {
+			name       string
+			recipients []map[string]any
+		}{
+			{name: "different values", recipients: []map[string]any{{jwe.ContentEncryptionKey: jwa.A128GCM().String()}, {jwe.ContentEncryptionKey: jwa.A256GCM().String()}}},
+			{name: "one recipient without enc", recipients: []map[string]any{{jwe.ContentEncryptionKey: jwa.A128GCM().String()}, {}}},
+		}
+		for _, tc := range testcases {
+			t.Run(tc.name, func(t *testing.T) {
+				wire := buildDirectJSONJWE(t, new(`{"alg":"dir"}`), nil, tc.recipients, false)
+				_, err := jwe.Parse(wire)
+				require.Error(t, err, `jwe.Parse should reject recipients that disagree on enc`)
+				require.ErrorIs(t, err, jwe.ParseError(), `error should be a jwe.ParseError`)
+			})
+		}
+	})
+
+	t.Run("message without protected member survives a round trip", func(t *testing.T) {
+		wire := buildDirectJSONJWE(t, nil, map[string]any{jwe.AlgorithmKey: jwa.DIRECT().String(), jwe.ContentEncryptionKey: jwa.A128GCM().String()}, nil, true)
+		msg, err := jwe.Parse(wire)
+		require.NoError(t, err, `jwe.Parse should accept a message without "protected"`)
+
+		serialized, err := json.Marshal(msg)
+		require.NoError(t, err, `json.Marshal should succeed`)
+		var members map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(serialized, &members), `serialized message should be a JSON object`)
+		_, ok := members["protected"]
+		require.False(t, ok, `serialized message should not gain a "protected" member`)
+
+		got, err := jwe.Decrypt(serialized, jwe.WithKey(jwa.DIRECT(), headerUnionKey))
+		require.NoError(t, err, `re-serialized message should decrypt`)
+		require.Equal(t, []byte("payload"), got, `plaintext should match`)
+	})
+}
+
+// TestJSONHeaderUnionKeySet checks that jwe.WithKeySet finds "kid" and "alg"
+// wherever the JOSE header carries them, not only in the recipient header.
+func TestJSONHeaderUnionKeySet(t *testing.T) {
+	key, err := jwk.Import[jwk.Key](headerUnionKey)
+	require.NoError(t, err, `jwk.Import should succeed`)
+	require.NoError(t, key.Set(jwk.KeyIDKey, "k1"), `setting kid should succeed`)
+	set := jwk.NewSet()
+	require.NoError(t, set.AddKey(key), `adding the key should succeed`)
+
+	testcases := []struct {
+		name      string
+		protected *string
+		shared    map[string]any
+	}{
+		{name: "kid and alg in protected header", protected: new(`{"alg":"dir","enc":"A128GCM","kid":"k1"}`)},
+		{name: "kid and alg in shared header", protected: new(`{"enc":"A128GCM"}`), shared: map[string]any{jwe.AlgorithmKey: jwa.DIRECT().String(), jwe.KeyIDKey: "k1"}},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			wire := buildDirectJSONJWE(t, tc.protected, tc.shared, nil, true)
+			got, err := jwe.Decrypt(wire, jwe.WithKeySet(set))
+			require.NoError(t, err, `jwe.Decrypt should select the key by kid`)
+			require.Equal(t, []byte("payload"), got, `plaintext should match`)
+		})
+	}
+
+	t.Run("flattened output of jwe.Encrypt", func(t *testing.T) {
+		encrypted, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithKey(jwa.A128KW(), key),
+			jwe.WithContentEncryption(jwa.A128GCM()),
+			jwe.WithJSON(),
+		)
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+		got, err := jwe.Decrypt(encrypted, jwe.WithKeySet(set))
+		require.NoError(t, err, `jwe.Decrypt should find the kid that jwe.Encrypt moved into the protected header`)
+		require.Equal(t, []byte("payload"), got, `plaintext should match`)
+	})
+}
+
+// TestEncryptRejectsInvalidHeaderPlacement checks that jwe.Encrypt does not
+// write a general JSON message that jwe.Decrypt would reject.
+func TestEncryptRejectsInvalidHeaderPlacement(t *testing.T) {
+	k1 := bytes.Repeat([]byte{1}, 16)
+	k2 := bytes.Repeat([]byte{2}, 16)
+
+	headersWith := func(t *testing.T, kv map[string]any) jwe.Headers {
+		t.Helper()
+		h := jwe.NewHeaders()
+		for k, v := range kv {
+			require.NoError(t, h.Set(k, v), `setting %q should succeed`, k)
+		}
+		return h
+	}
+
+	testcases := []struct {
+		name      string
+		protected map[string]any
+		recipient map[string]any
+	}{
+		{name: "kid in protected and recipient headers", protected: map[string]any{jwe.KeyIDKey: "p"}, recipient: map[string]any{jwe.KeyIDKey: "r"}},
+		{name: "private name in protected and recipient headers", protected: map[string]any{"x": "p"}, recipient: map[string]any{"x": "r"}},
+		{name: "alg in protected header", protected: map[string]any{jwe.AlgorithmKey: jwa.A128KW()}},
+		{name: "enc in recipient header", recipient: map[string]any{jwe.ContentEncryptionKey: jwa.A128GCM()}},
+		{name: "zip in recipient header", recipient: map[string]any{jwe.CompressionKey: jwa.Deflate()}},
+		{name: "crit in recipient header", recipient: map[string]any{jwe.CriticalKey: []string{"x"}, "x": true}},
+	}
+	for _, tc := range testcases {
+		t.Run(tc.name, func(t *testing.T) {
+			var options []jwe.EncryptOption
+			if tc.protected != nil {
+				options = append(options, jwe.WithProtectedHeaders(headersWith(t, tc.protected)))
+			}
+			var suboptions []jwe.WithKeySuboption
+			if tc.recipient != nil {
+				suboptions = append(suboptions, jwe.WithPerRecipientHeaders(headersWith(t, tc.recipient)))
+			}
+
+			general := append([]jwe.EncryptOption{
+				jwe.WithJSON(),
+				jwe.WithKey(jwa.A128KW(), k1, suboptions...),
+				jwe.WithKey(jwa.A128KW(), k2),
+			}, options...)
+			_, err := jwe.Encrypt([]byte("payload"), general...)
+			require.Error(t, err, `jwe.Encrypt should reject the header layout for general JSON`)
+			require.ErrorIs(t, err, jwe.EncryptError(), `error should be a jwe.EncryptError`)
+
+			// A single recipient is written in flattened form, where the
+			// recipient header is merged into the protected header, so the
+			// same options do not put a name in two places.
+			flattened := append([]jwe.EncryptOption{
+				jwe.WithJSON(),
+				jwe.WithKey(jwa.A128KW(), k1, suboptions...),
+			}, options...)
+			_, err = jwe.Encrypt([]byte("payload"), flattened...)
+			require.NoError(t, err, `jwe.Encrypt should accept the options for flattened JSON`)
+		})
+	}
+
+	t.Run("disjoint headers are accepted", func(t *testing.T) {
+		encrypted, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithJSON(),
+			jwe.WithProtectedHeaders(headersWith(t, map[string]any{"p": 1})),
+			jwe.WithKey(jwa.A128KW(), k1, jwe.WithPerRecipientHeaders(headersWith(t, map[string]any{"r": 1}))),
+			jwe.WithKey(jwa.A128KW(), k2),
+		)
+		require.NoError(t, err, `jwe.Encrypt should accept disjoint headers`)
+		for _, key := range [][]byte{k1, k2} {
+			got, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.A128KW(), key))
+			require.NoError(t, err, `jwe.Decrypt should succeed for each recipient`)
+			require.Equal(t, []byte("payload"), got, `plaintext should match`)
+		}
+	})
+}
+
+// TestMarshalRecipientHeaderCopy checks how json.Marshal writes a recipient
+// header that parsing copied from the protected header.
+func TestMarshalRecipientHeaderCopy(t *testing.T) {
+	compact, err := jwe.Encrypt([]byte("payload"),
+		jwe.WithKey(jwa.A128KW(), headerUnionKey),
+		jwe.WithContentEncryption(jwa.A128GCM()),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	t.Run("copied names are left out", func(t *testing.T) {
+		msg, err := jwe.Parse(compact)
+		require.NoError(t, err, `jwe.Parse should succeed`)
+		alg, ok := msg.Recipients()[0].Headers().Algorithm()
+		require.True(t, ok, `recipient header should carry the copied alg`)
+		require.Equal(t, jwa.A128KW(), alg, `copied alg should match`)
+
+		serialized, err := json.Marshal(msg)
+		require.NoError(t, err, `json.Marshal should succeed`)
+		var members map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(serialized, &members), `serialized message should be a JSON object`)
+		_, ok = members["header"]
+		require.False(t, ok, `serialized message should not repeat the protected header in "header"`)
+
+		got, err := jwe.Decrypt(serialized, jwe.WithKey(jwa.A128KW(), headerUnionKey))
+		require.NoError(t, err, `serialized message should decrypt`)
+		require.Equal(t, []byte("payload"), got, `plaintext should match`)
+	})
+
+	t.Run("names added after parsing are kept", func(t *testing.T) {
+		msg, err := jwe.Parse(compact)
+		require.NoError(t, err, `jwe.Parse should succeed`)
+		require.NoError(t, msg.Recipients()[0].Headers().Set(jwe.KeyIDKey, "added"), `setting kid should succeed`)
+
+		serialized, err := json.Marshal(msg)
+		require.NoError(t, err, `json.Marshal should succeed`)
+		var members map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(serialized, &members), `serialized message should be a JSON object`)
+		require.JSONEq(t, `{"kid":"added"}`, string(members["header"]), `"header" should hold only the added name`)
+	})
+
+	t.Run("changed copied value is an error", func(t *testing.T) {
+		msg, err := jwe.Parse(compact)
+		require.NoError(t, err, `jwe.Parse should succeed`)
+		require.NoError(t, msg.Recipients()[0].Headers().Set(jwe.AlgorithmKey, jwa.A256KW()), `setting alg should succeed`)
+
+		_, err = json.Marshal(msg)
+		require.Error(t, err, `json.Marshal should refuse to write "alg" with two values`)
+	})
+}
+
+// useLenientHeaderRules turns off jwe.WithStrictHeaderRules for the rest of
+// the test. Tests that call it must not call t.Parallel: the setting is
+// process-wide. Go starts top-level parallel tests only after every
+// sequential top-level test has finished, so the setting is restored before
+// any of them runs.
+func useLenientHeaderRules(t *testing.T) {
+	t.Helper()
+	require.NoError(t, jwe.Settings(jwe.WithStrictHeaderRules(false)), `jwe.Settings should succeed`)
+	t.Cleanup(func() {
+		require.NoError(t, jwe.Settings(jwe.WithStrictHeaderRules(true)), `restoring jwe.Settings should succeed`)
+	})
+}
+
+// TestStrictHeaderRulesDisabled checks that jwe.WithStrictHeaderRules(false)
+// restores the header handling from before the RFC 7516 §7.2.1 rules were
+// enforced: header layouts that strict mode rejects are accepted again, and
+// the shared "unprotected" header does not supply "alg" or "enc".
+func TestStrictHeaderRulesDisabled(t *testing.T) {
+	useLenientHeaderRules(t)
+
+	t.Run("layouts rejected in strict mode decrypt", func(t *testing.T) {
+		testcases := []struct {
+			name       string
+			protected  *string
+			shared     map[string]any
+			recipients []map[string]any
+		}{
+			{name: "kid in protected and per-recipient headers", protected: new(`{"alg":"dir","enc":"A128GCM","kid":"a"}`), recipients: []map[string]any{{jwe.KeyIDKey: "b"}}},
+			{name: "same alg in protected and shared headers", protected: new(`{"alg":"dir","enc":"A128GCM"}`), shared: map[string]any{jwe.AlgorithmKey: jwa.DIRECT().String()}},
+			{name: "private name in shared and recipient headers", protected: new(`{"alg":"dir","enc":"A128GCM"}`), shared: map[string]any{"x": true}, recipients: []map[string]any{{"x": true}}},
+			{name: "crit in shared header", protected: new(`{"alg":"dir","enc":"A128GCM"}`), shared: map[string]any{jwe.CriticalKey: []string{"x"}, "x": true}},
+			{name: "crit in per-recipient header", protected: new(`{"alg":"dir","enc":"A128GCM"}`), recipients: []map[string]any{{jwe.CriticalKey: []string{"x"}, "x": true}}},
+			{name: "zip in shared header", protected: new(`{"alg":"dir","enc":"A128GCM"}`), shared: map[string]any{jwe.CompressionKey: jwa.Deflate().String()}},
+			{name: "zip in per-recipient header", protected: new(`{"alg":"dir","enc":"A128GCM"}`), recipients: []map[string]any{{jwe.CompressionKey: jwa.Deflate().String()}}},
+		}
+		for _, tc := range testcases {
+			for _, flattened := range []bool{true, false} {
+				name := tc.name + "/general"
+				if flattened {
+					name = tc.name + "/flattened"
+				}
+				t.Run(name, func(t *testing.T) {
+					wire := buildDirectJSONJWE(t, tc.protected, tc.shared, tc.recipients, flattened)
+					got, err := jwe.Decrypt(wire, jwe.WithKey(jwa.DIRECT(), headerUnionKey))
+					require.NoError(t, err, `jwe.Decrypt should accept the layout when strict header rules are off`)
+					require.Equal(t, []byte("payload"), got, `plaintext should match`)
+				})
+			}
+		}
+	})
+
+	t.Run("null crit is still rejected", func(t *testing.T) {
+		testcases := []struct {
+			name      string
+			protected *string
+			shared    map[string]any
+		}{
+			{name: "protected header", protected: new(`{"alg":"dir","enc":"A128GCM","crit":null}`)},
+			{name: "shared header", protected: new(`{"alg":"dir","enc":"A128GCM"}`), shared: map[string]any{jwe.CriticalKey: nil}},
+		}
+		for _, tc := range testcases {
+			t.Run(tc.name, func(t *testing.T) {
+				wire := buildDirectJSONJWE(t, tc.protected, tc.shared, nil, true)
+				_, err := jwe.Parse(wire)
+				require.Error(t, err, `jwe.Parse should reject a null crit even when strict header rules are off`)
+			})
+		}
+
+		t.Run("compact", func(t *testing.T) {
+			protected := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"dir","enc":"A128GCM","crit":null}`))
+			_, err := jwe.Parse([]byte(protected + "..aXZpdml2aXZpdml2.Y3Q.dGFn"))
+			require.Error(t, err, `jwe.Parse should reject a null crit in a compact message`)
+		})
+	})
+
+	t.Run("recipients that disagree on enc parse", func(t *testing.T) {
+		wire := buildDirectJSONJWE(t, new(`{"alg":"dir"}`), nil, []map[string]any{
+			{jwe.ContentEncryptionKey: jwa.A128GCM().String()},
+			{jwe.ContentEncryptionKey: jwa.A256GCM().String()},
+		}, false)
+		_, err := jwe.Parse(wire)
+		require.NoError(t, err, `jwe.Parse should accept the message when strict header rules are off`)
+	})
+
+	t.Run("alg and enc outside the protected header are ignored", func(t *testing.T) {
+		testcases := []struct {
+			name      string
+			protected *string
+			shared    map[string]any
+			recipient map[string]any
+		}{
+			{name: "alg in shared header", protected: new(`{"enc":"A128GCM"}`), shared: map[string]any{jwe.AlgorithmKey: jwa.DIRECT().String()}},
+			{name: "enc in shared header", protected: new(`{"alg":"dir"}`), shared: map[string]any{jwe.ContentEncryptionKey: jwa.A128GCM().String()}},
+			{name: "enc in per-recipient header", protected: new(`{"alg":"dir"}`), recipient: map[string]any{jwe.ContentEncryptionKey: jwa.A128GCM().String()}},
+		}
+		for _, tc := range testcases {
+			t.Run(tc.name, func(t *testing.T) {
+				wire := buildDirectJSONJWE(t, tc.protected, tc.shared, []map[string]any{tc.recipient}, true)
+				_, err := jwe.Decrypt(wire, jwe.WithKey(jwa.DIRECT(), headerUnionKey))
+				require.Error(t, err, `jwe.Decrypt should not read alg or enc outside the protected header when strict header rules are off`)
+			})
+		}
+	})
+
+	t.Run("shared alg does not override the protected alg", func(t *testing.T) {
+		wire := buildDirectJSONJWE(t, new(`{"alg":"dir","enc":"A128GCM"}`), map[string]any{jwe.AlgorithmKey: jwa.A128KW().String()}, nil, true)
+		got, err := jwe.Decrypt(wire, jwe.WithKey(jwa.DIRECT(), headerUnionKey))
+		require.NoError(t, err, `jwe.Decrypt should ignore the shared alg when strict header rules are off`)
+		require.Equal(t, []byte("payload"), got, `plaintext should match`)
+	})
+
+	t.Run("encrypt writes overlapping recipient headers", func(t *testing.T) {
+		protected := jwe.NewHeaders()
+		require.NoError(t, protected.Set(jwe.KeyIDKey, "p"), `setting kid should succeed`)
+		recipient := jwe.NewHeaders()
+		require.NoError(t, recipient.Set(jwe.KeyIDKey, "r"), `setting kid should succeed`)
+
+		k1 := bytes.Repeat([]byte{1}, 16)
+		k2 := bytes.Repeat([]byte{2}, 16)
+		encrypted, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithJSON(),
+			jwe.WithProtectedHeaders(protected),
+			jwe.WithKey(jwa.A128KW(), k1, jwe.WithPerRecipientHeaders(recipient)),
+			jwe.WithKey(jwa.A128KW(), k2),
+		)
+		require.NoError(t, err, `jwe.Encrypt should accept overlapping headers when strict header rules are off`)
+
+		got, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.A128KW(), k1))
+		require.NoError(t, err, `jwe.Decrypt should accept the output when strict header rules are off`)
+		require.Equal(t, []byte("payload"), got, `plaintext should match`)
+	})
+
+	t.Run("marshal writes a changed copied value", func(t *testing.T) {
+		compact, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithKey(jwa.A128KW(), headerUnionKey),
+			jwe.WithContentEncryption(jwa.A128GCM()),
+		)
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+		msg, err := jwe.Parse(compact)
+		require.NoError(t, err, `jwe.Parse should succeed`)
+		require.NoError(t, msg.Recipients()[0].Headers().Set(jwe.AlgorithmKey, jwa.A256KW()), `setting alg should succeed`)
+
+		serialized, err := json.Marshal(msg)
+		require.NoError(t, err, `json.Marshal should write the header when strict header rules are off`)
+		var members map[string]json.RawMessage
+		require.NoError(t, json.Unmarshal(serialized, &members), `serialized message should be a JSON object`)
+		require.Contains(t, string(members["header"]), `"A256KW"`, `"header" should keep the changed alg`)
+	})
+}
+
+// TestStrictHeaderRulesRestored checks that turning the setting back on
+// brings back the strict checks.
+func TestStrictHeaderRulesRestored(t *testing.T) {
+	require.NoError(t, jwe.Settings(jwe.WithStrictHeaderRules(false)), `jwe.Settings should succeed`)
+	require.NoError(t, jwe.Settings(jwe.WithStrictHeaderRules(true)), `jwe.Settings should succeed`)
+
+	wire := buildDirectJSONJWE(t, new(`{"alg":"dir","enc":"A128GCM"}`), map[string]any{jwe.CompressionKey: jwa.Deflate().String()}, nil, true)
+	_, err := jwe.Parse(wire)
+	require.Error(t, err, `jwe.Parse should reject an unprotected zip once strict header rules are back on`)
+}
+
+// TestStrictHeaderRulesReadOncePerCall checks that jwe.Decrypt and
+// jwe.Encrypt use the WithStrictHeaderRules value they read when they
+// started, even when jwe.Settings changes it while they run. The change is
+// made from inside a key provider or key encrypter, which runs in the middle
+// of the call.
+func TestStrictHeaderRulesReadOncePerCall(t *testing.T) {
+	restore := func(t *testing.T) {
+		t.Helper()
+		t.Cleanup(func() {
+			require.NoError(t, jwe.Settings(jwe.WithStrictHeaderRules(true)), `restoring jwe.Settings should succeed`)
+		})
+	}
+	switchTo := func(strict bool) {
+		// Errors cannot be returned from here; the restore cleanup and the
+		// assertions below catch a failed switch.
+		_ = jwe.Settings(jwe.WithStrictHeaderRules(strict))
+	}
+
+	t.Run("decrypt started strict", func(t *testing.T) {
+		restore(t)
+		// "enc" is only in the shared header, so only a strict call can
+		// decrypt this message.
+		wire := buildDirectJSONJWE(t, new(`{"alg":"dir"}`), map[string]any{jwe.ContentEncryptionKey: jwa.A128GCM().String()}, nil, true)
+		kp := jwe.KeyProviderFunc(func(_ context.Context, sink jwe.KeySink, _ jwe.Recipient, _ *jwe.Message) error {
+			switchTo(false)
+			sink.Key(jwa.DIRECT(), headerUnionKey)
+			return nil
+		})
+		got, err := jwe.Decrypt(wire, jwe.WithKeyProvider(kp))
+		require.NoError(t, err, `jwe.Decrypt should keep the strict setting it started with`)
+		require.Equal(t, []byte("payload"), got, `plaintext should match`)
+	})
+
+	t.Run("decrypt started lenient", func(t *testing.T) {
+		restore(t)
+		switchTo(false)
+		// The shared header repeats "alg" with a different value. A lenient
+		// parse accepts it; the decrypt step must then keep ignoring the
+		// shared header instead of letting it replace the protected "alg".
+		wire := buildDirectJSONJWE(t, new(`{"alg":"dir","enc":"A128GCM"}`), map[string]any{jwe.AlgorithmKey: jwa.A128KW().String()}, nil, true)
+		kp := jwe.KeyProviderFunc(func(_ context.Context, sink jwe.KeySink, _ jwe.Recipient, _ *jwe.Message) error {
+			switchTo(true)
+			sink.Key(jwa.DIRECT(), headerUnionKey)
+			return nil
+		})
+		got, err := jwe.Decrypt(wire, jwe.WithKeyProvider(kp))
+		require.NoError(t, err, `jwe.Decrypt should keep the lenient setting it started with`)
+		require.Equal(t, []byte("payload"), got, `plaintext should match`)
+	})
+
+	t.Run("encrypt started strict", func(t *testing.T) {
+		restore(t)
+		protected := jwe.NewHeaders()
+		require.NoError(t, protected.Set(jwe.KeyIDKey, "p"), `setting kid should succeed`)
+		recipient := jwe.NewHeaders()
+		require.NoError(t, recipient.Set(jwe.KeyIDKey, "r"), `setting kid should succeed`)
+
+		switching := jwe.KeyEncryptFunc{
+			Alg: jwa.A128KW(),
+			Encrypt: func(cek []byte) ([]byte, error) {
+				switchTo(false)
+				return bytes.Clone(cek), nil
+			},
+		}
+		_, err := jwe.Encrypt([]byte("payload"),
+			jwe.WithJSON(),
+			jwe.WithProtectedHeaders(protected),
+			jwe.WithKey(jwa.A128KW(), switching, jwe.WithPerRecipientHeaders(recipient)),
+			jwe.WithKey(jwa.A128KW(), bytes.Repeat([]byte{2}, 16)),
+		)
+		require.Error(t, err, `jwe.Encrypt should keep the strict setting it started with`)
+	})
+}
+
+// TestUnprotectedZipRejected verifies that a "zip" (compression) header
+// injected into the per-recipient/unprotected header — which the AEAD does
+// not authenticate — is rejected. RFC 7516 §4.1.3 only allows "zip" in the
+// protected header, so only the protected header may control
+// post-decryption decompression.
+func TestUnprotectedZipRejected(t *testing.T) {
+	const plaintext = `the quick brown fox jumps over the lazy dog`
+
+	key, err := jwk.Import[jwk.SymmetricKey]([]byte(`0123456789abcdef`))
+	require.NoError(t, err, `jwk.Import should succeed`)
+
+	// Encrypt WITHOUT compression, in flattened JSON form. The protected
+	// header therefore carries no "zip".
+	encrypted, err := jwe.Encrypt([]byte(plaintext),
+		jwe.WithKey(jwa.A128KW(), key),
+		jwe.WithContentEncryption(jwa.A128CBC_HS256()),
+		jwe.WithJSON(),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	// Inject a malicious "zip":"DEF" into the unprotected per-recipient
+	// "header" object. This is outside the AEAD-authenticated protected
+	// header, so an attacker can add it without invalidating the tag.
+	var obj map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(encrypted, &obj), `unmarshal serialized JWE`)
+	_, hasZipInProtected := obj["zip"]
+	require.False(t, hasZipInProtected, `top-level should not have zip`)
+	obj["header"] = json.RawMessage(`{"zip":"DEF"}`)
+	tampered, err := json.Marshal(obj)
+	require.NoError(t, err, `re-marshal tampered JWE`)
+
+	_, err = jwe.Decrypt(tampered, jwe.WithKey(jwa.A128KW(), key))
+	require.Error(t, err, `jwe.Decrypt should reject an unprotected zip`)
+	require.ErrorIs(t, err, jwe.ParseError(), `the message should be rejected while parsing`)
+}
+
+// TestProtectedZipRoundTrips is the control: compression requested through
+// the protected header (via jwe.WithCompress) still round-trips correctly.
+func TestProtectedZipRoundTrips(t *testing.T) {
+	const plaintext = `the quick brown fox jumps over the lazy dog`
+
+	key, err := jwk.Import[jwk.SymmetricKey]([]byte(`0123456789abcdef`))
+	require.NoError(t, err, `jwk.Import should succeed`)
+
+	encrypted, err := jwe.Encrypt([]byte(plaintext),
+		jwe.WithKey(jwa.A128KW(), key),
+		jwe.WithContentEncryption(jwa.A128CBC_HS256()),
+		jwe.WithCompress(jwa.Deflate()),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	decrypted, err := jwe.Decrypt(encrypted, jwe.WithKey(jwa.A128KW(), key))
+	require.NoError(t, err, `jwe.Decrypt should succeed`)
+	require.Equal(t, plaintext, string(decrypted), `compressed payload must round-trip`)
 }
