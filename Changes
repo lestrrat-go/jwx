@@ -69,7 +69,7 @@ UNRELEASED
     fraction is written as an integer, and output at the default precision
     of 0 is unchanged. Callers who set a precision above 0 will see
     fractional dates in their tokens, in the bytes `jwt.Sign` signs, and in
-    what `jwt.Equal` compares. (#2406)
+    what `jwt.Equal` compares. (#2409)
 
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
