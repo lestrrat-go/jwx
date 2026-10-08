@@ -48,7 +48,6 @@ go_test(
         "encrypt_aad_test.go",
         "fuzz_test.go",
         "gh402_test.go",
-        "header_union_lenient_test.go",
         "header_union_test.go",
         "headers_nil_test.go",
         "headers_test.go",
