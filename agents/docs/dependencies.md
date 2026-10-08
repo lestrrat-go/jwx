@@ -11,27 +11,27 @@ Application Layer
   cmd/jwx → jwt, jws, jwe, jwk, jwa
 
 Composition Layer
-  jwt → jws, jwe, jwk, jwa, transform, internal/{json}
-  jwt/openid → jwt, internal/{json,tokens,pool}
+  jwt → jwx, jws, jwe, jwk, jwa, jws/jwsbb, jwt/internal/types
+      → internal/{base64,json,pool,tokens}
+  jwt/openid → jwt, jwt/internal/types, internal/{json,tokens,pool}
 
 Processing Layer
-  jws → jwa, jwk, cert, internal/{base64,json,pool,tokens}
+  jws → jwa, jwk, cert, internal/{base64,json,keyconv,pool,tokens}
        → jws/jwsbb, jws/internal/jwsbb, jws/internal/keyalg
        → crypto/mldsa (go1.27 only, via mldsa.go)
-  jwe → jwa, jwk, cert, transform, internal/{base64,json,pool,tokens}
-       → jwe/internal/{aescbc,cipher,concatkdf,content_crypt,keygen}
+  jwe → jwa, jwk, cert, internal/{base64,json,keyconv,pool,tokens}
+       → jwe/internal/{aescbc,content_crypt,keygen}
        → jwe/jwebb
 
 Core Layer
-  jwk → jwa, cert, transform, internal/{base64,json,ecutil}
-       → jwk/ecdsa, jwk/jwkbb
+  jwk → jwa, cert, internal/{base64,json,ecutil,pool}
+       → jwk/ecdsa, jwk/internal/registry, jwk/jwkbb
        → crypto/mldsa (go1.27 only, via mldsa.go)
-  jwx (root) → internal/json
+  jwx (root) → internal/{base64,json,tokens}
 
-Leaf Packages (no internal deps)
+Foundational Packages
   jwa → internal/tokens
   cert → internal/{base64,tokens}
-  transform → (stdlib only)
   internal/json → internal/{base64,tokens}
   internal/{base64,ecutil,pool,tokens}
 ```
@@ -42,15 +42,14 @@ Leaf Packages (no internal deps)
 |---------|-----------------|
 | `jwa` | internal/tokens |
 | `cert` | internal/{base64,tokens} |
-| `transform` | (none — stdlib only) |
-| `jwk` | jwa, cert, transform |
+| `jwk` | jwa, cert |
 | `jwk/ecdsa` | jwa |
 | `jwk/jwkbb` | internal/json |
 | `jws` | jwa, jwk, cert |
 | `jws/internal/keyalg` | jwa, jwk |
-| `jwe` | jwa, jwk, cert, transform |
-| `jwt` | jwa, jws, jwe, jwk, transform |
-| `jwt/openid` | jwt |
+| `jwe` | jwa, jwk, cert |
+| `jwt` | jwx, jwa, jws, jwe, jwk, jws/jwsbb, jwt/internal/types |
+| `jwt/openid` | jwt, jwt/internal/types |
 
 ## Key External Dependencies
 

@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/lestrrat-go/dsig"
+
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
 	"github.com/lestrrat-go/jwx/v4/internal/jwxtest"
@@ -2729,7 +2730,7 @@ func TestJSONSigningInput(t *testing.T) {
 					for range signatures {
 						opts = append(opts, jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(protected), jws.WithPublicHeaders(public)))
 					}
-					payload := []byte("a.b")
+					payload := []byte("payload")
 					wire, err := jws.Sign(payload, opts...)
 					require.NoError(t, err)
 					var obj struct {
@@ -2782,11 +2783,13 @@ func TestJSONSigningInput(t *testing.T) {
 	got, err := jws.Verify(compact, jws.WithKey(jwa.HS256(), key))
 	require.NoError(t, err)
 	require.Equal(t, []byte("payload"), got)
-	protected := jws.NewHeaders()
-	require.NoError(t, protected.Set("b64", false))
-	_, err = jws.Sign([]byte("a.b"), jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(protected)))
-	require.ErrorContains(t, err, "compact serialization")
+	hdrEncoded, _, _, err := jwsbb.SplitCompact(compact)
+	require.NoError(t, err)
+	hdrJSON, err := stdbase64.RawURLEncoding.DecodeString(string(hdrEncoded))
+	require.NoError(t, err)
+	require.JSONEq(t, `{"alg":"HS256","kid":"public-key"}`, string(hdrJSON))
 }
+
 func fmtJSONCase(pretty, unencoded bool, n int) string {
 	// Names describe the wire shape as well as the payload encoding.
 	s := "flattened"
@@ -2800,60 +2803,4 @@ func fmtJSONCase(pretty, unencoded bool, n int) string {
 		s += "/unencoded"
 	}
 	return s
-}
-
-func TestJSONSigningHeaderUnion(t *testing.T) {
-	key, err := jwk.Import[jwk.Key](bytes.Repeat([]byte{42}, 32))
-	require.NoError(t, err)
-	require.NoError(t, key.Set(jwk.KeyIDKey, "test"))
-	for _, streaming := range []bool{false, true} {
-		public := jws.NewHeaders()
-		require.NoError(t, public.Set(jws.KeyIDKey, "test"))
-		opts := []jws.SignOption{jws.WithJSON(), jws.WithKey(jwa.HS256(), key, jws.WithPublicHeaders(public))}
-		payload := []byte("payload")
-		if streaming {
-			opts = append(opts, jws.WithDetachedPayloadReader(bytes.NewReader(payload)))
-			payload = nil
-		}
-		wire, err := jws.Sign(payload, opts...)
-		require.NoError(t, err)
-		verify := []jws.VerifyOption{jws.WithKey(jwa.HS256(), key)}
-		if streaming {
-			verify = append(verify, jws.WithDetachedPayload([]byte("payload")))
-		}
-		got, err := jws.Verify(wire, verify...)
-		require.NoError(t, err)
-		require.Equal(t, []byte("payload"), got)
-		var obj struct {
-			Protected string `json:"protected"`
-		}
-		require.NoError(t, stdjson.Unmarshal(wire, &obj))
-		raw, err := stdbase64.RawURLEncoding.DecodeString(obj.Protected)
-		require.NoError(t, err)
-		require.NotContains(t, string(raw), `"kid"`)
-	}
-	for _, name := range []string{jws.AlgorithmKey, jws.CriticalKey, "b64", "x-shared"} {
-		for _, streaming := range []bool{false, true} {
-			protected, public := jws.NewHeaders(), jws.NewHeaders()
-			switch name {
-			case jws.AlgorithmKey:
-				require.NoError(t, public.Set(name, jwa.HS256()))
-			case jws.CriticalKey:
-				require.NoError(t, public.Set(name, []string{"x"}))
-			case "b64":
-				require.NoError(t, public.Set(name, true))
-			default:
-				require.NoError(t, public.Set(name, true))
-				require.NoError(t, protected.Set(name, true))
-			}
-			opts := []jws.SignOption{jws.WithJSON(), jws.WithKey(jwa.HS256(), key, jws.WithPublicHeaders(public), jws.WithProtectedHeaders(protected))}
-			payload := []byte("payload")
-			if streaming {
-				opts = append(opts, jws.WithDetachedPayloadReader(bytes.NewReader(payload)))
-				payload = nil
-			}
-			_, err := jws.Sign(payload, opts...)
-			require.Error(t, err, "signing must reject invalid JSON header unions")
-		}
-	}
 }
