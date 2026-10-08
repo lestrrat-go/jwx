@@ -59,7 +59,6 @@ go_test(
         "speed_test.go",
         "unsupported_key_internal_test.go",
         "unsupported_key_test.go",
-        "zip_protected_only_test.go",
     ],
     embed = [":jwe"],
     deps = [

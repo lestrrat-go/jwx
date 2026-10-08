@@ -720,6 +720,11 @@ func (h *stdHeaders) UnmarshalJSON(buf []byte) error {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, ContentTypeKey, err)
 			}
 		case CriticalKey:
+			// JSON null is rejected for this field. The reason is recorded
+			// next to its reject_null flag in objects.yml.
+			if dec.PeekKind() == 'n' {
+				return fmt.Errorf(`invalid value for key %s: must not be null`, CriticalKey)
+			}
 			var decoded []string
 			if err := json.UnmarshalDecode(dec, &decoded); err != nil {
 				return fmt.Errorf(`failed to decode value for key %s: %w`, CriticalKey, err)

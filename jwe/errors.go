@@ -140,8 +140,9 @@ func makeParseError(prefix string, f string, args ...any) error {
 //-------------------------------------------------------------------
 
 // MissingContentEncryptionError is returned when jwe.Decrypt cannot
-// locate the content encryption algorithm ("enc") in the protected
-// headers of the JWE message.
+// locate the content encryption algorithm ("enc") in the recipient's
+// JOSE header: the protected header, the shared "unprotected" header,
+// or the recipient's own header.
 //
 // Use errors.Is with a zero-value MissingContentEncryptionError{} to
 // detect this failure mode programmatically:
@@ -150,7 +151,7 @@ func makeParseError(prefix string, f string, args ...any) error {
 type MissingContentEncryptionError struct{}
 
 func (MissingContentEncryptionError) Error() string {
-	return `failed to retrieve content encryption algorithm from protected headers`
+	return `failed to retrieve content encryption algorithm from the JOSE header`
 }
 
 func (MissingContentEncryptionError) Is(target error) bool {
@@ -168,8 +169,9 @@ func (MissingContentEncryptionError) Is(target error) bool {
 // supplied by the caller.
 //
 // Expected holds the algorithm bound to the caller's key (for example
-// via jwe.WithKey). Got holds the algorithm found in the per-recipient
-// or protected headers of the message.
+// via jwe.WithKey). Got holds the algorithm found in the recipient's
+// JOSE header: the protected header, the shared "unprotected" header, or
+// the recipient's own header.
 //
 // Use errors.Is with a zero-value AlgorithmMismatchError{} to detect
 // this failure mode, or errors.AsType to recover the Expected and Got
@@ -182,8 +184,8 @@ type AlgorithmMismatchError struct {
 	// Expected is the key encryption algorithm associated with the
 	// decryption key supplied by the caller.
 	Expected jwa.KeyEncryptionAlgorithm
-	// Got is the key encryption algorithm declared in the JWE
-	// per-recipient or protected headers.
+	// Got is the key encryption algorithm declared in the recipient's
+	// JOSE header.
 	Got jwa.KeyEncryptionAlgorithm
 }
 

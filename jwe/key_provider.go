@@ -107,6 +107,29 @@ type keySetProvider struct {
 	requireKid bool
 }
 
+// joseHeaders returns the header locations that make up a recipient's JOSE
+// header (RFC 7516 §7.2.1): the recipient's own header, the protected header,
+// and the shared unprotected header. Any of them may be nil. Parsing rejects a
+// name that appears in more than one of them, except that a compact message's
+// recipient header is a copy of its protected header, so the order does not
+// change which value is found.
+func joseHeaders(r Recipient, msg *Message) [3]Headers {
+	return [3]Headers{r.Headers(), msg.ProtectedHeaders(), msg.UnprotectedHeaders()}
+}
+
+// recipientKeyID returns the "kid" from the recipient's JOSE header.
+func recipientKeyID(r Recipient, msg *Message) (string, bool) {
+	for _, hdr := range joseHeaders(r, msg) {
+		if hdr == nil {
+			continue
+		}
+		if v, ok := hdr.KeyID(); ok {
+			return v, true
+		}
+	}
+	return "", false
+}
+
 func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, r Recipient, msg *Message) error {
 	if uk, ok := key.(jwk.UnsupportedKey); ok {
 		kid, _ := uk.KeyID()
@@ -131,12 +154,11 @@ func (kp *keySetProvider) selectKey(sink KeySink, key jwk.Key, r Recipient, msg 
 	}
 
 	// The JWK has no "alg" — common for IdP-published encryption keys.
-	// Fall back to the recipient's declared "alg" (per-recipient header,
-	// then protected header), matching the preference order used when
-	// jwe.Decrypt verifies the chosen key's algorithm against the message.
-	// jwe.Decrypt re-checks agreement before use, so trusting the header
-	// alg here does not widen the attack surface.
-	for _, hdr := range []Headers{r.Headers(), msg.ProtectedHeaders()} {
+	// Fall back to the recipient's declared "alg" from its JOSE header,
+	// the same header jwe.Decrypt verifies the chosen key's algorithm
+	// against. jwe.Decrypt re-checks agreement before use, so trusting the
+	// header alg here does not widen the attack surface.
+	for _, hdr := range joseHeaders(r, msg) {
 		if hdr == nil {
 			continue
 		}
@@ -160,7 +182,7 @@ func (kp *keySetProvider) FetchKeys(_ context.Context, sink KeySink, r Recipient
 	if kp.requireKid {
 		var key jwk.Key
 
-		wantedKid, ok := r.Headers().KeyID()
+		wantedKid, ok := recipientKeyID(r, msg)
 		if !ok || wantedKid == "" {
 			return fmt.Errorf(`failed to find matching key: no key ID ("kid") specified in token but multiple keys available in key set`)
 		}

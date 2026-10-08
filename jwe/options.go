@@ -202,7 +202,8 @@ func WithKey(alg jwa.KeyAlgorithm, key any, options ...WithKeySuboption) Encrypt
 }
 
 // WithKeySet specifies a JWKS (jwk.Set) to use for decryption. The
-// recipient's protected/per-recipient `kid` header selects a key from
+// `kid` in the recipient's JOSE header (the protected header, the shared
+// "unprotected" header, or the recipient's own header) selects a key from
 // the set, and the key's `alg` (or, when the JWK lacks `alg`, the
 // recipient's declared `alg`) drives the decrypt-time dispatch.
 //
@@ -215,14 +216,14 @@ func WithKey(alg jwa.KeyAlgorithm, key any, options ...WithKeySuboption) Encrypt
 //
 // Security caveats:
 //
-//   - The recipient's per-recipient header is unprotected. When the
-//     selected JWK has no `alg`, the keyset provider falls back to
-//     the per-recipient `alg`, then the protected header's `alg`.
-//     `jwe.Decrypt` re-checks `alg` against the integrity-protected
-//     protected header before any cryptographic call (RFC 7516
-//     §7.2.1 disjointness) — see the active prior
-//     `jwe-keyset-alg-confusion-blocked` for the full attack-tree
-//     analysis.
+//   - The shared "unprotected" header and the recipient's own header
+//     are not integrity protected. When the selected JWK has no `alg`,
+//     the keyset provider uses the `alg` from the recipient's JOSE
+//     header, wherever it appears. Parsing rejects a message that
+//     carries `alg` in more than one header location (RFC 7516 §7.2.1),
+//     so an unprotected `alg` cannot override a protected one, and
+//     `jwe.Decrypt` re-checks the chosen `alg` against the message
+//     before any cryptographic call.
 //   - For untrusted issuers, prefer narrowing the keyset to keys
 //     already typed for the expected algorithm rather than relying
 //     on the header-fallback path.

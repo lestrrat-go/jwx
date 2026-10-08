@@ -205,6 +205,8 @@ func marshalField(v any) (string, error) {
 }
 
 func (m *Message) MarshalJSON() ([]byte, error) {
+	strict := m.headerRules.strict()
+
 	// This is slightly convoluted, but we need to encode the
 	// protected headers, so we do it by hand
 	buf := pool.BytesBuffer().Get()
@@ -227,13 +229,15 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 		fields = append(fields, jsonKV{Key: InitializationVectorKey, Value: v})
 	}
 
+	// RFC 7516 §7.2.1: the "protected" member is absent when the protected
+	// header is empty. Writing "e30" (an encoded {}) instead would change
+	// the AAD, and the message would no longer decrypt.
 	if h := m.ProtectedHeaders(); h != nil {
-		v, err := h.Encode()
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode protected headers: %w`, err)
-		}
-
-		if len(v) > 2 { // '{}'
+		if iz, ok := h.(isZeroer); !ok || !iz.isZero() {
+			v, err := h.Encode()
+			if err != nil {
+				return nil, fmt.Errorf(`failed to encode protected headers: %w`, err)
+			}
 			fields = append(fields, jsonKV{
 				Key:   ProtectedHeadersKey,
 				Value: fmt.Sprintf("%q", v),
@@ -259,6 +263,17 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 	if recipients := m.Recipients(); len(recipients) > 0 {
 		if len(recipients) == 1 { // Use flattened format
 			if hdrs := recipients[0].Headers(); hdrs != nil {
+				wire, err := wireRecipientHeaders(hdrs, m.ProtectedHeaders(), m.UnprotectedHeaders())
+				switch {
+				case err == nil:
+					hdrs = wire
+				case strict:
+					return nil, fmt.Errorf(`failed to encode %s field: %w`, HeadersKey, err)
+				default:
+					// WithStrictHeaderRules(false): write the recipient header
+					// as it is, including the conflicting value.
+				}
+
 				var skipHeaders bool
 				if zeroer, ok := hdrs.(isZeroer); ok {
 					if zeroer.isZero() {
@@ -331,6 +346,9 @@ func (m *Message) MarshalJSON() ([]byte, error) {
 }
 
 func (m *Message) UnmarshalJSON(buf []byte) error {
+	strict := m.headerRules.strict()
+	m.headerRules = headerRulesUnset
+
 	var proxy messageMarshalProxy
 	proxy.UnprotectedHeaders = NewHeaders()
 
@@ -338,39 +356,44 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		return fmt.Errorf(`failed to unmashal JSON into message: %w`, err)
 	}
 
-	// Get the string value
-	var protectedHeadersStr string
-	if err := json.Unmarshal(proxy.ProtectedHeaders, &protectedHeadersStr); err != nil {
-		return fmt.Errorf(`failed to decode protected headers (1): %w`, err)
-	}
-
-	// It's now in _quoted_ base64 string. Decode it
-	protectedHeadersRaw, err := base64.DecodeString(protectedHeadersStr)
-	if err != nil {
-		return fmt.Errorf(`failed to base64 decoded protected headers buffer: %w`, err)
-	}
-
+	// RFC 7516 §7.2.1 requires the "protected" member to be absent when the
+	// protected header is empty. An absent member leaves h empty, and the
+	// AAD computed from it is the empty string.
 	h := NewHeaders()
-	if err := json.Unmarshal(protectedHeadersRaw, h); err != nil {
-		return fmt.Errorf(`failed to decode protected headers (2): %w`, err)
+	var protectedHeadersRaw []byte
+	if len(proxy.ProtectedHeaders) > 0 {
+		var protectedHeadersStr string
+		if err := json.Unmarshal(proxy.ProtectedHeaders, &protectedHeadersStr); err != nil {
+			return fmt.Errorf(`failed to decode protected headers (1): %w`, err)
+		}
+
+		// It's now in _quoted_ base64 string. Decode it
+		raw, err := base64.DecodeString(protectedHeadersStr)
+		if err != nil {
+			return fmt.Errorf(`failed to base64 decoded protected headers buffer: %w`, err)
+		}
+
+		if err := json.Unmarshal(raw, h); err != nil {
+			return fmt.Errorf(`failed to decode protected headers (2): %w`, err)
+		}
+		protectedHeadersRaw = raw
 	}
 
-	// if this were a flattened message, we would see a "header" and "ciphertext"
-	// field. TODO: do both of these conditions need to meet, or just one?
-	if proxy.Headers != nil || len(proxy.EncryptedKey) > 0 {
+	// A flattened message carries "header" and/or "encrypted_key" at the top
+	// level. One with "encrypted_key" but no "header" gets its recipient from
+	// makeDummyRecipient below, which copies the protected header into the
+	// recipient header the same way parseCompact does.
+	switch {
+	case proxy.Headers != nil:
 		recipient := NewRecipient()
 
-		// `"headers"` could be empty. If that's the case, just skip the
-		// following unmarshaling step
-		if proxy.Headers != nil {
-			hdrs := NewHeaders()
-			if err := json.Unmarshal(proxy.Headers, hdrs); err != nil {
-				return fmt.Errorf(`failed to decode headers field: %w`, err)
-			}
+		hdrs := NewHeaders()
+		if err := json.Unmarshal(proxy.Headers, hdrs); err != nil {
+			return fmt.Errorf(`failed to decode headers field: %w`, err)
+		}
 
-			if err := recipient.SetHeaders(hdrs); err != nil {
-				return fmt.Errorf(`failed to set new headers: %w`, err)
-			}
+		if err := recipient.SetHeaders(hdrs); err != nil {
+			return fmt.Errorf(`failed to set new headers: %w`, err)
 		}
 
 		if v := proxy.EncryptedKey; len(v) > 0 {
@@ -384,7 +407,9 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 		}
 
 		m.recipients = append(m.recipients, recipient)
-	} else {
+	case len(proxy.EncryptedKey) > 0:
+		// flattened, no "header": handled by makeDummyRecipient below
+	default:
 		for i, recipientbuf := range proxy.Recipients {
 			recipient := NewRecipient()
 			if err := json.Unmarshal(recipientbuf, recipient); err != nil {
@@ -434,7 +459,7 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	m.tag = tagbuf
 
 	m.protectedHeaders = h
-	if m.storeProtectedHeaders {
+	if m.storeProtectedHeaders && protectedHeadersRaw != nil {
 		// this is later used for decryption
 		m.rawProtectedHeaders = base64.Encode(protectedHeadersRaw)
 	}
@@ -442,6 +467,12 @@ func (m *Message) UnmarshalJSON(buf []byte) error {
 	if iz, ok := proxy.UnprotectedHeaders.(isZeroer); ok {
 		if !iz.isZero() {
 			m.unprotectedHeaders = proxy.UnprotectedHeaders
+		}
+	}
+
+	if strict {
+		if err := validateJSONHeaders(m.protectedHeaders, m.unprotectedHeaders, m.recipients); err != nil {
+			return err
 		}
 	}
 
