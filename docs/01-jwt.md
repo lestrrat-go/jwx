@@ -99,8 +99,10 @@ func Example_jwt_parse() {
 source: [examples/jwt_parse_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwt_parse_example_test.go)
 <!-- END INCLUDE -->
 
-Note that the above form performs only signature verification and no validation of the JWT token itself.
-In order to perform validation, please use `Validate()`.
+The call above verifies the signature and then validates the token. By default, validation checks only the
+time-based claims (`exp`, `nbf`, and `iat`). To check `iss`, `aud`, `sub`, or other claims, pass the matching option,
+such as `jwt.WithIssuer()` or `jwt.WithAudience()`. To validate later instead, pass `jwt.WithValidate(false)` and call
+`jwt.Validate()` yourself.
 
 ## Parse a JWT from a filesystem
 

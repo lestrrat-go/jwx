@@ -348,9 +348,10 @@ func WithCookieKey(v string) ParseOption {
 	return &parseOption{option.New(identCookieKey{}, v)}
 }
 
-// WithEncryptOption provides an escape hatch for cases where extra options to
-// `(jws.Serializer).Encrypt()` must be specified when using `jwt.Sign()`. Normally you do not
-// need to use this.
+// WithEncryptOption passes an extra `jwe.EncryptOption` through
+// `(*jwt.Serializer).Encrypt()` to `jwe.Encrypt()`, for example
+// `jwe.WithContentEncryption()` to choose the "enc" algorithm. Normally you
+// do not need to use this.
 func WithEncryptOption(v jwe.EncryptOption) EncryptOption {
 	return &encryptOption{option.New(identEncryptOption{}, v)}
 }

@@ -490,7 +490,7 @@ func WithPretty(v bool) WithJSONSuboption {
 	return &withJSONSuboption{option.New(identPretty{}, v)}
 }
 
-// WithRequiredKid specifies whether the keys in the jwk.Set should
+// WithRequireKid specifies whether the keys in the jwk.Set should
 // only be matched if the target JWE message's Key ID and the Key ID
 // in the given key matches.
 func WithRequireKid(v bool) WithKeySetSuboption {
