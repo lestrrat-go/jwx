@@ -108,10 +108,10 @@ source: [examples/jwe_parsefs_example_test.go](https://github.com/jwx-go/example
 
 ## Generating a JWE message in compact serialization format
 
-To encrypt an arbitrary payload as a JWE message in compact serialization format, use `jwt.Encrypt()`.
+To encrypt an arbitrary payload as a JWE message in compact serialization format, use `jwe.Encrypt()`.
 
-Note that this would be [slightly different if you are encrypting JWTs](01-jwt.md#serialize-using-jws), as you would be
-using functions from the `jwt` package instead of `jws`.
+Note that this would be [slightly different if you are encrypting JWTs](01-jwt.md#serialize-using-jwe-and-jws), as you would be
+using functions from the `jwt` package instead of `jwe`.
 
 <!-- INCLUDE(examples/jwe_encrypt_example_test.go) -->
 ```go

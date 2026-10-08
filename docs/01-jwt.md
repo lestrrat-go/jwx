@@ -1403,7 +1403,7 @@ source: [examples/jwt_serialize_jws_example_test.go](https://github.com/jwx-go/e
 
 The `jwt` package provides a `Serializer` object to allow users to serialize a token using an arbitrary combination of processors.
 
-If for whatever reason the built-in `(jwt.Serializer).Sign()` and `(jwt.Serializer).Encrypt()` do not work for you, you may choose to provider a custom serialization step using `(jwt.Serialize).Step()` -- but at this point it may just be easier if you hand-rolled your own serialization.
+If for whatever reason the built-in `(jwt.Serializer).Sign()` and `(jwt.Serializer).Encrypt()` do not work for you, you may choose to provide a custom serialization step using `(jwt.Serializer).Step()` -- but at this point it may just be easier if you hand-rolled your own serialization.
 
 The following example, encrypts a token using JWE, then uses JWS to sign the encrypted payload:
 
