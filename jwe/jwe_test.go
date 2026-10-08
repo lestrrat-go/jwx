@@ -1864,6 +1864,39 @@ func TestDecryptKeyProviderFallback(t *testing.T) {
 	})
 }
 
+// TestDecryptKeySetFindsKidInProtectedHeader checks that jwe.WithKeySet
+// selects the key by a "kid" that is only in the protected header, as in a
+// flattened JSON message whose producer left out the "header" member.
+func TestDecryptKeySetFindsKidInProtectedHeader(t *testing.T) {
+	t.Parallel()
+	key, err := jwk.Import(bytes.Repeat([]byte{1}, 16))
+	require.NoError(t, err, `jwk.Import should succeed`)
+	require.NoError(t, key.Set(jwk.KeyIDKey, "k1"), `setting kid should succeed`)
+	set := jwk.NewSet()
+	require.NoError(t, set.AddKey(key), `adding the key should succeed`)
+
+	payload := []byte("kid in protected header")
+	encrypted, err := jwe.Encrypt(payload,
+		jwe.WithKey(jwa.A128KW(), key),
+		jwe.WithContentEncryption(jwa.A128GCM()),
+		jwe.WithJSON(),
+	)
+	require.NoError(t, err, `jwe.Encrypt should succeed`)
+
+	// jwe.Encrypt repeats "alg" and "kid" in "header". Drop it, so "kid"
+	// is only in the protected header. The protected header is unchanged,
+	// so the authentication tag still matches.
+	var members map[string]json.RawMessage
+	require.NoError(t, json.Unmarshal(encrypted, &members), `encrypted message should be a JSON object`)
+	delete(members, "header")
+	withoutHeader, err := json.Marshal(members)
+	require.NoError(t, err, `json.Marshal should succeed`)
+
+	decrypted, err := jwe.Decrypt(withoutHeader, jwe.WithKeySet(set))
+	require.NoError(t, err, `jwe.Decrypt should find the kid in the protected header`)
+	require.Equal(t, payload, decrypted, `plaintext should match`)
+}
+
 func TestDecryptProviderFallbackHonorsCancellation(t *testing.T) {
 	t.Parallel()
 	key := bytes.Repeat([]byte{1}, 32)
