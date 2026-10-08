@@ -1578,12 +1578,52 @@ func TestFractional(t *testing.T) {
 			{
 				Input:     types.NumericDate{Time: time.Unix(0, 100000000).UTC()},
 				Precision: 9,
-				Expected:  "0.100000000",
+				Expected:  "0.1",
+			},
+			{
+				// A fraction that rounds down to zero is dropped with its period
+				Input:     types.NumericDate{Time: time.Unix(0, 1).UTC()},
+				Precision: 3,
+				Expected:  "0",
+			},
+			{
+				Input:     types.NumericDate{Time: time.Unix(-2, 0).UTC()},
+				Precision: 9,
+				Expected:  "-2",
+			},
+			{
+				Input:     types.NumericDate{Time: time.Unix(-2, 500000000).UTC()},
+				Precision: 1,
+				Expected:  "-1.5",
+			},
+			{
+				Input:     types.NumericDate{Time: time.Unix(-1, 500000000).UTC()},
+				Precision: 3,
+				Expected:  "-0.5",
+			},
+			{
+				// Fractions are floored, matching Unix() at precision 0
+				Input:     types.NumericDate{Time: time.Unix(-1, 999999999).UTC()},
+				Precision: 3,
+				Expected:  "-0.001",
+			},
+			{
+				// After the last date UnixNano can represent (year 2262)
+				Input:     types.NumericDate{Time: time.Date(3000, time.January, 1, 0, 0, 0, 123456789, time.UTC)},
+				Precision: 9,
+				Expected:  "32503680000.123456789",
+			},
+			{
+				// Before the first date UnixNano can represent (year 1677)
+				Input:     types.NumericDate{Time: time.Date(1000, time.January, 1, 0, 0, 0, 500000000, time.UTC)},
+				Precision: 3,
+				Expected:  "-30610223999.5",
 			},
 		}
 
 		for i := 1; i <= int(types.MaxPrecision); i++ {
-			fractional := (fmt.Sprintf(`%d`, 100000001))[:i]
+			// Trailing zeros are trimmed: "1", "1", ..., "100000001"
+			fractional := strings.TrimRight((fmt.Sprintf(`%d`, 100000001))[:i], "0")
 			testcases = append(testcases, struct {
 				Input     types.NumericDate
 				Expected  string
@@ -1602,6 +1642,70 @@ func TestFractional(t *testing.T) {
 			})
 		}
 		jwt.Settings(jwt.WithNumericDateFormatPrecision(0))
+	})
+	t.Run("FormatPrecision in registered claims", func(t *testing.T) {
+		oldPrecision := types.FormatPrecision.Load()
+		t.Cleanup(func() { types.FormatPrecision.Store(oldPrecision) })
+
+		timestamp := time.Unix(2000000000, 123456789).UTC()
+		claims := []string{jwt.ExpirationKey, jwt.IssuedAtKey, jwt.NotBeforeKey}
+		token := jwt.New()
+		for _, claim := range claims {
+			require.NoError(t, token.Set(claim, timestamp))
+		}
+		key := bytes.Repeat([]byte{42}, 32)
+
+		for _, tc := range []struct {
+			Precision int
+			Expected  string
+		}{
+			{Precision: 0, Expected: "2000000000"},
+			{Precision: 3, Expected: "2000000000.123"},
+			{Precision: 9, Expected: "2000000000.123456789"},
+		} {
+			t.Run(fmt.Sprintf("precision=%d", tc.Precision), func(t *testing.T) {
+				jwt.Settings(jwt.WithNumericDateFormatPrecision(tc.Precision))
+
+				checkClaims := func(t *testing.T, data []byte) {
+					t.Helper()
+					var fields map[string]json.RawMessage
+					require.NoError(t, json.Unmarshal(data, &fields))
+					for _, claim := range claims {
+						require.Equal(t, tc.Expected, string(fields[claim]), claim)
+					}
+				}
+
+				data, err := json.Marshal(token)
+				require.NoError(t, err)
+				checkClaims(t, data)
+
+				signed, err := jwt.Sign(token, jwt.WithKey(jwa.HS256(), key))
+				require.NoError(t, err)
+				payload, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key))
+				require.NoError(t, err)
+				checkClaims(t, payload)
+			})
+		}
+
+		t.Run("whole seconds are written without a fraction", func(t *testing.T) {
+			jwt.Settings(jwt.WithNumericDateFormatPrecision(9))
+			whole := jwt.New()
+			require.NoError(t, whole.Set(jwt.IssuedAtKey, time.Unix(2000000000, 0)))
+			data, err := json.Marshal(whole)
+			require.NoError(t, err)
+			require.Equal(t, `{"iat":2000000000}`, string(data))
+		})
+
+		t.Run("Equal compares at the configured precision", func(t *testing.T) {
+			a, b := jwt.New(), jwt.New()
+			require.NoError(t, a.Set(jwt.IssuedAtKey, timestamp))
+			require.NoError(t, b.Set(jwt.IssuedAtKey, timestamp.Add(time.Millisecond)))
+
+			jwt.Settings(jwt.WithNumericDateFormatPrecision(0))
+			require.True(t, jwt.Equal(a, b), `dates 1ms apart must be equal at precision 0`)
+			jwt.Settings(jwt.WithNumericDateFormatPrecision(3))
+			require.False(t, jwt.Equal(a, b), `dates 1ms apart must differ at precision 3`)
+		})
 	})
 	t.Run("ParsePrecision", func(t *testing.T) {
 		const template = `{"iat":"%s"}`

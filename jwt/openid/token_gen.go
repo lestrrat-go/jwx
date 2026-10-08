@@ -1349,11 +1349,7 @@ func (t *stdToken) makePairs() ([]claimPair, error) {
 		pairs = append(pairs, claimPair{Name: EmailVerifiedKey, Value: buf})
 	}
 	if t.expiration != nil {
-		buf, err := json.Marshal(t.expiration.Unix())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "exp": %w`, err)
-		}
-		pairs = append(pairs, claimPair{Name: ExpirationKey, Value: buf})
+		pairs = append(pairs, claimPair{Name: ExpirationKey, Value: []byte(t.expiration.String())})
 	}
 	if t.familyName != nil {
 		buf, err := json.Marshal(*(t.familyName))
@@ -1377,11 +1373,7 @@ func (t *stdToken) makePairs() ([]claimPair, error) {
 		pairs = append(pairs, claimPair{Name: GivenNameKey, Value: buf})
 	}
 	if t.issuedAt != nil {
-		buf, err := json.Marshal(t.issuedAt.Unix())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "iat": %w`, err)
-		}
-		pairs = append(pairs, claimPair{Name: IssuedAtKey, Value: buf})
+		pairs = append(pairs, claimPair{Name: IssuedAtKey, Value: []byte(t.issuedAt.String())})
 	}
 	if t.issuer != nil {
 		buf, err := json.Marshal(*(t.issuer))
@@ -1426,11 +1418,7 @@ func (t *stdToken) makePairs() ([]claimPair, error) {
 		pairs = append(pairs, claimPair{Name: NicknameKey, Value: buf})
 	}
 	if t.notBefore != nil {
-		buf, err := json.Marshal(t.notBefore.Unix())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "nbf": %w`, err)
-		}
-		pairs = append(pairs, claimPair{Name: NotBeforeKey, Value: buf})
+		pairs = append(pairs, claimPair{Name: NotBeforeKey, Value: []byte(t.notBefore.String())})
 	}
 	if t.phoneNumber != nil {
 		buf, err := json.Marshal(*(t.phoneNumber))
@@ -1475,11 +1463,7 @@ func (t *stdToken) makePairs() ([]claimPair, error) {
 		pairs = append(pairs, claimPair{Name: SubjectKey, Value: buf})
 	}
 	if t.updatedAt != nil {
-		buf, err := json.Marshal(t.updatedAt.Unix())
-		if err != nil {
-			return nil, fmt.Errorf(`failed to encode "updated_at": %w`, err)
-		}
-		pairs = append(pairs, claimPair{Name: UpdatedAtKey, Value: buf})
+		pairs = append(pairs, claimPair{Name: UpdatedAtKey, Value: []byte(t.updatedAt.String())})
 	}
 	if t.website != nil {
 		buf, err := json.Marshal(*(t.website))
