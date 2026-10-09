@@ -241,7 +241,10 @@ func (n *NumericDate) UnmarshalJSON(data []byte) error {
 		if err != nil {
 			return fmt.Errorf(`invalid value for NumericDate: %w`, err)
 		}
-		n.Time = t
+		// Accept applies the checks that every other input goes through
+		if err := n.Accept(t); err != nil {
+			return fmt.Errorf(`invalid value for NumericDate: %w`, err)
+		}
 		return nil
 	}
 
