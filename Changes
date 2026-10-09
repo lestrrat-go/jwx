@@ -60,6 +60,13 @@ UNRELEASED
     string such as `"1.5.5"` is therefore rejected, where it used to be
     read as `1.5`. (#2412)
 
+  * [jwt] NumericDate claims such as `exp`, `iat`, and `nbf` now parse a
+    JSON number with a fraction from its decimal digits, so every digit
+    that `jwt.WithNumericDateParsePrecision` asks for is kept. At precision
+    9, `2000000000.123456789` parses with 123456789 nanoseconds, and at
+    precision 1, `2000000000.1` parses with 100000000. A number written
+    with an exponent, such as `2e9`, is still read as a float64. (#2414)
+
 v3.3.0 8 Sep 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes
