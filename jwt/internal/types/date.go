@@ -67,60 +67,72 @@ func intToTime(v any, t *time.Time) bool {
 	return true
 }
 
-func parseNumericString(x string) (time.Time, error) {
-	var t time.Time // empty time for empty return value
-
-	// Only check for the escape hatch if it's the pedantic
-	// flag is off
-	if Pedantic.Load() != 1 {
-		// This is an escape hatch for non-conformant providers
-		// that gives us RFC3339 instead of epoch time
-		for _, r := range x {
-			// 0x30 = '0', 0x39 = '9', 0x2E = tokens.Period
-			if (r >= 0x30 && r <= 0x39) || r == 0x2E {
-				continue
-			}
-
-			// if it got here, then it probably isn't epoch time
-			tv, err := time.Parse(time.RFC3339, x)
-			if err != nil {
-				return t, fmt.Errorf(`value is not number of seconds since the epoch, and attempt to parse it as RFC3339 timestamp failed: %w`, err)
-			}
-			return tv, nil
+func isDigits(s string) bool {
+	for i := range len(s) {
+		if s[i] < '0' || s[i] > '9' {
+			return false
 		}
 	}
+	return true
+}
 
-	var fractional string
-	whole := x
-	parsePrecision := ParsePrecision.Load()
-	if i := strings.IndexRune(x, tokens.Period); i > 0 {
-		if parsePrecision > 0 && len(x) > i+1 {
-			fractional = x[i+1:] // everything after the tokens.Period
-			if int(parsePrecision) < len(fractional) {
-				// Remove insignificant digits
-				fractional = fractional[:int(parsePrecision)]
-			}
-			// Replace missing fractional diits with zeros
-			for len(fractional) < int(MaxPrecision) {
-				fractional = fractional + "0"
-			}
-		}
-		whole = x[:i]
+// parseEpochSeconds parses a decimal number of seconds since the epoch: an
+// optional '-', one or more digits, and an optional fraction. The sign applies
+// to the whole number, fraction included. Fractional digits beyond
+// ParsePrecision are dropped, rounding toward negative infinity the same way
+// NumericDate.String() and time.Unix do.
+func parseEpochSeconds(x string) (time.Time, error) {
+	digits := strings.TrimPrefix(x, "-")
+	negative := len(digits) < len(x)
+	whole, fractional, _ := strings.Cut(digits, string(tokens.Period))
+	if whole == "" || !isDigits(whole) || !isDigits(fractional) {
+		return time.Time{}, fmt.Errorf(`invalid number of seconds %q`, x)
 	}
-	n, err := strconv.ParseInt(whole, 10, 64)
+
+	// Parse the sign together with the whole part, so that the most
+	// negative int64 still fits
+	sec, err := strconv.ParseInt(x[:len(x)-len(digits)+len(whole)], 10, 64)
 	if err != nil {
-		return t, fmt.Errorf(`failed to parse whole value %q: %w`, whole, err)
-	}
-	var nsecs int64
-	if fractional != "" {
-		v, err := strconv.ParseInt(fractional, 10, 64)
-		if err != nil {
-			return t, fmt.Errorf(`failed to parse fractional value %q: %w`, fractional, err)
-		}
-		nsecs = v
+		return time.Time{}, fmt.Errorf(`failed to parse whole value %q: %w`, whole, err)
 	}
 
-	return time.Unix(n, nsecs).UTC(), nil
+	kept := fractional
+	if precision := int(ParsePrecision.Load()); len(kept) > precision {
+		kept = kept[:precision]
+	}
+	// unit ends up as the value of the last kept digit, in nanoseconds
+	unit := int64(time.Second)
+	var nsec int64
+	for i := range len(kept) {
+		unit /= 10
+		nsec += int64(kept[i]-'0') * unit
+	}
+
+	if !negative {
+		return time.Unix(sec, nsec).UTC(), nil
+	}
+	// Dropping digits moved a negative value toward zero, so move it one
+	// unit back down. "-0" parses as 0, so the sign is applied through nsec,
+	// and time.Unix carries it into the seconds.
+	if strings.Trim(fractional[len(kept):], "0") != "" {
+		nsec += unit
+	}
+	return time.Unix(sec, -nsec).UTC(), nil
+}
+
+func parseNumericString(x string) (time.Time, error) {
+	t, err := parseEpochSeconds(x)
+	if err == nil || Pedantic.Load() == 1 {
+		return t, err
+	}
+
+	// This is an escape hatch for non-conformant providers
+	// that gives us RFC3339 instead of epoch time
+	tv, err := time.Parse(time.RFC3339, x)
+	if err != nil {
+		return time.Time{}, fmt.Errorf(`value is not number of seconds since the epoch, and attempt to parse it as RFC3339 timestamp failed: %w`, err)
+	}
+	return tv, nil
 }
 
 func (n *NumericDate) Accept(v any) error {
@@ -135,7 +147,7 @@ func (n *NumericDate) Accept(v any) error {
 	case float64:
 		tv, err := parseNumericString(fmt.Sprintf(`%.9f`, x))
 		if err != nil {
-			return fmt.Errorf(`failed to accept float32 %.9f: %w`, x, err)
+			return fmt.Errorf(`failed to accept float64 %.9f: %w`, x, err)
 		}
 		t = tv
 	case string:

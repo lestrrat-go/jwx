@@ -208,3 +208,92 @@ func TestPedanticNumericDateRequiresJSONNumber(t *testing.T) {
 		require.NoError(t, date.UnmarshalJSON([]byte(data)))
 	}
 }
+
+func TestNumericDateNegative(t *testing.T) {
+	oldPedantic, oldPrecision := types.Pedantic.Load(), types.ParsePrecision.Load()
+	t.Cleanup(func() {
+		types.Pedantic.Store(oldPedantic)
+		types.ParsePrecision.Store(oldPrecision)
+	})
+
+	for _, pedantic := range []bool{false, true} {
+		t.Run(fmt.Sprintf("pedantic=%t", pedantic), func(t *testing.T) {
+			// The sign applies to the whole number, fraction included, and
+			// digits beyond the parse precision round toward negative
+			// infinity, the same way NumericDate.String() and time.Unix do.
+			for _, tc := range []struct {
+				input     string
+				precision int
+				want      time.Time
+			}{
+				{"-1", 9, time.Unix(-1, 0)},
+				{"-1.5", 9, time.Unix(-2, 500000000)},
+				{"-0.5", 9, time.Unix(-1, 500000000)},
+				{"-0.000000001", 9, time.Unix(-1, 999999999)},
+				{"-1.0000000005", 9, time.Unix(-2, 999999999)},
+				{"-1.0005", 3, time.Unix(-2, 999000000)},
+				{"-1.5000", 3, time.Unix(-2, 500000000)},
+				{"-1.5", 0, time.Unix(-2, 0)},
+				{"-0.5", 0, time.Unix(-1, 0)},
+				{"-1.0", 0, time.Unix(-1, 0)},
+				{"-9223372036854775808", 0, time.Unix(math.MinInt64, 0)},
+			} {
+				t.Run(fmt.Sprintf("Accept/%s/precision=%d", tc.input, tc.precision), func(t *testing.T) {
+					require.NoError(t, jwt.Settings(
+						jwt.WithNumericDateParsePedantic(pedantic),
+						jwt.WithNumericDateParsePrecision(tc.precision),
+					))
+					var date types.NumericDate
+					require.NoError(t, date.Accept(tc.input))
+					require.Equal(t, tc.want.UTC(), date.Time)
+				})
+			}
+
+			// JSON numbers take the float64 path, so stick to values that
+			// float64 holds exactly
+			for _, tc := range []struct {
+				data string
+				want time.Time
+			}{
+				{"-1", time.Unix(-1, 0)},
+				{"-1.5", time.Unix(-2, 500000000)},
+				{"-0.5", time.Unix(-1, 500000000)},
+			} {
+				t.Run("UnmarshalJSON/"+tc.data, func(t *testing.T) {
+					require.NoError(t, jwt.Settings(
+						jwt.WithNumericDateParsePedantic(pedantic),
+						jwt.WithNumericDateParsePrecision(9),
+					))
+					var date types.NumericDate
+					require.NoError(t, date.UnmarshalJSON([]byte(tc.data)))
+					require.Equal(t, tc.want.UTC(), date.Time)
+				})
+			}
+
+			// A number must be a number all the way through: digits that the
+			// parse precision would drop are still checked
+			for _, input := range []string{"1.5abc", "-1.5abc", "--1", "-", "-.5", "+1", "1.5.5"} {
+				t.Run("reject/"+input, func(t *testing.T) {
+					require.NoError(t, jwt.Settings(
+						jwt.WithNumericDateParsePedantic(pedantic),
+						jwt.WithNumericDateParsePrecision(1),
+					))
+					var date types.NumericDate
+					require.Error(t, date.Accept(input))
+				})
+			}
+		})
+	}
+
+	t.Run("RFC3339 fallback still applies without pedantic", func(t *testing.T) {
+		require.NoError(t, jwt.Settings(
+			jwt.WithNumericDateParsePedantic(false),
+			jwt.WithNumericDateParsePrecision(0),
+		))
+		var date types.NumericDate
+		require.NoError(t, date.UnmarshalJSON([]byte(`"-1.5"`)))
+		require.Equal(t, time.Unix(-2, 0).UTC(), date.Time)
+		require.NoError(t, date.UnmarshalJSON([]byte(`"2026-10-04T00:00:00.5Z"`)))
+		require.Equal(t, time.Date(2026, 10, 4, 0, 0, 0, 500000000, time.UTC), date.Time)
+	})
+}
