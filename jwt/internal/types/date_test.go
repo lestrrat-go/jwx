@@ -145,7 +145,21 @@ func TestNumericDateRejectsTimeOverflow(t *testing.T) {
 		require.Error(t, date.Accept(value), "value %v (%T) must not become an overflowing date", value, value)
 	}
 	var date types.NumericDate
-	require.Error(t, date.UnmarshalJSON([]byte("9.22337198e18")))
+	for _, data := range []string{"9.22337198e18", "9223372036854775807.5", "-9223372036854775809", "-9223372036854775808.5"} {
+		require.Error(t, date.UnmarshalJSON([]byte(data)), "value %s must not become an overflowing date", data)
+	}
+
+	// Plain JSON numbers are parsed without float64, which would round
+	// away the last digit of these
+	for _, seconds := range []int64{9007199254740993, -9007199254740993} {
+		require.NoError(t, date.UnmarshalJSON(strconv.AppendInt(nil, seconds, 10)))
+		require.Equal(t, seconds, date.Unix())
+	}
+
+	// Text that is not a JSON number is still rejected
+	for _, data := range []string{"-01", "1.", "-", "-.5", ".5", "+1", "1.5.5", "--1"} {
+		require.Error(t, date.UnmarshalJSON([]byte(data)), "value %s is not a JSON number", data)
+	}
 
 	// The fix must not impose an unrelated calendar-year or int32 limit.
 	for _, seconds := range []int64{math.MinInt64, -1, 0, 2147483648, 253402300800} {
@@ -249,8 +263,6 @@ func TestNumericDateNegative(t *testing.T) {
 				})
 			}
 
-			// JSON numbers take the float64 path, so stick to values that
-			// float64 holds exactly
 			for _, tc := range []struct {
 				data string
 				want time.Time
@@ -258,6 +270,10 @@ func TestNumericDateNegative(t *testing.T) {
 				{"-1", time.Unix(-1, 0)},
 				{"-1.5", time.Unix(-2, 500000000)},
 				{"-0.5", time.Unix(-1, 500000000)},
+				{"-0", time.Unix(0, 0)},
+				{"-1.0000000005", time.Unix(-2, 999999999)},
+				{"-2000000000.123456789", time.Unix(-2000000001, 876543211)},
+				{"-1.5e0", time.Unix(-2, 500000000)},
 			} {
 				t.Run("UnmarshalJSON/"+tc.data, func(t *testing.T) {
 					require.NoError(t, jwt.Settings(
