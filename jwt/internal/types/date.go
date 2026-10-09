@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -30,6 +31,20 @@ func (n *NumericDate) Get() time.Time {
 		return (time.Time{}).UTC()
 	}
 	return n.Time
+}
+
+// validateNumericDateTime checks that Unix seconds and time.Time agree about
+// whether a date is before January 1, 1970 UTC. Negative seconds must be
+// before that instant; zero or positive seconds must be on or after it.
+// time.Unix(math.MaxInt64, 0) breaks this rule: adding Go's internal time
+// offset overflows, so Unix() stays positive while comparisons put the date
+// before 1970.
+func validateNumericDateTime(t time.Time) error {
+	seconds := t.Unix()
+	if (seconds < 0) != t.Before(time.Unix(0, 0)) {
+		return fmt.Errorf(`NumericDate %d is out of range for time.Time`, seconds)
+	}
+	return nil
 }
 
 func intToTime(v any, t *time.Time) bool {
@@ -148,6 +163,9 @@ func (n *NumericDate) Accept(v any) error {
 			return fmt.Errorf(`invalid type %T`, v)
 		}
 	}
+	if err := validateNumericDateTime(t); err != nil {
+		return err
+	}
 	n.Time = t.UTC()
 	return nil
 }
@@ -220,7 +238,33 @@ func (n *NumericDate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(n.String())
 }
 
+// isPlainDecimal reports whether data is a JSON number without an
+// exponent: an optional '-', a whole part without leading zeros, and an
+// optional '.' followed by at least one digit
+func isPlainDecimal(data []byte) bool {
+	whole, fractional, hasPeriod := bytes.Cut(bytes.TrimPrefix(data, []byte{'-'}), []byte{tokens.Period})
+	if len(whole) == 0 || (len(whole) > 1 && whole[0] == '0') || (hasPeriod && len(fractional) == 0) {
+		return false
+	}
+	return len(bytes.TrimLeft(whole, decimalDigits)) == 0 && len(bytes.TrimLeft(fractional, decimalDigits)) == 0
+}
+
 func (n *NumericDate) UnmarshalJSON(data []byte) error {
+	// Numbers without an exponent are parsed from their digits. Decoding
+	// them into a float64 would keep only about 16 significant digits,
+	// which at current timestamps is about 7 fractional digits.
+	if isPlainDecimal(data) {
+		t, err := parseEpochSeconds(string(data))
+		if err != nil {
+			return fmt.Errorf(`invalid value for NumericDate: %w`, err)
+		}
+		// Accept applies the checks that every other input goes through
+		if err := n.Accept(t); err != nil {
+			return fmt.Errorf(`invalid value for NumericDate: %w`, err)
+		}
+		return nil
+	}
+
 	var v any
 	if err := json.Unmarshal(data, &v); err != nil {
 		return fmt.Errorf(`failed to unmarshal date: %w`, err)

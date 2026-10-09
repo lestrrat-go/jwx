@@ -126,6 +126,37 @@ func TestToken_Parse(t *testing.T) {
 	})
 }
 
+func TestParseRejectsOverflowingNumericDates(t *testing.T) {
+	key := []byte("numeric-date-range-regression-test")
+	for _, claim := range []string{jwt.NotBeforeKey, jwt.IssuedAtKey, jwt.ExpirationKey} {
+		t.Run(claim, func(t *testing.T) {
+			for _, value := range []string{"9223372036854775807", "9.22337198e18"} {
+				signed, err := jws.Sign(fmt.Appendf(nil, `{"%s":%s}`, claim, value), jws.WithKey(jwa.HS256(), key))
+				require.NoError(t, err)
+				// Establish that this is a valid signature, not a forgery.
+				_, err = jws.Verify(signed, jws.WithKey(jwa.HS256(), key))
+				require.NoError(t, err)
+				for _, options := range [][]jwt.ParseOption{
+					{jwt.WithKey(jwa.HS256(), key)},
+					{jwt.WithKey(jwa.HS256(), key), jwt.WithValidate(false)},
+					{jwt.WithKey(jwa.HS256(), key), jwt.WithToken(jwt.New()), jwt.WithValidate(false)},
+				} {
+					_, err := jwt.Parse(signed, options...)
+					require.Error(t, err, "overflow must fail during parsing, independently of validation")
+				}
+			}
+		})
+	}
+
+	// A representable future nbf must still fail validation normally.
+	signed, err := jws.Sign([]byte(`{"nbf":1791075600}`), jws.WithKey(jwa.HS256(), key))
+	require.NoError(t, err)
+	_, err = jwt.Parse(signed, jwt.WithKey(jwa.HS256(), key),
+		jwt.WithClock(jwt.ClockFunc(func() time.Time { return time.Unix(1791072000, 0) })),
+		jwt.WithAcceptableSkew(0))
+	require.ErrorIs(t, err, jwt.TokenNotYetValidError())
+}
+
 func TestJWTParseVerify(t *testing.T) {
 	t.Parallel()
 
@@ -1708,8 +1739,6 @@ func TestFractional(t *testing.T) {
 		})
 	})
 	t.Run("ParsePrecision", func(t *testing.T) {
-		const template = `{"iat":"%s"}`
-
 		testcases := []struct {
 			Input     string
 			Expected  time.Time
@@ -1733,6 +1762,24 @@ func TestFractional(t *testing.T) {
 				Precision: int(types.MaxPrecision),
 				Expected:  time.Unix(aLongLongTimeAgo, 100000001).UTC(),
 			},
+			{
+				// float64 holds only about 7 fractional digits at this size
+				Input:     "2000000000.123456789",
+				Precision: int(types.MaxPrecision),
+				Expected:  time.Unix(2000000000, 123456789).UTC(),
+			},
+			{
+				// As a float64 this is 2000000000.0999999, whose first
+				// digit is 0
+				Input:     "2000000000.1",
+				Precision: 1,
+				Expected:  time.Unix(2000000000, 100000000).UTC(),
+			},
+			{
+				// As a float64 this rounds up to the next second
+				Input:    "1999999999.9999999999",
+				Expected: time.Unix(1999999999, 0).UTC(),
+			},
 		}
 
 		for i := 1; i < int(types.MaxPrecision); i++ {
@@ -1747,19 +1794,23 @@ func TestFractional(t *testing.T) {
 			})
 		}
 
-		for _, tc := range testcases {
-			t.Run(fmt.Sprintf("%s (precision=%d)", tc.Input, tc.Precision), func(t *testing.T) {
-				jwt.Settings(jwt.WithNumericDateParsePrecision(tc.Precision))
-				tok, err := jwt.Parse(
-					fmt.Appendf(nil, template, tc.Input),
-					jwt.WithVerify(false),
-					jwt.WithValidate(false),
-				)
-				require.NoError(t, err, `jwt.Parse should succeed`)
-				v, ok := tok.IssuedAt()
-				require.True(t, ok, `iat should be present`)
-				require.Equal(t, tc.Expected, v, `iat should match`)
-			})
+		// The value is sent both as a JSON string and as a JSON number
+		for _, template := range []string{`{"iat":"%s"}`, `{"iat":%s}`} {
+			for _, tc := range testcases {
+				data := fmt.Appendf(nil, template, tc.Input)
+				t.Run(fmt.Sprintf("%s (precision=%d)", data, tc.Precision), func(t *testing.T) {
+					jwt.Settings(jwt.WithNumericDateParsePrecision(tc.Precision))
+					tok, err := jwt.Parse(
+						data,
+						jwt.WithVerify(false),
+						jwt.WithValidate(false),
+					)
+					require.NoError(t, err, `jwt.Parse should succeed`)
+					v, ok := tok.IssuedAt()
+					require.True(t, ok, `iat should be present`)
+					require.Equal(t, tc.Expected, v, `iat should match`)
+				})
+			}
 		}
 		jwt.Settings(jwt.WithNumericDateParsePrecision(0))
 	})

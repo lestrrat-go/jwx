@@ -865,3 +865,14 @@ func TestWithBase64Encoder(t *testing.T) {
 		require.NoError(t, err, `jwt.Parse should succeed`)
 	})
 }
+
+func TestOpenIDRejectsOverflowingNumericDates(t *testing.T) {
+	for _, claim := range []string{jwt.ExpirationKey, jwt.IssuedAtKey, jwt.NotBeforeKey, openid.UpdatedAtKey} {
+		t.Run(claim, func(t *testing.T) {
+			for _, value := range []string{"9223372036854775807", "9.22337198e18"} {
+				token := openid.New()
+				require.Error(t, json.Unmarshal(fmt.Appendf(nil, `{"%s":%s}`, claim, value), token))
+			}
+		})
+	}
+}
