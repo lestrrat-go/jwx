@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -231,6 +232,17 @@ func (n *NumericDate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(n.String())
 }
 
+// isPlainDecimal reports whether data is a JSON number without an
+// exponent: an optional '-', a whole part without leading zeros, and an
+// optional '.' followed by at least one digit
+func isPlainDecimal(data []byte) bool {
+	whole, fractional, hasPeriod := bytes.Cut(bytes.TrimPrefix(data, []byte{'-'}), []byte{tokens.Period})
+	if len(whole) == 0 || (len(whole) > 1 && whole[0] == '0') || (hasPeriod && len(fractional) == 0) {
+		return false
+	}
+	return len(bytes.TrimLeft(whole, decimalDigits)) == 0 && len(bytes.TrimLeft(fractional, decimalDigits)) == 0
+}
+
 func (n *NumericDate) UnmarshalJSON(data []byte) error {
 	// Fast path: integer timestamps are the overwhelmingly common case in JWTs.
 	// Parse them directly without going through json.Unmarshal → any → float64 → fmt.Sprintf → parseNumericString.
@@ -256,7 +268,22 @@ func (n *NumericDate) UnmarshalJSON(data []byte) error {
 		}
 	}
 
-	// Slow path: handles floats, strings, negative numbers, etc.
+	// Other numbers without an exponent are parsed from their digits too.
+	// Decoding them into a float64 would keep only about 16 significant
+	// digits, which at current timestamps is about 7 fractional digits.
+	if isPlainDecimal(data) {
+		t, err := parseEpochSeconds(string(data))
+		if err != nil {
+			return fmt.Errorf(`invalid value for NumericDate: %w`, err)
+		}
+		if err := validateNumericDateTime(t); err != nil {
+			return err
+		}
+		n.Time = t
+		return nil
+	}
+
+	// Slow path: handles exponents, strings, etc.
 	var v any
 	if err := json.Unmarshal(data, &v); err != nil {
 		return fmt.Errorf(`failed to unmarshal date: %w`, err)
