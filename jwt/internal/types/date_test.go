@@ -139,8 +139,6 @@ func TestNumericDateNegative(t *testing.T) {
 				})
 			}
 
-			// JSON numbers take the float64 path, so stick to values that
-			// float64 holds exactly
 			for _, tc := range []struct {
 				data string
 				want time.Time
@@ -148,6 +146,10 @@ func TestNumericDateNegative(t *testing.T) {
 				{"-1", time.Unix(-1, 0)},
 				{"-1.5", time.Unix(-2, 500000000)},
 				{"-0.5", time.Unix(-1, 500000000)},
+				{"-0", time.Unix(0, 0)},
+				{"-1.0000000005", time.Unix(-2, 999999999)},
+				{"-2000000000.123456789", time.Unix(-2000000001, 876543211)},
+				{"-1.5e0", time.Unix(-2, 500000000)},
 			} {
 				t.Run("UnmarshalJSON/"+tc.data, func(t *testing.T) {
 					jwt.Settings(
@@ -186,4 +188,37 @@ func TestNumericDateNegative(t *testing.T) {
 		require.NoError(t, date.UnmarshalJSON([]byte(`"2026-10-04T00:00:00.5Z"`)))
 		require.Equal(t, time.Date(2026, 10, 4, 0, 0, 0, 500000000, time.UTC), date.Time)
 	})
+}
+
+func TestNumericDateDecimalJSON(t *testing.T) {
+	oldPrecision := types.ParsePrecision.Load()
+	t.Cleanup(func() { types.ParsePrecision.Store(oldPrecision) })
+	jwt.Settings(jwt.WithNumericDateParsePrecision(int(types.MaxPrecision)))
+
+	// Plain JSON numbers are parsed without float64, which would round
+	// away the last digits of these
+	for _, tc := range []struct {
+		data string
+		want time.Time
+	}{
+		{"2000000000.123456789", time.Unix(2000000000, 123456789)},
+		{"9007199254740993.5", time.Unix(9007199254740993, 500000000)},
+		{"9007199254740993", time.Unix(9007199254740993, 0)},
+		{"-9007199254740993", time.Unix(-9007199254740993, 0)},
+		{"2e9", time.Unix(2000000000, 0)},
+	} {
+		t.Run(tc.data, func(t *testing.T) {
+			var date types.NumericDate
+			require.NoError(t, date.UnmarshalJSON([]byte(tc.data)))
+			require.Equal(t, tc.want.UTC(), date.Time)
+		})
+	}
+
+	// Text that is not a JSON number is still rejected
+	for _, data := range []string{"1.", "-", "-.5", ".5", "+1", "--1"} {
+		t.Run("reject/"+data, func(t *testing.T) {
+			var date types.NumericDate
+			require.Error(t, date.UnmarshalJSON([]byte(data)))
+		})
+	}
 }

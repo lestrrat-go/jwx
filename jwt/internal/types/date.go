@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -220,7 +221,30 @@ func (n *NumericDate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(n.String())
 }
 
+// isPlainDecimal reports whether data is a JSON number without an
+// exponent: an optional '-', a whole part without leading zeros, and an
+// optional '.' followed by at least one digit
+func isPlainDecimal(data []byte) bool {
+	whole, fractional, hasPeriod := bytes.Cut(bytes.TrimPrefix(data, []byte{'-'}), []byte{tokens.Period})
+	if len(whole) == 0 || (len(whole) > 1 && whole[0] == '0') || (hasPeriod && len(fractional) == 0) {
+		return false
+	}
+	return len(bytes.TrimLeft(whole, decimalDigits)) == 0 && len(bytes.TrimLeft(fractional, decimalDigits)) == 0
+}
+
 func (n *NumericDate) UnmarshalJSON(data []byte) error {
+	// Numbers without an exponent are parsed from their digits. Decoding
+	// them into a float64 would keep only about 16 significant digits,
+	// which at current timestamps is about 7 fractional digits.
+	if isPlainDecimal(data) {
+		t, err := parseEpochSeconds(string(data))
+		if err != nil {
+			return fmt.Errorf(`invalid value for NumericDate: %w`, err)
+		}
+		n.Time = t
+		return nil
+	}
+
 	var v any
 	if err := json.Unmarshal(data, &v); err != nil {
 		return fmt.Errorf(`failed to unmarshal date: %w`, err)
