@@ -67,14 +67,7 @@ func intToTime(v any, t *time.Time) bool {
 	return true
 }
 
-func isDigits(s string) bool {
-	for i := range len(s) {
-		if s[i] < '0' || s[i] > '9' {
-			return false
-		}
-	}
-	return true
-}
+const decimalDigits = "0123456789"
 
 // parseEpochSeconds parses a decimal number of seconds since the epoch: an
 // optional '-', one or more digits, and an optional fraction. The sign applies
@@ -85,7 +78,7 @@ func parseEpochSeconds(x string) (time.Time, error) {
 	digits := strings.TrimPrefix(x, "-")
 	negative := len(digits) < len(x)
 	whole, fractional, _ := strings.Cut(digits, string(tokens.Period))
-	if whole == "" || !isDigits(whole) || !isDigits(fractional) {
+	if whole == "" || strings.TrimLeft(whole, decimalDigits) != "" || strings.TrimLeft(fractional, decimalDigits) != "" {
 		return time.Time{}, fmt.Errorf(`invalid number of seconds %q`, x)
 	}
 
