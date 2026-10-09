@@ -71,6 +71,20 @@ UNRELEASED
     fractional dates in their tokens, in the bytes `jwt.Sign` signs, and in
     what `jwt.Equal` compares. (#2409)
 
+  * [jwt] NumericDate claims such as `exp`, `iat`, and `nbf` now parse
+    negative values, which are dates before 1970, with or without
+    `jwt.WithNumericDateParsePedantic(true)`. The sign covers the fraction
+    too, so `-1.5` is one and a half seconds before the epoch. Fractional
+    digits beyond `jwt.WithNumericDateParsePrecision` are rounded down,
+    toward the earlier time, the same way serialization rounds: at the
+    default precision of 0, `-1.5` parses as `-2`. Positive values parse
+    as before.
+
+    Without pedantic mode, a value is now read as a number first, and is
+    read as an RFC3339 timestamp only when it is not a valid number. A
+    string such as `"1.5.5"` is therefore rejected, where it used to be
+    read as `1.5`. (#2411)
+
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes
