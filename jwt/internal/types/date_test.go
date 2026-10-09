@@ -103,9 +103,12 @@ func TestDate(t *testing.T) {
 
 func TestNumericDateRejectsTimeOverflow(t *testing.T) {
 	// Global parsing settings must not leak into parallel tests.
-	oldPedantic := types.Pedantic.Load()
+	oldPedantic, oldPrecision := types.Pedantic.Load(), types.ParsePrecision.Load()
 	types.Pedantic.Store(0)
-	t.Cleanup(func() { types.Pedantic.Store(oldPedantic) })
+	t.Cleanup(func() {
+		types.Pedantic.Store(oldPedantic)
+		types.ParsePrecision.Store(oldPrecision)
+	})
 
 	// time.Time stores seconds relative to year 1, rather than the Unix epoch.
 	maxSeconds := int64(math.MaxInt64) + (time.Time{}).Unix()
@@ -150,10 +153,17 @@ func TestNumericDateRejectsTimeOverflow(t *testing.T) {
 	}
 
 	// Plain JSON numbers are parsed without float64, which would round
-	// away the last digit of these
-	for _, seconds := range []int64{9007199254740993, -9007199254740993} {
-		require.NoError(t, date.UnmarshalJSON(strconv.AppendInt(nil, seconds, 10)))
-		require.Equal(t, seconds, date.Unix())
+	// away the last digits of these
+	types.ParsePrecision.Store(types.MaxPrecision)
+	for _, tc := range []struct {
+		data string
+		want time.Time
+	}{
+		{"9007199254740993.5", time.Unix(9007199254740993, 500000000)},
+		{"-9007199254740993", time.Unix(-9007199254740993, 0)},
+	} {
+		require.NoError(t, date.UnmarshalJSON([]byte(tc.data)))
+		require.Equal(t, tc.want.UTC(), date.Time, "value %s", tc.data)
 	}
 
 	// Text that is not a JSON number is still rejected
