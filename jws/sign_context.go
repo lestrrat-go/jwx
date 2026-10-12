@@ -1,12 +1,14 @@
 package jws
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/pool"
+	"github.com/lestrrat-go/jwx/v3/internal/tokens"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
@@ -156,20 +158,47 @@ func (sc *signContext) PopulateMessage(m *Message) error {
 	m.signatures = make([]*Signature, 0, len(sc.sigbuilders))
 
 	for i, sb := range sc.sigbuilders {
-		// Create signature for each builders
-		if sc.validateKey {
-			if err := validateKeyBeforeUse(sb.key); err != nil {
-				return fmt.Errorf(`failed to validate key for signature %d: %w`, i, err)
-			}
-		}
-
-		sig, err := sb.Build(sc, m.payload)
+		sig, _, err := sc.buildSignature(i, sb)
 		if err != nil {
-			return fmt.Errorf(`failed to build signature %d: %w`, i, err)
+			return err
 		}
 
 		m.signatures = append(m.signatures, sig)
 	}
 
 	return nil
+}
+
+func (sc *signContext) buildSignature(i int, sb *signatureBuilder) (*Signature, []byte, error) {
+	if sc.validateKey {
+		if err := validateKeyBeforeUse(sb.key); err != nil {
+			return nil, nil, fmt.Errorf(`failed to validate key for signature %d: %w`, i, err)
+		}
+	}
+
+	sig, signingInput, err := sb.Build(sc, sc.payload)
+	if err != nil {
+		return nil, nil, fmt.Errorf(`failed to build signature %d: %w`, i, err)
+	}
+	return sig, signingInput, nil
+}
+
+// SignCompact produces compact serialization from the header bytes that
+// were signed. Going through Message and Compact would write only the
+// protected header, dropping public headers that the signature covers.
+func (sc *signContext) SignCompact() ([]byte, error) {
+	sig, signingInput, err := sc.buildSignature(0, sc.sigbuilders[0])
+	if err != nil {
+		return nil, err
+	}
+
+	if sc.detached {
+		// Keep the encoded header and its trailing ".".
+		signingInput = signingInput[:bytes.IndexByte(signingInput, tokens.Period)+1]
+	}
+
+	buf := make([]byte, 0, len(signingInput)+1+sc.encoder.EncodedLen(len(sig.signature)))
+	buf = append(buf, signingInput...)
+	buf = append(buf, tokens.Period)
+	return sc.encoder.AppendEncode(buf, sig.signature), nil
 }
