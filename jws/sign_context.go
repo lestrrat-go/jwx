@@ -197,8 +197,8 @@ func (sc *signContext) SignCompact() ([]byte, error) {
 		signingInput = signingInput[:bytes.IndexByte(signingInput, tokens.Period)+1]
 	}
 
-	buf := make([]byte, 0, len(signingInput)+1+sc.encoder.EncodedLen(len(sig.signature)))
-	buf = append(buf, signingInput...)
-	buf = append(buf, tokens.Period)
+	// Build allocated signingInput for this call alone, so appending to it
+	// is safe.
+	buf := append(signingInput, tokens.Period)
 	return sc.encoder.AppendEncode(buf, sig.signature), nil
 }
