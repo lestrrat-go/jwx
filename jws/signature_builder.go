@@ -220,10 +220,11 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (buildResult,
 		}
 	}
 
-	// When there are no public (unprotected) headers, skip the merge
-	// to avoid allocating a third Headers object just to copy into.
+	// JSON serialization transmits public headers separately, so only the
+	// protected header belongs in the signing input. Compact serialization
+	// merges both headers into the single protected header it transmits.
 	hdrs := protected
-	if sb.public != nil {
+	if sb.public != nil && sc.format == fmtCompact {
 		var err error
 		hdrs, err = mergeHeaders(sb.public, protected)
 		if err != nil {

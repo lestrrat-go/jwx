@@ -586,8 +586,9 @@ func WithProtectedHeaders(v Headers) WithKeySuboption {
 //
 // It has no effect if used when `jws.WithKey()` is passed to `jws.Verify()`.
 //
-// `jws.Sign()` will result in an error if `jws.WithPublicHeaders()` is used
-// and the serialization format is compact serialization.
+// In JSON serialization, these headers are transmitted separately from
+// the protected header and are not included in the signing input.
+// In compact serialization, they are merged into the protected header.
 func WithPublicHeaders(v Headers) WithKeySuboption {
 	return &withKeySuboption{option.New(identPublicHeaders{}, v)}
 }
