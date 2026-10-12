@@ -2723,10 +2723,12 @@ func TestJSONSigningInput(t *testing.T) {
 					if unencoded {
 						require.NoError(t, protected.Set("b64", false))
 					}
-					opts := []jws.SignOption{jws.WithJSON()}
+					var jsonOpts []jws.WithJSONSuboption
 					if pretty {
-						opts = []jws.SignOption{jws.WithJSON(jws.WithPretty(true))}
+						jsonOpts = append(jsonOpts, jws.WithPretty(true))
 					}
+					opts := make([]jws.SignOption, 0, 1+signatures)
+					opts = append(opts, jws.WithJSON(jsonOpts...))
 					for range signatures {
 						opts = append(opts, jws.WithKey(jwa.HS256(), key, jws.WithProtectedHeaders(protected), jws.WithPublicHeaders(public)))
 					}
