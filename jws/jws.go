@@ -186,6 +186,14 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		return sc.signStreaming()
 	}
 
+	if sc.format == fmtCompact {
+		buf, err := sc.SignCompact()
+		if err != nil {
+			return nil, makeSignError(prefixJwsSign, `failed to populate message: %w`, err)
+		}
+		return buf, nil
+	}
+
 	// Create a Message object with all the bits and bobs, and we'll
 	// serialize it in the end
 	var result Message
@@ -198,19 +206,6 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 		return json.Marshal(result)
 	case fmtJSONPretty:
 		return json.MarshalIndent(result, "", "  ")
-	case fmtCompact:
-		// Take the only signature object, and convert it into a Compact
-		// serialization format
-		var compactOpts []CompactOption
-		if sc.detached {
-			compactOpts = append(compactOpts, WithDetached(true))
-		}
-		for _, option := range options {
-			if copt, ok := option.(CompactOption); ok {
-				compactOpts = append(compactOpts, copt)
-			}
-		}
-		return Compact(&result, compactOpts...)
 	default:
 		return nil, makeSignError(prefixJwsSign, `invalid serialization format`)
 	}

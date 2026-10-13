@@ -104,10 +104,12 @@ func unwrapECDSASignKey(key any) (any, bool) {
 	return privkey, true
 }
 
-func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, error) {
+// Build signs payload and returns the signature along with the signing
+// input: the encoded header, ".", and the payload as it appears on the wire.
+func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, []byte, error) {
 	if sc.strictECDSA {
 		if err := requireECDSACurve(sb.alg, sb.key); err != nil {
-			return nil, makeSignError(prefixJwsSign, `%w`, err)
+			return nil, nil, makeSignError(prefixJwsSign, `%w`, err)
 		}
 	}
 
@@ -118,7 +120,7 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, 
 	if sb.protected != nil {
 		cloned, err := sb.protected.Clone()
 		if err != nil {
-			return nil, makeSignError(prefixJwsSign, `failed to clone protected headers: %w`, err)
+			return nil, nil, makeSignError(prefixJwsSign, `failed to clone protected headers: %w`, err)
 		}
 		protected = cloned
 	} else {
@@ -126,13 +128,13 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, 
 	}
 
 	if err := protected.Set(AlgorithmKey, sb.alg); err != nil {
-		return nil, makeSignError(prefixJwsSign, `failed to set "alg" header: %w`, err)
+		return nil, nil, makeSignError(prefixJwsSign, `failed to set "alg" header: %w`, err)
 	}
 
 	if key, ok := sb.key.(jwk.Key); ok {
 		if kid, ok := key.KeyID(); ok && kid != "" {
 			if err := protected.Set(KeyIDKey, kid); err != nil {
-				return nil, makeSignError(prefixJwsSign, `failed to set "kid" header: %w`, err)
+				return nil, nil, makeSignError(prefixJwsSign, `failed to set "kid" header: %w`, err)
 			}
 		}
 	}
@@ -148,27 +150,34 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, 
 		if !slices.Contains(crit, "b64") {
 			crit = append(crit, "b64")
 			if err := protected.Set(CriticalKey, crit); err != nil {
-				return nil, makeSignError(prefixJwsSign, `failed to set "crit" header: %w`, err)
+				return nil, nil, makeSignError(prefixJwsSign, `failed to set "crit" header: %w`, err)
 			}
 		}
 	}
 
-	hdrs, err := mergeHeaders(sb.public, protected)
-	if err != nil {
-		return nil, makeSignError(prefixJwsSign, `failed to merge headers: %w`, err)
+	// JSON serialization transmits public headers separately, so only the
+	// protected header belongs in the signing input. Compact serialization
+	// merges both headers into the single protected header it transmits.
+	hdrs := protected
+	if sb.public != nil && sc.format == fmtCompact {
+		var err error
+		hdrs, err = mergeHeaders(sb.public, protected)
+		if err != nil {
+			return nil, nil, makeSignError(prefixJwsSign, `failed to merge headers: %w`, err)
+		}
 	}
 
 	// raw, json format headers
 	hdrbuf, err := json.Marshal(hdrs)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to marshal headers: %w`, err)
+		return nil, nil, fmt.Errorf(`failed to marshal headers: %w`, err)
 	}
 
 	// check if we need to base64 encode the payload
 	b64 := getB64Value(hdrs)
 	if !b64 && !sc.detached {
 		if bytes.IndexByte(payload, tokens.Period) != -1 {
-			return nil, fmt.Errorf(`compact serialization with b64=false requires payload to contain no "." characters per RFC 7797 §5.2; use jws.WithDetachedPayload to keep the payload out of the wire format`)
+			return nil, nil, fmt.Errorf(`compact serialization with b64=false requires payload to contain no "." characters per RFC 7797 §5.2; use jws.WithDetachedPayload to keep the payload out of the wire format`)
 		}
 	}
 
@@ -181,10 +190,10 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, 
 	if sb.signer2 != nil {
 		signature, err := sb.signer2.Sign(sb.key, combined)
 		if err != nil {
-			return nil, fmt.Errorf(`failed to sign payload: %w`, err)
+			return nil, nil, fmt.Errorf(`failed to sign payload: %w`, err)
 		}
 		sig.signature = signature
-		return &sig, nil
+		return &sig, combined, nil
 	}
 
 	if sb.signer == nil {
@@ -193,10 +202,10 @@ func (sb *signatureBuilder) Build(sc *signContext, payload []byte) (*Signature, 
 
 	signature, err := sb.signer.Sign(combined, sb.key)
 	if err != nil {
-		return nil, fmt.Errorf(`failed to sign payload: %w`, err)
+		return nil, nil, fmt.Errorf(`failed to sign payload: %w`, err)
 	}
 
 	sig.signature = signature
 
-	return &sig, nil
+	return &sig, combined, nil
 }
