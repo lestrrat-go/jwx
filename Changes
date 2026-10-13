@@ -105,7 +105,7 @@ UNRELEASED
     `"alg"` must still match that algorithm. `jws.VerifyCompactFast` now
     returns `jws.ErrNonMinimalHeader()` for a protected header with no
     `"alg"`, so callers retry through `jws.Verify`. It used to return a
-    verification error that matched `jws.VerificationError()`.
+    verification error that matched `jws.VerificationError()`. (#2422)
 
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
