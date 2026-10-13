@@ -73,6 +73,13 @@ UNRELEASED
     with such a claim fails, even with `jwt.WithValidate(false)`, and so
     does setting such a value with `Set`. (#2414)
 
+  * [jws] `jws.Sign` with `jws.WithPublicHeaders` now produces a JWS that
+    verifies. In JSON serialization, the signature now covers only the
+    protected header, and the public headers are sent in the unprotected
+    `"header"` member. In compact serialization, the public headers are
+    merged into the protected header, and the header written to the output
+    is the one that was signed. (#2416)
+
 v3.3.0 8 Sep 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes
