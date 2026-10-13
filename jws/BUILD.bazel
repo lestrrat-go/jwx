@@ -63,6 +63,7 @@ go_test(
         "signer_test.go",
         "streaming_detached_test.go",
         "unsupported_key_test.go",
+        "verify_alg_match_test.go",
     ],
     embed = [":jws"],
     deps = [

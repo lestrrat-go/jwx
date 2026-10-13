@@ -27,6 +27,7 @@ type verifyContext struct {
 	keyUsed            any
 	validateKey        bool
 	critValidation     bool
+	algorithmMatch     bool
 	criticalExtensions []string
 	encoder            Base64Encoder
 	//nolint:containedctx
@@ -51,6 +52,7 @@ func freeVerifyContext(vc *verifyContext) *verifyContext {
 	vc.keyUsed = nil
 	vc.validateKey = false
 	vc.critValidation = false
+	vc.algorithmMatch = false
 	vc.criticalExtensions = vc.criticalExtensions[:0]
 	vc.encoder = base64.DefaultEncoder()
 	vc.ctx = context.Background()
@@ -137,6 +139,10 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 		case identCritValidation{}:
 			if err := option.Value(&vc.critValidation); err != nil {
 				return makeVerifyError(`failed to retrieve crit-validation option value: %w`, err)
+			}
+		case identAlgorithmMatch{}:
+			if err := option.Value(&vc.algorithmMatch); err != nil {
+				return makeVerifyError(`failed to retrieve algorithm-match option value: %w`, err)
 			}
 		case identCritExtension{}:
 			var names []string
@@ -297,6 +303,21 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 		return unsupportedKeyError(uk, `signature verification`)
 	}
 
+	// Under WithAlgorithmMatch(true), require the algorithm we are about to
+	// verify under to exactly match the "alg" advertised in this signature's
+	// protected header. tryKey is the single chokepoint every (alg, key)
+	// candidate funnels through, so this covers all key sources (WithKey,
+	// WithKeySet, WithVerifyAuto, and custom WithKeyProvider). The match is
+	// plain string equality: the deprecated polymorphic "EdDSA" and the
+	// fully-specified "Ed25519"/"Ed448" identifiers are distinct per RFC 9864
+	// and do NOT alias one another. The check fires only when the protected
+	// header carries an "alg"; if "alg" is absent (for example a JSON JWS
+	// that places it only in the unprotected header) we fall through
+	// unchanged.
+	if err := vc.checkAlgorithmMatch(alg, sig); err != nil {
+		return err
+	}
+
 	if vc.validateKey {
 		if err := validateKeyBeforeUse(key); err != nil {
 			return fmt.Errorf(`failed to validate key before verification: %w`, err)
@@ -324,6 +345,21 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 	}
 
 	return nil
+}
+
+// checkAlgorithmMatch implements jws.WithAlgorithmMatch(true): it returns a
+// verification error when sig's protected header carries an "alg" that
+// differs from alg, the algorithm about to be used for verification. It
+// returns nil when the option is off or the protected header has no "alg".
+func (vc *verifyContext) checkAlgorithmMatch(alg jwa.SignatureAlgorithm, sig *Signature) error {
+	if !vc.algorithmMatch || sig.protected == nil {
+		return nil
+	}
+	hdrAlg, ok := sig.protected.Algorithm()
+	if !ok || hdrAlg.String() == alg.String() {
+		return nil
+	}
+	return verifyError{verificationError{fmt.Errorf(`protected header %q %q does not match verification algorithm %q`, AlgorithmKey, hdrAlg, alg)}}
 }
 
 // validateB64InCritIfFalse enforces RFC 7797 §3: producers that set

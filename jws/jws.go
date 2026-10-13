@@ -232,6 +232,12 @@ var allowNoneWhitelist = jwk.WhitelistFunc(func(string) bool {
 // accept messages with "none" signature algorithm, use `jws.Parse` to get the
 // raw JWS message.
 //
+// Verify resolves the verification algorithm from the key or provider you
+// supply (jws.WithKey, jws.WithKeySet, jws.WithVerifyAuto, or a custom
+// jws.WithKeyProvider). By default it does not compare that algorithm with
+// the protected header's "alg". Pass jws.WithAlgorithmMatch(true) to reject a
+// JWS whose protected header advertises a different "alg".
+//
 // The error returned by this function is of type can be checked against
 // `jws.VerifyError()` and `jws.VerificationError()`. The latter is returned
 // when the verification process itself fails (e.g. invalid signature, wrong key),
