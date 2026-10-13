@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/lestrrat-go/jwx/v4/jws"
 	"github.com/lestrrat-go/jwx/v4/jwt"
 	"github.com/stretchr/testify/require"
@@ -89,5 +90,78 @@ func TestParseDuplicateHeaderParameters(t *testing.T) {
 
 		_, err = jwt.Parse(badTyp, jwt.WithKey(jwa.HS256(), key), jwt.WithValidate(false))
 		require.Error(t, err, `jwt.Parse must reject a non-string typ`)
+	})
+}
+
+// TestParseMissingAlgAgreesAcrossOptions checks that a compact JWS whose
+// protected header has no "alg" gets the same answer from jwt.Parse no matter
+// which options select the verification path. The algorithm always comes from
+// the caller (WithKey) or the key ("alg" in the JWK), so a missing header
+// "alg" is accepted when the signature verifies under that algorithm, and
+// rejected when it does not.
+func TestParseMissingAlgAgreesAcrossOptions(t *testing.T) {
+	key := []byte("0123456789abcdef0123456789abcdef")
+	otherKey := []byte("fedcba9876543210fedcba9876543210")
+	payload := `{"sub":"alice"}`
+
+	jwkKey, err := jwk.Import[jwk.Key](key)
+	require.NoError(t, err)
+	require.NoError(t, jwkKey.Set(jwk.KeyIDKey, "k1"))
+	require.NoError(t, jwkKey.Set(jwk.AlgorithmKey, jwa.HS256()))
+	set := jwk.NewSet()
+	require.NoError(t, set.AddKey(jwkKey))
+
+	parsers := []struct {
+		name    string
+		options []jwt.ParseOption
+	}{
+		// jwt.Parse's dedicated fast path (WithKey, optionally WithValidate).
+		{name: "WithKey", options: []jwt.ParseOption{jwt.WithKey(jwa.HS256(), key)}},
+		{name: "WithKey and WithValidate(false)", options: []jwt.ParseOption{jwt.WithKey(jwa.HS256(), key), jwt.WithValidate(false)}},
+		// Any other option skips that fast path, but verification still tries
+		// VerifyCompactFast first for a single WithKey.
+		{name: "WithKey and WithContext", options: []jwt.ParseOption{jwt.WithKey(jwa.HS256(), key), jwt.WithContext(t.Context())}},
+		// Lenient base64 never uses VerifyCompactFast.
+		{name: "WithKey and lenient base64", options: []jwt.ParseOption{jwt.WithKey(jwa.HS256(), key), jwt.WithStrictBase64Encoding(false)}},
+		{name: "WithKeySet", options: []jwt.ParseOption{jwt.WithKeySet(set)}},
+	}
+
+	t.Run("signed with the expected key is accepted", func(t *testing.T) {
+		signed := signHS256Compact(key, `{"kid":"k1"}`, payload)
+
+		_, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key))
+		require.NoError(t, err, `jws.Verify uses the caller's algorithm when "alg" is missing`)
+
+		for _, p := range parsers {
+			tok, err := jwt.Parse(signed, p.options...)
+			require.NoError(t, err, `jwt.Parse with %s`, p.name)
+			sub, ok := tok.Subject()
+			require.True(t, ok, `jwt.Parse with %s`, p.name)
+			require.Equal(t, "alice", sub, `jwt.Parse with %s`, p.name)
+		}
+	})
+
+	t.Run("signed with another key is rejected", func(t *testing.T) {
+		signed := signHS256Compact(otherKey, `{"kid":"k1"}`, payload)
+
+		_, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key))
+		require.Error(t, err)
+
+		for _, p := range parsers {
+			_, err := jwt.Parse(signed, p.options...)
+			require.Error(t, err, `jwt.Parse with %s`, p.name)
+		}
+	})
+
+	t.Run("an alg that disagrees with the caller's is rejected", func(t *testing.T) {
+		signed := signHS256Compact(key, `{"alg":"HS384","kid":"k1"}`, payload)
+
+		_, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key))
+		require.Error(t, err)
+
+		for _, p := range parsers {
+			_, err := jwt.Parse(signed, p.options...)
+			require.Error(t, err, `jwt.Parse with %s`, p.name)
+		}
 	})
 }

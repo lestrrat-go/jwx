@@ -639,15 +639,18 @@ func TestVerifyCompactFastMinimalHeaderShape(t *testing.T) {
 		require.NotErrorIs(t, jws.ErrNonMinimalHeader(), jws.VerifyError(), `bare umbrella sentinel is not a verifyError`)
 	})
 
-	t.Run("missing alg keeps the alg-specific diagnostic", func(t *testing.T) {
-		// A missing "alg" is a malformed compact JWS (RFC 7515 §4.1.1), not a
-		// defer-to-jws.Verify case. The gate must let the alg cross-check
-		// report it so the caller still gets the specific error.
+	t.Run("missing alg defers to jws.Verify", func(t *testing.T) {
+		// The minimal shape requires exactly one "alg". jws.Verify accepts a
+		// header without "alg" and verifies under the caller's algorithm, so
+		// the fast path declines the header instead of rejecting the message.
 		compact := signHS256Compact(key, `{"typ":"JWT"}`)
 		_, err := jws.VerifyCompactFast(key, compact, jwa.HS256())
 		require.Error(t, err)
-		require.NotErrorIs(t, err, jws.ErrNonMinimalHeader())
-		require.ErrorContains(t, err, `"alg"`)
+		require.ErrorIs(t, err, jws.ErrNonMinimalHeader())
+		require.ErrorContains(t, err, `missing "alg"`)
+
+		_, err = jws.Verify(compact, jws.WithKey(jwa.HS256(), key))
+		require.NoError(t, err, `jws.Verify accepts the header the fast path declined`)
 	})
 }
 

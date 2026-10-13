@@ -155,10 +155,11 @@ func ParseString(s string, options ...ParseOption) (Token, error) {
 // `typ`/`kid`/`cty`, nothing else, no JSON escapes — see
 // `jws.VerifyCompactFast` for the exact shape), and any other header —
 // including one carrying duplicate, unknown, or key-source parameters,
-// `crit`, or `b64` — is automatically reverified through the full
-// `jws.Verify` path, so it is never accepted more leniently than `jws.Verify`
-// would. In particular a protected header with duplicate parameter names is
-// rejected, matching `jws.Verify`.
+// `crit`, or `b64`, or one with no `alg` — is automatically reverified
+// through the full `jws.Verify` path, so the result matches what `jws.Verify`
+// would return. In particular a protected header with duplicate parameter
+// names is rejected, and a protected header with no `alg` is verified under
+// the algorithm passed to `jwt.WithKey()`, as `jws.Verify` does.
 //
 // The fast path is a close but not byte-for-byte mirror of `jws.Verify`'s
 // header parsing. It validates parameter names and that `alg`/`typ`/`kid`/`cty`

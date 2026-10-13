@@ -97,6 +97,16 @@ UNRELEASED
     protected header, and the public headers are sent in the unprotected
     `"header"` member. (#2415)
 
+  * [jws][jwt] `jwt.Parse` now gives the same result for a compact JWS whose
+    protected header has no `"alg"`, whichever options select the
+    verification path. With a single `jwt.WithKey`, the token is now
+    verified under the `jwt.WithKey` algorithm, as it already was with
+    `jwt.WithKeySet` or any other option set. A header that does carry
+    `"alg"` must still match that algorithm. `jws.VerifyCompactFast` now
+    returns `jws.ErrNonMinimalHeader()` for a protected header with no
+    `"alg"`, so callers retry through `jws.Verify`. It used to return a
+    verification error that matched `jws.VerificationError()`. (#2422)
+
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes

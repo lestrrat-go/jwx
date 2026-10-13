@@ -2306,6 +2306,8 @@ func TestVerifyCompactFastHeaderAlgCrossCheck(t *testing.T) {
 
 	t.Run("Missing alg in header", func(t *testing.T) {
 		// Hand-assemble a compact JWS whose protected header omits "alg".
+		// The fast path declines it as a non-minimal header, so callers retry
+		// through jws.Verify like jwt.Parse does.
 		hdr := base64.EncodeToString([]byte(`{"typ":"JWT"}`))
 		payload := base64.EncodeToString([]byte("payload"))
 		sig := base64.EncodeToString([]byte("not-a-real-signature"))
@@ -2314,7 +2316,8 @@ func TestVerifyCompactFastHeaderAlgCrossCheck(t *testing.T) {
 		_, err := jws.VerifyCompactFast(hmacKey, compact, jwa.HS256())
 		require.Error(t, err)
 		require.True(t, errors.Is(err, jws.VerifyError()), `error should be VerifyError`)
-		require.True(t, errors.Is(err, jws.VerificationError()), `error should be VerificationError`)
+		require.True(t, errors.Is(err, jws.ErrNonMinimalHeader()), `error should be ErrNonMinimalHeader`)
+		require.False(t, errors.Is(err, jws.VerificationError()), `error should not be VerificationError`)
 		require.Contains(t, err.Error(), `"alg"`)
 	})
 }

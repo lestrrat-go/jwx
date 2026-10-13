@@ -10,7 +10,9 @@ import (
 // errNonMinimalHeader is the umbrella sentinel for every VerifyCompactFast
 // header refusal: the protected header is not in the minimal shape the fast
 // path handles ("alg" exactly once, an optional single "typ"/"kid"/"cty", no
-// JSON escape sequences, and no other parameters). The field probe used by the
+// JSON escape sequences, and no other parameters). A header with no "alg" is
+// refused too, because jws.Verify verifies it under the caller-supplied
+// algorithm instead of rejecting it. The field probe used by the
 // fast path keeps duplicate object members and resolves them first-wins, whereas
 // encoding/json/v2 (used by jws.Verify) rejects duplicate names outright — so
 // a header carrying a duplicate, a nested object, an unknown or key-source
@@ -28,10 +30,10 @@ import (
 var errNonMinimalHeader = errors.New(`VerifyCompactFast: protected header is not in the fast-path minimal shape; use jws.Verify`)
 
 // ErrNonMinimalHeader returns the umbrella sentinel that VerifyCompactFast
-// returns for every protected-header refusal: a duplicate, a nested object,
-// an unknown or key-source parameter, an escaped key, or the more specific
-// "crit"/"b64" cases (see ErrCritPresent / ErrB64Present, which both match
-// this sentinel too). Treat it as "the fast path declined this header; retry
+// returns for every protected-header refusal: a missing "alg", a duplicate, a
+// nested object, an unknown or key-source parameter, an escaped key, or the
+// more specific "crit"/"b64" cases (see ErrCritPresent / ErrB64Present, which
+// both match this sentinel too). Treat it as "the fast path declined this header; retry
 // through jws.Verify". Errors returned from VerifyCompactFast that wrap this
 // sentinel additionally match jws.VerifyError() (they are wrapped in
 // verifyError at the return site); the bare sentinel value returned here does
