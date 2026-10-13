@@ -796,10 +796,11 @@ func Settings(options ...GlobalOption) error {
 // you must ensure to perform the necessary checks including ensuring that algorithm is safe to use for your payload yourself.
 //
 // VerifyCompactFast cross-checks the protected header's "alg" against
-// the caller-supplied alg: if the header omits "alg" (required by
-// RFC 7515 §4.1.1) or advertises a different value, it returns a
-// verification error. This prevents silently verifying a message
-// under a different discipline than the one its header advertises.
+// the caller-supplied alg: if the header advertises a different value, it
+// returns a verification error. This prevents silently verifying a message
+// under a different discipline than the one its header advertises. A header
+// with no "alg" is refused with jws.ErrNonMinimalHeader() (see below);
+// jws.Verify verifies such a message under the caller-supplied algorithm.
 //
 // VerifyCompactFast refuses messages whose protected header carries a
 // "crit" list. RFC 7515 §4.1.11 requires every critical extension to be
@@ -827,8 +828,7 @@ func Settings(options ...GlobalOption) error {
 // with jws.ErrNonMinimalHeader() and the caller should retry through
 // jws.Verify:
 //
-//   - "alg" is present exactly once (a missing "alg" is reported separately,
-//     via the cross-check described above, not as ErrNonMinimalHeader);
+//   - "alg" is present exactly once;
 //   - "typ", "kid", and "cty" each appear at most once;
 //   - "typ", "kid", and "cty", when present, have JSON string values (a
 //     non-string value, which jws.Verify rejects, is refused here too);
@@ -916,8 +916,10 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// that — a duplicate, a nested object, an unknown or key-source parameter
 	// — is deferred to jws.Verify via errNonMinimalHeader, where json/v2's
 	// strict recursive duplicate rejection and full header handling apply. A
-	// *missing* "alg" is left to the cross-check below so the caller still
-	// gets the specific diagnostic.
+	// *missing* "alg" is deferred the same way: jws.Verify verifies it under
+	// the caller-supplied algorithm, so refusing it here as a verification
+	// failure would make jwt.Parse answer differently depending on which path
+	// its options select.
 	//
 	// Why gate-here-and-defer rather than teach the header parser to reject
 	// duplicates itself:
@@ -967,11 +969,13 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	// Refuse, naming the specific trigger so the refusal is debuggable. The
 	// error still wraps errNonMinimalHeader, so errors.Is classification
 	// (ErrNonMinimalHeader / VerifyError) is unchanged.
-	if others > 0 || algN > 1 || typN > 1 || kidN > 1 || ctyN > 1 {
+	if others > 0 || algN != 1 || typN > 1 || kidN > 1 || ctyN > 1 {
 		var reason string
 		switch {
 		case others > 0:
 			reason = fmt.Sprintf(`unexpected protected header parameter %q`, firstOther)
+		case algN == 0:
+			reason = `missing "alg"`
 		case algN > 1:
 			reason = `duplicate "alg"`
 		case typN > 1:
@@ -1008,11 +1012,10 @@ func VerifyCompactFast(key any, compact []byte, alg jwa.SignatureAlgorithm) ([]b
 	}
 
 	// Cross-check the protected header "alg" against the caller-supplied
-	// alg. RFC 7515 §4.1.1 makes "alg" mandatory in the protected header
-	// for compact serialization, and a mismatch between what the message
-	// advertises and the discipline under which we verify is the sort of
-	// silent divergence that downstream code (e.g. JWT consumers) should
-	// not be asked to re-discover on its own.
+	// alg. The gate above guarantees exactly one "alg" is present. A
+	// mismatch between what the message advertises and the discipline under
+	// which we verify is the sort of silent divergence that downstream code
+	// (e.g. JWT consumers) should not be asked to re-discover on its own.
 	hdrAlg, err := jwsbbi.HeaderGetStringBytes(parsedHdr, AlgorithmKey)
 	if err != nil {
 		return nil, verifyError{verificationError{fmt.Errorf(`jws.Verify: failed to extract %q from protected header: %w`, AlgorithmKey, err)}}

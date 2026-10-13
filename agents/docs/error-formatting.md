@@ -74,7 +74,7 @@ Within `jwt`, only `jwt.UnknownPayloadTypeError()` remains a sentinel function (
 | `jws` | `ParseError()` | Parse failed |
 | `jws` | `ErrCritPresent()` | `VerifyCompactFast` refused a `crit`-bearing protected header (use `jws.Verify`) |
 | `jws` | `ErrB64Present()` | `VerifyCompactFast` refused a `b64`-bearing protected header (use `jws.Verify`) |
-| `jws` | `ErrNonMinimalHeader()` | `VerifyCompactFast` refused a protected header outside the fast-path minimal shape — alg×1 + optional single typ/kid/cty, no escapes/duplicates/extras (use `jws.Verify`) |
+| `jws` | `ErrNonMinimalHeader()` | `VerifyCompactFast` refused a protected header outside the fast-path minimal shape — alg×1 (missing alg included) + optional single typ/kid/cty, no escapes/duplicates/extras (use `jws.Verify`) |
 | `jws` | `ErrUnclassifiableKey()` | Key classification failed at option time in `Sign`/`Verify` (Import failed, kty not registered, or key-agreement-only key like ecdh). Sentinel defined in `jws/internal/keyalg`; `jws.ErrUnclassifiableKey()` re-exports it |
 | `jwe` | `EncryptError()` | Encryption failed |
 | `jwe` | `DecryptError()` | Decryption failed |
