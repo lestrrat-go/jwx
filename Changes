@@ -89,13 +89,14 @@ UNRELEASED
     `"alg"` is not compared. The option is off by default, and `jws.Verify`
     keeps verifying under the algorithm from the key source without
     looking at the header. This is the same check v4 runs by default.
+    (#2423)
 
   * [jwt] `jwt.Parse` now gives the same result for a compact JWS whose
     protected header has no `"alg"`, whichever options select the
     verification path. With a single `jwt.WithKey`, the token is now
     verified under the `jwt.WithKey` algorithm, as it already was with
     `jwt.WithKeySet` or any other option set. `jws.VerifyCompactFast` still
-    rejects such a header.
+    rejects such a header. (#2423)
 
 v3.3.0 8 Sep 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
