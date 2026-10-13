@@ -92,6 +92,11 @@ UNRELEASED
     precision 1, `2000000000.1` parses with 100000000. A number written
     with an exponent, such as `2e9`, is still read as a float64. (#2413)
 
+  * [jws] `jws.Sign` with `jws.WithJSON` and `jws.WithPublicHeaders` now
+    produces a JWS that verifies. The signature now covers only the
+    protected header, and the public headers are sent in the unprotected
+    `"header"` member. (#2415)
+
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes
