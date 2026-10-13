@@ -80,6 +80,24 @@ UNRELEASED
     merged into the protected header, and the header written to the output
     is the one that was signed. (#2416)
 
+  * [jws] Added `jws.WithAlgorithmMatch(true)`. With it, `jws.Verify` rejects
+    a JWS whose protected header `"alg"` differs from the algorithm used to
+    verify it, for every key source (`jws.WithKey`, `jws.WithKeySet`,
+    `jws.WithVerifyAuto`, `jws.WithKeyProvider`) and for
+    `jws.WithDetachedPayloadReader`. The match is exact, so `"EdDSA"` and
+    `"Ed25519"` count as different values. A protected header without
+    `"alg"` is not compared. The option is off by default, and `jws.Verify`
+    keeps verifying under the algorithm from the key source without
+    looking at the header. This is the same check v4 runs by default.
+    (#2423)
+
+  * [jwt] `jwt.Parse` now gives the same result for a compact JWS whose
+    protected header has no `"alg"`, whichever options select the
+    verification path. With a single `jwt.WithKey`, the token is now
+    verified under the `jwt.WithKey` algorithm, as it already was with
+    `jwt.WithKeySet` or any other option set. `jws.VerifyCompactFast` still
+    rejects such a header. (#2423)
+
 v3.3.0 8 Sep 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes

@@ -203,6 +203,7 @@ type withKeySuboption struct {
 
 func (*withKeySuboption) withKeySuboption() {}
 
+type identAlgorithmMatch struct{}
 type identBase64Encoder struct{}
 type identContext struct{}
 type identCritValidation struct{}
@@ -226,6 +227,10 @@ type identSerialization struct{}
 type identStrictECDSA struct{}
 type identUseDefault struct{}
 type identValidateKey struct{}
+
+func (identAlgorithmMatch) String() string {
+	return "WithAlgorithmMatch"
+}
 
 func (identBase64Encoder) String() string {
 	return "WithBase64Encoder"
@@ -317,6 +322,31 @@ func (identUseDefault) String() string {
 
 func (identValidateKey) String() string {
 	return "WithValidateKey"
+}
+
+// WithAlgorithmMatch enables a check that the protected header's "alg"
+// parameter exactly equals the algorithm actually used to verify the
+// signature. The default is false: jws.Verify() verifies under the
+// algorithm resolved from the key or provider you supply (jws.WithKey(),
+// jws.WithKeySet(), jws.WithVerifyAuto(), or a custom
+// jws.WithKeyProvider()) and does not compare it with the header.
+//
+// When enabled, jws.Verify() rejects a JWS whose protected header
+// advertises one algorithm while it is verified under another (for
+// example, a custom jws.WithKeyProvider() that returns an HS256 key for a
+// message whose protected header claims RS256). The match is plain
+// string equality, with no aliasing: the deprecated polymorphic "EdDSA"
+// and the fully-specified "Ed25519"/"Ed448" identifiers are distinct per
+// RFC 9864 and are not interchangeable. The check runs for every key
+// source, including the jws.WithDetachedPayloadReader() streaming path.
+// It only fires when the protected header carries an "alg"; messages
+// that omit it, or place it only in the unprotected header, are verified
+// under the resolved algorithm as before.
+//
+// jws.VerifyCompactFast() always performs an equivalent check against
+// its explicitly supplied algorithm.
+func WithAlgorithmMatch(v bool) VerifyOption {
+	return &verifyOption{option.New(identAlgorithmMatch{}, v)}
 }
 
 // WithBase64Encoder specifies the base64 encoder to be used while signing or

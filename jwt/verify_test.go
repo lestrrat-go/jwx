@@ -1,6 +1,8 @@
 package jwt_test
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"strings"
@@ -271,5 +273,81 @@ func TestVerifyCompactFastSecurityBypass(t *testing.T) {
 
 		// Both should produce equivalent results
 		require.True(t, jwt.Equal(parsed1, parsed2), `fast path and slow path should produce equivalent results`)
+	})
+}
+
+// TestParseMissingAlgAgreesAcrossOptions checks that a compact JWS whose
+// protected header has no "alg" gets the same answer from jwt.Parse no matter
+// which options select the verification path. The algorithm always comes from
+// the caller (WithKey) or the key ("alg" in the JWK), so a missing header
+// "alg" is accepted when the signature verifies under that algorithm, and
+// rejected when it does not.
+func TestParseMissingAlgAgreesAcrossOptions(t *testing.T) {
+	key := []byte("0123456789abcdef0123456789abcdef")
+	otherKey := []byte("fedcba9876543210fedcba9876543210")
+
+	signHS256 := func(signingKey []byte, hdrJSON string) []byte {
+		signingInput := base64.RawURLEncoding.EncodeToString([]byte(hdrJSON)) + "." +
+			base64.RawURLEncoding.EncodeToString([]byte(`{"sub":"alice"}`))
+		mac := hmac.New(sha256.New, signingKey)
+		mac.Write([]byte(signingInput))
+		return []byte(signingInput + "." + base64.RawURLEncoding.EncodeToString(mac.Sum(nil)))
+	}
+
+	jwkKey, err := jwk.Import(key)
+	require.NoError(t, err)
+	require.NoError(t, jwkKey.Set(jwk.KeyIDKey, "k1"))
+	require.NoError(t, jwkKey.Set(jwk.AlgorithmKey, jwa.HS256()))
+	set := jwk.NewSet()
+	require.NoError(t, set.AddKey(jwkKey))
+
+	parsers := []struct {
+		name    string
+		options []jwt.ParseOption
+	}{
+		// A single WithKey tries jws.VerifyCompactFast first.
+		{name: "WithKey", options: []jwt.ParseOption{jwt.WithKey(jwa.HS256(), key)}},
+		{name: "WithKey and WithValidate(false)", options: []jwt.ParseOption{jwt.WithKey(jwa.HS256(), key), jwt.WithValidate(false)}},
+		// Two keys and key sets always go through jws.Verify.
+		{name: "two WithKey options", options: []jwt.ParseOption{jwt.WithKey(jwa.HS256(), otherKey), jwt.WithKey(jwa.HS256(), key)}},
+		{name: "WithKeySet", options: []jwt.ParseOption{jwt.WithKeySet(set)}},
+	}
+
+	t.Run("signed with the expected key is accepted", func(t *testing.T) {
+		signed := signHS256(key, `{"kid":"k1"}`)
+
+		_, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key))
+		require.NoError(t, err, `jws.Verify uses the caller's algorithm when "alg" is missing`)
+
+		for _, p := range parsers {
+			tok, err := jwt.Parse(signed, p.options...)
+			require.NoError(t, err, `jwt.Parse with %s`, p.name)
+			sub, ok := tok.Subject()
+			require.True(t, ok, `jwt.Parse with %s`, p.name)
+			require.Equal(t, "alice", sub, `jwt.Parse with %s`, p.name)
+		}
+	})
+
+	t.Run("signed with another key is rejected", func(t *testing.T) {
+		signed := signHS256([]byte("not-the-expected-key-at-all-0000"), `{"kid":"k1"}`)
+
+		_, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key))
+		require.Error(t, err)
+
+		for _, p := range parsers {
+			_, err := jwt.Parse(signed, p.options...)
+			require.Error(t, err, `jwt.Parse with %s`, p.name)
+		}
+	})
+
+	t.Run("crit is still rejected after falling back", func(t *testing.T) {
+		// The fallback must keep jwt.Parse's crit validation: an unknown
+		// critical extension is rejected even when "alg" is missing.
+		signed := signHS256(key, `{"kid":"k1","crit":["x-foo"],"x-foo":"bar"}`)
+
+		for _, p := range parsers[:2] {
+			_, err := jwt.Parse(signed, p.options...)
+			require.Error(t, err, `jwt.Parse with %s`, p.name)
+		}
 	})
 }
