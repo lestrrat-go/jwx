@@ -217,6 +217,11 @@ func (vc *verifyContext) VerifyMessage(buf []byte) ([]byte, error) {
 			return nil, makeVerifyError(`%w`, err)
 		}
 
+		if err := requireProtectedAlgorithm(sig); err != nil {
+			errs = append(errs, makeVerifyError(`signature #%d: %w`, idx+1, err))
+			continue
+		}
+
 		var rawHeaders []byte
 		if rbp, ok := sig.protected.(interface{ rawBuffer() []byte }); ok {
 			if raw := rbp.rawBuffer(); raw != nil {
@@ -316,10 +321,11 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 	// is plain string equality: the deprecated polymorphic "EdDSA" and the
 	// fully-specified "Ed25519"/"Ed448" identifiers are distinct per RFC 9864
 	// and do NOT alias one another. The check fires only when the protected
-	// header carries an "alg"; if "alg" is absent (for example a JSON JWS that
-	// places it only in the unprotected header) we fall through unchanged.
+	// header carries an "alg"; a signature without one never reaches this
+	// point because Verify rejects it first (see requireProtectedAlgorithm).
 	// VerifyCompactFast performs the equivalent cross-check on the fast path.
-	// Use WithSkipAlgorithmMatch to bypass this for non-conforming producers.
+	// Use WithSkipAlgorithmMatch to bypass the comparison for non-conforming
+	// producers.
 	if !vc.skipAlgorithmMatch && sig.protected != nil {
 		if hdrAlg, ok := sig.protected.Algorithm(); ok && hdrAlg.String() != alg.String() {
 			return verifyError{verificationError{fmt.Errorf(`protected header %q %q does not match verification algorithm %q`, AlgorithmKey, hdrAlg, alg)}}
@@ -356,6 +362,21 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 	}
 
 	return nil
+}
+
+// requireProtectedAlgorithm rejects a signature whose protected header has no
+// "alg". RFC 7515 lets a JSON serialization carry "alg" only in the
+// unprotected header, but the signature does not cover that header, so an
+// attacker can change it without invalidating the signature. WithSkipAlgorithmMatch
+// does not waive this. Callers that need the RFC behavior can read the headers
+// themselves and verify with the jws/jwsbb package.
+func requireProtectedAlgorithm(sig *Signature) error {
+	if sig.protected != nil {
+		if _, ok := sig.protected.Algorithm(); ok {
+			return nil
+		}
+	}
+	return verifyError{verificationError{fmt.Errorf(`protected header must carry %q: a value in the unprotected header is not covered by the signature (use jws/jwsbb to verify such messages manually)`, AlgorithmKey)}}
 }
 
 // validateECDSAVerificationCurve checks the selected key, rather than changing

@@ -95,10 +95,8 @@ func TestParseDuplicateHeaderParameters(t *testing.T) {
 
 // TestParseMissingAlgAgreesAcrossOptions checks that a compact JWS whose
 // protected header has no "alg" gets the same answer from jwt.Parse no matter
-// which options select the verification path. The algorithm always comes from
-// the caller (WithKey) or the key ("alg" in the JWK), so a missing header
-// "alg" is accepted when the signature verifies under that algorithm, and
-// rejected when it does not.
+// which options select the verification path. Every path rejects it, because
+// "alg" must be in the protected header.
 func TestParseMissingAlgAgreesAcrossOptions(t *testing.T) {
 	key := []byte("0123456789abcdef0123456789abcdef")
 	otherKey := []byte("fedcba9876543210fedcba9876543210")
@@ -126,18 +124,15 @@ func TestParseMissingAlgAgreesAcrossOptions(t *testing.T) {
 		{name: "WithKeySet", options: []jwt.ParseOption{jwt.WithKeySet(set)}},
 	}
 
-	t.Run("signed with the expected key is accepted", func(t *testing.T) {
+	t.Run("signed with the expected key is rejected", func(t *testing.T) {
 		signed := signHS256Compact(key, `{"kid":"k1"}`, payload)
 
 		_, err := jws.Verify(signed, jws.WithKey(jwa.HS256(), key))
-		require.NoError(t, err, `jws.Verify uses the caller's algorithm when "alg" is missing`)
+		require.Error(t, err, `jws.Verify requires "alg" in the protected header`)
 
 		for _, p := range parsers {
-			tok, err := jwt.Parse(signed, p.options...)
-			require.NoError(t, err, `jwt.Parse with %s`, p.name)
-			sub, ok := tok.Subject()
-			require.True(t, ok, `jwt.Parse with %s`, p.name)
-			require.Equal(t, "alice", sub, `jwt.Parse with %s`, p.name)
+			_, err := jwt.Parse(signed, p.options...)
+			require.Error(t, err, `jwt.Parse with %s`, p.name)
 		}
 	})
 
