@@ -2,7 +2,7 @@ Changes
 =======
 
 v4 has many incompatibilities with v3. To see the full list of differences between
-v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MICRATION-v4.md)
+v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MIGRATION-v4.md)
 
 UNRELEASED
   * [jws][jwk] `github.com/valyala/fastjson` is no longer a dependency. The
