@@ -84,12 +84,12 @@ func TestVerifyAlgorithmMatch(t *testing.T) {
 		require.Equal(t, payload, got)
 	})
 
-	t.Run("alg only in unprotected header falls through", func(t *testing.T) {
+	t.Run("alg only in unprotected header is rejected", func(t *testing.T) {
 		t.Parallel()
 		// Flattened JSON JWS: protected header carries no "alg" (it is in
-		// the unprotected header). The signing input is computed over the
-		// empty protected header. The alg-match guard must NOT fire here,
-		// since the protected header has no "alg" to contradict.
+		// the unprotected header). The signature is valid HMAC, but the
+		// unprotected header is not covered by it, so "alg" must not be
+		// taken from there.
 		protected := b64url([]byte(`{}`))
 		pl := b64url(payload)
 		signingInput := protected + "." + pl
@@ -103,9 +103,45 @@ func TestVerifyAlgorithmMatch(t *testing.T) {
 			`","header":{"alg":"HS256"},"payload":"` + pl +
 			`","signature":"` + b64url(sig) + `"}`)
 
-		got, err := jws.Verify(jsonJWS, jws.WithKey(jwa.HS256(), hmacKey))
-		require.NoError(t, err, `alg-in-unprotected JWS should verify (falls through)`)
-		require.Equal(t, payload, got)
+		_, err = jws.Verify(jsonJWS, jws.WithKey(jwa.HS256(), hmacKey))
+		require.Error(t, err, `alg-in-unprotected JWS should be rejected`)
+		require.ErrorIs(t, err, jws.VerifyError())
+
+		_, err = jws.Verify(jsonJWS, jws.WithKey(jwa.HS256(), hmacKey), jws.WithSkipAlgorithmMatch(true))
+		require.Error(t, err, `WithSkipAlgorithmMatch must not make a missing protected alg acceptable`)
+		require.ErrorIs(t, err, jws.VerifyError())
+	})
+
+	t.Run("omitted protected member is rejected", func(t *testing.T) {
+		t.Parallel()
+		// No "protected" member at all: RFC 7515 section 5.1 signs over an
+		// empty protected segment, and "alg" can only be in the unprotected
+		// header. The result is rejected for lack of a protected "alg".
+		pl := b64url(payload)
+		mac := hmac.New(sha256.New, hmacKey)
+		_, err := mac.Write([]byte("." + pl))
+		require.NoError(t, err, `hmac write should succeed`)
+
+		jsonJWS := []byte(`{"header":{"alg":"HS256"},"payload":"` + pl +
+			`","signature":"` + b64url(mac.Sum(nil)) + `"}`)
+
+		_, err = jws.Verify(jsonJWS, jws.WithKey(jwa.HS256(), hmacKey))
+		require.Error(t, err, `omitted protected member should be rejected`)
+		require.ErrorIs(t, err, jws.VerifyError())
+	})
+
+	t.Run("compact protected header without alg is rejected", func(t *testing.T) {
+		t.Parallel()
+		hdr := b64url([]byte(`{"typ":"JWT"}`))
+		pl := b64url(payload)
+		mac := hmac.New(sha256.New, hmacKey)
+		_, err := mac.Write([]byte(hdr + "." + pl))
+		require.NoError(t, err, `hmac write should succeed`)
+
+		token := []byte(hdr + "." + pl + "." + b64url(mac.Sum(nil)))
+		_, err = jws.Verify(token, jws.WithKey(jwa.HS256(), hmacKey))
+		require.Error(t, err, `compact JWS without protected alg should be rejected`)
+		require.ErrorIs(t, err, jws.VerifyError())
 	})
 
 	t.Run("EdDSA and Ed25519 are distinct per RFC 9864", func(t *testing.T) {
@@ -201,6 +237,25 @@ func TestVerifyAlgorithmMatchStreaming(t *testing.T) {
 			jws.WithSkipAlgorithmMatch(true),
 		)
 		require.NoError(t, err, `streaming verify with WithSkipAlgorithmMatch(true) should succeed`)
+	})
+
+	t.Run("protected header without alg is rejected", func(t *testing.T) {
+		t.Parallel()
+		hdr := b64url([]byte(`{"typ":"JWT"}`))
+		mac := hmac.New(sha256.New, hmacKey)
+		_, err := mac.Write([]byte(hdr + "." + b64url(payload)))
+		require.NoError(t, err, `hmac write should succeed`)
+
+		token := []byte(hdr + ".." + b64url(mac.Sum(nil)))
+		for _, skip := range []bool{false, true} {
+			_, err = jws.Verify(token,
+				jws.WithKey(jwa.HS256(), hmacKey),
+				jws.WithDetachedPayloadReader(bytes.NewReader(payload)),
+				jws.WithSkipAlgorithmMatch(skip),
+			)
+			require.Error(t, err, `streaming verify without protected alg should be rejected (skip=%v)`, skip)
+			require.ErrorIs(t, err, jws.VerifyError())
+		}
 	})
 
 	t.Run("matching alg verifies (no regression)", func(t *testing.T) {

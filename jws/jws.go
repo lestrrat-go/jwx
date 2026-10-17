@@ -244,10 +244,12 @@ func Sign(payload []byte, options ...SignOption) ([]byte, error) {
 // the signature would otherwise be cryptographically valid. The match is plain
 // string equality, with no aliasing: the deprecated polymorphic "EdDSA" and the
 // fully-specified "Ed25519"/"Ed448" identifiers are distinct per RFC 9864 and
-// are not interchangeable. This check fires only when the protected header
-// carries an "alg" — messages that place "alg" only in the unprotected header
-// (or omit it) are unaffected. Pass jws.WithSkipAlgorithmMatch(true) to bypass
-// the check for non-conforming producers. The compact fast path
+// are not interchangeable. The protected header must carry an "alg": a message
+// that omits it, or places it only in the unprotected header, is rejected
+// because the signature does not cover that header. RFC 7515 allows such
+// messages; to verify one, read the headers yourself and use the jws/jwsbb
+// package. Pass jws.WithSkipAlgorithmMatch(true) to bypass the comparison
+// (not the presence requirement) for non-conforming producers. The compact fast path
 // [VerifyCompactFast] performs an equivalent cross-check against its explicitly
 // supplied algorithm.
 //
