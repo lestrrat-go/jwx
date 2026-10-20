@@ -1,6 +1,7 @@
 package jwebb_test
 
 import (
+	"encoding/base64"
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v3/internal/jwxtest"
@@ -48,6 +49,27 @@ func TestKeyDecryptPBES2(t *testing.T) {
 	// Verify the result has the expected type with salt and count
 	_, ok := encrypted.(keygen.ByteWithSaltAndCount)
 	require.True(t, ok, "PBES2 encryption should return ByteWithSaltAndCount")
+}
+
+// RFC 7517 Appendix C.4 pins the PBKDF2 output, so a change of the underlying
+// implementation cannot silently alter derived keys.
+func TestKeyDecryptPBES2RFC7517Vector(t *testing.T) {
+	password := []byte("Thus from my lips, by yours, my sin is purged.")
+	p2s, err := base64.RawURLEncoding.DecodeString("2WCTcJZ1Rvd_CJuJripQ1w")
+	require.NoError(t, err)
+	enckey, err := base64.RawURLEncoding.DecodeString("TrqXOwuNUfDV9VPTNbyGvEJ9JMjefAVn-TR1uIxR9p6hsRQh9Tk7BA")
+	require.NoError(t, err)
+	wantCEK := []byte{
+		111, 27, 25, 52, 66, 29, 20, 78, 92, 176, 56, 240, 65, 208, 82, 112,
+		161, 131, 36, 55, 202, 236, 185, 172, 129, 23, 153, 194, 195, 48, 253, 182,
+	}
+
+	salt := append([]byte(tokens.PBES2_HS256_A128KW), byte(tokens.PBES2NullByteSeparator))
+	salt = append(salt, p2s...)
+
+	cek, err := jwebb.KeyDecryptPBES2(nil, enckey, tokens.PBES2_HS256_A128KW, password, salt, 4096)
+	require.NoError(t, err)
+	require.Equal(t, wantCEK, cek)
 }
 
 func TestKeyDecryptAESGCMKW(t *testing.T) {
