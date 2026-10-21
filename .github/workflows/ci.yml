@@ -30,7 +30,7 @@ jobs:
         with:
           go-version-file: "go.mod"
           check-latest: true
-      # Mirror of the guard in the Go 1.27 job below. go.mod declares go 1.26.0,
+      # Mirror of the guard in the Go 1.27 job below. go.mod declares go 1.26.10,
       # where encoding/json/v2 is still behind GOEXPERIMENT=jsonv2, so this job
       # must name the experiment. Asserting both halves means neither the probe
       # in the Makefile nor a toolchain change can quietly flip one of them.
@@ -157,7 +157,7 @@ jobs:
             echo "::error::expected the probe to drop an inherited jsonv2 on Go 1.27, got '$exp'"
             exit 1
           fi
-      # -vet=off is required, not a shortcut. go.mod declares go 1.26.0, and
+      # -vet=off is required, not a shortcut. go.mod declares go 1.26.10, and
       # under Go 1.27 the encoding/json/v2 and jsontext symbols carry a
       # since-go1.27 API version, so vet's stdversion analyzer rejects every
       # file that uses them ("requires go1.27 or later (file is go1.26)").

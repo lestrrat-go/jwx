@@ -31,7 +31,7 @@ Text output labels each finding as `(auto)` or `(manual)`, with migration notes 
 
 ## Prerequisites
 
-- Go 1.26.0 or later
+- Go 1.26.10 or later
 - On Go 1.26 only: set `GOEXPERIMENT=jsonv2` in your build environment. Go 1.27 ships `encoding/json/v2` in the standard library, so leave `GOEXPERIMENT` unset there.
 - Update `go.mod`: change module requirement to `github.com/lestrrat-go/jwx/v4`
 
@@ -555,7 +555,7 @@ These changes cannot be mechanically transformed and need human judgment:
 
 1. Update `go.mod`:
    ```
-   go 1.26.0
+   go 1.26.10
    require github.com/lestrrat-go/jwx/v4 v4.x.x
    ```
 

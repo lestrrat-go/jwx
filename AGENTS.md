@@ -15,7 +15,7 @@ The rest of this document focuses on developing the jwx library itself.
 
 ## Go Version
 
-This project requires **Go 1.26.0** or later. Check `go.mod` for the exact version.
+This project requires **Go 1.26.10** or later. Check `go.mod` for the exact version.
 
 ## GOEXPERIMENT
 
