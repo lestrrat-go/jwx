@@ -1,6 +1,6 @@
 module github.com/lestrrat-go/jwx/v4
 
-go 1.26.0
+go 1.26.10
 
 require (
 	github.com/lestrrat-go/dsig v1.4.0

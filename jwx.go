@@ -14,7 +14,7 @@
 //
 // # Requirements
 //
-// v4 requires Go 1.26.0 or later (see go.mod for the exact minimum) and uses
+// v4 requires Go 1.26.10 or later (see go.mod for the exact minimum) and uses
 // the encoding/json/v2 API. Whether that needs extra build configuration
 // depends on the toolchain:
 //

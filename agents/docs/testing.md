@@ -65,7 +65,7 @@ Go 1.27 does still require `-vet=off`:
 make test-cmd TESTOPTS=-vet=off   # Go 1.27
 ```
 
-`go.mod` declares `go 1.26.0`, so under Go 1.27 vet's `stdversion` analyzer
+`go.mod` declares `go 1.26.10`, so under Go 1.27 vet's `stdversion` analyzer
 rejects every file that uses `encoding/json/v2` or `jsontext` (`requires go1.27
 or later (file is go1.26)`). `go vet ./...` and `make lint` fail on Go 1.27 for
 the same reason. Use Go 1.26 for vet and lint until `go.mod` moves to 1.27.
