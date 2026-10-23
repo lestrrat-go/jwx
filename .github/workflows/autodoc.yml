@@ -2,8 +2,6 @@ name: Auto-Doc
 on:
   pull_request:
     branches:
-      - develop/v2
-      - develop/v3
       - develop/v4
     types:
       - closed
