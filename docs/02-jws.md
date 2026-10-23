@@ -161,9 +161,9 @@ func Example_jws_use_jws_header() {
     return
   }
 
-  // A JWS in compact format has exactly one signature, so index 0 is that
-  // signature. A JSON JWS can have several, and jws.Parse verifies none of
-  // them, so do not pick an entry by position in that case.
+  // While JWT enveloped with JWS in compact format only has 1 signature,
+  // a generic JWS message may have multiple signatures. Therefore, we
+  // need to access the first element
   kid, ok := msg.Signatures()[0].ProtectedHeaders().KeyID()
   if !ok {
     fmt.Printf("failed to get key ID from protected headers")
