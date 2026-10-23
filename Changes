@@ -107,6 +107,14 @@ UNRELEASED
     `"alg"`, so callers retry through `jws.Verify`. It used to return a
     verification error that matched `jws.VerificationError()`. (#2422)
 
+  * [jws] Added `jws.WithVerifiedSignature`, a `jws.Verify` option that returns
+    the signature that passed verification. A JSON JWS is accepted when any
+    one of its signatures verifies, so `Message.Signatures()[0]` can be an
+    entry that did not verify. Read per-signature values, such as a `crit`
+    extension, from the signature this option returns. The `jws.WithMessage`
+    documentation now says that the message holds every parsed signature,
+    including entries that did not verify. (#2434)
+
   * [jwe] Added `jwe.WithDecryptedRecipient`, a `jwe.Decrypt` option that
     returns the recipient whose encrypted key decrypted the message. A JWE in
     JSON serialization can have several recipients, and `jwe.Decrypt` tries
