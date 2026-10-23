@@ -28,6 +28,7 @@ type verifyContext struct {
 	payloadReader      io.Reader
 	keyProviders       []KeyProvider
 	keyUsed            *any
+	verifiedSignature  **Signature
 	validateKey        bool
 	strictECDSA        bool
 	critValidation     bool
@@ -55,6 +56,7 @@ func freeVerifyContext(vc *verifyContext) *verifyContext {
 	vc.payloadReader = nil
 	vc.keyProviders = vc.keyProviders[:0]
 	vc.keyUsed = nil
+	vc.verifiedSignature = nil
 	vc.validateKey = false
 	vc.strictECDSA = false
 	vc.critValidation = true
@@ -119,6 +121,8 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 			vc.keyProviders = append(vc.keyProviders, option.MustGet[KeyProvider](opt))
 		case identKeyUsed{}:
 			vc.keyUsed = option.MustGet[*any](opt)
+		case identVerifiedSignature{}:
+			vc.verifiedSignature = option.MustGet[**Signature](opt)
 		case identContext{}:
 			ctxOpt = option.MustGet[context.Context](opt) //nolint:fatcontext // not nesting; selecting from options
 		case identValidateKey{}:
@@ -349,6 +353,10 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 	// Verification succeeded
 	if vc.keyUsed != nil {
 		*vc.keyUsed = key
+	}
+
+	if vc.verifiedSignature != nil {
+		*vc.verifiedSignature = sig
 	}
 
 	if vc.dst != nil {
