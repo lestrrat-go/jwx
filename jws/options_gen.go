@@ -227,6 +227,7 @@ type identSerialization struct{}
 type identStrictECDSA struct{}
 type identUseDefault struct{}
 type identValidateKey struct{}
+type identVerifiedSignature struct{}
 
 func (identAlgorithmMatch) String() string {
 	return "WithAlgorithmMatch"
@@ -322,6 +323,10 @@ func (identUseDefault) String() string {
 
 func (identValidateKey) String() string {
 	return "WithValidateKey"
+}
+
+func (identVerifiedSignature) String() string {
+	return "WithVerifiedSignature"
 }
 
 // WithAlgorithmMatch enables a check that the protected header's "alg"
@@ -580,6 +585,12 @@ func WithMaxSignatures(v int) GlobalParseOption {
 
 // WithMessage can be passed to Verify() to obtain the jws.Message upon
 // a successful verification.
+//
+// The message holds every signature that was parsed, including entries
+// that did not verify. A JSON JWS is accepted when any one of its
+// signatures verifies, so do not read per-signature values from the
+// message by position. Use `jws.WithVerifiedSignature` to get the
+// signature that passed.
 func WithMessage(v *Message) VerifyOption {
 	return &verifyOption{option.New(identMessage{}, v)}
 }
@@ -688,4 +699,22 @@ func WithUseDefault(v bool) WithKeySetSuboption {
 // By default, the key is not validated.
 func WithValidateKey(v bool) SignVerifyOption {
 	return &signVerifyOption{option.New(identValidateKey{}, v)}
+}
+
+// WithVerifiedSignature allows you to specify that `jws.Verify()` should
+// return the signature that passed verification.
+//
+// A JSON JWS may carry several signatures, and `jws.Verify()` succeeds
+// when any one of them verifies. The other entries are unverified input,
+// and their position in the message says nothing about which one passed.
+// When you need a per-signature value, such as a "crit" extension, read it
+// from this signature and not from `Message.Signatures()[0]`.
+//
+// `v` must be a pointer to a `*jws.Signature` variable. After a successful
+// verification, the variable points to the signature that verified. When
+// `jws.WithMessage` is also given, it is one of the entries returned by
+// `Message.Signatures()`. The variable is left untouched when verification
+// fails.
+func WithVerifiedSignature(v **Signature) VerifyOption {
+	return &verifyOption{option.New(identVerifiedSignature{}, v)}
 }
