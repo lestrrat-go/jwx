@@ -12,6 +12,7 @@ In this document we describe how to work with JWE using `github.com/lestrrat-go/
 * [Decrypting](#decrypting)
   * [Decrypting using a single key](#decrypting-using-a-single-key)
   * [Decrypting using a JWKS](#decrypting-using-a-jwks)
+  * [Decrypting a message with multiple recipients](#decrypting-a-message-with-multiple-recipients)
 * [HPKE (Hybrid Public Key Encryption)](#hpke-hybrid-public-key-encryption)
 * [ECDH-ES with X25519](#ecdh-es-with-x25519)
 * [Filtering JWE headers](#filtering-jwe-headers)
@@ -445,6 +446,37 @@ func Example_jwe_verify_with_jwk_set() {
 ```
 source: [examples/jwe_decrypt_with_keyset_example_test.go](https://github.com/jwx-go/examples/blob/v4/jwe_decrypt_with_keyset_example_test.go)
 <!-- END INCLUDE -->
+
+## Decrypting a message with multiple recipients
+
+A JWE in JSON serialization can have several recipients, each with its own encrypted key. `jwe.Decrypt()` tries the
+recipients in the order they appear and returns as soon as one of them decrypts with a key you supplied.
+
+The authentication tag of a JWE covers the protected header, and it does not cover the per-recipient `header` member or
+the shared `unprotected` member. Anyone can change those members without invalidating the message. A value in them,
+such as a `kid`, is therefore not authenticated, even for the recipient that decrypted. Do not use such a value for an
+authorization decision. Put any value you rely on in the protected header.
+
+To find out which recipient decrypted the message, use `jwe.WithDecryptedRecipient()`. `jwe.WithKeyUsed()` returns the
+key but not the recipient:
+
+```go
+var used jwe.Recipient
+plaintext, err := jwe.Decrypt(buf,
+  jwe.WithKey(jwa.A128KW(), key),
+  jwe.WithDecryptedRecipient(&used),
+)
+if err != nil {
+  fmt.Printf("failed to decrypt payload: %s\n", err)
+  return
+}
+
+// The headers of this recipient are not authenticated.
+kid, _ := used.Headers().KeyID()
+```
+
+`used` is set only when decryption succeeds. When you also pass `jwe.WithMessage()`, it is one of the entries returned
+by `msg.Recipients()`.
 
 # HPKE (Hybrid Public Key Encryption)
 
