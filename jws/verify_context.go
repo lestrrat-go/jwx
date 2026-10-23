@@ -25,6 +25,7 @@ type verifyContext struct {
 	payloadReader      io.Reader
 	keyProviders       []KeyProvider
 	keyUsed            any
+	verifiedSignature  **Signature
 	validateKey        bool
 	critValidation     bool
 	algorithmMatch     bool
@@ -50,6 +51,7 @@ func freeVerifyContext(vc *verifyContext) *verifyContext {
 	vc.payloadReader = nil
 	vc.keyProviders = vc.keyProviders[:0]
 	vc.keyUsed = nil
+	vc.verifiedSignature = nil
 	vc.validateKey = false
 	vc.critValidation = false
 	vc.algorithmMatch = false
@@ -127,6 +129,10 @@ func (vc *verifyContext) ProcessOptions(options []VerifyOption) error {
 		case identKeyUsed{}:
 			if err := option.Value(&vc.keyUsed); err != nil {
 				return makeVerifyError(`failed to retrieve key-used option value: %w`, err)
+			}
+		case identVerifiedSignature{}:
+			if err := option.Value(&vc.verifiedSignature); err != nil {
+				return makeVerifyError(`failed to retrieve verified-signature option value: %w`, err)
 			}
 		case identContext{}:
 			if err := option.Value(&vc.ctx); err != nil {
@@ -338,6 +344,10 @@ func (vc *verifyContext) tryKey(verifyBuf []byte, alg jwa.SignatureAlgorithm, ke
 		if err := blackmagic.AssignIfCompatible(vc.keyUsed, key); err != nil {
 			return fmt.Errorf(`failed to assign used key (%T) to %T: %w`, key, vc.keyUsed, err)
 		}
+	}
+
+	if vc.verifiedSignature != nil {
+		*vc.verifiedSignature = sig
 	}
 
 	if vc.dst != nil {
