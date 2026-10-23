@@ -355,6 +355,9 @@ func (vc *verifyContext) verifyStreaming(buf []byte) ([]byte, error) {
 	if vc.keyUsed != nil {
 		*vc.keyUsed = key
 	}
+	if vc.verifiedSignature != nil {
+		*vc.verifiedSignature = sig
+	}
 	if vc.dst != nil {
 		*vc.dst = *msg
 	}
