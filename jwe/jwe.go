@@ -340,6 +340,7 @@ func EncryptStatic(payload, cek []byte, options ...EncryptOption) ([]byte, error
 type decryptContext struct {
 	keyProviders            []KeyProvider
 	keyUsed                 *any
+	decryptedRecipient      *Recipient
 	cek                     *[]byte
 	dst                     *Message
 	maxRecipients           int
@@ -364,6 +365,7 @@ func allocDecryptContext() *decryptContext {
 func freeDecryptContext(dc *decryptContext) *decryptContext {
 	dc.keyProviders = dc.keyProviders[:0]
 	dc.keyUsed = nil
+	dc.decryptedRecipient = nil
 	dc.cek = nil
 	dc.dst = nil
 	dc.maxRecipients = 0
@@ -391,6 +393,8 @@ func (dc *decryptContext) ProcessOptions(options []DecryptOption) error {
 			dc.keyProviders = append(dc.keyProviders, option.MustGet[KeyProvider](opt))
 		case identKeyUsed{}:
 			dc.keyUsed = option.MustGet[*any](opt)
+		case identDecryptedRecipient{}:
+			dc.decryptedRecipient = option.MustGet[*Recipient](opt)
 		case identKey{}:
 			pair := option.MustGet[*withKey](opt)
 			alg, ok := pair.alg.(jwa.KeyEncryptionAlgorithm)
@@ -575,6 +579,9 @@ func (dc *decryptContext) DecryptMessage(buf []byte) ([]byte, error) {
 		if err != nil {
 			errs = append(errs, makeRecipientError(err))
 			continue
+		}
+		if dc.decryptedRecipient != nil {
+			*dc.decryptedRecipient = recipient
 		}
 		if dc.dst != nil {
 			*dc.dst = *msg
