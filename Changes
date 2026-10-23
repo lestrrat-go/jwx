@@ -98,6 +98,14 @@ UNRELEASED
     `jwt.WithKeySet` or any other option set. `jws.VerifyCompactFast` still
     rejects such a header. (#2423)
 
+  * [jws] Added `jws.WithVerifiedSignature`, a `jws.Verify` option that returns
+    the signature that passed verification. A JSON JWS is accepted when any
+    one of its signatures verifies, so `Message.Signatures()[0]` can be an
+    entry that did not verify. Read per-signature values, such as a `crit`
+    extension, from the signature this option returns. The `jws.WithMessage`
+    documentation now says that the message holds every parsed signature,
+    including entries that did not verify. (#2436)
+
 v3.3.0 8 Sep 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes
