@@ -33,4 +33,5 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithStrictECDSA", identStrictECDSA{}.String())
 	require.Equal(t, "WithUseDefault", identUseDefault{}.String())
 	require.Equal(t, "WithValidateKey", identValidateKey{}.String())
+	require.Equal(t, "WithVerifiedSignature", identVerifiedSignature{}.String())
 }
