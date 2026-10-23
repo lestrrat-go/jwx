@@ -33,7 +33,12 @@ type identCritExtension struct{}
 //
 // Concretely, the post-verify code path for a declared extension must:
 //
-//  1. Read the value of the named header from the verified message.
+//  1. Read the value of the named header from the signature that passed
+//     verification, which jws.WithVerifiedSignature returns. A JSON JWS is
+//     accepted when any one of its signatures verifies, so the other entries
+//     of a multi-signature message are unverified input. Do not read the
+//     header by position, for example from Message.Signatures()[0], unless
+//     the message has exactly one signature.
 //  2. Apply whatever check or transformation the extension specifies
 //     (e.g. for an "x-tenant-binding" extension, refuse to act on the
 //     payload unless the binding matches the current tenant).
