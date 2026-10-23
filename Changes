@@ -107,6 +107,14 @@ UNRELEASED
     `"alg"`, so callers retry through `jws.Verify`. It used to return a
     verification error that matched `jws.VerificationError()`. (#2422)
 
+  * [jwe] Added `jwe.WithDecryptedRecipient`, a `jwe.Decrypt` option that
+    returns the recipient whose encrypted key decrypted the message. A JWE in
+    JSON serialization can have several recipients, and `jwe.Decrypt` tries
+    them in order, so this tells you which one worked, which
+    `jwe.WithKeyUsed` does not. The per-recipient `header` member is not
+    covered by the authentication tag of the content, so a value in it, such
+    as `kid`, is not authenticated. (#2438)
+
 v4.5.0 8 September 2026
   * [jwt][jws][jwe][jwk] Custom claim, header, and JWK field names are now
     JSON-escaped on output. Previously a name was written between the quotes
