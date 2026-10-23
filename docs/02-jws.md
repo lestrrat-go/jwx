@@ -18,6 +18,7 @@ In this document we describe how to work with JWS using [`github.com/lestrrat-go
   * [Verification using a detached payload](#verification-using-a-detached-payload)
   * [Verification using `jku`](#verification-using-jku)
   * [Enforce RFC 7518 ECDSA curve bindings](#enforce-rfc-7518-ecdsa-curve-bindings)
+  * [Verification of a message with multiple signatures](#verification-of-a-message-with-multiple-signatures)
 * [Using a custom signing/verification algorithm](#using-a-custom-signingverification-algorithm)
 * [Extension algorithms (Ed448, ES256K, ML-DSA)](#extension-algorithms-ed448-es256k-ml-dsa)
 * [Using a custom base64 encoder](#using-a-custom-base64-encoder)
@@ -160,9 +161,9 @@ func Example_jws_use_jws_header() {
     return
   }
 
-  // While JWT enveloped with JWS in compact format only has 1 signature,
-  // a generic JWS message may have multiple signatures. Therefore, we
-  // need to access the first element
+  // A JWS in compact format has exactly one signature, so index 0 is that
+  // signature. A JSON JWS can have several, and jws.Parse verifies none of
+  // them, so do not pick an entry by position in that case.
   kid, ok := msg.Signatures()[0].ProtectedHeaders().KeyID()
   if !ok {
     fmt.Printf("failed to get key ID from protected headers")
@@ -656,6 +657,44 @@ The URL in the `jku` field must have the `https` scheme and the key ID in the fe
 Passing `nil` to `jws.WithVerifyAuto` is not supported: jku verification will error at use time rather than silently falling back to any default. This is intentional — there is no correct default fetcher for jku verification because the policy (which URLs to trust) is site-specific.
 
 Both `jwkfetch.Client` (one-shot) and `jwkfetch.Cache` (background-refreshed) implement `jwk.Fetcher` and can be passed to `jws.WithVerifyAuto`. See the [jwkfetch section of the extensions doc](./10-extensions.md#http-jwk-set-retrieval-jwkfetch) and the [module README](https://github.com/jwx-go/jwkfetch) for full details.
+
+## Verification of a message with multiple signatures
+
+A JWS in JSON serialization can carry several signatures over the same payload (see
+[Generating a JWS message in JSON serialization format](#generating-a-jws-message-in-json-serialization-format)).
+`jws.Verify()` tries the signatures in the order they appear and returns as soon as one of them verifies with a key you
+supplied. It does not look at the remaining signatures. This follows RFC 7515 section 5.2, which treats a JWS as valid
+when at least one of its signatures validates.
+
+Because of this, a signature entry that you have not seen verify is untrusted input. Anyone who holds a valid JWS can
+add, remove, or reorder entries without invalidating it, and the library gives no meaning to a signature's position.
+The message returned by `jws.WithMessage()` lists every signature that was parsed, including entries that did not
+verify. Do not read a header such as a `crit` extension, a tenant, or an issuer from `msg.Signatures()[0]` and act on
+it: that entry may be one that failed verification.
+
+To get the signature that passed, use `jws.WithVerifiedSignature()`:
+
+```go
+var verified *jws.Signature
+_, err := jws.Verify(buf,
+  jws.WithKey(jwa.HS256(), key),
+  jws.WithCritExtension("x-tenant-binding"),
+  jws.WithVerifiedSignature(&verified),
+)
+if err != nil {
+  fmt.Printf("failed to verify payload: %s\n", err)
+  return
+}
+
+// Read per-signature values from the signature that verified.
+binding, ok := verified.ProtectedHeaders().Field("x-tenant-binding")
+```
+
+`verified` is set only when verification succeeds. When you also pass `jws.WithMessage()`, it is one of the entries
+returned by `msg.Signatures()`, so you can compare the pointers to find its position.
+
+If your policy requires every signature to verify, `jws.Verify()` cannot enforce that, because it stops at the first
+success. Rebuild each entry as a flattened JWS that holds one signature, and call `jws.Verify()` on each of them.
 
 # Using a custom signing/verification algorithm
 
