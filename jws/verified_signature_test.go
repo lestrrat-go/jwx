@@ -89,6 +89,46 @@ func TestVerifyWithVerifiedSignature(t *testing.T) {
 		require.Equal(t, "tenant-b", tenantOf(t, msg.Signatures()[0]), `entry 0 did not verify and keeps its own value`)
 	})
 
+	// Signed with the trusted key, but its "crit" lists an extension that the
+	// caller did not declare with WithCritExtension.
+	undeclaredCrit := hmacSignatureEntry(t, payload,
+		`{"alg":"HS256","crit":["x-undeclared"],"x-undeclared":"v"}`, trustedKey)
+
+	t.Run("validly signed entry with undeclared crit is skipped", func(t *testing.T) {
+		t.Parallel()
+
+		data, err := json.Marshal(generalJSONJWS{Payload: payload, Signatures: []signatureEntry{undeclaredCrit, trusted}})
+		require.NoError(t, err, `json.Marshal should succeed`)
+
+		var verified *jws.Signature
+		msg := jws.NewMessage()
+		_, err = jws.Verify(data,
+			jws.WithKey(jwa.HS256(), trustedKey),
+			jws.WithCritExtension(verifiedSignatureExt),
+			jws.WithMessage(msg),
+			jws.WithVerifiedSignature(&verified),
+		)
+		require.NoError(t, err, `jws.Verify should succeed on the entry whose crit is declared`)
+		require.Same(t, msg.Signatures()[1], verified, `the entry rejected by crit validation must not be reported`)
+		require.Equal(t, "tenant-a", tenantOf(t, verified))
+	})
+
+	t.Run("only entries with undeclared crit", func(t *testing.T) {
+		t.Parallel()
+
+		data, err := json.Marshal(generalJSONJWS{Payload: payload, Signatures: []signatureEntry{undeclaredCrit}})
+		require.NoError(t, err, `json.Marshal should succeed`)
+
+		var verified *jws.Signature
+		_, err = jws.Verify(data,
+			jws.WithKey(jwa.HS256(), trustedKey),
+			jws.WithCritExtension(verifiedSignatureExt),
+			jws.WithVerifiedSignature(&verified),
+		)
+		require.ErrorContains(t, err, `invalid "crit" header`, `jws.Verify should fail because crit validation rejects every entry`)
+		require.Nil(t, verified, `WithVerifiedSignature should not be set on failure`)
+	})
+
 	t.Run("unverified entry listed last", func(t *testing.T) {
 		t.Parallel()
 
