@@ -304,6 +304,9 @@ func (vc *verifyContext) verifyStreaming(buf []byte) ([]byte, error) {
 			return nil, makeVerifyError(`failed to assign key to keyUsed: %w`, err)
 		}
 	}
+	if vc.verifiedSignature != nil {
+		*vc.verifiedSignature = sig
+	}
 	if vc.dst != nil {
 		*vc.dst = *msg
 	}
