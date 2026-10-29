@@ -640,9 +640,9 @@ func TestVerifyCompactFastMinimalHeaderShape(t *testing.T) {
 	})
 
 	t.Run("missing alg defers to jws.Verify", func(t *testing.T) {
-		// The minimal shape requires exactly one "alg". jws.Verify accepts a
-		// header without "alg" and verifies under the caller's algorithm, so
-		// the fast path declines the header instead of rejecting the message.
+		// The minimal shape requires exactly one "alg". The fast path declines
+		// a header without "alg" so that jws.Verify gives the answer, and
+		// jws.Verify rejects it because "alg" must be in the protected header.
 		compact := signHS256Compact(key, `{"typ":"JWT"}`)
 		_, err := jws.VerifyCompactFast(key, compact, jwa.HS256())
 		require.Error(t, err)
@@ -650,7 +650,8 @@ func TestVerifyCompactFastMinimalHeaderShape(t *testing.T) {
 		require.ErrorContains(t, err, `missing "alg"`)
 
 		_, err = jws.Verify(compact, jws.WithKey(jwa.HS256(), key))
-		require.NoError(t, err, `jws.Verify accepts the header the fast path declined`)
+		require.Error(t, err, `jws.Verify rejects a protected header without "alg"`)
+		require.ErrorIs(t, err, jws.VerifyError())
 	})
 }
 

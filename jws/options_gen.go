@@ -631,11 +631,14 @@ func WithCompact() SignVerifyParseOption {
 // RFC 9864 and are not interchangeable. This guard runs for every key
 // source — jws.WithKey(), jws.WithKeySet(), jws.WithVerifyAuto(), and
 // custom jws.WithKeyProvider() — so the algorithm a message advertises
-// always matches the discipline under which it was accepted. The check
-// only fires when the protected header carries an "alg"; messages that
-// place "alg" only in the unprotected header (or omit it) are unaffected.
+// always matches the discipline under which it was accepted.
 //
-// Pass jws.WithSkipAlgorithmMatch(true) to bypass this check. It is
+// This option does not waive the requirement that the protected header
+// carries an "alg". jws.Verify() rejects a message that omits it or
+// places it only in the unprotected header, because the signature does
+// not cover that header.
+//
+// Pass jws.WithSkipAlgorithmMatch(true) to bypass the comparison. It is
 // intended for recovery or interoperability with non-conforming
 // producers that emit a protected "alg" inconsistent with the actual
 // signature algorithm. It weakens a safety check: with it enabled, a
