@@ -436,7 +436,9 @@ when strict ECDSA verification is required.
 ## Reject small-order Ed25519 keys
 
 A small-order Ed25519 public key, such as the identity point `01 00 ... 00`, verifies
-a fixed signature for any message. `jws.Verify` accepts these keys by default. Call
+a fixed signature for any message. Key generation never produces one. It appears only
+when a key set holds a hand-written key or a placeholder such as 32 zero bytes.
+`jws.Verify` accepts these keys by default. Call
 `jwk.Settings(jwk.WithRejectSmallOrderEd25519Keys(true))` once at program startup to
 make `jws.Verify` and `jwt.Parse` return an error when the verification key is one.
 The setting also applies to keys passed as a raw `ed25519.PublicKey` or as a `jwk.Key`.

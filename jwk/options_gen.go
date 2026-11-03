@@ -296,9 +296,11 @@ func WithRejectDuplicateKID(v bool) GlobalParseOption {
 //
 // A small-order key (for example the identity point `01 00 ... 00`)
 // verifies one fixed signature for every message, so it can never be
-// a legitimate verification key. RFC 8032 does not require rejecting
-// such keys, so this option is false by default to keep existing
-// behavior.
+// a legitimate verification key. Key generation never produces one.
+// It appears only when a key set holds a hand-written key or a
+// placeholder such as 32 zero bytes. RFC 8032 does not require
+// rejecting such keys, so this option is false by default to keep
+// existing behavior.
 //
 // When true, `jwk.Parse()`, `jwk.Import()`, and `Key.Validate()`
 // reject these keys, and `jws.Verify()` rejects them when given a raw

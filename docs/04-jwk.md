@@ -778,6 +778,13 @@ verification multiplies the key by 8 and the key's contribution disappears. For 
 identity key `01 00 ... 00`, the signature `01 00 ... 00` verifies against every
 payload, so anyone can forge a token that this key appears to sign.
 
+Key generation never produces a small-order key: the chance that a randomly
+generated key lands in the 8-point subgroup is negligible. One appears only when
+someone writes it into a key set by hand, or when a placeholder such as 32 zero bytes
+is published as a public key by mistake. The setting below is a safeguard for key sets
+that come from sources you do not fully control. It does not fix a flaw in key
+generation.
+
 RFC 8032 does not require a verifier to reject these keys, so jwx accepts them by
 default. Call `jwk.Settings` once at program startup to reject them:
 
