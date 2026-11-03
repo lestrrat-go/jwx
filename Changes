@@ -4,6 +4,15 @@ Changes
 v4 has many incompatibilities with v3. To see the full list of differences between
 v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents should read [MIGRATION-v4.md](./MIGRATION-v4.md)
 
+v4.7.0 UNRELEASED
+  * [jwk][jws] Added `jwk.WithRejectSmallOrderEd25519Keys`, a global option for
+    `jwk.Settings`. When set to true, `jwk.Parse`, `jwk.Import`, and
+    `Key.Validate` reject an Ed25519 public key that encodes a point of small
+    order, and `jws.Verify` and `jwt.Parse` reject such a key as a verification
+    key. A small-order key, such as the identity point `01 00 ... 00`, verifies
+    a fixed signature for any message. The option is false by default, so
+    existing behavior is unchanged.
+
 v4.6.0 23 October 2026
   * [jws][jwk] `github.com/valyala/fastjson` is no longer a dependency. The
     header probes in `jws/jwsbb` and `jwk/jwkbb` now use `encoding/json/v2`

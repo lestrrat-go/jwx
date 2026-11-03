@@ -767,11 +767,19 @@ The default HTTP client (`jwkfetch.DefaultHTTPClient()`) applies a 30-second tim
 
 ## Small-order Ed25519 keys
 
-An Ed25519 public key that encodes a small-order point, such as the identity point
-`01 00 ... 00`, verifies one fixed signature for every message. RFC 8032 does not
-require rejecting these keys, so jwx accepts them by default.
+The Ed25519 curve contains 8 points of small order: the identity point (order 1),
+one point of order 2, two of order 4, and four of order 8. Multiplying any of them
+by 8 gives the identity. An Ed25519 public key whose point is one of these is a
+small-order key. Real public keys, which are multiples of the base point, are never
+small-order.
 
-Set `jwk.WithRejectSmallOrderEd25519Keys(true)` once at program startup to reject them:
+A small-order key verifies a fixed signature for any message, because Ed25519
+verification multiplies the key by 8 and the key's contribution disappears. For the
+identity key `01 00 ... 00`, the signature `01 00 ... 00` verifies against every
+payload, so anyone can forge a token that this key appears to sign.
+
+RFC 8032 does not require a verifier to reject these keys, so jwx accepts them by
+default. Call `jwk.Settings` once at program startup to reject them:
 
 ```go
 if err := jwk.Settings(jwk.WithRejectSmallOrderEd25519Keys(true)); err != nil {
@@ -779,9 +787,25 @@ if err := jwk.Settings(jwk.WithRejectSmallOrderEd25519Keys(true)); err != nil {
 }
 ```
 
-With the setting on, `jwk.Parse()`, `jwk.Import()`, and `Key.Validate()` return an error
-for such a key, and `jws.Verify()` returns an error when given one as a raw
-`ed25519.PublicKey`. The setting is process-global and covers both the jwk and jws packages.
+With the setting on, a small-order key is rejected in these places:
+
+| Call | Result |
+|------|--------|
+| `jwk.Parse()`, `jwk.ParseKey()` | Returns a key validation error. |
+| `jwk.Import()` of an `ed25519.PublicKey` | Returns an import error. |
+| `Key.Validate()` | Returns a key validation error. |
+| `jws.Verify()` with a raw `ed25519.PublicKey` or a `jwk.Key` | Returns a verification error. |
+
+The error message contains `ed25519: small-order public key`.
+
+The check matches the 8 points above, including the non-canonical encodings of the
+identity point and of the order-4 point. It ignores the sign bit of the encoded key.
+It does not check X25519 keys, and it does not check low-level
+`jws/jwsbb.VerifyEdDSA`, which assumes a well-formed key.
+
+The setting is process-global and is shared by the jwk and jws packages. Applying
+it while other goroutines parse or verify keys is safe but gives a mixed result for
+calls already in flight.
 
 ## Whitelist types
 
