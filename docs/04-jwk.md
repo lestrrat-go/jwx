@@ -765,6 +765,24 @@ A restrictive `Whitelist` is applied to **every URL the Client contacts**, inclu
 
 The default HTTP client (`jwkfetch.DefaultHTTPClient()`) applies a 30-second timeout, a 5-redirect cap, and a redirect policy that blocks HTTPS→HTTP scheme downgrades. If you bring your own `*http.Client` via `jwkfetch.WithHTTPClient(...)`, wrap it with `jwkfetch.WrapHTTPClientDefaults(...)` first to keep those protections. For full SSRF defense (private-IP blocking, DNS rebinding prevention), supply a `*http.Client` whose `Transport.DialContext` validates resolved addresses.
 
+## Small-order Ed25519 keys
+
+An Ed25519 public key that encodes a small-order point, such as the identity point
+`01 00 ... 00`, verifies one fixed signature for every message. RFC 8032 does not
+require rejecting these keys, so jwx accepts them by default.
+
+Set `jwk.WithRejectSmallOrderEd25519Keys(true)` once at program startup to reject them:
+
+```go
+if err := jwk.Settings(jwk.WithRejectSmallOrderEd25519Keys(true)); err != nil {
+  return err
+}
+```
+
+With the setting on, `jwk.Parse()`, `jwk.Import()`, and `Key.Validate()` return an error
+for such a key, and `jws.Verify()` returns an error when given one as a raw
+`ed25519.PublicKey`. The setting is process-global and covers both the jwk and jws packages.
+
 ## Whitelist types
 
 Pass any implementation of `jwkfetch.Whitelist` to `jwkfetch.WithWhitelist`:

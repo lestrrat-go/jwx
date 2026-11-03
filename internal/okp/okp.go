@@ -6,7 +6,18 @@ import (
 	"crypto/ed25519"
 	"fmt"
 	"slices"
+	"sync/atomic"
 )
+
+// rejectSmallOrder makes ValidateEd25519PublicKey reject small-order keys.
+// It is false by default: RFC 8032 does not require rejecting them, and
+// existing callers may depend on them being accepted.
+var rejectSmallOrder atomic.Bool
+
+// SetRejectSmallOrder turns small-order Ed25519 public key rejection on or off.
+func SetRejectSmallOrder(v bool) {
+	rejectSmallOrder.Store(v)
+}
 
 // smallOrderEd25519Y holds the y-coordinates of the eight Ed25519 points of
 // order 1, 2, 4, and 8, as little-endian bytes with the sign bit cleared.
@@ -44,13 +55,18 @@ var smallOrderEd25519Y = [...][ed25519.PublicKeySize]byte{
 	},
 }
 
-// ValidateEd25519PublicKey returns an error when x is not a usable Ed25519
-// public key: it must be 32 bytes and must not encode a small-order point.
-// A small-order key verifies one fixed signature for every message, so it can
-// never be a legitimate verification key.
+// ValidateEd25519PublicKey returns an error when x is not a 32-byte Ed25519
+// public key. When SetRejectSmallOrder(true) is in effect, it also returns an
+// error if x encodes a small-order point. A small-order key verifies one fixed
+// signature for every message, so it can never be a legitimate verification
+// key.
 func ValidateEd25519PublicKey(x []byte) error {
 	if len(x) != ed25519.PublicKeySize {
 		return fmt.Errorf(`ed25519: wrong public key size`)
+	}
+
+	if !rejectSmallOrder.Load() {
+		return nil
 	}
 
 	var y [ed25519.PublicKeySize]byte

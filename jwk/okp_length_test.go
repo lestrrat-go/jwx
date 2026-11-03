@@ -94,6 +94,11 @@ var smallOrderEd25519Keys = map[string]string{
 }
 
 func TestOKPRejectsSmallOrderEd25519PublicKeys(t *testing.T) {
+	require.NoError(t, jwk.Settings(jwk.WithRejectSmallOrderEd25519Keys(true)))
+	t.Cleanup(func() {
+		require.NoError(t, jwk.Settings(jwk.WithRejectSmallOrderEd25519Keys(false)))
+	})
+
 	for name, hexKey := range smallOrderEd25519Keys {
 		raw, err := hex.DecodeString(hexKey)
 		require.NoError(t, err)
@@ -132,4 +137,17 @@ func TestOKPRejectsSmallOrderEd25519PublicKeys(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, key.Validate())
 	})
+}
+
+func TestOKPAcceptsSmallOrderEd25519PublicKeysByDefault(t *testing.T) {
+	identity := make([]byte, ed25519.PublicKeySize)
+	identity[0] = 1
+
+	src := fmt.Sprintf(`{"kty":"OKP","crv":"Ed25519","x":"%s"}`, base64.EncodeToString(identity))
+	key, err := jwk.ParseKey([]byte(src))
+	require.NoError(t, err)
+	require.NoError(t, key.Validate())
+
+	_, err = jwk.Import[jwk.OKPPublicKey](ed25519.PublicKey(identity))
+	require.NoError(t, err)
 }

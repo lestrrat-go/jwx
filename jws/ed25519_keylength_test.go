@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/lestrrat-go/jwx/v4/jwa"
+	"github.com/lestrrat-go/jwx/v4/jwk"
 	"github.com/lestrrat-go/jwx/v4/jws"
 	"github.com/stretchr/testify/require"
 )
@@ -164,8 +165,7 @@ func TestVerifyWithMalformedEd25519Key(t *testing.T) {
 }
 
 func TestVerifyRejectsSmallOrderEd25519PublicKey(t *testing.T) {
-	t.Parallel()
-
+	// Not parallel: the setting is process-global.
 	// The identity point verifies the fixed signature 01 00...00 for any message.
 	identity := make(ed25519.PublicKey, ed25519.PublicKeySize)
 	identity[0] = 1
@@ -177,15 +177,23 @@ func TestVerifyRejectsSmallOrderEd25519PublicKey(t *testing.T) {
 		enc.EncodeToString([]byte(`{"sub":"admin"}`)) + "." +
 		enc.EncodeToString(forgedSig)
 
+	t.Run("accepted by default", func(t *testing.T) {
+		_, err := jws.Verify([]byte(compact), jws.WithKey(jwa.EdDSAEd25519(), identity))
+		require.NoError(t, err)
+	})
+
+	require.NoError(t, jwk.Settings(jwk.WithRejectSmallOrderEd25519Keys(true)))
+	t.Cleanup(func() {
+		require.NoError(t, jwk.Settings(jwk.WithRejectSmallOrderEd25519Keys(false)))
+	})
+
 	t.Run("raw public key", func(t *testing.T) {
-		t.Parallel()
 		_, err := jws.Verify([]byte(compact), jws.WithKey(jwa.EdDSAEd25519(), identity))
 		require.Error(t, err)
 		require.ErrorContains(t, err, "small-order")
 	})
 
 	t.Run("pointer public key", func(t *testing.T) {
-		t.Parallel()
 		_, err := jws.Verify([]byte(compact), jws.WithKey(jwa.EdDSAEd25519(), &identity))
 		require.Error(t, err)
 		require.ErrorContains(t, err, "small-order")
