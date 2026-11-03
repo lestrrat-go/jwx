@@ -2847,3 +2847,44 @@ func fmtJSONCase(pretty, unencoded bool, n int) string {
 	}
 	return s
 }
+
+func TestVerifyRejectsSmallOrderEd25519PublicKey(t *testing.T) {
+	// Not parallel: the setting is process-global.
+
+	// The identity point verifies the fixed signature 01 00...00 for any message.
+	identity := make(ed25519.PublicKey, ed25519.PublicKeySize)
+	identity[0] = 1
+	forgedSig := make([]byte, ed25519.SignatureSize)
+	forgedSig[0] = 1
+
+	enc := stdbase64.RawURLEncoding
+	compact := enc.EncodeToString([]byte(`{"alg":"EdDSA"}`)) + "." +
+		enc.EncodeToString([]byte(`{"sub":"admin"}`)) + "." +
+		enc.EncodeToString(forgedSig)
+
+	t.Run("accepted by default", func(t *testing.T) {
+		_, err := jws.Verify([]byte(compact), jws.WithKey(jwa.EdDSA(), identity))
+		require.NoError(t, err)
+	})
+
+	// Import before enabling the setting, which would reject the import itself.
+	jwkKey, err := jwk.Import(identity)
+	require.NoError(t, err)
+
+	jwk.Configure(jwk.WithRejectSmallOrderEd25519Keys(true))
+	t.Cleanup(func() {
+		jwk.Configure(jwk.WithRejectSmallOrderEd25519Keys(false))
+	})
+
+	t.Run("raw public key", func(t *testing.T) {
+		_, err := jws.Verify([]byte(compact), jws.WithKey(jwa.EdDSA(), identity))
+		require.Error(t, err)
+		require.ErrorContains(t, err, "small-order")
+	})
+
+	t.Run("jwk.Key", func(t *testing.T) {
+		_, err := jws.Verify([]byte(compact), jws.WithKey(jwa.EdDSA(), jwkKey))
+		require.Error(t, err)
+		require.ErrorContains(t, err, "small-order")
+	})
+}

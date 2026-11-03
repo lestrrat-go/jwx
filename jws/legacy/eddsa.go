@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/lestrrat-go/jwx/v3/internal/keyconv"
+	"github.com/lestrrat-go/jwx/v3/internal/okp"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jws/internal/keytype"
 )
@@ -69,6 +70,10 @@ func (v eddsaVerifier) Verify(payload, signature []byte, key any) (err error) {
 		if err := keyconv.Ed25519PublicKey(&pubkey, key); err != nil {
 			return fmt.Errorf(`failed to retrieve ed25519.PublicKey out of %T: %w`, key, err)
 		}
+	}
+
+	if err := okp.ValidateEd25519PublicKey(pubkey); err != nil {
+		return err
 	}
 
 	if !ed25519.Verify(pubkey, payload, signature) {

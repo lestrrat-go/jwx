@@ -1,0 +1,14 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "okp",
+    srcs = ["okp.go"],
+    importpath = "github.com/lestrrat-go/jwx/v3/internal/okp",
+    visibility = ["//:__subpackages__"],
+)
+
+alias(
+    name = "go_default_library",
+    actual = ":okp",
+    visibility = ["//:__subpackages__"],
+)
