@@ -18,6 +18,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
 	"github.com/lestrrat-go/jwx/v3/internal/json"
+	"github.com/lestrrat-go/jwx/v3/internal/okp"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 	"github.com/lestrrat-go/jwx/v3/jwk/jwkbb"
 )
@@ -893,6 +894,12 @@ func Configure(options ...GlobalOption) {
 				continue
 			}
 			strictKeySetParsing.Store(v)
+		case identRejectSmallOrderEd25519Keys{}:
+			var v bool
+			if err := option.Value(&v); err != nil {
+				continue
+			}
+			okp.SetRejectSmallOrder(v)
 		}
 	}
 

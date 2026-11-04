@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/lestrrat-go/jwx/v3/internal/base64"
+	"github.com/lestrrat-go/jwx/v3/internal/okp"
 	"github.com/lestrrat-go/jwx/v3/jwa"
 )
 
@@ -145,9 +146,7 @@ func RegisterOKPRawKeyImporter(fn OKPRawKeyImporter) {
 func validateOKPPublicKeySize(alg jwa.EllipticCurveAlgorithm, xbuf []byte) error {
 	switch alg {
 	case jwa.Ed25519():
-		if len(xbuf) != ed25519.PublicKeySize {
-			return fmt.Errorf(`ed25519: wrong public key size`)
-		}
+		return okp.ValidateEd25519PublicKey(xbuf)
 	case jwa.X25519():
 		if len(xbuf) != 32 {
 			return fmt.Errorf(`x25519: wrong public key size`)

@@ -38,6 +38,7 @@ go_library(
         "//internal/base64",
         "//internal/ecutil",
         "//internal/json",
+        "//internal/okp",
         "//internal/pool",
         "//internal/tokens",
         "//jwa",

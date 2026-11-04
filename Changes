@@ -4,6 +4,15 @@ Changes
 v3 has many incompatibilities with v2. To see the full list of differences between
 v2 and v3, please read the Changes-v3.md file (https://github.com/lestrrat-go/jwx/blob/develop/v3/Changes-v3.md)
 
+v3.5.0 UNRELEASED
+  * [jwk][jws] Added `jwk.WithRejectSmallOrderEd25519Keys`, a global option for
+    `jwk.Configure`. When set to true, `jwk.Parse`, `jwk.Import`, and
+    `Key.Validate` reject an Ed25519 public key that encodes a point of small
+    order, and `jws.Verify` and `jwt.Parse` reject such a key as a verification
+    key. A small-order key, such as the identity point `01 00 ... 00`, verifies
+    a fixed signature for any message. The option is false by default, so
+    existing behavior is unchanged.
+
 v3.4.0 23 Oct 2026
   * [jwe] `jwe.Decrypt` now tries each key provider in turn and moves on to
     the next one when a provider returns an error, as `jws.Verify` does.
