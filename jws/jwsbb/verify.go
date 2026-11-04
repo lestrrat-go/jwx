@@ -9,6 +9,7 @@ import (
 
 	"github.com/lestrrat-go/dsig"
 	"github.com/lestrrat-go/jwx/v4/internal/keyconv"
+	"github.com/lestrrat-go/jwx/v4/internal/okp"
 )
 
 // Verify verifies a JWS signature using the specified key and algorithm.
@@ -138,6 +139,9 @@ func dispatchEdDSAVerify(key any, jwsAlg, dsigAlg string, payload, signature []b
 			if err := validateEd25519KeyShape(pub); err != nil {
 				return fmt.Errorf(`jwsbb.Verify: %w`, err)
 			}
+			if err := okp.ValidateEd25519PublicKey(pub); err != nil {
+				return fmt.Errorf(`jwsbb.Verify: %w`, err)
+			}
 			if err := validateEdDSACurve(jwsAlg, pub); err != nil {
 				return fmt.Errorf(`jwsbb.Verify: %w`, err)
 			}
@@ -152,6 +156,9 @@ func dispatchEdDSAVerify(key any, jwsAlg, dsigAlg string, payload, signature []b
 	}
 	pubkey := *pubkeyPtr
 
+	if err := okp.ValidateEd25519PublicKey(pubkey); err != nil {
+		return fmt.Errorf(`jwsbb.Verify: %w`, err)
+	}
 	if err := validateEdDSACurve(jwsAlg, pubkey); err != nil {
 		return fmt.Errorf(`jwsbb.Verify: %w`, err)
 	}

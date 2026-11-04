@@ -19,6 +19,7 @@ import (
 
 	"github.com/lestrrat-go/jwx/v4/internal/base64"
 	"github.com/lestrrat-go/jwx/v4/internal/json"
+	"github.com/lestrrat-go/jwx/v4/internal/okp"
 	"github.com/lestrrat-go/jwx/v4/jwa"
 	"github.com/lestrrat-go/option/v3"
 )
@@ -912,6 +913,8 @@ func Settings(options ...GlobalOption) error {
 			rejectDuplicateKID.Store(option.MustGet[bool](opt))
 		case identStrictKeySetParsing{}:
 			strictKeySetParsing.Store(option.MustGet[bool](opt))
+		case identRejectSmallOrderEd25519Keys{}:
+			okp.SetRejectSmallOrder(option.MustGet[bool](opt))
 		}
 	}
 

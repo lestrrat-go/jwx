@@ -86,6 +86,7 @@ type identMinRSAModulusBits struct{}
 type identMinRSAPublicExponent struct{}
 type identOmitUnsupportedKeys struct{}
 type identRejectDuplicateKID struct{}
+type identRejectSmallOrderEd25519Keys struct{}
 type identStrictKeySetParsing struct{}
 type identStrictKeyUsage struct{}
 type identThumbprintHash struct{}
@@ -125,6 +126,10 @@ func (identOmitUnsupportedKeys) String() string {
 
 func (identRejectDuplicateKID) String() string {
 	return "WithRejectDuplicateKID"
+}
+
+func (identRejectSmallOrderEd25519Keys) String() string {
+	return "WithRejectSmallOrderEd25519Keys"
 }
 
 func (identStrictKeySetParsing) String() string {
@@ -284,6 +289,25 @@ func WithOmitUnsupportedKeys(v bool) PublicSetOption {
 // remain permissive (AddKey dedupes only by pointer identity).
 func WithRejectDuplicateKID(v bool) GlobalParseOption {
 	return &globalParseOption{option.New(identRejectDuplicateKID{}, v)}
+}
+
+// WithRejectSmallOrderEd25519Keys specifies whether Ed25519 public keys
+// that encode a small-order point are rejected.
+//
+// A small-order key (for example the identity point `01 00 ... 00`)
+// verifies one fixed signature for every message, so it can never be
+// a legitimate verification key. Key generation never produces one.
+// It appears only when a key set holds a hand-written key or a
+// placeholder such as 32 zero bytes. RFC 8032 does not require
+// rejecting such keys, so this option is false by default to keep
+// existing behavior.
+//
+// When true, `jwk.Parse()`, `jwk.Import()`, and `Key.Validate()`
+// reject these keys, and `jws.Verify()` rejects them when given a raw
+// `ed25519.PublicKey`. The setting is process-global and is shared by
+// the jwk and jws packages. Apply it once at program startup.
+func WithRejectSmallOrderEd25519Keys(v bool) GlobalOption {
+	return &globalOption{option.New(identRejectSmallOrderEd25519Keys{}, v)}
 }
 
 // WithStrictKeySetParsing restores the fail-fast behavior for JWK Set

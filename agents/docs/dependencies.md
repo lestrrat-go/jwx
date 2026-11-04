@@ -15,7 +15,7 @@ Composition Layer
   jwt/openid → jwt, internal/{json,tokens,pool}
 
 Processing Layer
-  jws → jwa, jwk, cert, internal/{base64,json,pool,tokens}
+  jws → jwa, jwk, cert, internal/{base64,json,okp,pool,tokens}
        → jws/jwsbb, jws/internal/jwsbb, jws/internal/keyalg
        → crypto/mldsa (go1.27 only, via mldsa.go)
   jwe → jwa, jwk, cert, transform, internal/{base64,json,pool,tokens}
@@ -23,7 +23,7 @@ Processing Layer
        → jwe/jwebb
 
 Core Layer
-  jwk → jwa, cert, transform, internal/{base64,json,ecutil}
+  jwk → jwa, cert, transform, internal/{base64,json,ecutil,okp}
        → jwk/ecdsa, jwk/jwkbb
        → crypto/mldsa (go1.27 only, via mldsa.go)
   jwx (root) → internal/json
@@ -33,7 +33,7 @@ Leaf Packages (no internal deps)
   cert → internal/{base64,tokens}
   transform → (stdlib only)
   internal/json → internal/{base64,tokens}
-  internal/{base64,ecutil,pool,tokens}
+  internal/{base64,ecutil,okp,pool,tokens}
 ```
 
 ## Package Import Summary

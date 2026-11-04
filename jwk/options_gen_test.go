@@ -18,6 +18,7 @@ func TestOptionIdent(t *testing.T) {
 	require.Equal(t, "WithMinRSAPublicExponent", identMinRSAPublicExponent{}.String())
 	require.Equal(t, "WithOmitUnsupportedKeys", identOmitUnsupportedKeys{}.String())
 	require.Equal(t, "WithRejectDuplicateKID", identRejectDuplicateKID{}.String())
+	require.Equal(t, "WithRejectSmallOrderEd25519Keys", identRejectSmallOrderEd25519Keys{}.String())
 	require.Equal(t, "WithStrictKeySetParsing", identStrictKeySetParsing{}.String())
 	require.Equal(t, "WithStrictKeyUsage", identStrictKeyUsage{}.String())
 	require.Equal(t, "WithThumbprintHash", identThumbprintHash{}.String())

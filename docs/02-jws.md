@@ -433,6 +433,17 @@ or `jwt.WithVerifyOption(jws.WithStrictECDSA(true))` to `jwt.Parse`.
 `jws.VerifyCompactFast` does not accept verification options; use `jws.Verify`
 when strict ECDSA verification is required.
 
+## Reject small-order Ed25519 keys
+
+A small-order Ed25519 public key, such as the identity point `01 00 ... 00`, verifies
+a fixed signature for any message. Key generation never produces one. It appears only
+when a key set holds a hand-written key or a placeholder such as 32 zero bytes.
+`jws.Verify` accepts these keys by default. Call
+`jwk.Settings(jwk.WithRejectSmallOrderEd25519Keys(true))` once at program startup to
+make `jws.Verify` and `jwt.Parse` return an error when the verification key is one.
+The setting also applies to keys passed as a raw `ed25519.PublicKey` or as a `jwk.Key`.
+See [Small-order Ed25519 keys](./04-jwk.md#small-order-ed25519-keys) for details.
+
 ## Verification using a JWKS
 
 To verify a payload using JWKS, by default you will need your payload and JWKS to have matching `kid` and `alg` fields.
