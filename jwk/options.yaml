@@ -136,10 +136,13 @@ options:
       rejecting such keys, so this option is false by default to keep
       existing behavior.
 
-      When true, `jwk.Parse()`, `jwk.Import()`, and `Key.Validate()`
+      When true, `jwk.ParseKey()`, `jwk.Import()`, and `Key.Validate()`
       reject these keys, and `jws.Verify()` rejects them when given a raw
-      `ed25519.PublicKey`. The setting is process-global and is shared by
-      the jwk and jws packages. Apply it once at program startup.
+      `ed25519.PublicKey`. `jwk.Parse()` checks each entry of a JWK Set:
+      by default it keeps a rejected entry as a `jwk.UnsupportedKey`, and
+      it fails the whole set under `jwk.WithStrictKeySetParsing(true)`.
+      The setting is process-global and is shared by the jwk and jws
+      packages. Apply it once at program startup.
   - ident: MaxKeys
     interface: GlobalParseOption
     argument_type: int
