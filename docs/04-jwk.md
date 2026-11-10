@@ -798,12 +798,15 @@ With the setting on, a small-order key is rejected in these places:
 
 | Call | Result |
 |------|--------|
-| `jwk.Parse()`, `jwk.ParseKey()` | Returns a key validation error. |
+| `jwk.ParseKey()` | Returns a key validation error. |
+| `jwk.Parse()` of a JWK Set | Keeps the entry as a `jwk.UnsupportedKey` and parses the other keys. With `jwk.WithStrictKeySetParsing(true)`, returns a key validation error for the whole set. |
 | `jwk.Import()` of an `ed25519.PublicKey` | Returns an import error. |
 | `Key.Validate()` | Returns a key validation error. |
 | `jws.Verify()` with a raw `ed25519.PublicKey` or a `jwk.Key` | Returns a verification error. |
 
-The error message contains `ed25519: small-order public key`.
+The error message contains `ed25519: small-order public key`. In the default mode of `jwk.Parse()`,
+that error is stored in the `jwk.UnsupportedKey` entry. Use `jwk.IsUnsupportedKey()` to find such entries,
+as described in [Unsupported keys in a set](#unsupported-keys-in-a-set).
 
 The check matches the 8 points above, including the non-canonical encodings of the
 identity point and of the order-4 point. It ignores the sign bit of the encoded key.

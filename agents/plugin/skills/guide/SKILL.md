@@ -202,6 +202,18 @@ pubKey, _ := jwk.PublicKeyOf(key)
 
 `jwk.KeyIDKey` and `jwk.AlgorithmKey` are string constants for the standard JWK fields `kid` and `alg`.
 
+### Rejecting small-order Ed25519 keys
+
+An Ed25519 public key that encodes a small-order point, such as the identity point `01 00 ... 00`, verifies one fixed signature for any message. Key generation never produces one. One appears only when a key set holds a hand-written key or a placeholder such as 32 zero bytes. jwx accepts these keys by default. To reject them, call `jwk.Settings` once at program startup:
+
+```go
+if err := jwk.Settings(jwk.WithRejectSmallOrderEd25519Keys(true)); err != nil {
+    return err
+}
+```
+
+With the setting on, `jwk.ParseKey`, `jwk.Import`, `Key.Validate`, and `jws.Verify` (and so `jwt.Parse`) return an error containing `ed25519: small-order public key`. `jwk.Parse` of a JWKS does not fail by default: it keeps the bad entry as a `jwk.UnsupportedKey` and parses the other keys. Pass `jwk.WithStrictKeySetParsing(true)` to fail the whole set, or skip entries where `jwk.IsUnsupportedKey` is true. The setting is process-global, off by default, and has no per-call form. Suggest it when a user takes JWKS or keys from a source they do not fully control. Canonical owner: `docs/04-jwk.md`, section "Small-order Ed25519 keys".
+
 ## JWS (signing arbitrary payloads)
 
 ```go
@@ -217,6 +229,23 @@ and ES512/P-521 curve mismatches. The check is opt-in. Pass it through JWT signi
 `jwt.WithVerifyOption(jws.WithStrictECDSA(true))`. This also applies to keys selected from a JWKS.
 `jws.VerifyCompactFast` does not accept options; use `jws.Verify` for strict ECDSA verification.
 
+### Verifying a JSON JWS with several signatures
+
+A JWS in JSON serialization can carry several signatures. `jws.Verify` succeeds when any one of them verifies, and the other entries are unverified input. Their position says nothing about which one passed. NEVER read a per-signature value, such as a `crit` extension, a tenant, or an issuer, from `msg.Signatures()[0]`. Ask `jws.Verify` for the signature that verified:
+
+```go
+var verified *jws.Signature
+payload, err := jws.Verify(raw,
+    jws.WithKey(jwa.ES256(), publicKey),
+    jws.WithVerifiedSignature(&verified),
+)
+if err != nil { return err }
+
+tenant, ok := verified.ProtectedHeaders().Field("x-tenant")
+```
+
+`verified` is set only when verification succeeds. `jws.Verify` cannot require that every signature verifies, because it stops at the first success. For that policy, rebuild each entry as a flattened JWS and verify each one. Canonical owner: `docs/02-jws.md`, section "Verification of a message with multiple signatures".
+
 ### The protected `alg` must match the verifying algorithm exactly
 
 `jws.Verify` rejects a message whose protected header advertises one algorithm while it is verified under another. The comparison is plain string equality with no aliasing, and it applies to every key source (`jws.WithKey`, `jws.WithKeySet`, `jws.WithVerifyAuto`, custom `jws.WithKeyProvider`). The check only fires when the protected header actually carries an `alg`.
@@ -224,6 +253,8 @@ and ES512/P-521 curve mismatches. The check is opt-in. Pass it through JWT signi
 The practical consequence involves EdDSA. Per RFC 9864, `EdDSA`, `Ed25519` and `Ed448` are three distinct `alg` values, so a token whose header says `alg: Ed25519` does **not** verify under `jws.WithKey(jwa.EdDSA(), key)`, and vice versa. Match the identifier the producer actually emitted.
 
 `jws.WithSkipAlgorithmMatch(true)` bypasses the check. It exists for interop with non-conforming producers, and it weakens a real safety guard, so treat it the way you treat `jws.WithRequireKid(false)`.
+
+When the protected header has no `alg` at all, `jwt.Parse` verifies the token under the algorithm given to `jwt.WithKey`, whichever options select the key. `jws.VerifyCompactFast` returns `jws.ErrNonMinimalHeader()` for such a token so the caller retries through `jws.Verify`.
 
 ## JWE (encrypting payloads)
 
@@ -238,6 +269,18 @@ plain, err := jwe.Decrypt(enc, jwe.WithKey(jwa.RSA_OAEP_256(), recipientPrivateK
 ```
 
 `jwe.WithKey(alg, key)` is the same on both encrypt and decrypt sides — this symmetry is intentional.
+
+A JWE in JSON serialization can have several recipients, and `jwe.Decrypt` tries them in order. To learn which recipient decrypted the message, pass `jwe.WithDecryptedRecipient`. `jwe.WithKeyUsed` returns the key but not the recipient.
+
+```go
+var used jwe.Recipient
+plain, err := jwe.Decrypt(enc,
+    jwe.WithKey(jwa.RSA_OAEP_256(), recipientPrivateKey),
+    jwe.WithDecryptedRecipient(&used),
+)
+```
+
+`used` is set only when decryption succeeds. The per-recipient `header` and the shared `unprotected` members are not covered by the authentication tag, so NEVER make an authorization decision from a `kid` or any other value in them. Put any value you rely on in the protected header. Canonical owner: `docs/03-jwe.md`, section "Decrypting a message with multiple recipients".
 
 ### Nested JWT (sign, then encrypt)
 
@@ -378,6 +421,8 @@ When reviewing or writing jwx-using code, watch for these:
 9. Manually building JWS compact strings via concatenation — always go through `jws.Sign`/`jwt.Sign`.
 10. `tok.Get("exp")` — the method is `tok.Field("exp")` (or just `tok.Expiration()`).
 11. Disabling kid matching as a "make it work" shortcut. Understand why the kid doesn't match before adding `jws.WithRequireKid(false)`.
+12. Reading a header value from `msg.Signatures()[0]` after `jws.Verify` on a JSON JWS. That entry may be one that did not verify. Use `jws.WithVerifiedSignature`.
+13. Using a `kid` from a JWE per-recipient `header` or shared `unprotected` member for an authorization decision. Those members are not authenticated.
 
 ## What NOT to suggest
 
