@@ -6,10 +6,11 @@ v3 and v4, please read the [Changes-v4.md file](./Changes-v4.md). Coding Agents 
 
 v4.7.0 UNRELEASED
   * [jwk][jws] Added `jwk.WithRejectSmallOrderEd25519Keys`, a global option for
-    `jwk.Settings`. When set to true, `jwk.Parse`, `jwk.Import`, and
+    `jwk.Settings`. When set to true, `jwk.ParseKey`, `jwk.Import`, and
     `Key.Validate` reject an Ed25519 public key that encodes a point of small
     order, and `jws.Verify` and `jwt.Parse` reject such a key as a verification
-    key. A small-order key, such as the identity point `01 00 ... 00`, verifies
+    key. `jwk.Parse` keeps such an entry of a JWK Set as a `jwk.UnsupportedKey`,
+    or fails the set under `jwk.WithStrictKeySetParsing(true)`. A small-order key, such as the identity point `01 00 ... 00`, verifies
     a fixed signature for any message. The option is false by default, so
     existing behavior is unchanged.
 

@@ -55,7 +55,7 @@ if ! GOEXPERIMENT= go list encoding/json/v2 >/dev/null 2>&1; then
 	export GOEXPERIMENT=jsonv2
 fi
 go mod tidy
-go build ./...
+go build -buildvcs=false ./...
 ```
 
 The test passes a case only when `go build` exits 0. A successful build proves:
@@ -72,7 +72,7 @@ The test agent has network access via `WebFetch` and `go mod tidy`. It must not 
 
 ## Test cases
 
-Cases are split into two families: **single-source** cases (one doc carries the answer) and **multi-source / index-navigation** cases (the answer requires combining or navigating across sources).
+Cases are split into three families: **single-source** cases (one doc carries the answer), **multi-source / index-navigation** cases (the answer requires combining or navigating across sources), and **newer API surface** cases (a `SKILL.md` section plus its owning doc).
 
 ### Family A — Single-source retrieval
 
@@ -174,6 +174,51 @@ Cases are split into two families: **single-source** cases (one doc carries the 
 - `go build` passes.
 - Code wires `jwkfetch.NewCache` with appropriate refresh options *and* a `jwt.WithValidator` for `azp`.
 
+### Family C — Newer API surface (SKILL.md section plus the owning doc)
+
+These cases cover options added after the first guide release. `SKILL.md` carries the rule and a snippet. The owning doc carries the detail. A pass shows the agent used the new option and did not invent a workaround.
+
+#### Case 9 — Opt-in small-order Ed25519 rejection (target: `SKILL.md` "Rejecting small-order Ed25519 keys" plus `docs/04-jwk.md`)
+
+**User question**: "Our service loads tenant-supplied JWKS documents. How do I make sure an Ed25519 key that verifies a forged signature for any message is never accepted? Show me a complete program that proves a parsed key is rejected."
+
+**Why this requires the guide**: the option is global, off by default, and set through `jwk.Settings`, which returns an error. An agent working from memory writes a per-call option or a hand-rolled byte comparison.
+
+**Requires**: a jwx release that contains `jwk.WithRejectSmallOrderEd25519Keys` (v4.7.0 or later). Before that release, point the test program at a checkout with a `replace` directive.
+
+**Pass criteria**:
+- `go build` passes.
+- Code calls `jwk.Settings(jwk.WithRejectSmallOrderEd25519Keys(true))` and checks the returned error.
+- Code shows `jwk.ParseKey` failing on the identity key `01 00 ... 00` after the setting is on.
+- For a JWKS, code either passes `jwk.WithStrictKeySetParsing(true)` or checks `jwk.IsUnsupportedKey`. A bare `jwk.Parse` on a set with the bad key does not return an error.
+- No fabricated per-call option and no hand-written small-order table.
+- The answer states that the setting is process-global and applies to `jws.Verify` as well.
+
+#### Case 10 — Reading the verified signature of a JSON JWS (target: `SKILL.md` "Verifying a JSON JWS with several signatures" plus `docs/02-jws.md`)
+
+**User question**: "I receive a JWS in JSON serialization with several signatures, each with its own `x-tenant` protected header. After `jws.Verify` succeeds, how do I read the `x-tenant` of the signature that actually verified?"
+
+**Why this requires the guide**: the obvious code reads `msg.Signatures()[0]`, which can be an entry that failed verification.
+
+**Pass criteria**:
+- `go build` passes.
+- Code passes `jws.WithVerifiedSignature(&sig)` with `var sig *jws.Signature`.
+- Code reads the header from `sig.ProtectedHeaders()`.
+- Code does not read the header from `msg.Signatures()[0]` or any index.
+- The answer says an unverified entry must not drive a decision.
+
+#### Case 11 — Finding the recipient that decrypted a JWE (target: `SKILL.md` "JWE" section plus `docs/03-jwe.md`)
+
+**User question**: "A JWE has two recipients. Which recipient decrypted it, and can I trust the `kid` in that recipient's header for an authorization decision?"
+
+**Why this requires the guide**: `jwe.WithKeyUsed` returns the key and not the recipient, and the per-recipient `header` is not authenticated.
+
+**Pass criteria**:
+- `go build` passes.
+- Code passes `jwe.WithDecryptedRecipient(&rec)` with `var rec jwe.Recipient`.
+- The answer says the per-recipient `kid` is not authenticated and must not drive authorization.
+- The answer points to the protected header for values the caller relies on.
+
 ## Negative cases (the skill should NOT need to fetch)
 
 Cases the SKILL.md alone covers. Each negative case must also produce a code sample that **builds** — these are real questions an end user might ask, and the skill is responsible for them too. Fetching anyway isn't a failure but signals the skill body is unclear.
@@ -193,7 +238,7 @@ For each case, record:
 
 | Field | Value |
 |-------|-------|
-| Case | 1–8 |
+| Case | 1–11 |
 | Skill invoked | yes / no |
 | jwx core docs fetched | list of `docs/*.md` URLs or module-cache paths |
 | Examples README fetched | yes / no |
@@ -213,6 +258,7 @@ The skill passes when:
 - **Case 6 builds green AND the trajectory hit the examples README + the specific example file.**
 - **Case 7 builds green AND `Companion docs fetched` lists a jwkfetch source.**
 - **Case 8 builds green AND sources span at least two of the five enumerated source kinds** (jwx core docs / module cache / pkg.go.dev / examples / companion READMEs).
+- **Cases 9–11 build green AND the code uses the option named in the case** (`jwk.WithRejectSmallOrderEd25519Keys`, `jws.WithVerifiedSignature`, `jwe.WithDecryptedRecipient`). A case fails if the final code reads `msg.Signatures()[0]` or trusts a per-recipient `kid`.
 - **Every negative case builds green from SKILL.md content alone**, with no fabricated APIs in the final code.
 
 ## When to re-run
