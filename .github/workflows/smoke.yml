@@ -3,10 +3,9 @@
 # some execution time)
 # Once a pull request is merged to master, workflows/ci.yml is run
 name: Smoke Tests
+# v2 is no longer maintained; run only on manual dispatch.
 on:
-  push:
-    branches-ignore:
-      - main
+  workflow_dispatch: {}
 
 jobs:
   build:
