@@ -1,5 +1,7 @@
 name: lint
-on: [push]
+# v2 is no longer maintained; run only on manual dispatch.
+on:
+  workflow_dispatch: {}
 jobs:
   golangci:
     name: lint

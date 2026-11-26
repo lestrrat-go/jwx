@@ -1,10 +1,7 @@
 name: Auto-Doc
+# v2 is no longer maintained; run only on manual dispatch.
 on:
-  pull_request:
-    branches:
-      - develop/v2
-    types:
-      - closed
+  workflow_dispatch: {}
 
 jobs:
   autodoc:

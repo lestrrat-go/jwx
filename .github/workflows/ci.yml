@@ -1,9 +1,7 @@
 name: CI
+# v2 is no longer maintained; run only on manual dispatch.
 on:
-  pull_request:
-    branches:
-      - v*
-      - develop/*
+  workflow_dispatch: {}
 
 jobs:
   build:
