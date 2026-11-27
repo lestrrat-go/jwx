@@ -102,6 +102,14 @@ func TestOpenOpaqueErrors(t *testing.T) {
 		require.EqualError(t, err, "invalid ciphertext")
 	})
 
+	t.Run("ciphertext over buffer cap", func(t *testing.T) {
+		SetMaxBufferSize(int64(len(sealed)) - 1)
+		t.Cleanup(func() { SetMaxBufferSize(0) })
+
+		_, err := enc.Open(nil, nonce, sealed, aad)
+		require.EqualError(t, err, "invalid ciphertext")
+	})
+
 	t.Run("mac mismatch", func(t *testing.T) {
 		tampered := make([]byte, len(sealed))
 		copy(tampered, sealed)
