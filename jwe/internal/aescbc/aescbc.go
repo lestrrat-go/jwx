@@ -41,6 +41,11 @@ func SetMaxBufferSize(siz int64) {
 	maxBufSize.Store(siz)
 }
 
+// MaxBufferSize returns the current cap on the size of internal buffers.
+func MaxBufferSize() int64 {
+	return maxBufSize.Load()
+}
+
 func pad(buf []byte, n int) []byte {
 	rem := n - len(buf)%n
 	if rem == 0 {
@@ -271,6 +276,14 @@ func (c Hmac) Open(dst, nonce, ciphertext, data []byte) ([]byte, error) {
 		return nil, errInvalidCiphertext
 	}
 	if len(ciphertext) < c.tlen {
+		return nil, errInvalidCiphertext
+	}
+
+	// Enforce the buffer cap before the decrypt buffer below is allocated,
+	// so an oversized, unauthenticated ciphertext cannot force an allocation
+	// larger than the configured limit. The length is public, so reusing the
+	// opaque error does not leak anything.
+	if int64(len(ciphertext)) > maxBufSize.Load() {
 		return nil, errInvalidCiphertext
 	}
 
