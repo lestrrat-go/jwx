@@ -165,6 +165,14 @@ func (c AesContentCipher) Decrypt(cek, iv, ciphertxt, tag, aad []byte) (plaintex
 		return nil, fmt.Errorf(`failed to decrypt: invalid iv size (got %d, expected %d)`, len(iv), aead.NonceSize())
 	}
 
+	// The CBC buffer cap must hold before the ciphertext is copied below,
+	// not only inside Open. The cap does not apply to GCM.
+	if _, ok := aead.(*aescbc.Hmac); ok {
+		if int64(len(ciphertxt))+int64(len(tag)) > aescbc.MaxBufferSize() {
+			return nil, fmt.Errorf(`failed to decrypt: ciphertext exceeds the AES-CBC buffer size limit`)
+		}
+	}
+
 	combined := make([]byte, len(ciphertxt)+len(tag))
 	copy(combined, ciphertxt)
 	copy(combined[len(ciphertxt):], tag)
