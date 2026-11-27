@@ -1325,6 +1325,54 @@ func TestCBCBufferSize(t *testing.T) {
 	require.Error(t, err, `jwe.Encrypt should fail`)
 }
 
+// TestCBCBufferSizeDecrypt verifies that the AES-CBC buffer cap is also
+// enforced on decryption, and that it does not apply to AES-GCM.
+func TestCBCBufferSizeDecrypt(t *testing.T) {
+	// NOTE: This has GLOBAL EFFECT
+	setCap := func(t *testing.T, n int64) {
+		t.Helper()
+		jwe.Settings(jwe.WithCBCBufferSize(n))
+		t.Cleanup(func() { jwe.Settings(jwe.WithCBCBufferSize(0)) })
+	}
+
+	plaintext := bytes.Repeat([]byte("x"), 4096)
+
+	encrypt := func(t *testing.T, enc jwa.ContentEncryptionAlgorithm, key []byte) []byte {
+		t.Helper()
+		msg, err := jwe.Encrypt(plaintext, jwe.WithContentEncryption(enc), jwe.WithKey(jwa.DIRECT(), key))
+		require.NoError(t, err, `jwe.Encrypt should succeed`)
+		return msg
+	}
+
+	t.Run("CBC ciphertext over the cap is rejected", func(t *testing.T) {
+		key := make([]byte, 32)
+		msg := encrypt(t, jwa.A128CBC_HS256(), key)
+
+		setCap(t, 1024)
+		_, err := jwe.Decrypt(msg, jwe.WithKey(jwa.DIRECT(), key))
+		require.Error(t, err, `jwe.Decrypt should fail`)
+		require.ErrorContains(t, err, `buffer size limit`)
+	})
+	t.Run("CBC ciphertext under the cap is accepted", func(t *testing.T) {
+		key := make([]byte, 32)
+		msg := encrypt(t, jwa.A128CBC_HS256(), key)
+
+		setCap(t, 1<<20)
+		got, err := jwe.Decrypt(msg, jwe.WithKey(jwa.DIRECT(), key))
+		require.NoError(t, err, `jwe.Decrypt should succeed`)
+		require.Equal(t, plaintext, got)
+	})
+	t.Run("GCM is not affected by the CBC cap", func(t *testing.T) {
+		key := make([]byte, 16)
+		msg := encrypt(t, jwa.A128GCM(), key)
+
+		setCap(t, 1024)
+		got, err := jwe.Decrypt(msg, jwe.WithKey(jwa.DIRECT(), key))
+		require.NoError(t, err, `jwe.Decrypt should succeed`)
+		require.Equal(t, plaintext, got)
+	})
+}
+
 func TestMaxDecompressBufferSize(t *testing.T) {
 	// This payload size is intentionally set to a small value to avoid
 	// causing problems for regular users and CI/CD systems. If you wish to
