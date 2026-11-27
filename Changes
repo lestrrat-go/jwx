@@ -13,6 +13,14 @@ v3.5.0 UNRELEASED
     a fixed signature for any message. The option is false by default, so
     existing behavior is unchanged.
 
+  * [jwe] `jwe.WithCBCBufferSize` now also limits AES-CBC decryption. Before,
+    the limit applied only to encryption, so `jwe.Decrypt` allocated buffers
+    sized by the ciphertext, up to about three times its length, before the
+    authentication tag was checked. `jwe.Decrypt` now rejects a CBC ciphertext
+    larger than the limit before it allocates. AES-GCM is not affected. The
+    default limit is 256 MiB, so callers that never set the option see no
+    change unless they decrypt a CBC ciphertext larger than that.
+
 v3.4.0 23 Oct 2026
   * [jwe] `jwe.Decrypt` now tries each key provider in turn and moves on to
     the next one when a provider returns an error, as `jws.Verify` does.
